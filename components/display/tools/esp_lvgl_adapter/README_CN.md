@@ -23,6 +23,7 @@
   - [FreeType 字体](#freetype-字体可选)
   - [FPS 与 Dummy Draw](#fps-与-dummy-draw)
   - [立即刷新](#立即刷新)
+  - [睡眠管理](#睡眠管理)
 - [配置项 (Kconfig)](#配置项kconfig)
 - [限制与注意事项](#限制与注意事项)
 - [反初始化](#反初始化)
@@ -245,21 +246,23 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 - 双缓冲模式：需要 **2** 个帧缓冲
 - 单缓冲模式：需要 **1** 个帧缓冲
 
-#### 防撕裂模式选择（RGB/MIPI DSI）
+#### 防撕裂模式选择
 
 根据您的应用场景选择合适的防撕裂模式：
 
-| 防撕裂模式 | 适用场景 | 帧缓冲数 | 内存占用 |
-|-----------|---------|---------|---------|
-| `TRIPLE_PARTIAL` | 旋转（90°/270°）<br>高分辨率流畅 UI | 3 | 高 |
-| `TRIPLE_FULL` | 整屏/大区域刷新<br>内存充足 | 3 | 高 |
-| `DOUBLE_FULL` | 大区域刷新<br>内存较紧 | 2 | 中 |
-| `DOUBLE_DIRECT` | 小区域更新<br>控件/局部变化 | 2 | 中 |
-| `NONE` | 静态 UI<br>超低内存 | 1 | 低 |
+| 防撕裂模式 | 适用场景 | 帧缓冲数 | 内存占用 | 支持接口 |
+|-----------|---------|---------|---------|---------|
+| `TRIPLE_PARTIAL` | 旋转（90°/270°）<br>高分辨率流畅 UI | 3 | 高 | RGB / MIPI DSI |
+| `TRIPLE_FULL` | 整屏/大区域刷新<br>内存充足 | 3 | 高 | RGB / MIPI DSI |
+| `DOUBLE_FULL` | 大区域刷新<br>内存较紧 | 2 | 中 | RGB / MIPI DSI |
+| `DOUBLE_DIRECT` | 小区域更新<br>控件/局部变化 | 2 | 中 | RGB / MIPI DSI |
+| `GPIO_TE` | SPI/I2C/I80/QSPI 接口<br>面板提供 TE 信号，通过垂直消隐同步消除撕裂 | 1 | 低 | SPI / I2C / I80 / QSPI |
+| `NONE` | 静态 UI<br>超低内存 | 1 | 低 | 所有接口 |
 
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-- OTHER (SPI/I2C/I80/QSPI) 接口仅支持 `NONE` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
+- OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `GPIO_TE` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
+- `GPIO_TE` 模式要求面板提供 TE 输出信号，并将 TE 引脚连接到 ESP GPIO；使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` 宏进行配置。`examples/display/gui/lvgl_common_demo` 会自动检测并在可用时使用 TE 同步
 
 #### 内存估算
 
@@ -496,6 +499,38 @@ ESP_ERROR_CHECK(esp_lv_adapter_set_dummy_draw(disp, false));
 esp_lv_adapter_refresh_now(disp);
 ```
 
+### 睡眠管理
+
+在保持 UI 状态的同时安全地关闭显示以降低功耗。适配器提供了与 ESP-IDF Light Sleep 配合使用的睡眠机制。
+
+**基本流程：**
+
+```c
+// 进入睡眠
+esp_lv_adapter_sleep_prepare();      // 暂停 worker，等待刷新完成
+esp_lcd_panel_del(panel);             // 删除硬件
+esp_light_sleep_start();              // 进入 Light Sleep（CPU 暂停，外设保持状态）
+
+// 从睡眠恢复（Light Sleep 唤醒后自动执行）
+panel = /* 重新初始化 LCD 硬件 */;
+esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // 重新绑定面板，恢复 worker
+```
+
+**配合 Light Sleep 使用：**
+
+1. **进入睡眠前**：调用 `esp_lv_adapter_sleep_prepare()` 暂停适配器任务并等待当前刷新完成
+2. **删除硬件**：调用 `esp_lcd_panel_del()` 释放显示硬件资源
+3. **进入 Light Sleep**：调用 `esp_light_sleep_start()`，系统将暂停 CPU 并保持外设状态
+4. **唤醒后恢复**：重新初始化 LCD 硬件，然后调用 `esp_lv_adapter_sleep_recover()` 恢复适配器运行
+
+**主要特性：**
+- UI 状态保留（无需重建控件）
+- 触摸设备保持注册（需要时单独关闭电源）
+- 多屏幕：为每个显示调用 `sleep_recover()`
+- 与 Light Sleep 无缝配合，实现低功耗待机
+
+**⚠️ 高级用法：** 可使用 `esp_lv_adapter_pause()`/`resume()` 实现自定义流程，但请勿与 `sleep_prepare()` 混用
+
 ---
 
 ## 配置项 (Kconfig)
@@ -523,7 +558,7 @@ esp_lv_adapter_refresh_now(disp);
 | 接口类型 | 支持的防撕裂模式 |
 |---------|----------------|
 | RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
-| OTHER (SPI/I2C/I80/QSPI) | 仅 `NONE` |
+| OTHER (SPI/I2C/I80/QSPI) | `NONE`、`GPIO_TE` |
 
 ### 旋转限制
 

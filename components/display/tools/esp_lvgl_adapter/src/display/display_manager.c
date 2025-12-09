@@ -11,6 +11,7 @@
  *********************/
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h>
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
@@ -30,8 +31,10 @@
 #endif
 #include "adapter_internal.h"
 #include "display_bridge.h"
+#include "bridge/common/display_bridge_common.h"
 #include "lvgl_port_alignment.h"
 #include "lvgl_port_ppa.h"
+#include "display_te_sync.h"
 #include "display_manager.h"
 
 /*********************
@@ -98,6 +101,7 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
                                             size_t color_size);
 static void *display_manager_alloc_draw_buffer(size_t size, bool use_psram);
 static size_t display_manager_ppa_alignment(void);
+static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_node_t *node);
 
 /* Frame buffer helpers */
 static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_node_t *node,
@@ -108,6 +112,7 @@ static uint8_t display_manager_required_buffer_count(const esp_lv_adapter_displa
 static size_t display_manager_default_buffer_pixels(const esp_lv_adapter_display_runtime_config_t *cfg,
                                                     esp_lv_adapter_display_render_mode_t mode);
 static uint16_t display_manager_effective_buffer_height(const esp_lv_adapter_display_runtime_config_t *cfg);
+static void display_manager_configure_te_timing(esp_lv_adapter_display_runtime_config_t *cfg);
 
 /* Internal node management */
 static bool display_manager_init_node(esp_lv_adapter_display_node_t *node);
@@ -150,7 +155,7 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
     node->cfg.base = *cfg;
 
     if (!display_manager_init_node(node)) {
-        free(node);
+        display_manager_destroy_node(node);
         return NULL;
     }
 
@@ -160,6 +165,9 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
         display_manager_destroy_node(node);
         return NULL;
     }
+
+    /* Initialize sleep management state */
+    node->sleep.input_count = 0;
 
     node->next = ctx->display_list;
     ctx->display_list = node;
@@ -256,14 +264,12 @@ void display_manager_request_full_refresh(lv_display_t *disp)
     if (scr) {
         lv_obj_invalidate(scr);
     }
-    lv_refr_now(disp);
 #else
     lv_disp_t *disp_v8 = (lv_disp_t *)disp;
     lv_obj_t *scr = lv_disp_get_scr_act(disp_v8);
     if (scr) {
         lv_obj_invalidate(scr);
     }
-    lv_refr_now(disp_v8);
 #endif
 }
 
@@ -278,10 +284,6 @@ esp_err_t display_manager_get_dummy_draw_state(lv_display_t *disp, bool *enabled
     return ESP_OK;
 }
 
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
-/**
- * @brief Get display node by LVGL display handle
- */
 esp_lv_adapter_display_node_t *display_manager_get_node(lv_display_t *disp)
 {
     esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
@@ -297,7 +299,6 @@ esp_lv_adapter_display_node_t *display_manager_get_node(lv_display_t *disp)
     /* Otherwise, find the matching display */
     return display_manager_find_node(disp);
 }
-#endif
 
 /**
  * @brief Check if a pointer is a panel frame buffer
@@ -369,6 +370,11 @@ static void display_manager_destroy_node(esp_lv_adapter_display_node_t *node)
         return;
     }
 
+    if (node->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_destroy(node->cfg.te_ctx);
+        node->cfg.te_ctx = NULL;
+    }
+
     /* Destroy the bridge (hardware interface) */
     if (node->bridge && node->bridge->destroy) {
         node->bridge->destroy(node->bridge);
@@ -427,6 +433,23 @@ esp_err_t display_manager_unregister(lv_display_t *disp)
     display_manager_destroy_node(node);
 
     ESP_LOGI(TAG, "Display unregistered successfully");
+    return ESP_OK;
+}
+
+esp_err_t display_manager_set_area_rounder_cb(lv_display_t *disp,
+                                              void (*rounder_cb)(lv_area_t *, void *),
+                                              void *user_data)
+{
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+
+    node->cfg.rounder_cb = rounder_cb;
+    node->cfg.rounder_user_data = user_data;
+
+    if (node->bridge && node->bridge->set_area_rounder) {
+        node->bridge->set_area_rounder(node->bridge, rounder_cb, user_data);
+    }
+
     return ESP_OK;
 }
 
@@ -524,6 +547,19 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE && pub->profile.rotation != ESP_LV_ADAPTER_ROTATE_0 && pub->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
         ESP_LOGE(TAG, "rotation not supported under TEAR_AVOID_MODE_NONE");
         return false;
+    }
+
+    if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        if (pub->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+            ESP_LOGE(TAG, "GPIO TE mode only supports panel interface OTHER");
+            return false;
+        }
+
+        display_manager_configure_te_timing(cfg);
+        if (esp_lv_adapter_te_sync_create(&pub->te_sync, cfg->te_intr_type, cfg->te_prefer_refresh_end, &cfg->te_ctx) != ESP_OK) {
+            ESP_LOGE(TAG, "failed to initialize GPIO TE sync");
+            return false;
+        }
     }
 
 #if LVGL_VERSION_MAJOR >= 9
@@ -749,6 +785,35 @@ static bool display_manager_use_panel_buffers(esp_lv_adapter_display_node_t *nod
     return true;
 }
 
+static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_node_t *node)
+{
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    esp_lv_adapter_display_profile_t *profile = &cfg->base.profile;
+
+    if (!cfg->frame_buffer_count ||
+            profile->interface == ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+        return true;
+    }
+
+    size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
+    bool rebound = false;
+
+    switch (cfg->base.tear_avoid_mode) {
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
+        rebound = display_manager_use_panel_buffers(node, full_pixels, 0, 1);
+        break;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
+        rebound = display_manager_use_panel_buffers(node, full_pixels, 1, 2);
+        break;
+    default:
+        rebound = true; /* Modes that do not rely on panel buffers keep existing draw buffers */
+        break;
+    }
+
+    return rebound;
+}
+
 static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
                                             esp_lv_adapter_display_render_mode_t mode,
                                             size_t color_size)
@@ -763,8 +828,9 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
     }
 
     uint8_t required_frames = display_manager_required_frame_buffer_count(pub->tear_avoid_mode, pub->profile.rotation);
-    /* For SPI/I2C interfaces with TEAR_AVOID_MODE_NONE, we don't need panel frame buffers */
-    if (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER && pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
+    /* For interfaces that manage their own frame timing (SPI/I2C) or GPIO TE mode, skip panel FB fetch */
+    if ((pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER && pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) ||
+            pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
         required_frames = 0;
     }
     bool have_panel_fb = false;
@@ -886,7 +952,9 @@ static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_nod
     void *fb2 = NULL;
     esp_err_t err = ESP_ERR_NOT_SUPPORTED;
 
-    switch (node->cfg.base.profile.interface) {
+    esp_lv_adapter_panel_interface_t panel_if = node->cfg.base.profile.interface;
+
+    switch (panel_if) {
     case ESP_LV_ADAPTER_PANEL_IF_RGB:
 #if SOC_LCDCAM_RGB_LCD_SUPPORTED
         if (required == 1) {
@@ -911,7 +979,9 @@ static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_nod
         break;
     case ESP_LV_ADAPTER_PANEL_IF_OTHER:
     default:
-        break;
+        /* Interfaces like SPI/QSPI/I80 keep their frame buffers inside the panel.
+         * Skip the request silently to avoid confusing warnings. */
+        return false;
     }
 
     if (err != ESP_OK) {
@@ -941,6 +1011,8 @@ static uint8_t display_manager_required_buffer_count(const esp_lv_adapter_displa
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
         return 2;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
+        return 1;  /* Single buffer for strict TE synchronization */
     default:
         break;
     }
@@ -975,6 +1047,7 @@ uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mo
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
         return 2;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
         /* Return 1 for RGB/MIPI DSI hardware minimum requirement */
         return 1;
     default:
@@ -1026,6 +1099,76 @@ static uint16_t display_manager_effective_buffer_height(const esp_lv_adapter_dis
     return height;
 }
 
+static void display_manager_configure_te_timing(esp_lv_adapter_display_runtime_config_t *cfg)
+{
+    if (!cfg) {
+        return;
+    }
+
+    esp_lv_adapter_te_sync_config_t *te_cfg = &cfg->base.te_sync;
+
+    cfg->te_intr_type = GPIO_INTR_DISABLE;
+    cfg->te_prefer_refresh_end = false;
+
+    /* Check if TE is enabled (gpio_num >= 0) */
+    if (!esp_lv_adapter_te_sync_is_enabled(te_cfg)) {
+        return;
+    }
+
+    bool manual_intr = (te_cfg->intr_type == GPIO_INTR_POSEDGE || te_cfg->intr_type == GPIO_INTR_NEGEDGE);
+    if (manual_intr) {
+        cfg->te_intr_type = te_cfg->intr_type;
+        ESP_LOGI(TAG, "GPIO TE: manual config gpio=%d, edge=%d",
+                 te_cfg->gpio_num, cfg->te_intr_type);
+        return;
+    }
+
+    if (te_cfg->time_tvdl_ms == 0) {
+        te_cfg->time_tvdl_ms = ESP_LV_ADAPTER_TE_TVDL_DEFAULT_MS;
+    }
+    if (te_cfg->time_tvdh_ms == 0) {
+        te_cfg->time_tvdh_ms = ESP_LV_ADAPTER_TE_TVDH_DEFAULT_MS;
+    }
+
+    if (te_cfg->bus_freq_hz == 0 || cfg->base.profile.hor_res == 0 || cfg->base.profile.ver_res == 0) {
+        ESP_LOGW(TAG, "TE timing parameters incomplete (bus=%" PRIu32 ", res=%ux%u, bpp=%u, data_lines=%u)",
+                 te_cfg->bus_freq_hz, cfg->base.profile.hor_res, cfg->base.profile.ver_res,
+                 te_cfg->bits_per_pixel, te_cfg->data_lines);
+        return;
+    }
+
+    uint32_t data_lines = te_cfg->data_lines ? te_cfg->data_lines : ESP_LV_ADAPTER_TE_DATA_LINES_DEFAULT;
+    uint32_t bits_per_pixel = te_cfg->bits_per_pixel ? te_cfg->bits_per_pixel : ESP_LV_ADAPTER_TE_BITS_PER_PIXEL_DEFAULT;
+
+    uint64_t pixels = (uint64_t)cfg->base.profile.hor_res * cfg->base.profile.ver_res;
+    uint64_t transfer_bits = pixels * bits_per_pixel;
+    uint64_t bus_bits_per_sec = (uint64_t)te_cfg->bus_freq_hz * data_lines;
+
+    if (bus_bits_per_sec == 0) {
+        ESP_LOGW(TAG, "TE auto timing bus bits per second is zero");
+        return;
+    }
+
+    uint64_t transfer_us = (transfer_bits * 1000000ULL + bus_bits_per_sec - 1ULL) / bus_bits_per_sec;
+    /* Datasheet Tvdl defines how long the panel reads from frame memory. Use it as the safe window. */
+    uint64_t window_us = (uint64_t)te_cfg->time_tvdl_ms * 1000ULL;
+    if (window_us == 0) {
+        window_us = (uint64_t)ESP_LV_ADAPTER_TE_TVDL_DEFAULT_MS * 1000ULL;
+    }
+
+    /* Calculate how many TE periods needed for transmission */
+    uint32_t periods_needed = (uint32_t)((transfer_us + window_us - 1ULL) / window_us);
+    if (periods_needed == 0) {
+        periods_needed = 1;
+    }
+
+    cfg->te_prefer_refresh_end = (periods_needed > 1);
+
+    ESP_LOGI(TAG, "GPIO TE: transfer=%llu us, Tvdl=%u ms, periods=%u, prefer %s of VBlank (auto detect)",
+             transfer_us, te_cfg->time_tvdl_ms, periods_needed,
+             cfg->te_prefer_refresh_end ? "end" : "start");
+}
+
 /**********************
  *   VALIDATION & CONFIGURATION
  **********************/
@@ -1040,6 +1183,7 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
     }
 
     esp_lv_adapter_tear_avoid_mode_t mode = cfg->tear_avoid_mode;
+    bool te_gpio_enabled = esp_lv_adapter_te_sync_is_enabled(&cfg->te_sync);
 
     switch (cfg->profile.interface) {
     case ESP_LV_ADAPTER_PANEL_IF_RGB:
@@ -1058,6 +1202,13 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
         if (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
             return true;
         }
+        if (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+            if (!te_gpio_enabled) {
+                ESP_LOGE(TAG, "GPIO TE mode selected but te_sync not configured/enabled");
+                return false;
+            }
+            return true;
+        }
         ESP_LOGE(TAG, "tear mode %d unsupported on panel interface %d", mode, cfg->profile.interface);
         return false;
     }
@@ -1071,6 +1222,7 @@ static esp_lv_adapter_display_render_mode_t display_manager_pick_render_mode(con
     switch (cfg->base.tear_avoid_mode) {
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
         return ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
         return ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT;
@@ -1119,3 +1271,158 @@ static void display_manager_fps_frame_done(esp_lv_adapter_display_node_t *node)
     }
 }
 #endif
+
+/**********************
+ *   PANEL DETACH/REBIND SUPPORT
+ **********************/
+
+/**
+ * @brief Wait for any pending flush operations to complete
+ */
+esp_err_t display_manager_wait_flush_done(lv_display_t *disp, int32_t timeout_ms)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+
+#if LVGL_VERSION_MAJOR >= 9
+    /* For LVGL v9, check if display is flushing */
+    int64_t start_time = esp_timer_get_time();
+    int64_t timeout_us = (timeout_ms < 0) ? INT64_MAX : ((int64_t)timeout_ms * 1000);
+
+    while (disp->rendering_in_progress) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+
+        if (esp_timer_get_time() - start_time > timeout_us) {
+            ESP_LOGW(TAG, "Timeout waiting for flush completion");
+            return ESP_ERR_TIMEOUT;
+        }
+    }
+#else
+    /* For LVGL v8, check driver flush state */
+    lv_disp_drv_t *drv = disp->driver;
+    ESP_RETURN_ON_FALSE(drv, ESP_ERR_INVALID_STATE, TAG, "Display driver not found");
+
+    int64_t start_time = esp_timer_get_time();
+    int64_t timeout_us = (timeout_ms < 0) ? INT64_MAX : ((int64_t)timeout_ms * 1000);
+
+    while (drv->draw_buf->flushing) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+
+        if (esp_timer_get_time() - start_time > timeout_us) {
+            ESP_LOGW(TAG, "Timeout waiting for flush completion");
+            return ESP_ERR_TIMEOUT;
+        }
+    }
+#endif
+
+    /* Additional safety: wait one more frame for any hardware operations */
+    vTaskDelay(pdMS_TO_TICKS(20));
+
+    ESP_LOGD(TAG, "Flush completion confirmed");
+    return ESP_OK;
+}
+
+/**
+ * @brief Refetch framebuffers from LCD panel and update all references
+ */
+esp_err_t display_manager_refetch_framebuffers(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+    ESP_RETURN_ON_FALSE(node->cfg.base.panel, ESP_ERR_INVALID_STATE, TAG, "Panel not attached");
+
+    /* Clear old framebuffer references */
+    memset(node->cfg.frame_buffers, 0, sizeof(node->cfg.frame_buffers));
+    node->cfg.frame_buffer_count = 0;
+
+    if (node->cfg.base.profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER &&
+            node->cfg.base.tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        /* Determine required panel frame buffer count */
+        uint8_t required = display_manager_required_frame_buffer_count(
+                               node->cfg.base.tear_avoid_mode,
+                               node->cfg.base.profile.rotation);
+
+        /* Get color size */
+#if LVGL_VERSION_MAJOR >= 9
+        size_t color_size = (lv_color_format_get_bpp(lv_display_get_color_format(disp)) + 7) / 8;
+#else
+        size_t color_size = sizeof(lv_color_t);
+#endif
+
+        /* Refetch framebuffers from panel hardware */
+        bool success = display_manager_fetch_panel_frame_buffers(node, required, color_size);
+        ESP_RETURN_ON_FALSE(success, ESP_FAIL, TAG, "Failed to refetch framebuffers from panel");
+
+        /* Clear all framebuffers after sleep recovery to prevent displaying stale data */
+        for (uint8_t i = 0; i < node->cfg.frame_buffer_count; i++) {
+            if (node->cfg.frame_buffers[i] && node->cfg.frame_buffer_size > 0) {
+                memset(node->cfg.frame_buffers[i], 0, node->cfg.frame_buffer_size);
+
+                /* Flush cache to ensure data is written to physical memory */
+                display_cache_msync_framebuffer(node->cfg.frame_buffers[i],
+                                                node->cfg.frame_buffer_size);
+            }
+        }
+    }
+
+    /* Update bridge internal references using proper interface */
+    if (node->bridge && node->bridge->update_panel) {
+        esp_err_t ret = node->bridge->update_panel(node->bridge, &node->cfg);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to update bridge panel");
+        ESP_LOGI(TAG, "Bridge panel handle and framebuffers updated");
+    }
+
+    ESP_LOGI(TAG, "Panel framebuffers refetched successfully (%d buffers)",
+             node->cfg.frame_buffer_count);
+
+    return ESP_OK;
+}
+
+esp_err_t display_manager_rebind_draw_buffers(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+
+    if (!display_manager_rebind_panel_draw_buffers(node)) {
+        ESP_LOGE(TAG, "Failed to bind panel frame buffers for display");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    ESP_RETURN_ON_FALSE(cfg->draw_buf_primary, ESP_ERR_INVALID_STATE, TAG, "Primary draw buffer missing");
+    ESP_RETURN_ON_FALSE(cfg->draw_buf_pixels, ESP_ERR_INVALID_STATE, TAG, "Draw buffer size invalid");
+
+#if LVGL_VERSION_MAJOR >= 9
+    esp_lv_adapter_display_render_mode_t render_mode = display_manager_pick_render_mode(cfg);
+    size_t color_size = lv_color_format_get_size(lv_display_get_color_format(disp));
+    size_t buf_bytes = cfg->draw_buf_pixels * color_size;
+
+    lv_display_render_mode_t lv_mode = LV_DISPLAY_RENDER_MODE_PARTIAL;
+    if (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL) {
+        lv_mode = LV_DISPLAY_RENDER_MODE_FULL;
+    } else if (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT) {
+        lv_mode = LV_DISPLAY_RENDER_MODE_DIRECT;
+    }
+
+    lv_display_set_buffers(disp,
+                           cfg->draw_buf_primary,
+                           cfg->draw_buf_secondary,
+                           buf_bytes,
+                           lv_mode);
+#else
+    lv_disp_draw_buf_init(&node->draw_buf,
+                          (lv_color_t *)cfg->draw_buf_primary,
+                          (lv_color_t *)cfg->draw_buf_secondary,
+                          cfg->draw_buf_pixels);
+#endif
+
+    ESP_LOGD(TAG, "LVGL draw buffers rebound successfully");
+    return ESP_OK;
+}

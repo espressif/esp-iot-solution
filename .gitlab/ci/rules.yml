@@ -562,6 +562,9 @@
 .patterns-example_display_gui_lvgl_multi_screen: &patterns-example_display_gui_lvgl_multi_screen
   - "examples/display/gui/lvgl_multi_screen/**/*"
 
+.patterns-example_display_gui_lvgl_light_sleep_demo: &patterns-example_display_gui_lvgl_light_sleep_demo
+  - "examples/display/gui/lvgl_light_sleep_demo/**/*"
+
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
 
@@ -1125,6 +1128,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_display_gui_lvgl_multi_screen
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
+.rules:build:example_display_gui_lvgl_light_sleep_demo:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_light_sleep_demo
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lvgl_adapter
 

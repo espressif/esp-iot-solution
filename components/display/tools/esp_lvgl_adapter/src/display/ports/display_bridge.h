@@ -73,6 +73,29 @@ struct esp_lv_adapter_display_bridge {
                                  int y_end,
                                  const void *frame_buffer,
                                  bool wait);
+
+    /**
+     * @brief Update panel handle and configuration for rebind
+     *
+     * @param bridge Bridge instance
+     * @param cfg Updated runtime configuration with new panel handle
+     * @return
+     *      - ESP_OK: Success
+     *      - ESP_FAIL: Update failed
+     */
+    esp_err_t (*update_panel)(esp_lv_adapter_display_bridge_t *bridge,
+                              const esp_lv_adapter_display_runtime_config_t *cfg);
+
+    /**
+     * @brief Set area rounding callback
+     *
+     * @param bridge Bridge instance
+     * @param rounder_cb Callback function (NULL to disable)
+     * @param user_data User data passed to callback
+     */
+    void (*set_area_rounder)(esp_lv_adapter_display_bridge_t *bridge,
+                             void (*rounder_cb)(lv_area_t *, void *),
+                             void *user_data);
 };
 
 /**********************

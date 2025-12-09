@@ -331,6 +331,44 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));    // 通过 `disp_gpio_num` 引脚控制 LCD 显示的开关，
                                                                           // 仅当该引脚设置且不为 `-1` 时可用，否则会报错
 
+**时序参数对应关系说明：**
+
+上述代码中的时序参数与前面 `DE 模式` 和 `SYNC 模式` 时序图中的符号对应关系如下：
+
+.. list-table:: 水平时序参数对应关系
+    :widths: 30 30 40
+    :header-rows: 1
+
+    * - 代码参数名称
+      - 时序图符号
+      - 说明
+    * - ``hsync_back_porch``
+      - Thbp
+      - 水平同步后沿
+    * - ``hsync_front_porch``
+      - Thfp
+      - 水平同步前沿
+    * - ``hsync_pulse_width``
+      - Thpw
+      - 水平同步脉冲宽度
+
+.. list-table:: 垂直时序参数对应关系
+    :widths: 30 30 40
+    :header-rows: 1
+
+    * - 代码参数名称
+      - 时序图符号
+      - 说明
+    * - ``vsync_back_porch``
+      - Tvbp
+      - 垂直同步后沿
+    * - ``vsync_front_porch``
+      - Tvfp
+      - 垂直同步前沿
+    * - ``vsync_pulse_width``
+      - Tvs
+      - 垂直同步脉冲宽度
+
 **对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中的 ``esp_lcd_new_rgb_panel()`` 函数创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备.
 
 关于 ``RGB`` 接口的参数配置和一些功能函数的说明，请参考 :ref:`RGB 参数配置及功能函数 <rgb_参数配置及功能函数>`

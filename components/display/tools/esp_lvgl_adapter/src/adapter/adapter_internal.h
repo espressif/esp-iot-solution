@@ -21,6 +21,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "esp_lv_adapter.h"
+#include "driver/gpio.h"
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS
 #include "esp_lv_fs.h"
@@ -32,9 +33,13 @@
 
 /* Forward declarations */
 struct esp_lv_adapter_display_bridge;
+struct esp_lv_adapter_te_sync_context;
 
 /* Maximum number of frame buffers supported */
-#define ESP_LV_ADAPTER_MAX_FRAME_BUFFERS  3
+#define ESP_LV_ADAPTER_MAX_FRAME_BUFFERS      3
+#define ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS     8
+#define ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS     8
+#define ESP_LV_ADAPTER_MAX_SLEEP_INPUTS       32
 
 /*****************************************************************************
  *                         Internal Data Structures                          *
@@ -54,9 +59,15 @@ typedef struct {
     void *frame_buffers[ESP_LV_ADAPTER_MAX_FRAME_BUFFERS]; /*!< Frame buffer pointers */
     size_t frame_buffer_size;               /*!< Size of each frame buffer in bytes */
     bool dummy_draw_enabled;                /*!< Dummy draw mode flag */
+    bool panel_detached;                    /*!< Panel detached flag for sleep management */
     esp_lv_adapter_dummy_draw_callbacks_t dummy_draw_cbs; /*!< Dummy draw callback collection */
     void *dummy_draw_user_ctx;              /*!< User context for dummy draw callbacks */
+    void (*rounder_cb)(lv_area_t *, void *); /*!< Area rounding callback */
+    void *rounder_user_data;                /*!< User data for rounder callback */
     lv_display_t *lv_disp;                   /*!< Associated LVGL display handle */
+    struct esp_lv_adapter_te_sync_context *te_ctx; /*!< TE sync runtime context */
+    gpio_int_type_t te_intr_type;           /*!< Computed TE interrupt type */
+    bool te_prefer_refresh_end;             /*!< Prefer TE falling edge (end of VBlank) */
 } esp_lv_adapter_display_runtime_config_t;
 
 /**
@@ -80,8 +91,13 @@ typedef struct esp_lv_adapter_display_node {
         int64_t window_start_time;          /*!< Time window start time (microseconds) */
         uint32_t current_fps;               /*!< Current FPS (cached value, integer to avoid FPU in ISR) */
         bool enabled;                       /*!< FPS statistics enabled flag */
+        TaskHandle_t monitor_task;          /*!< FPS monitor task handle */
     } fps_stats;
 #endif
+    struct {
+        lv_indev_t *associated_inputs[ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS];  /*!< Input devices for sleep management */
+        uint8_t input_count;               /*!< Input device count */
+    } sleep;
     struct esp_lv_adapter_display_node *next;     /*!< Next node in the linked list */
 } esp_lv_adapter_display_node_t;
 
@@ -147,16 +163,32 @@ typedef struct esp_lv_adapter_input_node {
  *
  * Global context that maintains the state of the LVGL adapter
  */
+/**
+ * @brief Sleep state for all displays
+ */
+typedef struct {
+    lv_display_t *all_displays[ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS];  /*!< All display handles to restore */
+    struct esp_lv_adapter_display_node *display_nodes[ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS]; /*!< Cached nodes for detach/rebind */
+    lv_indev_t *all_inputs[ESP_LV_ADAPTER_MAX_SLEEP_INPUTS];     /*!< All input devices to restore */
+    uint8_t input_count;             /*!< Input device count */
+    uint8_t display_count;           /*!< Display count before sleep */
+    bool is_sleeping;                /*!< Sleep state flag */
+} esp_lv_adapter_sleep_state_t;
+
 typedef struct {
     bool inited;                            /*!< Initialization flag */
     volatile bool task_exit_requested;      /*!< Flag to request LVGL task exit */
+    volatile bool paused;                   /*!< LVGL worker paused flag */
+    volatile bool pause_ack;                /*!< LVGL worker pause acknowledgment */
     SemaphoreHandle_t lvgl_mutex;           /*!< Recursive mutex for LVGL library calls */
     SemaphoreHandle_t dummy_draw_mutex;     /*!< Recursive mutex for dummy draw operations */
+    SemaphoreHandle_t pause_done_sem;       /*!< Semaphore to synchronize pause acknowledgement */
     TaskHandle_t task;                      /*!< LVGL task handle */
     void *tick_timer;                       /*!< LVGL tick timer handle (esp_timer_handle_t) */
     esp_lv_adapter_config_t config;       /*!< Adapter configuration */
     esp_lv_adapter_display_node_t *display_list;  /*!< Linked list of registered displays */
     esp_lv_adapter_input_node_t *input_list;      /*!< Linked list of registered input devices */
+    esp_lv_adapter_sleep_state_t sleep_state;     /*!< Sleep state tracking */
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER
     esp_lv_decoder_handle_t decoder_handle; /*!< Image decoder handle */
 #endif
@@ -208,3 +240,32 @@ esp_err_t esp_lv_adapter_register_input_device(lv_indev_t *indev,
  *      - ESP_ERR_NOT_FOUND: Input device not found in list
  */
 esp_err_t esp_lv_adapter_unregister_input_device(lv_indev_t *indev);
+
+/**
+ * @brief Internal function to detach LCD panel from display
+ *
+ * @param disp LVGL display handle
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ *      - ESP_ERR_INVALID_ARG: Invalid display pointer
+ *      - ESP_ERR_NOT_FOUND: Display not found
+ */
+esp_err_t esp_lv_adapter_detach_lcd_panel_internal(lv_display_t *disp);
+
+/**
+ * @brief Internal function to rebind LCD panel to display
+ *
+ * @param disp LVGL display handle
+ * @param panel New LCD panel handle
+ * @param panel_io New LCD panel IO handle (can be NULL)
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ *      - ESP_ERR_INVALID_ARG: Invalid parameters
+ *      - ESP_ERR_NOT_FOUND: Display not found
+ *      - ESP_FAIL: Failed to refetch framebuffers
+ */
+esp_err_t esp_lv_adapter_rebind_lcd_panel_internal(lv_display_t *disp,
+                                                   esp_lcd_panel_handle_t panel,
+                                                   esp_lcd_panel_io_handle_t panel_io);

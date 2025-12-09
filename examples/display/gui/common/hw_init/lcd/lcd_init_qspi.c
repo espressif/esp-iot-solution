@@ -20,6 +20,8 @@ static const char *TAG = "hw_lcd_init";
 #define HW_LCD_BASE_MIRROR_X                    (false)
 #define HW_LCD_BASE_MIRROR_Y                    (false)
 
+#define HW_LCD_SPI_HOST                         (SPI2_HOST)
+
 #define HW_LCD_DATA3                            (GPIO_NUM_12)
 #define HW_LCD_DATA2                            (GPIO_NUM_11)
 #define HW_LCD_DATA1                            (GPIO_NUM_13)
@@ -28,6 +30,7 @@ static const char *TAG = "hw_lcd_init";
 #define HW_LCD_CS                               (GPIO_NUM_14)
 #define HW_LCD_DC                               (GPIO_NUM_45)
 #define HW_LCD_RST                              (GPIO_NUM_47)
+#define HW_LCD_TE_GPIO                          (GPIO_NUM_8)
 #define HW_LCD_POWER_OFF                        (GPIO_NUM_9)
 
 #define HW_LCD_PIXEL_CLOCK_HZ                   (80 * 1000 * 1000)
@@ -39,6 +42,7 @@ static const char *TAG = "hw_lcd_init";
 
 static esp_lcd_panel_io_handle_t s_panel_io_handle;
 static esp_lcd_panel_handle_t s_panel_handle;
+static bool s_spi_bus_initialized;
 
 static const st77916_lcd_init_cmd_t st77916_qspi_init[] = {
     {0xF0, (uint8_t []){0x28}, 1, 0},
@@ -224,6 +228,7 @@ static const st77916_lcd_init_cmd_t st77916_qspi_init[] = {
     {0xF0, (uint8_t []){0x00}, 1, 0},
     {0x21, (uint8_t []){}, 0, 0},
     {0x11, (uint8_t []){}, 0, 0},
+    {0x35, (uint8_t []){}, 0, 0},
     {0x00, (uint8_t []){}, 0, 120},
 };
 
@@ -239,7 +244,8 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
         .max_transfer_sz = HW_LCD_MAX_TRANSFER_SZ,
         .flags = SPICOMMON_BUSFLAG_QUAD,
     };
-    ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    ESP_ERROR_CHECK(spi_bus_initialize(HW_LCD_SPI_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    s_spi_bus_initialized = true;
 
     ESP_LOGD(TAG, "Install panel IO");
     esp_lcd_panel_io_spi_config_t io_config = {
@@ -254,7 +260,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
             .quad_mode = 1,
         },
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_config, &s_panel_io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)HW_LCD_SPI_HOST, &io_config, &s_panel_io_handle));
 
     ESP_LOGD(TAG, "Power on LCD");
     gpio_config_t power_gpio_config = {
@@ -306,6 +312,50 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     gpio_set_level(HW_PIN_NUM_BK_LIGHT, HW_LCD_BK_LIGHT_ON_LEVEL);
 
     return ESP_OK;
+}
+
+esp_err_t hw_lcd_deinit(void)
+{
+    if (s_panel_handle) {
+        esp_lcd_panel_disp_on_off(s_panel_handle, false);
+        esp_lcd_panel_del(s_panel_handle);
+        s_panel_handle = NULL;
+    }
+
+    if (s_panel_io_handle) {
+        esp_lcd_panel_io_del(s_panel_io_handle);
+        s_panel_io_handle = NULL;
+    }
+
+    if (s_spi_bus_initialized) {
+        spi_bus_free(HW_LCD_SPI_HOST);
+        s_spi_bus_initialized = false;
+    }
+
+    gpio_set_level(HW_PIN_NUM_BK_LIGHT, !HW_LCD_BK_LIGHT_ON_LEVEL);
+    gpio_set_level(HW_LCD_POWER_OFF, 1);
+
+    return ESP_OK;
+}
+
+int hw_lcd_get_te_gpio(void)
+{
+    return HW_LCD_TE_GPIO;
+}
+
+uint32_t hw_lcd_get_bus_freq_hz(void)
+{
+    return HW_LCD_PIXEL_CLOCK_HZ;
+}
+
+uint8_t hw_lcd_get_bus_data_lines(void)
+{
+    return 4;
+}
+
+uint8_t hw_lcd_get_bits_per_pixel(void)
+{
+    return HW_LCD_BITS_PER_PIXEL;
 }
 
 #endif

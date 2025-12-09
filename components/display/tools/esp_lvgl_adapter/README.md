@@ -23,6 +23,7 @@ English | [中文](README_CN.md)
   - [FreeType Fonts](#freetype-fonts-optional)
   - [FPS Statistics and Dummy Draw](#fps-statistics-and-dummy-draw)
   - [Immediate Refresh](#immediate-refresh)
+  - [Sleep Management](#sleep-management)
 - [Configuration (Kconfig)](#configuration-kconfig)
 - [Limitations & Notes](#limitations--notes)
 - [Deinitialization](#deinitialization)
@@ -249,21 +250,23 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 - Double-buffer modes: **2** frame buffers
 - Single-buffer mode: **1** frame buffer
 
-#### Tearing Modes: Selector (RGB/MIPI DSI)
+#### Tearing Modes: Selector
 
 Choose the appropriate tearing mode based on your use case:
 
-| Tearing Mode | Use Case | Frame Buffers | Memory |
-|-------------|----------|---------------|--------|
-| `TRIPLE_PARTIAL` | 90°/270° rotation<br>High-res smooth UI | 3 | High |
-| `TRIPLE_FULL` | Full-screen/large-area updates<br>Plenty of RAM | 3 | High |
-| `DOUBLE_FULL` | Large-area updates<br>Tighter RAM | 2 | Medium |
-| `DOUBLE_DIRECT` | Small-area updates<br>Widget/UI deltas | 2 | Medium |
-| `NONE` | Static UI<br>Ultra-low RAM | 1 | Low |
+| Tearing Mode | Use Case | Frame Buffers | Memory | Supported Interfaces |
+|-------------|----------|---------------|--------|---------------------|
+| `TRIPLE_PARTIAL` | 90°/270° rotation<br>High-res smooth UI | 3 | High | RGB / MIPI DSI |
+| `TRIPLE_FULL` | Full-screen/large-area updates<br>Plenty of RAM | 3 | High | RGB / MIPI DSI |
+| `DOUBLE_FULL` | Large-area updates<br>Tighter RAM | 2 | Medium | RGB / MIPI DSI |
+| `DOUBLE_DIRECT` | Small-area updates<br>Widget/UI deltas | 2 | Medium | RGB / MIPI DSI |
+| `GPIO_TE` | SPI/I2C/I80/QSPI interfaces<br>Panel provides TE signal, syncs with vertical blanking to eliminate tearing | 1 | Low | SPI / I2C / I80 / QSPI |
+| `NONE` | Static UI<br>Ultra-low RAM | 1 | Low | All interfaces |
 
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` only; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `GPIO_TE` modes; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+- `GPIO_TE` mode requires panel to provide TE output signal and connect TE pin to ESP GPIO; use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` macro for configuration. The `examples/display/gui/lvgl_common_demo` automatically detects and uses TE synchronization if available
 
 #### Memory Estimation
 
@@ -500,6 +503,38 @@ Force a synchronous refresh:
 esp_lv_adapter_refresh_now(disp);
 ```
 
+### Sleep Management
+
+Safely power down displays while preserving UI state to reduce power consumption. The adapter provides a sleep mechanism that works seamlessly with ESP-IDF Light Sleep.
+
+**Basic Flow:**
+
+```c
+// Enter sleep
+esp_lv_adapter_sleep_prepare();      // Pauses worker, waits for flush
+esp_lcd_panel_del(panel);             // Delete hardware
+esp_light_sleep_start();              // Enter Light Sleep (CPU paused, peripherals maintained)
+
+// Recover from sleep (executed automatically after Light Sleep wake-up)
+panel = /* reinit LCD hardware */;
+esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // Rebinds panel, resumes worker
+```
+
+**Using with Light Sleep:**
+
+1. **Before entering sleep**: Call `esp_lv_adapter_sleep_prepare()` to pause the adapter task and wait for current flush to complete
+2. **Delete hardware**: Call `esp_lcd_panel_del()` to release display hardware resources
+3. **Enter Light Sleep**: Call `esp_light_sleep_start()`, which pauses the CPU while maintaining peripheral state
+4. **Recover after wake-up**: Reinitialize LCD hardware, then call `esp_lv_adapter_sleep_recover()` to resume adapter operation
+
+**Key Features:**
+- UI state preserved (no need to recreate widgets)
+- Touch inputs remain registered (power down separately if needed)
+- Multi-display: call `sleep_recover()` for each display
+- Seamless integration with Light Sleep for low-power standby
+
+**⚠️ Advanced:** Use `esp_lv_adapter_pause()`/`resume()` for custom flows, but do NOT mix with `sleep_prepare()`
+
 ---
 
 ## Configuration (Kconfig)
@@ -527,7 +562,7 @@ Configure via `idf.py menuconfig`:
 | Interface Type | Supported Tearing Modes |
 |---------------|------------------------|
 | RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
-| OTHER (SPI/I2C/I80/QSPI) | `NONE` only |
+| OTHER (SPI/I2C/I80/QSPI) | `NONE`, `GPIO_TE` |
 
 ### Rotation Limitations
 

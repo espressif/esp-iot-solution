@@ -23,6 +23,7 @@
 #include "esp_lv_adapter.h"
 #include "adapter_internal.h"
 #include "display_manager.h"
+#include "display_bridge.h"
 
 /* Tag for logging */
 static const char *TAG = "esp_lvgl:adapter";
@@ -43,6 +44,33 @@ static void lvgl_worker(void *arg);
  *                         Public API Implementation                         *
  *****************************************************************************/
 
+static void adapter_sleep_state_reset(esp_lv_adapter_sleep_state_t *state)
+{
+    if (state) {
+        memset(state, 0, sizeof(*state));
+    }
+}
+
+static void adapter_detach_display_node(esp_lv_adapter_display_node_t *node)
+{
+    if (!node) {
+        return;
+    }
+
+    node->cfg.panel_detached = true;
+    node->cfg.base.panel = NULL;
+    node->cfg.base.panel_io = NULL;
+    memset(node->cfg.frame_buffers, 0, sizeof(node->cfg.frame_buffers));
+    node->cfg.frame_buffer_count = 0;
+
+    if (node->bridge && node->bridge->update_panel) {
+        esp_err_t ret = node->bridge->update_panel(node->bridge, &node->cfg);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to update bridge during detach (%d)", ret);
+        }
+    }
+}
+
 esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
 {
     ESP_RETURN_ON_FALSE(!s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter already initialized");
@@ -52,6 +80,8 @@ esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
     memset(&s_ctx, 0, sizeof(s_ctx));
     s_ctx.config = *config;
     s_ctx.task_exit_requested = false;
+    s_ctx.paused = false;
+    s_ctx.pause_ack = false;
 
     /* Initialize LVGL library */
     lv_init();
@@ -76,11 +106,18 @@ esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
     s_ctx.dummy_draw_mutex = xSemaphoreCreateRecursiveMutex();
     ESP_GOTO_ON_FALSE(s_ctx.dummy_draw_mutex, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to create dummy draw mutex");
 
+    s_ctx.pause_done_sem = xSemaphoreCreateBinary();
+    ESP_GOTO_ON_FALSE(s_ctx.pause_done_sem, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to create pause semaphore");
+
     s_ctx.inited = true;
     ESP_LOGI(TAG, "LVGL adapter initialized successfully");
     return ESP_OK;
 
 cleanup:
+    if (s_ctx.pause_done_sem) {
+        vSemaphoreDelete(s_ctx.pause_done_sem);
+        s_ctx.pause_done_sem = NULL;
+    }
     if (s_ctx.dummy_draw_mutex) {
         vSemaphoreDelete(s_ctx.dummy_draw_mutex);
         s_ctx.dummy_draw_mutex = NULL;
@@ -148,6 +185,10 @@ esp_err_t esp_lv_adapter_start(void)
 
     ESP_GOTO_ON_FALSE(task_ret == pdPASS, ESP_ERR_NO_MEM, fail, TAG, "Failed to create LVGL task");
 
+    s_ctx.task_exit_requested = false;
+    s_ctx.paused = false;
+    s_ctx.pause_ack = false;
+
     ESP_LOGI(TAG, "LVGL task started successfully");
     return ESP_OK;
 
@@ -194,6 +235,315 @@ esp_err_t esp_lv_adapter_refresh_now(lv_display_t *disp)
     /* Release lock */
     esp_lv_adapter_unlock();
 
+    return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_pause(int32_t timeout_ms)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    if (s_ctx.paused) {
+        return ESP_OK;
+    }
+
+    s_ctx.pause_ack = false;
+    s_ctx.paused = true;
+
+    if (!s_ctx.task || !s_ctx.pause_done_sem) {
+        s_ctx.pause_ack = true;
+        return ESP_OK;
+    }
+
+    xSemaphoreTake(s_ctx.pause_done_sem, 0); /* clear pending */
+    TickType_t ticks = (timeout_ms < 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
+    if (xSemaphoreTake(s_ctx.pause_done_sem, ticks) != pdTRUE) {
+        s_ctx.paused = false;
+        return ESP_ERR_TIMEOUT;
+    }
+    return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_resume(void)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    if (!s_ctx.paused) {
+        return ESP_OK;
+    }
+
+    bool was_sleeping = s_ctx.sleep_state.is_sleeping;
+
+    s_ctx.paused = false;
+    s_ctx.pause_ack = false;
+
+    if (s_ctx.task) {
+        xTaskNotifyGive(s_ctx.task);
+    }
+
+    /* If recovering from sleep, trigger full refresh for displays that need it */
+    if (was_sleeping) {
+        /* Give worker task time to resume */
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+        /* Acquire LVGL lock before invalidating display areas */
+        esp_err_t lock_ret = esp_lv_adapter_lock(-1);
+        if (lock_ret == ESP_OK) {
+            esp_lv_adapter_display_node_t *node = s_ctx.display_list;
+            while (node) {
+                if (node->lv_disp && !node->cfg.panel_detached) {
+                    /* Only refresh if framebuffers were cleared (RGB/MIPI interfaces) */
+                    if (node->cfg.base.profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+                        display_manager_request_full_refresh(node->lv_disp);
+                    }
+                }
+                node = node->next;
+            }
+            esp_lv_adapter_unlock();
+        }
+
+        adapter_sleep_state_reset(&s_ctx.sleep_state);
+    }
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Prepare all displays for sleep with automatic recovery on failure
+ *
+ * This function:
+ * 1. Pauses LVGL worker
+ * 2. Waits for all pending flushes
+ * 3. Detaches LCD panels from displays
+ *
+ * If any step fails, automatically resumes the worker and cleans up.
+ *
+ * @return
+ *      - ESP_OK: Success, displays are ready for panel deletion
+ *      - ESP_ERR_INVALID_STATE: Not initialized or already sleeping
+ *      - ESP_ERR_TIMEOUT: Flush wait timeout
+ */
+esp_err_t esp_lv_adapter_sleep_prepare(void)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Not initialized");
+    /* Check if already sleeping */
+    if (s_ctx.sleep_state.is_sleeping) {
+        ESP_LOGW(TAG, "Already in sleep state");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Check if externally paused to prevent state pollution */
+    if (s_ctx.paused) {
+        ESP_LOGE(TAG, "Cannot sleep_prepare while externally paused. "
+                 "Call esp_lv_adapter_resume() first or use pause/resume directly.");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    uint8_t total_displays = 0;
+    for (esp_lv_adapter_display_node_t *node = s_ctx.display_list; node; node = node->next) {
+        total_displays++;
+        if (total_displays > ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS) {
+            ESP_LOGE(TAG, "Sleep prepare supports up to %d displays (found %u)",
+                     ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS, total_displays);
+            return ESP_ERR_INVALID_SIZE;
+        }
+    }
+
+    adapter_sleep_state_reset(&s_ctx.sleep_state);
+
+    esp_lv_adapter_display_node_t *node = s_ctx.display_list;
+    while (node && s_ctx.sleep_state.display_count < ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS) {
+        uint8_t idx = s_ctx.sleep_state.display_count++;
+        s_ctx.sleep_state.all_displays[idx] = node->lv_disp;
+        s_ctx.sleep_state.display_nodes[idx] = node;
+
+        for (uint8_t i = 0; i < node->sleep.input_count &&
+                s_ctx.sleep_state.input_count < ESP_LV_ADAPTER_MAX_SLEEP_INPUTS; i++) {
+            s_ctx.sleep_state.all_inputs[s_ctx.sleep_state.input_count++] = node->sleep.associated_inputs[i];
+        }
+
+        node = node->next;
+    }
+
+    ESP_LOGI(TAG, "Sleep prepare: %u displays, %u inputs",
+             s_ctx.sleep_state.display_count, s_ctx.sleep_state.input_count);
+
+    esp_err_t ret = esp_lv_adapter_pause(-1);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to pause adapter (%d)", ret);
+        adapter_sleep_state_reset(&s_ctx.sleep_state);
+        return ret;
+    }
+
+    for (int i = 0; i < s_ctx.sleep_state.display_count; i++) {
+        ret = display_manager_wait_flush_done(s_ctx.sleep_state.all_displays[i], 5000);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Display %d flush wait failed (%d), auto-recovering", i, ret);
+            esp_lv_adapter_resume();
+            adapter_sleep_state_reset(&s_ctx.sleep_state);
+            return ret;
+        }
+    }
+
+    for (int i = 0; i < s_ctx.sleep_state.display_count; i++) {
+        esp_lv_adapter_display_node_t *detach_node = s_ctx.sleep_state.display_nodes[i];
+        if (!detach_node || !detach_node->cfg.base.panel) {
+            ESP_LOGD(TAG, "Display %d already detached or not found", i);
+            continue;
+        }
+
+        adapter_detach_display_node(detach_node);
+    }
+
+    s_ctx.sleep_state.is_sleeping = true;
+
+    ESP_LOGI(TAG, "Sleep prepared successfully (%d displays detached)",
+             s_ctx.sleep_state.display_count);
+    ESP_LOGI(TAG, "Safe to call esp_lcd_panel_del() for each panel");
+    return ESP_OK;
+}
+
+/**
+ * @brief Recover a display from sleep state
+ *
+ * Rebinds a new LCD panel to an existing LVGL display after sleep.
+ * Automatically resumes LVGL worker when all displays are recovered.
+ *
+ * Supports partial recovery: Call esp_lv_adapter_sleep_recover() again for
+ * displays that become ready later. The adapter resumes automatically once
+ * every display is rebound.
+ *
+ * @param disp LVGL display handle
+ * @param panel New LCD panel handle
+ * @param panel_io New LCD panel IO handle (can be NULL for RGB/MIPI DSI)
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Not in sleep state
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_FAIL: Failed to rebind panel
+ */
+esp_err_t esp_lv_adapter_sleep_recover(lv_display_t *disp,
+                                       esp_lcd_panel_handle_t panel,
+                                       esp_lcd_panel_io_handle_t panel_io)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    ESP_RETURN_ON_FALSE(panel, ESP_ERR_INVALID_ARG, TAG, "Invalid panel handle");
+    ESP_RETURN_ON_FALSE(s_ctx.sleep_state.is_sleeping, ESP_ERR_INVALID_STATE, TAG, "Not in sleep state");
+
+    /* Rebind the display with new panel */
+    esp_err_t ret = esp_lv_adapter_rebind_lcd_panel_internal(disp, panel, panel_io);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to rebind panel (%d)", ret);
+        return ret;
+    }
+
+    /* Check if this display was in the sleep state list */
+    bool found = false;
+    int recovered_idx = -1;
+    for (int i = 0; i < s_ctx.sleep_state.display_count; i++) {
+        if (s_ctx.sleep_state.all_displays[i] == disp) {
+            found = true;
+            recovered_idx = i;
+            /* Mark as recovered by clearing the entry */
+            s_ctx.sleep_state.all_displays[i] = NULL;
+            s_ctx.sleep_state.display_nodes[i] = NULL;
+            break;
+        }
+    }
+
+    if (!found) {
+        ESP_LOGW(TAG, "Display not found in sleep state, but rebind succeeded");
+    } else {
+        ESP_LOGI(TAG, "Display %d/%d recovered successfully",
+                 recovered_idx + 1, s_ctx.sleep_state.display_count);
+    }
+
+    /* Check if all displays have been recovered */
+    int remaining = 0;
+    for (int i = 0; i < s_ctx.sleep_state.display_count; i++) {
+        if (s_ctx.sleep_state.all_displays[i] != NULL) {
+            remaining++;
+        }
+    }
+
+    if (remaining == 0) {
+        /* All displays recovered - exit sleep mode */
+        s_ctx.sleep_state.is_sleeping = false;
+        adapter_sleep_state_reset(&s_ctx.sleep_state);
+
+        ESP_LOGI(TAG, "All displays recovered, resuming LVGL worker");
+        esp_lv_adapter_resume();
+    } else {
+        ESP_LOGI(TAG, "Waiting for %d more display(s) to recover", remaining);
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_detach_lcd_panel_internal(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+
+    esp_lv_adapter_display_node_t *node = display_manager_get_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+    ESP_RETURN_ON_FALSE(node->cfg.base.panel, ESP_ERR_INVALID_STATE, TAG, "Panel already detached");
+
+    /* Step 1: Pause LVGL worker to prevent new render cycles */
+    esp_err_t ret = esp_lv_adapter_pause(-1);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to pause adapter");
+
+    /* Step 2: Wait for any ongoing flush operations to complete */
+    ret = display_manager_wait_flush_done(disp, 5000);  /* 5 second timeout */
+    if (ret != ESP_OK) {
+        /* Try to resume on error */
+        esp_lv_adapter_resume();
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to wait for flush completion");
+    }
+
+    /* Step 3-5: Mark runtime state as detached */
+    adapter_detach_display_node(node);
+
+    ESP_LOGI(TAG, "LCD panel detached successfully, LVGL display preserved");
+    ESP_LOGI(TAG, "It is now safe to call esp_lcd_panel_del()");
+    return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_rebind_lcd_panel_internal(lv_display_t *disp,
+                                                   esp_lcd_panel_handle_t panel,
+                                                   esp_lcd_panel_io_handle_t panel_io)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    ESP_RETURN_ON_FALSE(panel, ESP_ERR_INVALID_ARG, TAG, "Invalid panel handle");
+
+    esp_lv_adapter_display_node_t *node = display_manager_get_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+    ESP_RETURN_ON_FALSE(node->cfg.panel_detached, ESP_ERR_INVALID_STATE, TAG, "Panel not detached");
+
+    /* Step 1: Update panel handles in configuration */
+    node->cfg.base.panel = panel;
+    node->cfg.base.panel_io = panel_io;
+
+    /* Step 2: Refetch framebuffers from new panel and update all references */
+    esp_err_t ret = display_manager_refetch_framebuffers(disp);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to refetch framebuffers from new panel");
+
+    ret = display_manager_rebind_draw_buffers(disp);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to rebind LVGL draw buffers");
+
+    /* Step 3: Clear detached flag */
+    node->cfg.panel_detached = false;
+
+    /* Step 4: Acquire lock and trigger full screen refresh */
+    ret = esp_lv_adapter_lock(-1);
+    if (ret == ESP_OK) {
+        display_manager_request_full_refresh(disp);
+        esp_lv_adapter_unlock();
+    } else {
+        ESP_LOGW(TAG, "Failed to acquire LVGL lock for full refresh");
+    }
+
+    ESP_LOGI(TAG, "LCD panel rebound successfully");
+    ESP_LOGI(TAG, "Call esp_lv_adapter_resume() to restart rendering");
     return ESP_OK;
 }
 
@@ -310,6 +660,15 @@ esp_err_t esp_lv_adapter_unregister_display(lv_display_t *disp)
     return ret;
 }
 
+esp_err_t esp_lv_adapter_set_area_rounder_cb(lv_display_t *disp,
+                                             void (*rounder_cb)(lv_area_t *area, void *user_data),
+                                             void *user_data)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    return display_manager_set_area_rounder_cb(disp, rounder_cb, user_data);
+}
+
 esp_err_t esp_lv_adapter_deinit(void)
 {
     /* Check if already deinitialized */
@@ -321,6 +680,9 @@ esp_err_t esp_lv_adapter_deinit(void)
     if (s_ctx.task) {
         ESP_LOGI(TAG, "Requesting LVGL task to exit...");
         s_ctx.task_exit_requested = true;
+        s_ctx.paused = false;
+        s_ctx.pause_ack = false;
+        xTaskNotifyGive(s_ctx.task);
 
         /* Wait for task to exit (max 1 second) */
         uint32_t wait_count = 0;
@@ -479,6 +841,10 @@ esp_err_t esp_lv_adapter_deinit(void)
         vSemaphoreDelete(s_ctx.lvgl_mutex);
         s_ctx.lvgl_mutex = NULL;
     }
+    if (s_ctx.pause_done_sem) {
+        vSemaphoreDelete(s_ctx.pause_done_sem);
+        s_ctx.pause_done_sem = NULL;
+    }
 
     /* Clear context */
     memset(&s_ctx, 0, sizeof(s_ctx));
@@ -552,9 +918,18 @@ static void lvgl_worker(void *arg)
 {
     uint32_t task_delay_ms = s_ctx.config.task_max_delay_ms;
 
-    ESP_LOGI(TAG, "LVGL worker task started");
-
     while (!s_ctx.task_exit_requested) {
+        if (s_ctx.paused) {
+            if (!s_ctx.pause_ack) {
+                s_ctx.pause_ack = true;
+                if (s_ctx.pause_done_sem) {
+                    xSemaphoreGive(s_ctx.pause_done_sem);
+                }
+            }
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            continue;
+        }
+
         /* Process LVGL timers */
         if (esp_lv_adapter_lock(-1) == ESP_OK) {
             task_delay_ms = lv_timer_handler();
@@ -571,8 +946,8 @@ static void lvgl_worker(void *arg)
         vTaskDelay(pdMS_TO_TICKS(task_delay_ms));
     }
 
-    ESP_LOGI(TAG, "LVGL worker task exiting gracefully");
-
+    s_ctx.paused = false;
+    s_ctx.pause_ack = false;
     /* Task deletes itself */
     s_ctx.task = NULL;
     vTaskDelete(NULL);
