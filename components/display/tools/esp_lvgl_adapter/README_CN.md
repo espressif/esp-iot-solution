@@ -23,6 +23,7 @@
   - [FreeType 字体](#freetype-字体可选)
   - [FPS 与 Dummy Draw](#fps-与-dummy-draw)
   - [立即刷新](#立即刷新)
+  - [区域对齐（Area Rounding）](#区域对齐area-rounding)
   - [睡眠管理](#睡眠管理)
 - [配置项 (Kconfig)](#配置项kconfig)
 - [限制与注意事项](#限制与注意事项)
@@ -256,13 +257,13 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 | `TRIPLE_FULL` | 整屏/大区域刷新<br>内存充足 | 3 | 高 | RGB / MIPI DSI |
 | `DOUBLE_FULL` | 大区域刷新<br>内存较紧 | 2 | 中 | RGB / MIPI DSI |
 | `DOUBLE_DIRECT` | 小区域更新<br>控件/局部变化 | 2 | 中 | RGB / MIPI DSI |
-| `GPIO_TE` | SPI/I2C/I80/QSPI 接口<br>面板提供 TE 信号，通过垂直消隐同步消除撕裂 | 1 | 低 | SPI / I2C / I80 / QSPI |
+| `TE_SYNC` | SPI/I2C/I80/QSPI 接口<br>面板提供 TE 信号，通过垂直消隐同步消除撕裂 | 1 | 低 | SPI / I2C / I80 / QSPI |
 | `NONE` | 静态 UI<br>超低内存 | 1 | 低 | 所有接口 |
 
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-- OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `GPIO_TE` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
-- `GPIO_TE` 模式要求面板提供 TE 输出信号，并将 TE 引脚连接到 ESP GPIO；使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` 宏进行配置。`examples/display/gui/lvgl_common_demo` 会自动检测并在可用时使用 TE 同步
+- OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
+- `TE_SYNC` 模式要求面板提供 TE 输出信号，并将 TE 引脚连接到 ESP GPIO；使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` 宏进行配置。`examples/display/gui/lvgl_common_demo` 会自动检测并在可用时使用 TE 同步
 
 #### 内存估算
 
@@ -499,6 +500,47 @@ ESP_ERROR_CHECK(esp_lv_adapter_set_dummy_draw(disp, false));
 esp_lv_adapter_refresh_now(disp);
 ```
 
+### 区域对齐（Area Rounding）
+
+某些显示面板要求绘制区域的宽度和高度必须是特定值的倍数（例如 8 的倍数）。适配器提供了区域对齐回调功能，可以在刷新到硬件之前对绘制区域进行舍入对齐。
+
+**使用场景：**
+- 面板硬件要求绘制区域必须对齐到特定边界（如 8 像素对齐）
+- 某些 DMA 传输需要对齐的缓冲区大小
+- 优化硬件传输效率
+
+**示例代码：**
+
+```c
+// 定义对齐回调函数（将区域对齐到 8 的倍数）
+void area_rounder_cb(lv_area_t *area, void *user_data)
+{
+    // 获取对齐值（例如 8）
+    uint32_t align = *(uint32_t *)user_data;
+    
+    // 向下对齐 x1 和 y1
+    area->x1 = (area->x1 / align) * align;
+    area->y1 = (area->y1 / align) * align;
+    
+    // 向上对齐 x2 和 y2
+    area->x2 = ((area->x2 + align - 1) / align) * align;
+    area->y2 = ((area->y2 + align - 1) / align) * align;
+}
+
+// 注册对齐回调
+uint32_t align_value = 8;  // 对齐到 8 像素
+ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, area_rounder_cb, &align_value));
+
+// 禁用对齐回调（传入 NULL）
+ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, NULL, NULL));
+```
+
+**注意事项：**
+- 回调函数会在每次刷新区域之前被调用
+- 回调函数应该修改传入的 `lv_area_t` 结构体以调整区域边界
+- 传入 `NULL` 作为回调函数可以禁用区域对齐功能
+- `user_data` 参数可以用于传递对齐值或其他配置信息
+
 ### 睡眠管理
 
 在保持 UI 状态的同时安全地关闭显示以降低功耗。适配器提供了与 ESP-IDF Light Sleep 配合使用的睡眠机制。
@@ -558,7 +600,7 @@ esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // 重新绑定面板，�
 | 接口类型 | 支持的防撕裂模式 |
 |---------|----------------|
 | RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
-| OTHER (SPI/I2C/I80/QSPI) | `NONE`、`GPIO_TE` |
+| OTHER (SPI/I2C/I80/QSPI) | `NONE`、`TE_SYNC` |
 
 ### 旋转限制
 

@@ -212,9 +212,7 @@ TEST_CASE("test st7123 to read touch point with interruption", "[st7123][interru
 #endif
     test_touch_panel_init(&tp_io_handle, &tp_handle, touch_callback);
 
-    bool tp_pressed = false;
-    uint16_t tp_x = 0;
-    uint16_t tp_y = 0;
+    esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
     for (int i = 0; i < TEST_READ_TIME_MS / TEST_READ_PERIOD_MS; i++) {
         /* Read data from touch controller into memory */
@@ -223,9 +221,10 @@ TEST_CASE("test st7123 to read touch point with interruption", "[st7123][interru
         }
 
         /* Read data from touch controller */
-        tp_pressed = esp_lcd_touch_get_coordinates(tp_handle, &tp_x, &tp_y, NULL, &tp_cnt, 1);
-        if (tp_pressed && (tp_cnt > 0)) {
-            ESP_LOGI(TAG, "Touch position: %d,%d", tp_x, tp_y);
+        tp_cnt = 0;
+        ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp_handle, tp_data, &tp_cnt, 1));
+        if (tp_cnt > 0) {
+            ESP_LOGI(TAG, "Touch position: %" PRIu16 ",%" PRIu16, tp_data[0].x, tp_data[0].y);
         }
 
         vTaskDelay(pdMS_TO_TICKS(TEST_READ_PERIOD_MS));
@@ -269,18 +268,17 @@ TEST_CASE("test st7123 to read touch point with polling", "[st7123][poll]")
 #endif
     test_touch_panel_init(&tp_io_handle, &tp_handle, NULL);
 
-    bool tp_pressed = false;
-    uint16_t tp_x = 0;
-    uint16_t tp_y = 0;
+    esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
     for (int i = 0; i < TEST_READ_TIME_MS / TEST_READ_PERIOD_MS; i++) {
         /* Read data from touch controller into memory */
         TEST_ESP_OK(esp_lcd_touch_read_data(tp_handle));
 
         /* Read data from touch controller */
-        tp_pressed = esp_lcd_touch_get_coordinates(tp_handle, &tp_x, &tp_y, NULL, &tp_cnt, 1);
-        if (tp_pressed && (tp_cnt > 0)) {
-            ESP_LOGI(TAG, "Touch position: %d,%d", tp_x, tp_y);
+        tp_cnt = 0;
+        ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp_handle, tp_data, &tp_cnt, 1));
+        if (tp_cnt > 0) {
+            ESP_LOGI(TAG, "Touch position: %" PRIu16 ",%" PRIu16, tp_data[0].x, tp_data[0].y);
         }
 
         vTaskDelay(pdMS_TO_TICKS(TEST_READ_PERIOD_MS));

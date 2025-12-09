@@ -23,6 +23,7 @@ English | [中文](README_CN.md)
   - [FreeType Fonts](#freetype-fonts-optional)
   - [FPS Statistics and Dummy Draw](#fps-statistics-and-dummy-draw)
   - [Immediate Refresh](#immediate-refresh)
+  - [Area Rounding](#area-rounding)
   - [Sleep Management](#sleep-management)
 - [Configuration (Kconfig)](#configuration-kconfig)
 - [Limitations & Notes](#limitations--notes)
@@ -260,13 +261,13 @@ Choose the appropriate tearing mode based on your use case:
 | `TRIPLE_FULL` | Full-screen/large-area updates<br>Plenty of RAM | 3 | High | RGB / MIPI DSI |
 | `DOUBLE_FULL` | Large-area updates<br>Tighter RAM | 2 | Medium | RGB / MIPI DSI |
 | `DOUBLE_DIRECT` | Small-area updates<br>Widget/UI deltas | 2 | Medium | RGB / MIPI DSI |
-| `GPIO_TE` | SPI/I2C/I80/QSPI interfaces<br>Panel provides TE signal, syncs with vertical blanking to eliminate tearing | 1 | Low | SPI / I2C / I80 / QSPI |
+| `TE_SYNC` | SPI/I2C/I80/QSPI interfaces<br>Panel provides TE signal, syncs with vertical blanking to eliminate tearing | 1 | Low | SPI / I2C / I80 / QSPI |
 | `NONE` | Static UI<br>Ultra-low RAM | 1 | Low | All interfaces |
 
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `GPIO_TE` modes; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
-- `GPIO_TE` mode requires panel to provide TE output signal and connect TE pin to ESP GPIO; use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` macro for configuration. The `examples/display/gui/lvgl_common_demo` automatically detects and uses TE synchronization if available
+- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+- `TE_SYNC` mode requires panel to provide TE output signal and connect TE pin to ESP GPIO; use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` macro for configuration. The `examples/display/gui/lvgl_common_demo` automatically detects and uses TE synchronization if available
 
 #### Memory Estimation
 
@@ -503,6 +504,47 @@ Force a synchronous refresh:
 esp_lv_adapter_refresh_now(disp);
 ```
 
+### Area Rounding
+
+Some display panels require that drawing areas must be aligned to specific boundaries (e.g., width/height must be multiples of 8). The adapter provides an area rounding callback feature that allows rounding the drawing area before flushing to hardware.
+
+**Use Cases:**
+- Panel hardware requires drawing areas to be aligned to specific boundaries (e.g., 8-pixel alignment)
+- Some DMA transfers require aligned buffer sizes
+- Optimize hardware transfer efficiency
+
+**Example Code:**
+
+```c
+// Define rounding callback function (align area to multiples of 8)
+void area_rounder_cb(lv_area_t *area, void *user_data)
+{
+    // Get alignment value (e.g., 8)
+    uint32_t align = *(uint32_t *)user_data;
+    
+    // Round down x1 and y1
+    area->x1 = (area->x1 / align) * align;
+    area->y1 = (area->y1 / align) * align;
+    
+    // Round up x2 and y2
+    area->x2 = ((area->x2 + align - 1) / align) * align;
+    area->y2 = ((area->y2 + align - 1) / align) * align;
+}
+
+// Register rounding callback
+uint32_t align_value = 8;  // Align to 8 pixels
+ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, area_rounder_cb, &align_value));
+
+// Disable rounding callback (pass NULL)
+ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, NULL, NULL));
+```
+
+**Notes:**
+- The callback function is called before each area flush
+- The callback function should modify the passed `lv_area_t` structure to adjust area boundaries
+- Pass `NULL` as the callback function to disable area rounding
+- The `user_data` parameter can be used to pass alignment values or other configuration information
+
 ### Sleep Management
 
 Safely power down displays while preserving UI state to reduce power consumption. The adapter provides a sleep mechanism that works seamlessly with ESP-IDF Light Sleep.
@@ -562,7 +604,7 @@ Configure via `idf.py menuconfig`:
 | Interface Type | Supported Tearing Modes |
 |---------------|------------------------|
 | RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
-| OTHER (SPI/I2C/I80/QSPI) | `NONE`, `GPIO_TE` |
+| OTHER (SPI/I2C/I80/QSPI) | `NONE`, `TE_SYNC` |
 
 ### Rotation Limitations
 

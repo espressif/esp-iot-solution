@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.1 - 2025-12-10
+
+### Changes:
+
+* Update docs and tests to use esp_lcd_touch_get_data instead of the deprecated esp_lcd_touch_get_coordinates
+
 ## v2.0.0 - 2025-10-29
 
 ### Enhancements:

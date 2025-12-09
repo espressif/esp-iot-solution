@@ -1,10 +1,10 @@
-version: "1.0.0"
+version: "2.0.0"
 description: ESP LCD Touch SPD2010 - touch controller SPD2010
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd_touch/esp_lcd_touch_spd2010
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4.2"
+  idf: ">=5.3"
   cmake_utilities: "0.*"
   esp_lcd_touch:
     version: "^1"
