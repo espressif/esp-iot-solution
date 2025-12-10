@@ -1352,8 +1352,7 @@ build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
     - .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps
 

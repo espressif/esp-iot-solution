@@ -111,19 +111,18 @@ static void lvgl_port_touchpad_read(lv_indev_t *indev_drv, lv_indev_data_t *data
     assert(touch_ctx);
     assert(touch_ctx->handle);
 
-    uint16_t touchpad_x[1] = {0};
-    uint16_t touchpad_y[1] = {0};
+    esp_lcd_touch_point_data_t touch_points[1] = {0};
     uint8_t touchpad_cnt = 0;
 
     /* Read data from touch controller into memory */
     esp_lcd_touch_read_data(touch_ctx->handle);
 
     /* Read data from touch controller */
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(touch_ctx->handle, touchpad_x, touchpad_y, NULL, NULL, &touchpad_cnt, 1);
+    esp_err_t ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_points, &touchpad_cnt, 1);
 
-    if (touchpad_pressed && touchpad_cnt > 0) {
-        data->point.x = touchpad_x[0];
-        data->point.y = touchpad_y[0];
+    if (ret == ESP_OK && touchpad_cnt > 0) {
+        data->point.x = touch_points[0].x;
+        data->point.y = touch_points[0].y;
         data->state = LV_INDEV_STATE_PRESSED;
     } else {
         data->state = LV_INDEV_STATE_RELEASED;

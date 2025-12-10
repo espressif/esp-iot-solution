@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.1.1"
 description: ESP LCD Touch ILI2118 - touch controller ILI2118
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd_touch/esp_lcd_touch_ili2118
 repository: https://github.com/espressif/esp-iot-solution.git

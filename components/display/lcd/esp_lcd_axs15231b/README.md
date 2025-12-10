@@ -201,6 +201,12 @@ Get one X and Y coordinates with strength of touch.
     uint16_t touch_strength[1];
     uint8_t touch_cnt = 0;
 
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 1);
+    esp_lcd_touch_point_data_t points[1] = {0};
+    esp_lcd_touch_get_data(tp, points, &touch_cnt, 1);
+    if (touch_cnt > 0) {
+        touch_x[0] = points[0].x;
+        touch_y[0] = points[0].y;
+        touch_strength[0] = points[0].strength;
+    }
 ```
 There is an example in ESP-IDF with this LCD controller. Please follow this [link](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch).

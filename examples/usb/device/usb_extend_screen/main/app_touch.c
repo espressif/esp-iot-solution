@@ -17,30 +17,27 @@ static esp_lcd_touch_handle_t tp = NULL;
 
 static void app_touch_task(void *arg)
 {
-    uint16_t x[5];
-    uint16_t y[5];
-    uint16_t strength[5];
-    uint8_t track_id[5];
     uint8_t touchpad_cnt = 0;
     bool send_press = false;
     while (1) {
         esp_lcd_touch_read_data(tp);
-        bool touchpad_pressed = esp_lcd_touch_get_coordinates(tp, x, y, strength, track_id, &touchpad_cnt, CONFIG_ESP_LCD_TOUCH_MAX_POINTS);
+        esp_lcd_touch_point_data_t touch_points[CONFIG_ESP_LCD_TOUCH_MAX_POINTS] = {0};
+        ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp, touch_points, &touchpad_cnt, CONFIG_ESP_LCD_TOUCH_MAX_POINTS));
         hid_report_t report = {0};
-        if (touchpad_pressed && touchpad_cnt > 0) {
+        if (touchpad_cnt > 0) {
             report.report_id = REPORT_ID_TOUCH;
             int i = 0;
             for (i = 0; i < touchpad_cnt; i++) {
-                report.touch_report.data[i].index = track_id[i];
+                report.touch_report.data[i].index = touch_points[i].track_id;
                 report.touch_report.data[i].press_down = 1;
-                report.touch_report.data[i].x = x[i];
-                report.touch_report.data[i].y = y[i];
-                report.touch_report.data[i].width = strength[i];
-                report.touch_report.data[i].height = strength[i];
+                report.touch_report.data[i].x = touch_points[i].x;
+                report.touch_report.data[i].y = touch_points[i].y;
+                report.touch_report.data[i].width = touch_points[i].strength;
+                report.touch_report.data[i].height = touch_points[i].strength;
                 /*!< >= LOG_LEVEL_DEBUG */
 #if CONFIG_LOG_DEFAULT_LEVEL >= 4
                 /*!< For debug */
-                printf("(%d: %d, %d. %d) ", track_id[i], x[i], y[i], strength[i]);
+                printf("(%d: %d, %d. %d) ", touch_points[i].track_id, touch_points[i].x, touch_points[i].y, touch_points[i].strength);
 #endif
             }
 #if CONFIG_LOG_DEFAULT_LEVEL >= 4
