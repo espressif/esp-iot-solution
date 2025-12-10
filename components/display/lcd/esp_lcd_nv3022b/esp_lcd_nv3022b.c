@@ -304,7 +304,7 @@ static esp_err_t panel_nv3022b_draw_bitmap(esp_lcd_panel_t *panel, int x_start, 
     }, 4);
     // transfer frame buffer
     size_t len = (x_end - x_start) * (y_end - y_start) * nv3022b->fb_bits_per_pixel / 8;
-    esp_lcd_panel_io_tx_color(io, LCD_CMD_RAMWR, color_data, len);
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_color(io, LCD_CMD_RAMWR, color_data, len), TAG, "send color data failed");
 
     return ESP_OK;
 }
