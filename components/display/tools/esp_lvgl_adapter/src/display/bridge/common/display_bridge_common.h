@@ -265,10 +265,11 @@ void display_cache_msync_framebuffer(void *buffer,
  * @param panel LCD panel handle
  * @param runtime Runtime display information
  * @param frame_buffer Framebuffer to send
+ * @return esp_err_t ESP_OK on success, error code otherwise
  */
-void display_lcd_blit_full(esp_lcd_panel_handle_t panel,
-                           const esp_lv_adapter_display_runtime_info_t *runtime,
-                           void *frame_buffer);
+esp_err_t display_lcd_blit_full(esp_lcd_panel_handle_t panel,
+                                const esp_lv_adapter_display_runtime_info_t *runtime,
+                                void *frame_buffer);
 
 /**
  * @brief Send framebuffer region to LCD panel
@@ -279,13 +280,14 @@ void display_lcd_blit_full(esp_lcd_panel_handle_t panel,
  * @param x_end Ending X coordinate (exclusive)
  * @param y_end Ending Y coordinate (exclusive)
  * @param frame_buffer Framebuffer data for the specified region
+ * @return esp_err_t ESP_OK on success, error code otherwise
  */
-void display_lcd_blit_area(esp_lcd_panel_handle_t panel,
-                           int x_start,
-                           int y_start,
-                           int x_end,
-                           int y_end,
-                           const void *frame_buffer);
+esp_err_t display_lcd_blit_area(esp_lcd_panel_handle_t panel,
+                                int x_start,
+                                int y_start,
+                                int x_end,
+                                int y_end,
+                                const void *frame_buffer);
 
 /**
  * @brief Acquire next available frame buffer for double/triple buffering

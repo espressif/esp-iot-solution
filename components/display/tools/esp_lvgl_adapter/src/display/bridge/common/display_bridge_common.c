@@ -326,42 +326,42 @@ void display_cache_msync_framebuffer(void *buffer,
 /**
  * @brief Send full framebuffer to LCD panel
  */
-void display_lcd_blit_full(esp_lcd_panel_handle_t panel,
-                           const esp_lv_adapter_display_runtime_info_t *runtime,
-                           void *frame_buffer)
+esp_err_t display_lcd_blit_full(esp_lcd_panel_handle_t panel,
+                                const esp_lv_adapter_display_runtime_info_t *runtime,
+                                void *frame_buffer)
 {
     if (!panel || !runtime || !frame_buffer) {
-        return;
+        return ESP_ERR_INVALID_ARG;
     }
 
-    esp_lcd_panel_draw_bitmap(panel,
-                              0,
-                              0,
-                              runtime->hor_res,
-                              runtime->ver_res,
-                              frame_buffer);
+    return esp_lcd_panel_draw_bitmap(panel,
+                                     0,
+                                     0,
+                                     runtime->hor_res,
+                                     runtime->ver_res,
+                                     frame_buffer);
 }
 
 /**
  * @brief Send framebuffer region to LCD panel
  */
-void display_lcd_blit_area(esp_lcd_panel_handle_t panel,
-                           int x_start,
-                           int y_start,
-                           int x_end,
-                           int y_end,
-                           const void *frame_buffer)
+esp_err_t display_lcd_blit_area(esp_lcd_panel_handle_t panel,
+                                int x_start,
+                                int y_start,
+                                int x_end,
+                                int y_end,
+                                const void *frame_buffer)
 {
     if (!panel || !frame_buffer) {
-        return;
+        return ESP_ERR_INVALID_ARG;
     }
 
-    esp_lcd_panel_draw_bitmap(panel,
-                              x_start,
-                              y_start,
-                              x_end,
-                              y_end,
-                              frame_buffer);
+    return esp_lcd_panel_draw_bitmap(panel,
+                                     x_start,
+                                     y_start,
+                                     x_end,
+                                     y_end,
+                                     frame_buffer);
 }
 
 /**

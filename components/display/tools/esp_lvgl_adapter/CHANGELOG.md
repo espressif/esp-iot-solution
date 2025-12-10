@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.1 (2025-12-10)
+
+* Improved the screen update failure handling mechanism
+
 ## v0.1.0 (2025-11-17)
 
 * Add a sleep mechanism compatible with Light Sleep

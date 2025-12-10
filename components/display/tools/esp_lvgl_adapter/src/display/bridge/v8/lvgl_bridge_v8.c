@@ -617,7 +617,13 @@ static esp_err_t display_bridge_v8_dummy_draw_blit(esp_lv_adapter_display_bridge
         impl->dummy_draw_wait_mask = 0;
     }
 
-    display_lcd_blit_area(impl->panel, x_start, y_start, x_end, y_end, frame_buffer);
+    esp_err_t ret = display_lcd_blit_area(impl->panel, x_start, y_start, x_end, y_end, frame_buffer);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit area failed: %s", esp_err_to_name(ret));
+        impl->dummy_draw_wait_task = NULL;
+        impl->dummy_draw_wait_mask = 0;
+        return ret;
+    }
 
     if (wait_mask == 0) {
         return ESP_OK;
@@ -945,7 +951,12 @@ static void display_bridge_v8_flush_default(esp_lv_adapter_display_bridge_v8_t *
     const int offsety1 = area->y1;
     const int offsety2 = area->y2;
 
-    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+    esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
+        /* Callback won't be triggered on failure, must notify LVGL immediately */
+        display_manager_flush_ready(drv);
+    }
 }
 
 /**
@@ -984,7 +995,13 @@ static void display_bridge_v8_flush_gpio_te(esp_lv_adapter_display_bridge_v8_t *
         esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
     }
 
-    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+    esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
+        /* Don't wait for callback that will never come */
+        display_manager_flush_ready(drv);
+        return;
+    }
 
     /* Wait for transmission to complete */
     ulTaskNotifyValueClear(NULL, ULONG_MAX);
@@ -1004,7 +1021,10 @@ static void display_bridge_v8_flush_double_full(esp_lv_adapter_display_bridge_v8
     (void)area;
     esp_lcd_panel_handle_t panel_handle = impl->panel;
 
-    display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+    esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+    }
 
     ulTaskNotifyValueClear(NULL, ULONG_MAX);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -1033,7 +1053,10 @@ static void display_bridge_v8_flush_triple_full(esp_lv_adapter_display_bridge_v8
     }
     impl->rgb_flush_next_buf = color_map;
 
-    display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+    esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+    }
 
     impl->rgb_next_buf = color_map;
 
@@ -1052,7 +1075,10 @@ static void display_bridge_v8_flush_double_direct(esp_lv_adapter_display_bridge_
     esp_lcd_panel_handle_t panel_handle = impl->panel;
 
     if (lv_disp_flush_is_last(drv)) {
-        display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+        esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        }
 
         ulTaskNotifyValueClear(NULL, ULONG_MAX);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -1168,12 +1194,15 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
 
         copy_unrendered_area_from_front_to_back(disp_refr, impl);
 
-        display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
-
-        void *tmp = impl->front_fb;
-        impl->front_fb = impl->back_fb;
-        impl->back_fb  = impl->spare_fb;
-        impl->spare_fb = tmp;
+        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        } else {
+            void *tmp = impl->front_fb;
+            impl->front_fb = impl->back_fb;
+            impl->back_fb  = impl->spare_fb;
+            impl->spare_fb = tmp;
+        }
     }
 
     display_manager_flush_ready(drv);
@@ -1195,6 +1224,7 @@ static void display_bridge_v8_flush_direct_rotate(esp_lv_adapter_display_bridge_
     void *next_fb = NULL;
     esp_lv_adapter_display_flush_probe_t probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
     lv_disp_t *disp = _lv_refr_get_disp_refreshing();
+    esp_err_t ret;
 
     if (lv_disp_flush_is_last(drv)) {
         if (drv->full_refresh) {
@@ -1207,7 +1237,10 @@ static void display_bridge_v8_flush_direct_rotate(esp_lv_adapter_display_bridge_
                                offsetx1, offsety1, offsetx2, offsety2,
                                LV_HOR_RES, LV_VER_RES, bridge_rotation(impl), color_bytes);
 
-            display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+            ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+            if (ret != ESP_OK) {
+                ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+            }
 
             ulTaskNotifyValueClear(NULL, ULONG_MAX);
             ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -1232,7 +1265,10 @@ static void display_bridge_v8_flush_direct_rotate(esp_lv_adapter_display_bridge_
                 flush_dirty_save(&impl->dirty);
                 flush_dirty_copy(impl, next_fb, color_map, &impl->dirty);
 
-                display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+                ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+                if (ret != ESP_OK) {
+                    ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+                }
 
                 ulTaskNotifyValueClear(NULL, ULONG_MAX);
                 ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -1271,7 +1307,10 @@ static void display_bridge_v8_flush_full_rotate(esp_lv_adapter_display_bridge_v8
                        offsetx1, offsety1, offsetx2, offsety2,
                        LV_HOR_RES, LV_VER_RES, bridge_rotation(impl), color_bytes);
 
-    display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+    esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+    }
 
     display_manager_flush_ready(drv);
 }
@@ -1317,12 +1356,15 @@ static void display_bridge_v8_flush_partial_rotate(esp_lv_adapter_display_bridge
 
         copy_unrendered_area_from_front_to_back(disp_refr, impl);
 
-        display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
-
-        void *tmp = impl->front_fb;
-        impl->front_fb = impl->back_fb;
-        impl->back_fb  = impl->spare_fb;
-        impl->spare_fb = tmp;
+        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        } else {
+            void *tmp = impl->front_fb;
+            impl->front_fb = impl->back_fb;
+            impl->back_fb  = impl->spare_fb;
+            impl->spare_fb = tmp;
+        }
     }
 
     display_manager_flush_ready(drv);

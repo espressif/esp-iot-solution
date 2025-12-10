@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.2 - 2025-12-10
+
+### Bugfix:
+
+* Fix draw_bitmap not propagating tx_color errors, preventing system deadlock on SPI transmission failures
+
 ## v2.0.1 - 2025-11-12
 
 * Updated MIPI-DSI structs for IDF6
