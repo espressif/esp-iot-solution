@@ -518,9 +518,6 @@
 .patterns-example_camera_video_stream_server: &patterns-example_camera_video_stream_server
   - "examples/camera/video_stream_server/**/*"
 
-.patterns-example_check_pedestrian_flow: &patterns-example_check_pedestrian_flow
-  - "examples/check_pedestrian_flow/**/*"
-
 .patterns-example_common_components_boards: &patterns-example_common_components_boards
   - "examples/common_components/boards/**/*"
 
@@ -962,16 +959,6 @@
       changes: *patterns-example_camera_video_stream_server
     - <<: *if-dev-push
       changes: *patterns-example_common_components_camera
-
-.rules:build:example_check_pedestrian_flow:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_check_pedestrian_flow
 
 .rules:build:example_display_lcd_hdmi_video_renderer:
   rules:

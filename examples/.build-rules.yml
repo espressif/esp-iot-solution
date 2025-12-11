@@ -167,10 +167,6 @@ examples/camera/video_stream_server:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
 
-examples/check_pedestrian_flow:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
-
 examples/display/lcd/hdmi_video_renderer:
   enable:
     - if: IDF_TARGET in ["esp32p4"]

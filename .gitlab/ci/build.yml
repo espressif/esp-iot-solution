@@ -385,16 +385,6 @@ build_example_camera_video_stream_server:
     EXAMPLE_DIR: examples/camera/video_stream_server
     IMAGE: espressif/idf:release-v4.4
 
-build_example_check_pedestrian_flow:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_check_pedestrian_flow
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-  variables:
-    EXAMPLE_DIR: examples/check_pedestrian_flow
-
 build_example_display_lcd_hdmi_video_renderer:
   extends:
     - .build_examples_template
