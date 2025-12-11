@@ -1,0 +1,21 @@
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+    public: true
+
+  esp_lv_eaf_player:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lv_eaf_player"
+    public: true
+
+  hw_init:
+    version: "*"
+    override_path: "../../common/hw_init"
