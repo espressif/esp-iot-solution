@@ -26,6 +26,7 @@ IGNORE_WARNINGS = [
     r'1/2 app partitions are too small',
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',
+    r'Warning: The smallest app partition is nearly full',
     r'\'ADC_ATTEN_DB_11\' is deprecated',
     r'warning: unknown kconfig symbol*',
     r'warning High Performance Mode \(QSPI Flash > 80MHz\) is optional feature that depends on flash model. Read Docs First!',

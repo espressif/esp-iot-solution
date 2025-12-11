@@ -17,7 +17,7 @@ examples/audio/wav_player:
 
 examples/bluetooth/ble_conn_mgr/ble_periodic_adv:
   enable:
-    - if: SOC_BLE_SUPPORTED == 1
+    - if: SOC_BLE_50_SUPPORTED == 1
 
 examples/bluetooth/ble_conn_mgr/ble_periodic_sync:
   enable:
