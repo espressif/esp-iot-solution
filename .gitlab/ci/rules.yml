@@ -171,6 +171,10 @@
   - "components/display/tools/esp_mmap_assets/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_display_tools_esp_lv_eaf_player: &patterns-components_display_tools_esp_lv_eaf_player
+  - "components/display/tools/esp_lv_eaf_player/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_keyboard_button: &patterns-components_keyboard_button
   - "components/keyboard_button/**/*"
 
@@ -564,6 +568,9 @@
 
 .patterns-example_display_gui_lvgl_light_sleep_demo: &patterns-example_display_gui_lvgl_light_sleep_demo
   - "examples/display/gui/lvgl_light_sleep_demo/**/*"
+
+.patterns-example_display_gui_lvgl_eaf_player: &patterns-example_display_gui_lvgl_eaf_player
+  - "examples/display/gui/lvgl_eaf_player/**/*"
 
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
@@ -1142,6 +1149,18 @@
       changes: *patterns-example_display_gui_lvgl_light_sleep_demo
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lvgl_adapter
+
+.rules:build:example_display_gui_lvgl_eaf_player:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_eaf_player
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_eaf_player
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
@@ -2361,6 +2380,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_mmap_assets
+
+.rules:build:components_display_tools_esp_lv_eaf_player_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_eaf_player
 
 .rules:build:components_keyboard_button_test_apps:
   rules:
