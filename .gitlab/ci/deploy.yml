@@ -4,10 +4,12 @@ variables:
 
 push_to_github:
   stage: deploy
-  only:
-    - master
-    - /^release\/v/
-#  when: on_success
+  rules:
+    - if: '$CI_COMMIT_REF_NAME != "master" && $CI_COMMIT_REF_NAME !~ /^release\/v/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_FORCE_PUSH_TO_GITHUB == "true"'
+      when: manual
+    - when: on_success
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   tags:
     - github_sync
