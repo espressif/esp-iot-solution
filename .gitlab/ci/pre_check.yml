@@ -19,8 +19,8 @@ check_pre_commit:
   before_script:
     - pip install pre-commit
   rules:
-    # Pipelines triggered via the API might not have a base commit SHA, so failures are allowed.
-    - if: '$CI_PIPELINE_SOURCE == "api"'
+    # Pipelines triggered via the API or web might not have a base commit SHA, so failures are allowed.
+    - if: '$CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "web"'
       allow_failure: true
     - when: always
       allow_failure: false
