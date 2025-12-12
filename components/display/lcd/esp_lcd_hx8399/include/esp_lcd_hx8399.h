@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,6 +12,7 @@
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_mipi_dsi.h"
+#include "esp_idf_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +87,7 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -93,7 +95,7 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
  *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
  *
  */
-#define HX8399_1080_1920_PANEL_30HZ_DPI_CONFIG(px_format)            \
+#define HX8399_1080_1920_PANEL_30HZ_DPI_CONFIG(px_format)        \
     {                                                            \
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
         .dpi_clock_freq_mhz = 75,                                \
@@ -103,15 +105,16 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
         .video_timing = {                                        \
             .h_size = 1080,                                      \
             .v_size = 1920,                                      \
-            .hsync_back_porch = 20,                             \
+            .hsync_back_porch = 20,                              \
             .hsync_pulse_width = 22,                             \
             .hsync_front_porch = 22,                             \
-            .vsync_back_porch = 7,                              \
+            .vsync_back_porch = 7,                               \
             .vsync_pulse_width = 7,                              \
-            .vsync_front_porch = 9,                             \
+            .vsync_front_porch = 9,                              \
         },                                                       \
         .flags.use_dma2d = true,                                 \
     }
+#endif
 
 /**
  * @brief MIPI DPI configuration structure
@@ -120,7 +123,7 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
  *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
  *
  */
-#define HX8399_1080_1920_PANEL_30HZ_DPI_CONFIG_CF(color_format)            \
+#define HX8399_1080_1920_PANEL_30HZ_DPI_CONFIG_CF(color_format)  \
     {                                                            \
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
         .dpi_clock_freq_mhz = 75,                                \
@@ -137,7 +140,6 @@ esp_err_t esp_lcd_new_panel_hx8399(const esp_lcd_panel_io_handle_t io, const esp
             .vsync_pulse_width = 7,                              \
             .vsync_front_porch = 9,                              \
         },                                                       \
-        .flags.use_dma2d = true,                                 \
     }
 
 #ifdef __cplusplus

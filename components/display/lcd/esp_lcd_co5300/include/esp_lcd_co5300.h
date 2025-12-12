@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@
 
 #include "hal/lcd_types.h"
 #include "esp_lcd_panel_vendor.h"
+#include "esp_idf_version.h"
 
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_mipi_dsi.h"
@@ -168,6 +169,7 @@ esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -194,6 +196,7 @@ esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint
         },                                                       \
         .flags.use_dma2d = true,                                 \
     }
+#endif
 
 /**
  * @brief MIPI DPI configuration structure
@@ -202,7 +205,7 @@ esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint
  *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
  *
  */
-#define CO5300_466_466_PANEL_60HZ_DPI_CONFIG_CF(color_format)          \
+#define CO5300_466_466_PANEL_60HZ_DPI_CONFIG_CF(color_format)    \
     {                                                            \
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
         .dpi_clock_freq_mhz = 16,                                \
@@ -219,7 +222,6 @@ esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint
             .vsync_pulse_width = 4,                              \
             .vsync_front_porch = 18,                             \
         },                                                       \
-        .flags.use_dma2d = true,                                 \
     }
 
 #ifdef __cplusplus
