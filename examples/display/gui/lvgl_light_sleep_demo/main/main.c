@@ -19,6 +19,7 @@ static const char *TAG = "main";
 static lv_display_t *s_disp;
 static lv_obj_t *s_status_label;
 static lv_obj_t *s_sleep_button;
+static lv_indev_t *s_encoder;
 static esp_lcd_panel_handle_t s_panel_handle;
 static esp_lcd_panel_io_handle_t s_panel_io_handle;
 static esp_lv_adapter_rotation_t s_rotation;
@@ -27,6 +28,7 @@ static esp_lv_adapter_tear_avoid_mode_t s_tear_mode;
 static void create_demo_ui(void);
 static void sleep_button_event_cb(lv_event_t *e);
 static void enter_light_sleep(void);
+static void bind_encoder_to_ui(void);
 static esp_lv_adapter_rotation_t get_configured_rotation(void);
 static esp_lv_adapter_tear_avoid_mode_t get_default_tear_mode(void);
 
@@ -93,6 +95,8 @@ static void create_demo_ui(void)
     lv_obj_center(btn_label);
 
     esp_lv_adapter_unlock();
+
+    bind_encoder_to_ui();
 }
 
 static void enter_light_sleep(void)
@@ -175,7 +179,10 @@ void app_main(void)
         .encoder_a_b = hw_knob_get_config(),
         .encoder_enter = hw_knob_get_button(),
     };
-    esp_lv_adapter_register_encoder(&encoder_cfg);
+    s_encoder = esp_lv_adapter_register_encoder(&encoder_cfg);
+    if (s_encoder == NULL) {
+        ESP_LOGE(TAG, "Encoder registration failed");
+    }
 #endif
 
     // Start adapter
@@ -183,4 +190,35 @@ void app_main(void)
 
     // Create UI
     create_demo_ui();
+}
+
+static void bind_encoder_to_ui(void)
+{
+    if (!s_encoder || !s_sleep_button) {
+        return;
+    }
+
+    if (esp_lv_adapter_lock(-1) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to lock LVGL for encoder binding");
+        return;
+    }
+
+    lv_group_t *group = lv_group_get_default();
+    if (!group) {
+        group = lv_group_create();
+        lv_group_set_default(group);
+    }
+
+    if (!group) {
+        ESP_LOGE(TAG, "Failed to create default input group");
+        esp_lv_adapter_unlock();
+        return;
+    }
+
+    lv_group_remove_all_objs(group);
+    lv_group_add_obj(group, s_sleep_button);
+    lv_group_focus_obj(s_sleep_button);
+    lv_indev_set_group(s_encoder, group);
+
+    esp_lv_adapter_unlock();
 }

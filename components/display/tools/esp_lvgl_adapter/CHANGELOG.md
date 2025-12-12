@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.2 (2025-12-12)
+
+* Prevent deadlock when pausing the adapter from the LVGL worker
+
 ## v0.1.1 (2025-12-10)
 
 * Improved the screen update failure handling mechanism

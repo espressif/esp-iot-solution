@@ -245,8 +245,19 @@ esp_err_t esp_lv_adapter_pause(int32_t timeout_ms)
         return ESP_OK;
     }
 
+    bool called_from_worker = (s_ctx.task && xTaskGetCurrentTaskHandle() == s_ctx.task);
+
     s_ctx.pause_ack = false;
     s_ctx.paused = true;
+
+    if (called_from_worker) {
+        /* Avoid deadlock when pause is requested from the LVGL worker itself */
+        s_ctx.pause_ack = true;
+        if (s_ctx.pause_done_sem) {
+            xSemaphoreGive(s_ctx.pause_done_sem);
+        }
+        return ESP_OK;
+    }
 
     if (!s_ctx.task || !s_ctx.pause_done_sem) {
         s_ctx.pause_ack = true;
