@@ -265,6 +265,8 @@ static void ir_learn_task(void *arg)
             }
         }
     }
+
+    free(learn_param);
 }
 
 esp_err_t ir_learn_restart(ir_learn_handle_t ir_learn_hdl)
@@ -508,10 +510,12 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
     ir_learn_t *ir_learn_ctx = calloc(1, sizeof(ir_learn_t));
     IR_LEARN_CHECK(ir_learn_ctx, "no mem for ir_learn_ctx", ESP_ERR_NO_MEM);
 
-    ir_learn_common_param_t learn_param = {
-        .user_cb = cfg->callback,
-        .ctx = ir_learn_ctx,
-    };
+    ir_learn_common_param_t *learn_param = malloc(sizeof(ir_learn_common_param_t));
+    if (learn_param == NULL) {
+        return -ESP_ERR_NO_MEM;
+    }
+    learn_param->user_cb = cfg->callback;
+    learn_param->ctx = ir_learn_ctx;
 
     rmt_rx_channel_config_t rx_channel_cfg = {
         .clk_src = cfg->clk_src,
