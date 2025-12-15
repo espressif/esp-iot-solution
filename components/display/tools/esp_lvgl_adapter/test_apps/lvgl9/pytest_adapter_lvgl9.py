@@ -84,9 +84,7 @@ def test_adapter_esp32s3(dut: Dut) -> None:
     print('ESP32-S3 adapter tests finished!')
 
 
-@pytest.mark.target('esp32p4')
-@pytest.mark.env('esp32p4,esp32p4_function_ev_board,screen,touch')
-def test_adapter_esp32p4(dut: Dut) -> None:
+def test_adapter_esp32p4_template(dut: Dut) -> None:
     """
     Feature test for ESP32-P4 - full feature set with hardware acceleration.
     Tests adapter, image decoder, FreeType fonts, and dummy draw.
@@ -128,3 +126,25 @@ def test_adapter_esp32p4(dut: Dut) -> None:
     print('[4/4] FreeType fonts: PASSED')
 
     print('ESP32-P4 adapter tests finished!')
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco4')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'defaults',
+    ],
+)
+def test_adapter_esp32p4_eco4(dut: Dut) -> None:
+    test_adapter_esp32p4_template(dut)
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco_default')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'p4rev3',
+    ],
+)
+def test_adapter_esp32p4_eco_default(dut: Dut) -> None:
+    test_adapter_esp32p4_template(dut)

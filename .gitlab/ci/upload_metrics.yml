@@ -35,7 +35,7 @@ upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32s3:
 upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32p4:
   <<: *upload_metrics_lvgl_adapter_benchmark_template
   needs:
-    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32p4, 5.5, generic]"
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32p4, 5.5, generic,eco4]"
       artifacts: true
       optional: false
 
@@ -77,7 +77,7 @@ upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32s3:
 upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32p4:
   <<: *upload_metrics_lvgl_adapter_benchmark_template
   needs:
-    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32p4, 5.5, generic]"
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32p4, 5.5, generic,eco4]"
       artifacts: true
       optional: false
 

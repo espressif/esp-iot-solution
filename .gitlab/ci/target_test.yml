@@ -111,9 +111,12 @@ components_test_touch_button_sensor:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.4"
-          IDF_TARGET: ["esp32", "esp32s3", "esp32s2", "esp32p4"]
-          ENV_TAG: "generic"
+      - IDF_VERSION: "5.4"
+        IDF_TARGET: ["esp32", "esp32s3", "esp32s2"]
+        ENV_TAG: "generic"
+      # - IDF_VERSION: "5.4"
+      #   IDF_TARGET: "esp32p4"
+      #   ENV_TAG: "generic,eco4"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
@@ -496,7 +499,7 @@ components_test_esp_lvgl_adapter:
         ENV_TAG: esp-box-3
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.5"
-        ENV_TAG: esp32p4_function_ev_board,screen,touch
+        ENV_TAG: esp32p4_function_ev_board,screen,touch,eco4
       - IDF_TARGET: esp32c3
         IDF_VERSION: "5.5"
         ENV_TAG: esp32c3_lcdkit
@@ -520,7 +523,7 @@ components_test_esp_lvgl_adapter:
         ENV_TAG: generic
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.5"
-        ENV_TAG: generic
+        ENV_TAG: generic,eco4
       - IDF_TARGET: esp32c2
         IDF_VERSION: "5.5"
         ENV_TAG: xtal_40mhz
@@ -606,7 +609,7 @@ components_test_esp_mmap_assets:
         ENV_TAG: generic
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.4"
-        ENV_TAG: generic
+        ENV_TAG: generic,eco4
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}

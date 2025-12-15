@@ -1159,7 +1159,6 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.5
-        EXAMPLE_CONFIG: "="
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/test_apps
 
@@ -1174,8 +1173,6 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
 build_components_display_tools_esp_lvgl_adapter_benchmark:
   extends:
     - .build_components_display_tools_esp_lvgl_adapter_benchmark_template
-  variables:
-    EXAMPLE_CONFIG: "="
 
 build_components_display_tools_esp_lvgl_adapter_rgb888_benchmark:
   extends:
