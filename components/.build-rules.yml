@@ -18,8 +18,7 @@ components/touch/touch_button/test_apps:
 
 components/touch/touch_button_sensor/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
 
 components/touch/touch_proximity_sensor/test_apps:
   enable:
@@ -27,7 +26,7 @@ components/touch/touch_proximity_sensor/test_apps:
 
 components/touch/touch_slider_sensor/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
 
 components/usb/esp_msc_ota/test_apps:
   enable:
@@ -71,23 +70,23 @@ components/sensors/power_measure/test_apps:
 
 components/led/led_indicator/test_apps:
   enable:
-    - if: INCLUDE_DEFAULT == 1
-
-components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
-  enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
-
-components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
-  enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
+    - if: SOC_RMT_SUPPORTED == 1
 
 components/led/lightbulb_driver/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
+
+components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
+
 components/motor/esp_sensorless_bldc_control/test_apps/bldc_test_step_by_step:
   enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
 
 components/motor/esp_simplefoc/test_apps:
   enable:
@@ -211,7 +210,7 @@ components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
 
 components/display/tools/esp_lv_decoder/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
 
 components/display/tools/esp_lvgl_adapter/test_apps:
   enable:
