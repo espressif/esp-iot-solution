@@ -1504,11 +1504,15 @@ build_components_usb_usb_stream_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
+# This job should be removed. Reason: Deprecated.
+# Temporarily keep CI build job due to potential dependencies on this component.
 build_components_usb_iot_usbh_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_test
-    - .build_idf_active_release_version
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh/test_apps
 
