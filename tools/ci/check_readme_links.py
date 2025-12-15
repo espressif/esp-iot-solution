@@ -126,7 +126,7 @@ def check_readme_links(args: argparse.Namespace) -> int:
             file_links.append(link)
 
     for url in EXCLUDE_URL_LIST:
-        del web_links[url]
+        web_links.pop(url, None)
 
     errors.extend(check_file_links(file_links))
 
