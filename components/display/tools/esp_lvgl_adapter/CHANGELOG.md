@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.3 (2025-12-16)
+
+* Fixed the issue with 180-degree rotation
+
 ## v0.1.2 (2025-12-12)
 
 * Prevent deadlock when pausing the adapter from the LVGL worker

@@ -511,7 +511,7 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
 
     const esp_lv_adapter_rotation_t rotation = bridge_rotation(impl);
     const esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = impl->cfg.base.tear_avoid_mode;
-    const bool need_rotate = (rotation == ESP_LV_ADAPTER_ROTATE_90 || rotation == ESP_LV_ADAPTER_ROTATE_270) &&
+    const bool need_rotate = (rotation != ESP_LV_ADAPTER_ROTATE_0) &&
                              (impl->cfg.base.profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER);
 
     if (need_rotate) {
