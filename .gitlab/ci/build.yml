@@ -37,10 +37,12 @@
     # By configuring this macro, you can append the compiled configuration file.
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
     EXAMPLE_CONFIG: "="
+    BUILD_RECURSIVE: "1"
+    CHECK_WARNINGS: "1"
   script:
     - pip install idf-component-manager
     - pip install idf_build_apps
-    - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -vv
+    - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv --check-warnings ${CHECK_WARNINGS}
 
 .build_idf_active_release_version:
   parallel:
@@ -1884,15 +1886,51 @@ build_example_relinker:
   variables:
     EXAMPLE_DIR: examples/relinker
 
-build_example_robot_ragtime_panther_leader:
+# ragtime_panthera needs to first compile the receiver,
+# then move the firmware into the main project for compilation.
+build_example_ragtime_panthera_follower_receiver:
   extends:
     - .build_examples_template
-    - .rules:build:example_robot_ragtime_panther_leader
+    - .rules:build:example_ragtime_panthera_follower
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+        CI_IDF_VERSION: "5.5" # for after_script to find the correct build directory
+  variables:
+    EXAMPLE_DIR: examples/robot/ragtime_panthera/follower/receiver
+    BUILD_RECURSIVE: "0"
+  after_script:
+    - mkdir -p ${EXAMPLE_DIR}/build
+    - cd ${EXAMPLE_DIR}/${CI_IDF_VERSION}/build_esp32c6_defaults
+    - esptool.py --chip='esp32c6' merge_bin --output="${CI_PROJECT_DIR}/${EXAMPLE_DIR}/build/merged-binary.bin" '@flash_args'
+
+build_example_ragtime_panthera_follower:
+  extends:
+    - .build_examples_template
+  needs:
+    - job: "build_example_ragtime_panthera_follower_receiver"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  before_script:
+    - mkdir -p ${EXAMPLE_DIR}/spiffs
+    - mv ${EXAMPLE_DIR}/receiver/build/merged-binary.bin ${EXAMPLE_DIR}/spiffs/merged-binary.bin
+  variables:
+    EXAMPLE_DIR: examples/robot/ragtime_panthera/follower
+    SKIP_RECEIVER_BUILD: "1"
+    BUILD_RECURSIVE: "0"
+
+build_example_robot_ragtime_panthera_leader:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_robot_ragtime_panthera_leader
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.5
   variables:
-    EXAMPLE_DIR: examples/robot/ragtime_panther/leader
+    EXAMPLE_DIR: examples/robot/ragtime_panthera/leader
 
 build_example_elf_loader_elf_loader_example:
   extends:

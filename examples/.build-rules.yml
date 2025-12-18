@@ -286,12 +286,6 @@ examples/lighting/lightbulb:
 examples/motor/foc_openloop_control:
   enable:
     - if: IDF_TARGET == "esp32s3"
-
-examples/motor/foc_openloop_control:
-  disable:
-    - if: IDF_TARGET == "esp32c2"
-
-examples/motor/foc_velocity_control:
   disable:
     - if: IDF_TARGET == "esp32c2"
 
@@ -519,6 +513,14 @@ examples/relinker:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3"]
 
-examples/robot/ragtime_panther/leader:
+examples/robot/ragtime_panthera/follower:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+
+examples/robot/ragtime_panthera/follower/receiver:
+  enable:
+    - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+
+examples/robot/ragtime_panthera/leader:
   enable:
     - if: IDF_TARGET in ["esp32c3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)

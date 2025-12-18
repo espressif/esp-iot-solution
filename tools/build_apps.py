@@ -32,6 +32,7 @@ IGNORE_WARNINGS = [
     r'warning HPM-DC, which helps to run some flash > 80MHz by adjusting dummy cycles, is no longer enabled by default.',
     r'warning To enable this feature, your bootloader needs to have the support for it \(by explicitly selecting BOOTLOADER_FLASH_DC_AWARE\)',
     r'warning If your bootloader does not support it, select SPI_FLASH_HPM_DC_DISABLE to suppress the warning. READ DOCS FIRST!',
+    r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panther/follower
     r'.+MultiCommand.+',
 ]
 
@@ -53,15 +54,16 @@ def get_cmake_apps(
     target,
     config_rules_str,
     default_build_targets,
-):  # type: (List[str], str, List[str]) -> List[App]
+    recursive,
+):  # type: (List[str], str, str, List[str], bool) -> List[App]
     idf_ver = _get_idf_version()
     apps = find_apps(
         paths,
-        recursive=True,
+        recursive=recursive,
         target=target,
         build_dir=f'{idf_ver}/build_@t_@w',
         config_rules_str=config_rules_str,
-        build_log_filename='build_log.txt',
+        # build_log_filename='build_log.txt',
         size_json_filename='size.json',
         check_warnings=True,
         no_preserve=False,
@@ -77,7 +79,7 @@ def get_cmake_apps(
 
 def main(args):  # type: (argparse.Namespace) -> None
     default_build_targets = args.default_build_targets.split(',') if args.default_build_targets else None
-    apps = get_cmake_apps(args.paths, args.target, args.config, default_build_targets)
+    apps = get_cmake_apps(args.paths, args.target, args.config, default_build_targets, args.recursive)
 
     if args.find:
         if args.output:
@@ -109,6 +111,7 @@ def main(args):  # type: (argparse.Namespace) -> None
         dry_run=False,
         collect_size_info=args.collect_size_info,
         keep_going=True,
+        check_warnings=args.check_warnings,
         ignore_warning_strs=IGNORE_WARNINGS,
         copy_sdkconfig=True,
         no_preserve=False,
@@ -118,6 +121,16 @@ def main(args):  # type: (argparse.Namespace) -> None
 
 
 if __name__ == '__main__':
+    def str2bool(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+
     parser = argparse.ArgumentParser(
         description='Build all the apps for different test types. Will auto remove those non-test apps binaries',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -176,6 +189,22 @@ if __name__ == '__main__':
     parser.add_argument(
         '-o', '--output',
         help='Print the found apps to the specified file instead of stdout'
+    )
+    parser.add_argument(
+        '-r', '--recursive',
+        type=str2bool,
+        nargs='?',
+        default=True,
+        const=True,
+        help='Build apps recursively',
+    )
+    parser.add_argument(
+        '--check-warnings',
+        type=str2bool,
+        nargs='?',
+        default=True,
+        const=True,
+        help='Check warnings',
     )
 
     arguments = parser.parse_args()

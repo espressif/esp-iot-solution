@@ -750,8 +750,11 @@
   - "examples/relinker/**/*"
   - "tools/cmake_utilities/scripts/relinker/**/*"
 
-.patterns-example_robot_ragtime_panther_leader: &patterns-example_robot_ragtime_panther_leader
-  - "examples/robot/ragtime_panther/leader/**/*"
+.patterns-example_ragtime_panthera_follower: &patterns-example_ragtime_panthera_follower
+  - "examples/robot/ragtime_panthera/follower/**/*"
+
+.patterns-example_robot_ragtime_panthera_leader: &patterns-example_robot_ragtime_panthera_leader
+  - "examples/robot/ragtime_panthera/leader/**/*"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -1889,7 +1892,7 @@
     - <<: *if-dev-push
       changes: *patterns-example_relinker
 
-.rules:build:example_robot_ragtime_panther_leader:
+.rules:build:example_ragtime_panthera_follower:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -1897,7 +1900,17 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-example_robot_ragtime_panther_leader
+      changes: *patterns-example_ragtime_panthera_follower
+
+.rules:build:example_robot_ragtime_panthera_leader:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_robot_ragtime_panthera_leader
 
 # rules for ut
 .rules:build:component_audio_adc_mic_test_apps:
