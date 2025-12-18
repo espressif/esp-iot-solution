@@ -42,6 +42,10 @@ examples/bluetooth/ble_profiles/ble_htp:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
 
+examples/bluetooth/ble_profiles/ble_midi:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
 examples/bluetooth/ble_services/ble_ans:
   enable:
     - if: SOC_BLE_SUPPORTED == 1

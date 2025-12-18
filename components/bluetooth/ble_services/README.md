@@ -6,6 +6,9 @@
 
 The ``ble_services`` component provides a simplified API interface for accessing commonly used standard and custom BLE services functionality on a GATT server.
 
+Included services:
+- ANS, BAS, DIS, HRS, HTS, TPS, BCS, CTS, UDS, WSS, MIDI
+
 ### Adding the component to your project
 
 Please use the component manager command `idf.py add-dependency` to add `ble_services` as a dependency to your project. The component will be downloaded automatically during the CMake step.
@@ -36,6 +39,7 @@ The example will be downloaded to the current folder. You can navigate into it f
 8. [ble_tps](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_tps)
 9. [ble_uds](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_uds)
 10. [ble_wss](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_wss)
+11. [ble_midi](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_services/ble_midi)
 
 ### Q&A
 

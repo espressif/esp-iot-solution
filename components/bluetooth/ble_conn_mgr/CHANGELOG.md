@@ -1,10 +1,20 @@
 # ChangeLog
 
+## v0.1.4 - 2026-01-06
+
+### Enhancements:
+
+- Enhanced advertising configuration to support 128-bit UUIDs.
+- Added `ESP_BLE_CONN_EVENT_CCCD_UPDATE` event to report CCCD write status.
+- Added `esp_ble_conn_get_conn_handle()` API to query current connection handle.
+- Added `esp_ble_conn_get_mtu()` API to query current negotiated MTU.
+- Added `esp_ble_conn_update_params()` API to update connection parameters.
+
 ## v0.1.3 - 2024-12-09
 
 ### Enhancements:
 
-* Support Config UUID Information in BLE broadcasting.
+- Support Config UUID Information in BLE broadcasting.
 
 ## v0.1.2 - 2024-5-22
 

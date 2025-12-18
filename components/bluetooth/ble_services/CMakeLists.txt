@@ -54,6 +54,11 @@ list(APPEND srcs            "wss/src/esp_wss.c")
 list(APPEND include         "wss/include")
 endif()
 
+if(CONFIG_BLE_MIDI)
+list(APPEND srcs            "midi/src/esp_ble_midi_svc.c")
+list(APPEND include         "midi/include")
+endif()
+
 list(APPEND req "ble_conn_mgr")
 
 idf_component_register(SRCS "${srcs}"
