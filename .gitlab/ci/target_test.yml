@@ -1,5 +1,4 @@
 variables:
-  # There is no target-test-env-v4.4
   DOCKER_TARGET_TEST_v5_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.0:3"
   DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
   DOCKER_TARGET_TEST_v5_3_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.3:1"
@@ -8,7 +7,7 @@ variables:
   DOCKER_TARGET_TEST_v6_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v6.0:2"
 
 .test_template: &test_template
-  image: DOCKER_TARGET_TEST_v5_0_ENV_IMAGE
+  image: ${DOCKER_TARGET_TEST_v5_5_ENV_IMAGE}
   stage: target_test
   timeout: 4 hour
   variables:
@@ -50,15 +49,11 @@ components_test_aht20:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: "esp-box-3"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp-box-3"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/humiture/aht20
@@ -75,15 +70,11 @@ components_test_at581x:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: "esp-box-3"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp-box-3"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/radar
@@ -100,12 +91,11 @@ components_test_esp_msc_ota:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "msc-ota"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/usb/esp_msc_ota
@@ -121,13 +111,15 @@ components_test_touch_button_sensor:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: ["5.3"]
-          IDF_TARGET: ["esp32", "esp32s3", "esp32s2", "esp32p4"]
-          ENV_TAG: "generic"
+      - IDF_VERSION: "5.4"
+        IDF_TARGET: ["esp32", "esp32s3", "esp32s2"]
+        ENV_TAG: "generic"
+      # - IDF_VERSION: "5.4"
+      #   IDF_TARGET: "esp32p4"
+      #   ENV_TAG: "generic,eco4"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/touch/touch_button_sensor
@@ -142,13 +134,12 @@ components_test_touch_proximity_sensor:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: ["5.3"]
+        - IDF_VERSION: ["5.4", "5.5"]
           IDF_TARGET: esp32s3
           ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/touch/touch_proximity_sensor
@@ -160,66 +151,32 @@ components_test_usb_camera:
   needs:
     - job: "build_components_usb_usb_stream_test_apps"
       artifacts: true
-      optional: true
   retry:
     max: 2
+  timeout: 15 minutes
   parallel:
     matrix:
       - IDF_TARGET: esp32s2
-        IDF_VERSION: "5.4"
-        ENV_TAG: usb_camera
-      - IDF_TARGET: esp32s2
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb_camera
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb_camera
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
-        ENV_TAG: usb_camera
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb-otg_camera
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb_camera_s3_eye
       - IDF_TARGET: esp32s2
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb_camera_isoc
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/usb/usb_stream
-    TEST_ENV: ${ENV_TAG}
-
-components_test_iot_usbh:
-  extends:
-    - .pytest_template
-    - .rules:build:components_usb_iot_usbh_test
-  needs:
-    - job: "build_components_usb_iot_usbh_test_apps"
-      artifacts: true
-      optional: true
-  retry:
-    max: 2
-  parallel:
-    matrix:
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: usb_4g
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
-        ENV_TAG: usb_4g
-  tags:
-    - ${IDF_TARGET}
-    - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
-  variables:
-    TEST_TARGET: ${IDF_TARGET}
-    TEST_FOLDER: components/usb/iot_usbh
     TEST_ENV: ${ENV_TAG}
 
 components_test_iot_usbh_cdc:
@@ -229,21 +186,16 @@ components_test_iot_usbh_cdc:
   needs:
     - job: "build_components_usb_iot_usbh_cdc_test_apps"
       artifacts: true
-      optional: true
   retry:
     max: 2
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: usb_4g
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: usb_4g
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/usb/iot_usbh_cdc
@@ -260,12 +212,11 @@ components_test_ir_learn:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "esp-box-3"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/ir/ir_learn
@@ -282,12 +233,11 @@ components_test_button:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "button"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/button
@@ -300,16 +250,14 @@ components_test_led_indicator:
   needs:
     - job: "build_components_led_led_indicator_test_apps"
       artifacts: true
-      optional: true
   parallel:
     matrix:
-        - IDF_VERSION: "5.0"
-          IDF_TARGET: esp32s3
-          ENV_TAG: "led_indicator"
+      - IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_TARGET: esp32s3
+        ENV_TAG: "led_indicator"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/led/led_indicator
@@ -324,24 +272,16 @@ components_test_openai:
   needs:
     - job: "build_components_openai_test_apps"
       artifacts: true
-      optional: true
   retry:
     max: 2
   parallel:
     matrix:
-        - IDF_TARGET: esp32s3
-          IDF_VERSION: "4.4"
-          ENV_TAG: "openai"
-        - IDF_TARGET: esp32s3
-          IDF_VERSION: "5.0"
-          ENV_TAG: "openai"
-        - IDF_TARGET: esp32s3
-          IDF_VERSION: "5.4"
-          ENV_TAG: "openai"
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: ["5.3", "5.4", "5.5"]
+        ENV_TAG: "openai"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/openai
@@ -357,12 +297,11 @@ components_test_esp_lcd_axs15231b:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_axs15231b
@@ -379,12 +318,11 @@ components_test_esp_lcd_gc9b71:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_gc9b71
@@ -401,15 +339,11 @@ components_test_esp_lcd_panel_io_additions:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: "esp32s3_lcd_ev"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_panel_io_additions
@@ -426,12 +360,11 @@ components_test_esp_lcd_sh8601:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_sh8601
@@ -448,12 +381,11 @@ components_test_esp_lcd_spd2010:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_spd2010
@@ -469,13 +401,12 @@ components_test_esp_lcd_st77903_qspi:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: "5.3"
+        - IDF_VERSION: ["5.4", "5.5"]
           IDF_TARGET: esp32s3
           ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903_qspi
@@ -492,12 +423,11 @@ components_test_esp_lcd_st77903_rgb:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77903_rgb
@@ -513,15 +443,15 @@ components_test_esp_lv_decoder:
       optional: false
   parallel:
     matrix:
-      - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
+      - IDF_TARGET: ["esp32s3", "esp32c3"]
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: generic
       - IDF_TARGET: esp32p4
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
+        IDF_VERSION: "5.4"
+        ENV_TAG: generic,eco4
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic,eco_default
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
@@ -546,7 +476,7 @@ components_test_esp_lvgl_adapter:
         ENV_TAG: esp-box-3
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.5"
-        ENV_TAG: esp32p4,esp32p4_function_ev_board,screen,touch
+        ENV_TAG: esp32p4_function_ev_board,screen,touch,eco4
       - IDF_TARGET: esp32c3
         IDF_VERSION: "5.5"
         ENV_TAG: esp32c3_lcdkit
@@ -570,7 +500,7 @@ components_test_esp_lvgl_adapter:
         ENV_TAG: generic
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.5"
-        ENV_TAG: generic
+        ENV_TAG: generic,eco4
       - IDF_TARGET: esp32c2
         IDF_VERSION: "5.5"
         ENV_TAG: xtal_40mhz
@@ -619,18 +549,17 @@ components_test_esp_lv_fs:
   parallel:
     matrix:
       - IDF_TARGET: esp32
-        IDF_VERSION: "5.0"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/display/tools/esp_lv_fs
@@ -647,21 +576,20 @@ components_test_esp_mmap_assets:
   parallel:
     matrix:
       - IDF_TARGET: esp32
-        IDF_VERSION: "5.1"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.1"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32p4
         IDF_VERSION: "5.3"
         ENV_TAG: generic
+      - IDF_TARGET: esp32c3
+        IDF_VERSION: "5.4"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32p4
+        IDF_VERSION: "5.4"
+        ENV_TAG: generic,eco4
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/display/tools/esp_mmap_assets
@@ -683,7 +611,6 @@ components_test_esp_lcd_nv3022b:
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_3_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_nv3022b
@@ -705,7 +632,6 @@ components_test_esp_lcd_st77916:
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77916
@@ -727,7 +653,6 @@ components_test_esp_lcd_st77922:
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_4_ENV_IMAGE
   variables:
     TEST_TARGET: esp32s3
     TEST_FOLDER: components/display/lcd/esp_lcd_st77922
@@ -740,35 +665,19 @@ components_led_lightbulb_driver_test:
   needs:
     - job: "build_components_led_lightbulb_driver_test_apps"
       artifacts: true
-      optional: true
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.2"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.3"
-        ENV_TAG: generic
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.4"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/led/lightbulb_driver
     TEST_ENV: generic
+  allow_failure: true # The test runner may not have the required peripherals connected.
 
 example_lighting_lightbulb:
   extends:
@@ -777,19 +686,17 @@ example_lighting_lightbulb:
   needs:
     - job: "build_example_lighting_lightbulb"
       artifacts: true
-      optional: true
   parallel:
     matrix:
       - IDF_TARGET: esp32s2
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: examples/lighting/lightbulb
@@ -803,15 +710,11 @@ examples_test_usb_uf2_nvs:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
-        ENV_TAG: usb-otg_camera
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: usb-otg_camera
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: examples/usb/device/usb_uf2_nvs
@@ -824,19 +727,14 @@ examples_test_usb_uf2_ota:
   needs:
     - job: "build_example_usb_device_usb_uf2_ota"
       artifacts: true
-      optional: true
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
-        ENV_TAG: usb-otg_camera
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: usb-otg_camera
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: examples/usb/device/usb_uf2_ota
@@ -849,30 +747,19 @@ components_test_zero_detection:
   needs:
     - job: "build_components_zero_detection_test_apps"
       artifacts: true
-      optional: true
   parallel:
     matrix:
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+      - IDF_TARGET: ["esp32s3", "esp32c3"]
+        IDF_VERSION: ["5.4", "5.5"]
         ENV_TAG: zero_detection
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
-        ENV_TAG: zero_detection
-      # - IDF_TARGET: esp32c3
-      #   IDF_VERSION: "5.0"
-      #   ENV_TAG: zero_detection
-      # - IDF_TARGET: esp32c3
-      #   IDF_VERSION: "5.1"
-      #   ENV_TAG: zero_detection
-      #   Due to memory issues, the ESP32-C3 test case is temporarily skipped and will be restored after the problem is resolved. AEG-2602
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/zero_detection
     TEST_ENV: ${ENV_TAG}
+  allow_failure: true # The test runner may not have the GPIO pins shorted as required.
 
 components_test_ntc_driver:
   extends:
@@ -881,57 +768,59 @@ components_test_ntc_driver:
   needs:
     - job: "build_components_ntc_driver_test_apps"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
       - IDF_TARGET: esp32
-        IDF_VERSION: "5.0"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32c2
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: xtal_26mhz
       - IDF_TARGET: esp32c6
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.1"
+        IDF_VERSION: "5.4"
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/ntc_driver
     TEST_ENV: ${ENV_TAG}
 
 example_relinker:
+  # The relinker component needs to be adapted for different IDF versions,
+  # as there may be API changes between versions.
+  # Therefore, a fixed compilation version is used, and failures are allowed.
   extends:
     - .pytest_template
     - .rules:build:example_relinker
   needs:
     - job: "build_example_relinker"
       artifacts: true
-      optional: true
+      optional: false
   parallel:
     matrix:
       - IDF_TARGET: esp32c2
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.3"]
         ENV_TAG: xtal_26mhz
       - IDF_TARGET: esp32c3
-        IDF_VERSION: "5.3"
+        IDF_VERSION: ["5.3"]
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_ENV: ${ENV_TAG}
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: examples/relinker
+  allow_failure: true
 
 tools_test_cmake_utilities:
   extends:
@@ -940,19 +829,14 @@ tools_test_cmake_utilities:
   needs:
     - job: "build_tools_cmake_utilities_test_apps"
       artifacts: true
-      optional: true
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: "4.4"
-        ENV_TAG: "generic"
-      - IDF_TARGET: esp32s3
-        IDF_VERSION: "5.0"
+        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
-  image: $DOCKER_TARGET_TEST_v5_1_ENV_IMAGE
   variables:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: tools/cmake_utilities

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -26,6 +26,7 @@ IGNORE_WARNINGS = [
     r'1/2 app partitions are too small',
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',
+    r'Warning: The smallest app partition is nearly full',
     r'\'ADC_ATTEN_DB_11\' is deprecated',
     r'warning: unknown kconfig symbol*',
     r'warning High Performance Mode \(QSPI Flash > 80MHz\) is optional feature that depends on flash model. Read Docs First!',
@@ -53,9 +54,10 @@ def get_cmake_apps(
     paths,
     target,
     config_rules_str,
-    default_build_targets,
+    ignore_warnings,
     recursive,
-):  # type: (List[str], str, str, List[str], bool) -> List[App]
+    default_build_targets,
+):  # type: (List[str], str, str, bool, bool, List[str]) -> List[App]
     idf_ver = _get_idf_version()
     apps = find_apps(
         paths,
@@ -65,7 +67,7 @@ def get_cmake_apps(
         config_rules_str=config_rules_str,
         # build_log_filename='build_log.txt',
         size_json_filename='size.json',
-        check_warnings=True,
+        check_warnings=not ignore_warnings,
         no_preserve=False,
         default_build_targets=default_build_targets,
         manifest_files=[
@@ -79,7 +81,7 @@ def get_cmake_apps(
 
 def main(args):  # type: (argparse.Namespace) -> None
     default_build_targets = args.default_build_targets.split(',') if args.default_build_targets else None
-    apps = get_cmake_apps(args.paths, args.target, args.config, default_build_targets, args.recursive)
+    apps = get_cmake_apps(args.paths, args.target, args.config, args.ignore_warnings, args.recursive, default_build_targets)
 
     if args.find:
         if args.output:
@@ -111,7 +113,7 @@ def main(args):  # type: (argparse.Namespace) -> None
         dry_run=False,
         collect_size_info=args.collect_size_info,
         keep_going=True,
-        check_warnings=args.check_warnings,
+        check_warnings=not args.ignore_warnings,
         ignore_warning_strs=IGNORE_WARNINGS,
         copy_sdkconfig=True,
         no_preserve=False,
@@ -199,12 +201,9 @@ if __name__ == '__main__':
         help='Build apps recursively',
     )
     parser.add_argument(
-        '--check-warnings',
-        type=str2bool,
-        nargs='?',
-        default=True,
-        const=True,
-        help='Check warnings',
+        '--ignore-warnings',
+        action='store_true',
+        help='Ignore warnings when building apps',
     )
 
     arguments = parser.parse_args()

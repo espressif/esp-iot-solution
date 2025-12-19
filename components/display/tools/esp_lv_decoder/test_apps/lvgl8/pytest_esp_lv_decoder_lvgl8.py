@@ -26,7 +26,7 @@ def test_esp_lv_decoder_c3(dut: Dut)-> None:
     dut.run_all_single_board_cases()
 
 @pytest.mark.target('esp32p4')
-@pytest.mark.env('generic')
+@pytest.mark.env('generic,eco4')
 @pytest.mark.parametrize(
     'config',
     [
@@ -34,4 +34,15 @@ def test_esp_lv_decoder_c3(dut: Dut)-> None:
     ],
 )
 def test_esp_lv_decoder_p4(dut: Dut)-> None:
+    dut.run_all_single_board_cases()
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('generic,eco_default')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'p4rev3',
+    ],
+)
+def test_esp_lv_decoder_p4_rev3(dut: Dut)-> None:
     dut.run_all_single_board_cases()

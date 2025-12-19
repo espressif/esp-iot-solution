@@ -127,12 +127,35 @@ def test_adapter_fps_benchmark(dut: Dut, record_property: Callable[[str, object]
 @pytest.mark.target('esp32c5')
 @pytest.mark.target('esp32c6')
 @pytest.mark.target('esp32s3')
-@pytest.mark.target('esp32p4')
 @pytest.mark.env('generic')
 @pytest.mark.timeout(3600 * 2) # 2 hours
 def test_adapter_fps_benchmark_all(dut: Dut, record_property: Callable[[str, object], None]) -> None:
     test_adapter_fps_benchmark(dut, record_property)
 
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'default',
+    ],
+)
+@pytest.mark.env('generic,eco4')
+@pytest.mark.timeout(3600 * 2) # 2 hours
+def test_adapter_fps_benchmark_p4_eco4(dut: Dut, record_property: Callable[[str, object], None]) -> None:
+    test_adapter_fps_benchmark(dut, record_property)
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'p4rev3',
+    ],
+)
+@pytest.mark.env('generic,eco_default')
+@pytest.mark.timeout(3600 * 2) # 2 hours
+def test_adapter_fps_benchmark_p4_eco_default(dut: Dut, record_property: Callable[[str, object], None]) -> None:
+    test_adapter_fps_benchmark(dut, record_property)
 
 @pytest.mark.target('esp32c2')
 @pytest.mark.env('xtal_40mhz')

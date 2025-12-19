@@ -7,7 +7,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "driver/i2c.h"
 #include "esp_log.h"
 #include "power_measure.h"
 #include "power_measure_bl0937.h"
@@ -57,7 +56,7 @@ static bool ina236_quick_probe(uint8_t addr)
 {
     ESP_LOGI(TAG, "Probing for INA236 at address 0x%02X...", addr);
 
-    // Setup temporary I2C configuration for probing
+    // Setup I2C bus for probing
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_MASTER_SDA_IO,
@@ -67,34 +66,24 @@ static bool ina236_quick_probe(uint8_t addr)
         .master.clk_speed = I2C_MASTER_FREQ_HZ,
     };
 
-    esp_err_t ret = i2c_param_config(I2C_MASTER_NUM, &conf);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C param config failed: %s", esp_err_to_name(ret));
+    i2c_bus_handle_t probe_bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    if (probe_bus == NULL) {
+        ESP_LOGE(TAG, "Failed to create I2C bus for probing");
         return false;
     }
 
-    ret = i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "I2C driver install failed: %s", esp_err_to_name(ret));
+    i2c_bus_device_handle_t probe_dev = i2c_bus_device_create(probe_bus, addr, 0);
+    if (probe_dev == NULL) {
+        ESP_LOGE(TAG, "Failed to create I2C device for probing");
+        TEST_ASSERT(ESP_OK == i2c_bus_delete(&probe_bus));
         return false;
     }
 
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-    if (cmd == NULL) {
-        ESP_LOGE(TAG, "Failed to create I2C command link");
-        i2c_driver_delete(I2C_MASTER_NUM);
-        return false;
-    }
+    uint8_t dummy_data = 0;
+    esp_err_t err = i2c_bus_read_bytes(probe_dev, 0x00, 1, &dummy_data);
 
-    i2c_master_start(cmd);
-    // Write address with write bit, expect ACK
-    i2c_master_write_byte(cmd, (addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_stop(cmd);
-    esp_err_t err = i2c_master_cmd_begin(I2C_MASTER_NUM, cmd, pdMS_TO_TICKS(100));
-    i2c_cmd_link_delete(cmd);
-
-    // Clean up temporary driver
-    i2c_driver_delete(I2C_MASTER_NUM);
+    TEST_ASSERT(ESP_OK == i2c_bus_device_delete(&probe_dev));
+    TEST_ASSERT(ESP_OK == i2c_bus_delete(&probe_bus));
 
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "INA236 detected at address 0x%02X", addr);
@@ -134,7 +123,7 @@ static esp_err_t setup_i2c_bus(void)
 static void cleanup_i2c_bus(void)
 {
     if (test_i2c_bus) {
-        i2c_bus_delete(&test_i2c_bus);
+        TEST_ASSERT(ESP_OK == i2c_bus_delete(&test_i2c_bus));
         test_i2c_bus = NULL;
     }
 }

@@ -1,4 +1,4 @@
-.build_template: &build_template
+.build_template:
   stage: build
   tags:
     - build
@@ -10,8 +10,9 @@
     V: "0"
     WARNING_STR: ""
 
-.build_examples_template: &build_examples_template
-  <<: *build_template
+.build_examples_template:
+  extends:
+    - .build_template
   artifacts:
     when: always
     paths:
@@ -37,56 +38,81 @@
     # By configuring this macro, you can append the compiled configuration file.
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
     EXAMPLE_CONFIG: "="
+    EXAMPLE_APPEND_ARGS: ""
     BUILD_RECURSIVE: "1"
-    CHECK_WARNINGS: "1"
   script:
     - pip install idf-component-manager
     - pip install idf_build_apps
-    - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv --check-warnings ${CHECK_WARNINGS}
+    - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv ${EXAMPLE_APPEND_ARGS}
+
+# ESP-IDF v5.0 has reached EOL in May 2025.
+#
+# For Espressif's IDF support policy,
+# please refer to
+# - https://github.com/espressif/esp-idf/blob/master/SUPPORT_POLICY.md.
+# - https://github.com/espressif/esp-idf/blob/master/README.md#esp-idf-release-support-schedule
 
 .build_idf_active_release_version:
   parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
+    matrix:                               #  EOL date
+      - IMAGE: espressif/idf:release-v5.1 # 2025-12-31
+      - IMAGE: espressif/idf:release-v5.2 # 2026-08-16
+      - IMAGE: espressif/idf:release-v5.3 # 2027-01-25
+      - IMAGE: espressif/idf:release-v5.4 # 2027-07-05
+      - IMAGE: espressif/idf:release-v5.5 # 2028-01-21
 
-.build_idf_version_greater_equal_v5_0:
+.build_idf_ge_than_v5_3:
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.0
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+
+.build_idf_ge_than_v5_4:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+
+.build_idf_ge_than_v5_5:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+
+# ESP-IDF 6.0 is currently in pre-release stage.
+# It may still be subject to changes as development continues.
+
+.build_idf_active_release_version_with_pre_release:
+  parallel:
+    matrix:
       - IMAGE: espressif/idf:release-v5.1
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
       - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.0
 
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
     - .build_examples_template
     - .rules:build:example_ai_esp_dl_human_activity_recognition
+    - .build_idf_ge_than_v5_3
   variables:
-    IMAGE: espressif/idf:release-v5.3
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
 
 build_example_ai_esp_dl_touchpad_digit_recognition:
   extends:
     - .build_examples_template
     - .rules:build:example_ai_esp_dl_touchpad_digit_recognition
+    - .build_idf_ge_than_v5_3
   variables:
-    IMAGE: espressif/idf:release-v5.3
     EXAMPLE_DIR: examples/ai/esp_dl/touchpad_digit_recognition
 
 build_example_audio_wav_player:
   extends:
     - .build_examples_template
     - .rules:build:example_audio_wav_player
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/audio/wav_player
 
@@ -94,11 +120,7 @@ build_example_bluetooth_ble_conn_mgr_ble_periodic_adv:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_conn_mgr
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_periodic_adv
 
@@ -106,11 +128,7 @@ build_example_bluetooth_ble_conn_mgr_ble_periodic_sync:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_conn_mgr
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_periodic_sync
 
@@ -118,12 +136,7 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_client:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_conn_mgr
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_client
 
@@ -131,12 +144,7 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_server:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_conn_mgr
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_server
 
@@ -144,12 +152,7 @@ build_example_bluetooth_ble_anp:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_anp
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_anp
 
@@ -157,12 +160,7 @@ build_example_bluetooth_ble_hrp:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_hrp
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_hrp
 
@@ -170,12 +168,7 @@ build_example_bluetooth_ble_htp:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_htp
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_htp
 
@@ -183,12 +176,7 @@ build_example_bluetooth_ble_services_ble_ans:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_ans
 
@@ -196,12 +184,7 @@ build_example_bluetooth_ble_services_ble_bas:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_bas
 
@@ -209,12 +192,7 @@ build_example_bluetooth_ble_services_ble_bcs:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_bcs
 
@@ -222,12 +200,7 @@ build_example_bluetooth_ble_services_ble_cts:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_cts
 
@@ -235,12 +208,7 @@ build_example_bluetooth_ble_services_ble_dis:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_dis
 
@@ -248,12 +216,7 @@ build_example_bluetooth_ble_services_ble_hrs:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hrs
 
@@ -261,12 +224,7 @@ build_example_bluetooth_ble_services_ble_hts:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_hts
 
@@ -274,12 +232,7 @@ build_example_bluetooth_ble_services_ble_tps:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_tps
 
@@ -287,12 +240,7 @@ build_example_bluetooth_ble_services_ble_uds:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_uds
 
@@ -300,12 +248,7 @@ build_example_bluetooth_ble_services_ble_wss:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_services
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_wss
 
@@ -313,12 +256,7 @@ build_example_bluetooth_ble_ota:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_ota
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_ota
 
@@ -326,10 +264,7 @@ build_example_bluetooth_ble_remote_control:
   extends:
     - .build_examples_template
     - .rules:build:example_bluetooth_ble_remote_control
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_remote_control
 
@@ -337,10 +272,7 @@ build_example_camera_basic:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_basic
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/camera/basic
 
@@ -348,10 +280,7 @@ build_example_camera_pic_server:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_pic_server
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/camera/pic_server
 
@@ -359,10 +288,7 @@ build_example_camera_test_framerate:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_test_framerate
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/camera/test_framerate
 
@@ -370,10 +296,7 @@ build_example_camera_video_recorder:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_video_recorder
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/camera/video_recorder
 
@@ -381,27 +304,15 @@ build_example_camera_video_stream_server:
   extends:
     - .build_examples_template
     - .rules:build:example_camera_video_stream_server
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/camera/video_stream_server
-    IMAGE: espressif/idf:release-v4.4
-
-build_example_check_pedestrian_flow:
-  extends:
-    - .build_examples_template
-    - .rules:build:example_check_pedestrian_flow
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-  variables:
-    EXAMPLE_DIR: examples/check_pedestrian_flow
 
 build_example_display_lcd_hdmi_video_renderer:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_hdmi_video_renderer
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
   allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
@@ -410,9 +321,7 @@ build_example_display_lcd_lcd_layer_blending:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_lcd_layer_blending
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_layer_blending
 
@@ -420,9 +329,7 @@ build_example_display_lcd_lcd_with_te:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_lcd_with_te
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_with_te
 
@@ -430,9 +337,7 @@ build_example_display_lcd_mipi_dsi_avoid_tearing:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_mipi_dsi_avoid_tearing
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/lcd/mipi_dsi_avoid_tearing
 
@@ -440,9 +345,7 @@ build_example_display_lcd_qspi_with_ram:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_qspi_with_ram
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_with_ram
 
@@ -450,9 +353,7 @@ build_example_display_lcd_qspi_without_ram:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_qspi_without_ram
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/display/lcd/qspi_without_ram
 
@@ -460,9 +361,7 @@ build_example_display_lcd_rgb_lcd_8bit:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_rgb_lcd_8bit
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/lcd/rgb_lcd_8bit
 
@@ -470,9 +369,7 @@ build_example_display_lcd_rgb_avoid_tearing:
   extends:
     - .build_examples_template
     - .rules:build:example_display_lcd_rgb_avoid_tearing
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/lcd/rgb_avoid_tearing
 
@@ -480,41 +377,41 @@ build_example_display_gui_lvgl_dummy_draw:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_dummy_draw
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_dummy_draw
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_common_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_common_demo
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_common_demo
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_decode_image:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_decode_image
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_decode_image
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_freetype_font:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_freetype_font
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_freetype_font
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_multi_screen:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_multi_screen
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_multi_screen
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_light_sleep_demo:
   extends:
@@ -536,10 +433,7 @@ build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_gpio_gpio_simple
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/gpio/gpio_simple
 
@@ -547,10 +441,7 @@ build_example_extended_vfs_i2c_i2c_bh1750:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_i2c_i2c_bh1750
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_bh1750
 
@@ -558,10 +449,7 @@ build_example_extended_vfs_i2c_i2c_tt21100:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_i2c_i2c_tt21100
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/i2c/i2c_tt21100
 
@@ -569,10 +457,7 @@ build_example_extended_vfs_ledc_ledc_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_ledc_ledc_simple
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/ledc/ledc_simple
 
@@ -580,10 +465,7 @@ build_example_extended_vfs_spi_spi_master_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_spi_spi_master_simple
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/spi/spi_master_simple
 
@@ -591,10 +473,7 @@ build_example_extended_vfs_spi_spi_slave_simple:
   extends:
     - .build_examples_template
     - .rules:build:example_extended_vfs_spi_spi_slave_simple
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/extended_vfs/spi/spi_slave_simple
 
@@ -602,9 +481,10 @@ build_example_get_started_blink:
   extends:
     - .build_examples_template
     - .rules:build:example_get_started_blink
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/get-started/blink
-    IMAGE: espressif/idf:release-v4.4
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_example_get_started_button_power_save:
   extends:
@@ -636,7 +516,7 @@ build_example_gprof_gprof_simple:
     - .rules:build:example_gprof_gprof_simple
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.3
       - IMAGE: espressif/idf:release-v6.0
   variables:
     EXAMPLE_DIR: examples/gprof/gprof_simple
@@ -645,7 +525,7 @@ build_example_indicator:
   extends:
     - .build_examples_template
     - .rules:build:example_indicator
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/indicator
 
@@ -653,10 +533,7 @@ build_example_keyboard:
   extends:
     - .build_examples_template
     - .rules:build:example_keyboard
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/keyboard
 
@@ -664,14 +541,7 @@ build_example_lighting_lightbulb:
   extends:
     - .build_examples_template
     - .rules:build:example_lighting_lightbulb
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
@@ -679,15 +549,15 @@ build_example_motor_bldc_fan_rainmaker:
   extends:
     - .build_examples_template
     - .rules:build:example_motor_bldc_fan_rainmaker
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/motor/bldc_fan/rainmaker
-    IMAGE: espressif/idf:release-v5.0
 
 build_example_motor_drv10987:
   extends:
     - .build_examples_template
     - .rules:build:example_motor_drv10987
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/motor/drv10987
 
@@ -695,9 +565,7 @@ build_example_motor_foc_openloop_control:
   extends:
     - .build_examples_template
     - .rules:build:example_motor_foc_openloop_control
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/motor/foc_openloop_control
 
@@ -705,9 +573,7 @@ build_example_motor_foc_velocity_control:
   extends:
     - .build_examples_template
     - .rules:build:example_motor_foc_velocity_control
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/motor/foc_velocity_control
 
@@ -715,9 +581,7 @@ build_example_motor_foc_knob:
   extends:
     - .build_examples_template
     - .rules:build:example_motor_foc_knob
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/motor/foc_knob_example
 
@@ -733,14 +597,7 @@ build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template
     - .rules:build:example_ota_simple_ota_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
@@ -749,9 +606,10 @@ build_example_sensors_sensor_control_led:
   extends:
     - .build_examples_template
     - .rules:build:example_sensors_sensor_control_led
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/sensors/sensor_control_led
-    IMAGE: espressif/idf:release-v4.4
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_example_sensors_sensor_hub_monitor:
   extends:
@@ -760,16 +618,13 @@ build_example_sensors_sensor_hub_monitor:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/sensors/sensor_hub_monitor
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_example_touch_button:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_button
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/touch/touch_button
 
@@ -777,11 +632,7 @@ build_example_touch_button_sensor:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_button_sensor
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/touch/touch_button_sensor
 
@@ -789,11 +640,7 @@ build_example_touch_slider_sensor:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_slider_sensor
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/touch/touch_slider_sensor
 
@@ -801,9 +648,7 @@ build_example_touch_touch_proximity:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_proximity
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/touch/touch_proximity
 
@@ -811,10 +656,7 @@ build_example_ulp_lp_cpu_lp_environment_sensor:
   extends:
     - .build_examples_template
     - .rules:build:example_ulp_lp_cpu_lp_environment_sensor
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/ulp/lp_cpu/lp_environment_sensor
 
@@ -822,7 +664,7 @@ build_example_usb_device_bootloader_uf2:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_bootloader_uf2
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/bootloader_uf2
 
@@ -830,7 +672,7 @@ build_example_usb_device_usb_dongle:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dongle
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dongle
 
@@ -846,7 +688,7 @@ build_example_usb_device_usb_uac:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uac
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uac
 
@@ -854,7 +696,7 @@ build_example_usb_device_usb_dual_uvc_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_dual_uvc_device
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_dual_uvc_device
 
@@ -862,10 +704,7 @@ build_example_usb_device_usb_extend_screen:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_extend_screen
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_extend_screen
 
@@ -873,7 +712,7 @@ build_example_usb_device_usb_webcam:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_webcam
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_webcam
 
@@ -881,7 +720,7 @@ build_example_usb_device_usb_hid_device:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_hid_device
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_hid_device
 
@@ -889,15 +728,15 @@ build_example_usb_device_usb_lcd_display:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_lcd_display
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_lcd_display
-    IMAGE: espressif/idf:release-v5.3
 
 build_example_usb_device_usb_msc_wireless_disk:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_msc_wireless_disk
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_msc_wireless_disk
 
@@ -905,7 +744,7 @@ build_example_usb_device_usb_surface_dial:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_surface_dial
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_surface_dial
 
@@ -913,12 +752,7 @@ build_example_usb_device_usb_uf2_nvs:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uf2_nvs
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uf2_nvs
 
@@ -926,12 +760,7 @@ build_example_usb_device_usb_uf2_ota:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uf2_ota
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uf2_ota
 
@@ -941,8 +770,8 @@ build_example_usb_host_usb_camera_lcd_display:
     - .rules:build:example_usb_host_usb_camera_lcd_display
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.1
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v5.5
         EXAMPLE_CONFIG: "sdkconfig.psram_octal_120m=default"
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_camera_lcd_display
@@ -951,7 +780,7 @@ build_example_usb_host_usb_camera_mic_spk:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_camera_mic_spk
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_camera_mic_spk
 
@@ -959,9 +788,7 @@ build_example_usb_host_usb_audio_player:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_audio_player
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_audio_player
 
@@ -969,7 +796,7 @@ build_example_usb_host_usb_cdc_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_4g_module
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
 
@@ -977,10 +804,7 @@ build_example_usb_host_usb_cdc_basic:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_basic
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_basic
 
@@ -988,7 +812,7 @@ build_example_usb_host_usb_host_msc_example:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_host_msc_example
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_host_msc_example
 
@@ -996,9 +820,7 @@ build_example_usb_host_usb_hub_dual_camera:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_hub_dual_camera
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_hub_dual_camera
 
@@ -1006,7 +828,7 @@ build_example_usb_host_usb_ecm_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_ecm_4g_module
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_ecm_4g_module
 
@@ -1014,7 +836,7 @@ build_example_usb_host_usb_msc_ota:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_msc_ota
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_msc_ota
 
@@ -1022,7 +844,7 @@ build_example_usb_host_usb_rndis_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_rndis_4g_module
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
 
@@ -1030,7 +852,7 @@ build_example_usb_otg_usb_host_device_mode_manual_switch:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_msc_ota
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/usb/otg/usb_host_device_mode_manual_switch
 
@@ -1038,10 +860,7 @@ build_example_utilities_xz_decompress_file:
   extends:
     - .build_examples_template
     - .rules:build:example_utilities_xz_decompress_file
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/utilities/xz_decompress_file
 
@@ -1049,11 +868,7 @@ build_example_utilities_adc_tp_calibration:
   extends:
     - .build_examples_template
     - .rules:build:example_utilities_adc_tp_calibration
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/utilities/adc_tp_calibration
 
@@ -1061,9 +876,7 @@ build_example_vision_opencv_color_tracker:
   extends:
     - .build_examples_template
     - .rules:build:example_vision_opencv_color_tracker
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/vision/opencv/color_tracker
 
@@ -1071,7 +884,7 @@ build_components_audio_adc_mic_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:component_audio_adc_mic_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/audio/adc_mic/test_apps
 
@@ -1095,7 +908,7 @@ build_components_bluetooth_ble_hci_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_bluetooth_ble_hci_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/bluetooth/ble_hci/test_apps
 
@@ -1103,7 +916,7 @@ build_components_bluetooth_ble_adv_bthome_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_bluetooth_ble_adv_bthome_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/bluetooth/ble_adv/bthome/test_apps
 
@@ -1111,7 +924,7 @@ build_components_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_button_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/button/test_apps
 
@@ -1119,9 +932,7 @@ build_components_display_lcd_esp_lcd_axs15231b_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_axs15231b_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_axs15231b/test_apps
 
@@ -1129,9 +940,7 @@ build_components_display_lcd_esp_lcd_co5300_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_co5300_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_co5300/test_apps
 
@@ -1139,9 +948,7 @@ build_components_display_lcd_esp_lcd_ek79007_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_ek79007_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_ek79007/test_apps
 
@@ -1149,9 +956,7 @@ build_components_display_lcd_esp_lcd_er88577_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_er88577_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_er88577/test_apps
 
@@ -1159,9 +964,7 @@ build_components_display_lcd_esp_lcd_jd9165_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_jd9165_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_jd9165/test_apps
 
@@ -1169,9 +972,7 @@ build_components_display_lcd_esp_lcd_jd9365_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_jd9365_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_jd9365/test_apps
 
@@ -1179,9 +980,7 @@ build_components_display_lcd_esp_lcd_gc9107_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_gc9107_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_gc9107/test_apps
 
@@ -1189,9 +988,7 @@ build_components_display_lcd_esp_lcd_gc9b71_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_gc9b71_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_gc9b71/test_apps
 
@@ -1199,9 +996,7 @@ build_components_display_lcd_esp_lcd_gc9d01_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_gc9d01_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_gc9d01/test_apps
 
@@ -1209,9 +1004,7 @@ build_components_display_lcd_esp_lcd_hx8399_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_hx8399_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_hx8399/test_apps
 
@@ -1219,10 +1012,7 @@ build_components_display_lcd_esp_lcd_panel_io_additions_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_panel_io_additions_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_panel_io_additions/test_apps
 
@@ -1230,9 +1020,7 @@ build_components_display_lcd_esp_lcd_nv3022b_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_nv3022b_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_nv3022b/test_apps
 
@@ -1240,9 +1028,7 @@ build_components_display_lcd_esp_lcd_nv3052_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_nv3052_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_nv3052/test_apps
 
@@ -1250,9 +1036,7 @@ build_components_display_lcd_esp_lcd_sh8601_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_sh8601/test_apps
 
@@ -1260,9 +1044,7 @@ build_components_display_lcd_esp_lcd_spd2010_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_spd2010_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_spd2010/test_apps
 
@@ -1270,9 +1052,7 @@ build_components_display_lcd_esp_lcd_st7701_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st7701_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7701/test_apps
 
@@ -1280,9 +1060,7 @@ build_components_display_lcd_esp_lcd_st7123_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st7123_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7123/test_apps
 
@@ -1290,9 +1068,7 @@ build_components_display_lcd_esp_lcd_st7703_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st7703_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st7703/test_apps
 
@@ -1300,9 +1076,7 @@ build_components_display_lcd_esp_lcd_st77903_qspi_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st77903_qspi_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903_qspi/test_apps
 
@@ -1310,9 +1084,7 @@ build_components_display_lcd_esp_lcd_st77903_rgb_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st77903_rgb_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77903_rgb/test_apps
 
@@ -1320,9 +1092,7 @@ build_components_display_lcd_esp_lcd_st77916_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st77916_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77916/test_apps
 
@@ -1330,9 +1100,7 @@ build_components_display_lcd_esp_lcd_st77922_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_st77922_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_st77922/test_apps
 
@@ -1340,9 +1108,7 @@ build_components_display_lcd_esp_lcd_usb_display_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_usb_display_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_usb_display/test_apps
 
@@ -1350,9 +1116,7 @@ build_components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_ili2118/test_apps
 
@@ -1360,9 +1124,7 @@ build_components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_touch_esp_lcd_touch_spd2010_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps
 
@@ -1370,9 +1132,7 @@ build_components_display_lcd_touch_esp_lcd_touch_st7123_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_touch_esp_lcd_touch_st7123_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/display/lcd_touch/esp_lcd_touch_st7123/test_apps
 
@@ -1380,9 +1140,7 @@ build_components_display_tools_esp_lv_decoder_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lv_decoder_test_apps
-  parallel:
-    matrix:
-    - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lv_decoder/test_apps
 
@@ -1390,10 +1148,7 @@ build_components_display_tools_esp_lv_fs_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lv_fs_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lv_fs/test_apps
 
@@ -1407,35 +1162,29 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/test_apps
 
-.build_components_display_tools_esp_lvgl_adapter_benchmark_template: &build_components_display_tools_esp_lvgl_adapter_benchmark_template
+.build_components_display_tools_esp_lvgl_adapter_benchmark_template:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lvgl_adapter_benchmark
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
 
 build_components_display_tools_esp_lvgl_adapter_benchmark:
-  <<: *build_components_display_tools_esp_lvgl_adapter_benchmark_template
-  variables:
-    EXAMPLE_CONFIG: "="
-    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
+  extends:
+    - .build_components_display_tools_esp_lvgl_adapter_benchmark_template
 
 build_components_display_tools_esp_lvgl_adapter_rgb888_benchmark:
-  <<: *build_components_display_tools_esp_lvgl_adapter_benchmark_template
+  extends:
+    - .build_components_display_tools_esp_lvgl_adapter_benchmark_template
   variables:
     EXAMPLE_CONFIG: "sdkconfig.ci.rgb888=default"
-    EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
 
 build_components_display_tools_esp_mmap_assets_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_mmap_assets_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/display/tools/esp_mmap_assets/test_apps
 
@@ -1461,11 +1210,7 @@ build_components_keyboard_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_keyboard_button_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/keyboard_button/test_apps
 
@@ -1473,9 +1218,7 @@ build_components_ir_ir_learn_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_ir_ir_learn_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/ir/ir_learn/test_apps
 
@@ -1483,10 +1226,7 @@ build_components_knob_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_knob_test
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/knob/test_apps
 
@@ -1494,7 +1234,7 @@ build_components_led_led_indicator_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_led_led_indicator_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 
@@ -1502,7 +1242,7 @@ build_components_motor_drv10987_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_motor_drv10987_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/motor/drv10987/test_apps
 
@@ -1510,9 +1250,7 @@ build_components_motor_esp_sensorless_bldc_control_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_motor_esp_sensorless_bldc_control_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/motor/esp_sensorless_bldc_control/test_apps
 
@@ -1520,7 +1258,7 @@ build_components_motor_esp_simplefoc_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_motor_esp_simplefoc_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/motor/esp_simplefoc/test_apps
 
@@ -1536,10 +1274,7 @@ build_components_ntc_driver_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_ntc_driver_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/sensors/ntc_driver/test_apps
 
@@ -1547,10 +1282,7 @@ build_components_sensors_power_monitor_ina236_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_power_monitor_ina236_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/sensors/power_monitor/ina236/test_apps
 
@@ -1558,13 +1290,7 @@ build_components_openai_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_openai_test_apps
-  parallel:
-    matrix:
-      # TODO: Replace v4.4.6 with release/v4.4 when the bug is fixed.
-      - IMAGE: espressif/idf:v4.4.6   # Due to a bug in the ESP32-S3 not being able to scan for AP in release/v4.4,
-                                      # temporarily using version v4.4.6 and awaiting the next update in release/v4.4.
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/openai/test_apps
 
@@ -1572,10 +1298,7 @@ build_components_sensors_power_measure_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_power_measure_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v4.4
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/sensors/power_measure/test_apps
 
@@ -1591,9 +1314,7 @@ build_components_sensors_battery_fuel_gauge_adc_battery_estimation_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_battery_fuel_gauge_adc_battery_estimation_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.4
+    - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: components/sensors/battery_fuel_gauge/adc_battery_estimation/test_apps
 
@@ -1625,10 +1346,7 @@ build_components_sensors_humiture_aht20_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_humiture_aht20_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/sensors/humiture/aht20/test_apps
 
@@ -1701,10 +1419,7 @@ build_components_sensors_radar_at581x_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_radar_at581x_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/sensors/radar/at581x/test_apps
 
@@ -1736,9 +1451,7 @@ build_components_touch_touch_proximity_sensor_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_proximity_sensor_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/touch/touch_proximity_sensor/test_apps
 
@@ -1746,20 +1459,16 @@ build_components_touch_touch_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_button_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/touch/touch_button/test_apps
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_components_touch_touch_button_sensor_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_button_sensor_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/touch/touch_button_sensor/test_apps
 
@@ -1767,9 +1476,7 @@ build_components_touch_touch_slider_sensor_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_slider_sensor_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/touch/touch_slider_sensor/test_apps
 
@@ -1777,15 +1484,15 @@ build_components_usb_esp_msc_ota_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_esp_msc_ota_test_apps
+    - .build_idf_active_release_version
   variables:
-    IMAGE: espressif/idf:release-v5.1
     EXAMPLE_DIR: components/usb/esp_msc_ota/test_apps
 
 build_components_usb_iot_usbh_rndis_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_rndis_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_rndis/test_apps
 
@@ -1797,13 +1504,14 @@ build_components_usb_usb_stream_test_apps:
   variables:
     EXAMPLE_DIR: components/usb/usb_stream/test_apps
 
+# This job should be removed. Reason: Deprecated.
+# Temporarily keep CI build job due to potential dependencies on this component.
 build_components_usb_iot_usbh_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_test
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v4.4
       - IMAGE: espressif/idf:release-v5.0
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh/test_apps
@@ -1812,10 +1520,7 @@ build_components_usb_iot_usbh_cdc_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_cdc_test
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
 
@@ -1823,10 +1528,7 @@ build_components_usb_iot_usbh_modem_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_modem_test
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.3
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_modem/test_apps
 
@@ -1834,9 +1536,7 @@ build_components_usb_usb_device_uac:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_usb_device_uac
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/usb_device_uac
 
@@ -1868,23 +1568,23 @@ build_tools_cmake_utilities_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:tools_cmake_utilities_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: tools/cmake_utilities/test_apps
 
 build_example_relinker:
+  # The relinker component needs to be adapted for different IDF versions,
+  # as there may be API changes between versions.
+  # Therefore, a fixed compilation version is used, and failures are allowed.
   extends:
     - .build_examples_template
     - .rules:build:example_relinker
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.0
       - IMAGE: espressif/idf:release-v5.3
   variables:
     EXAMPLE_DIR: examples/relinker
+  allow_failure: true
 
 # ragtime_panthera needs to first compile the receiver,
 # then move the firmware into the main project for compilation.
@@ -1907,6 +1607,7 @@ build_example_ragtime_panthera_follower_receiver:
 build_example_ragtime_panthera_follower:
   extends:
     - .build_examples_template
+    - .rules:build:example_ragtime_panthera_follower
   needs:
     - job: "build_example_ragtime_panthera_follower_receiver"
       artifacts: true
@@ -1936,16 +1637,7 @@ build_example_elf_loader_elf_loader_example:
   extends:
     - .build_examples_template
     - .rules:build:example_elf_loader_elf_loader_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
-      - IMAGE: espressif/idf:release-v5.5
-        EXAMPLE_CONFIG: "sdkconfig.ci=default"
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/elf_loader/elf_loader_example
 
@@ -1953,15 +1645,7 @@ build_example_elf_loader_build_elf_file_example:
   extends:
     - .build_examples_template
     - .rules:build:example_elf_loader_build_elf_file_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/elf_loader/build_elf_file_example
 
@@ -1977,7 +1661,7 @@ build_components_utilities_log_router_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_utilities_log_router_test_apps
-    - .build_idf_version_greater_equal_v5_0
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/utilities/log_router/test_apps
 
@@ -1985,9 +1669,6 @@ build_components_zero_detection_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_zero_detection_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/zero_detection/test_apps

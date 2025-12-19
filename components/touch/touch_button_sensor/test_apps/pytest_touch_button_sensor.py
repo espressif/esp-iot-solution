@@ -18,7 +18,28 @@ from pytest_embedded import Dut
 @pytest.mark.target('esp32')
 @pytest.mark.target('esp32s2')
 @pytest.mark.target('esp32s3')
-@pytest.mark.target('esp32p4')
 @pytest.mark.env('generic')
 def test_touch_button_sensor(dut: Dut)-> None:
+    dut.run_all_single_board_cases()
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('generic,eco_default')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'p4rev3',
+    ],
+)
+def test_touch_button_sensor_esp32p4_rev3(dut: Dut)-> None:
+    dut.run_all_single_board_cases()
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('generic,eco4')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'defaults',
+    ],
+)
+def test_touch_button_sensor_esp32p4_defaults(dut: Dut)-> None:
     dut.run_all_single_board_cases()
