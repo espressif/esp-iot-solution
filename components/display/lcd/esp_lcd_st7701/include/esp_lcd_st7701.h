@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@
 
 #include "hal/lcd_types.h"
 #include "esp_lcd_panel_vendor.h"
+#include "esp_idf_version.h"
 
 #if SOC_LCD_RGB_SUPPORTED
 #include "esp_lcd_panel_rgb.h"
@@ -165,6 +166,7 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -193,6 +195,7 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
         },                                               \
         .flags.use_dma2d = true,                         \
     }
+#endif
 
 /**
  * @brief MIPI DPI configuration structure
@@ -220,7 +223,6 @@ esp_err_t esp_lcd_new_panel_st7701(const esp_lcd_panel_io_handle_t io, const esp
             .vsync_pulse_width = 10,                     \
             .vsync_front_porch = 10,                     \
         },                                               \
-        .flags.use_dma2d = true,                         \
     }
 
 #ifdef __cplusplus
