@@ -13,8 +13,11 @@ import re
 import logging
 from pathlib import Path
 from typing import List
+import typing as t
+import shutil
 
 from idf_build_apps import App, build_apps, find_apps, setup_logging
+from idf_build_apps.app import CMakeApp
 
 logger = logging.getLogger('idf_build_apps')
 
@@ -36,6 +39,28 @@ IGNORE_WARNINGS = [
     r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panther/follower
     r'.+MultiCommand.+',
 ]
+
+class CustomApp(CMakeApp):
+    build_system: t.Literal['custom'] = 'custom'  # Must be unique to identify your custom app type
+
+    def _build(
+        self,
+        *,
+        manifest_rootpath: t.Optional[str] = None,
+        modified_components: t.Optional[t.List[str]] = None,
+        modified_files: t.Optional[t.List[str]] = None,
+        check_app_dependencies: bool = False,
+    ) -> None:
+        # Remove managed_components and dependencies.lock to avoid conflicts
+        shutil.rmtree(os.path.join(self.work_dir, 'managed_components'), ignore_errors=True)
+        if os.path.isfile(os.path.join(self.work_dir, 'dependencies.lock')):
+            os.remove(os.path.join(self.work_dir, 'dependencies.lock'))
+        super()._build(
+            manifest_rootpath=manifest_rootpath,
+            modified_components=modified_components,
+            modified_files=modified_files,
+            check_app_dependencies=check_app_dependencies,
+        )
 
 def _get_idf_version():
     if os.environ.get('IDF_VERSION'):
@@ -75,6 +100,7 @@ def get_cmake_apps(
             str(Path(PROJECT_ROOT) /'examples'/'.build-rules.yml'),
             str(Path(PROJECT_ROOT) /'tools'/'.build-rules.yml'),
         ],
+        build_system=CustomApp,
     )
     return apps
 
