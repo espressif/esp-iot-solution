@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.1.1 - 2025-12-22
+
+### Bugfix
+
+* Guard the RMT initialisation code with appropriate config option to prevent compilation failures for newer chips like esp32c61.
+
 ## v2.1.0 - 2025-11-5
 
 ## Improve:
