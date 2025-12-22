@@ -3,7 +3,7 @@ USB-Serial-JTAG 外设介绍
 
 :link_to_translation:`en:[English]`
 
-ESP32-S3/C3/P4 等芯片内置 USB-Serial-JTAG 外设，它包含了 USB-to-serial 转换器和 USB-to-JTAG 转换器，支持通过 USB 线连接到 PC，实现固件下载、调试和打印系统 LOG 等功能。USB-Serial-JTAG 外设的内部结构可参考 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
+集成了 USB-Serial-JTAG 外设的 ESP32 系列芯片（如 ESP32-S3、ESP32-C3、ESP32-P4）融合了 USB-to-serial 和 USB-to-JTAG 功能。该外设提供与主机 PC 的直接 USB 连接，支持固件下载、基于 JTAG 的调试和系统控制台输出。有关 USB-Serial-JTAG 外设架构的详细信息，请参阅 `ESP32-C3 技术参考手册-USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ 。
 
 USB-Serial-JTAG 外设驱动
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12,6 +12,13 @@ USB-Serial-JTAG 外设驱动
 * Linux 和 MacOS 系统下，无需手动安装驱动
 * Windows 10 及以上系统，联网将自动安装驱动
 * Windows 7/8 系统，需要手动安装驱动，驱动下载地址：\ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ 。用户也可以使用 `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ ，勾选 USB-Serial-JTAG 驱动进行安装，
+
+.. Note::
+    若以上驱动安装失败，可使用 `Zadig <https://zadig.akeo.ie/>`_ 工具进行安装。使用 Zadig 工具时，请按如下方式选择驱动：
+
+    * 对 ``USB JTAG/serial debug unit (Interface 0)`` 选择 ``usbser`` 或 ``USB Serial (CDC)`` 驱动
+    * 对 ``USB JTAG/serial debug unit (Interface 2)`` 选择 ``WinUSB`` 驱动
+
 
 USB-Serial-JTAG 外设内置功能
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -33,6 +40,9 @@ Linux 如下图所示：
    :target: ../../../_static/usb/usb_serial_jtag_linux.png
    :alt: device_manager_usb_serial_jtag_cn
 
+
+.. Note::
+    如果设备未正确显示，请参阅上述驱动安装部分。
 
 使用 USB-Serial-JTAG 下载固件
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
