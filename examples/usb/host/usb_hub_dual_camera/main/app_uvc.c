@@ -187,9 +187,6 @@ void driver_event_cb(const uvc_host_driver_event_data_t *event, void *user_ctx)
 
     switch (event->type) {
     case UVC_HOST_DRIVER_EVENT_DEVICE_CONNECTED: {
-#if CONFIG_PRINTF_CAMERA_USB_DESC
-        uvc_host_desc_print(dev->stream);
-#endif
         ESP_LOGI(TAG, "Device connected");
 
         dev = (uvc_dev_t *)calloc(1, sizeof(uvc_dev_t) + (event->device_connected.frame_info_num) * sizeof(uvc_host_frame_info_t));
@@ -317,6 +314,9 @@ static esp_err_t uvc_open(uvc_dev_t *dev, int frame_index)
         ESP_LOGI(TAG, "Failed to open UVC[%d]", dev->index);
         return ESP_FAIL;
     }
+#if CONFIG_PRINTF_CAMERA_USB_DESC
+    uvc_host_desc_print(dev->stream);
+#endif
 
     dev->active_frame_index = frame_index;
     return ESP_OK;
