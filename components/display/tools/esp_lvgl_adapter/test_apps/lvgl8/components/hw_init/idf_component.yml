@@ -2,11 +2,11 @@ dependencies:
   idf:
     version: ">=5.5.0"
 
-  esp_lvgl_adapter:
+  espressif/esp_lvgl_adapter:
     version: "*"
     override_path: "../../../.."
 
-  esp_lcd_ek79007:
+  espressif/esp_lcd_ek79007:
     version: "*"
     override_path: "../../../../../../lcd/esp_lcd_ek79007"
     rules:

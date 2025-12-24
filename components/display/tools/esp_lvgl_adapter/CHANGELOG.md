@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.2.0 (2025-12-24)
+
+* Optimized dependency management by adding conditional rules for optional dependencies
+
 ## v0.1.4 (2025-12-22)
 
 * Fixed the LVGL naming compatibility dependency issue
