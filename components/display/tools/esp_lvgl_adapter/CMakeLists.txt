@@ -7,16 +7,26 @@ if(${target} STREQUAL "esp32p4")
 endif()
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
-if(lvgl IN_LIST build_components)
-    set(lvgl_name lvgl)
+
+set(lvgl_name "")
+if("lvgl" IN_LIST build_components)
+    set(lvgl_name "lvgl")
+elseif("lvgl__lvgl" IN_LIST build_components)
+    set(lvgl_name "lvgl__lvgl")
+endif()
+
+if(NOT lvgl_name)
+    set(lvgl_name "lvgl__lvgl")
+endif()
+
+set(lvgl_ver "")
+if(DEFINED ENV{LVGL_VERSION} AND NOT "$ENV{LVGL_VERSION}" STREQUAL "")
     set(lvgl_ver $ENV{LVGL_VERSION})
 else()
-    set(lvgl_name lvgl__lvgl)
     idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION)
 endif()
 
 if("${lvgl_ver}" STREQUAL "")
-    message("Could not determine LVGL version, assuming v9.x")
     set(lvgl_ver "9.0.0")
 endif()
 
@@ -125,17 +135,16 @@ set(ESP_LV_ADAPTER_PPA_ALIGNMENT 128)
 target_compile_definitions(${COMPONENT_LIB} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
 target_compile_options(${COMPONENT_LIB} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
 
-idf_component_get_property(lvgl_comp_lib ${lvgl_name} COMPONENT_LIB)
-if(lvgl_comp_lib)
-    target_compile_definitions(${lvgl_comp_lib} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
-    target_compile_options(${lvgl_comp_lib} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
-    # Suppress FreeRTOS atomic.h unused function warnings in LVGL
-    target_compile_options(${lvgl_comp_lib} PRIVATE -Wno-unused-function)
+if("${lvgl_name}" IN_LIST build_components)
+    idf_component_get_property(lvgl_comp_lib ${lvgl_name} COMPONENT_LIB)
+    if(lvgl_comp_lib)
+        target_compile_definitions(${lvgl_comp_lib} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
+        target_compile_options(${lvgl_comp_lib} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
+        target_compile_options(${lvgl_comp_lib} PRIVATE -Wno-unused-function)
+    endif()
 endif()
 
-# Link FreeType to LVGL when enabled
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
-    # Detect FreeType component name (espressif__freetype or freetype)
     set(_freetype_component "")
     if("espressif__freetype" IN_LIST build_components)
         set(_freetype_component espressif__freetype)
@@ -162,35 +171,28 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
             FT2_BUILD_LIBRARY)
     endif()
 
-    # ========================================================================
-    # LVGL v9+ Virtual File System Support for FreeType
-    # ========================================================================
-    # LVGL v9 introduced lv_ftsystem.c which bridges FreeType to LVGL's
-    # virtual filesystem (lv_fs), enabling paths like "F:font.ttf".
-    #
-    # LVGL v8 lacks this feature, so users must use memory mode:
-    #   - Get pointer from esp_mmap_assets: mmap_assets_get_mem()
-    #   - Pass pointer to FreeType via .mem/.mem_size fields
-    # ========================================================================
     if(CONFIG_LV_FREETYPE_USE_LVGL_PORT AND
        TARGET freetype AND
        lvgl_ver VERSION_GREATER_EQUAL "9.0.0")
 
-        idf_component_get_property(_lvgl_dir ${lvgl_name} COMPONENT_DIR)
-        set(_lv_ftsystem "${_lvgl_dir}/src/libs/freetype/lv_ftsystem.c")
+        set(_lvgl_dir "")
+        if("${lvgl_name}" IN_LIST build_components)
+            idf_component_get_property(_lvgl_dir ${lvgl_name} COMPONENT_DIR)
+        endif()
 
-        if(EXISTS ${_lv_ftsystem})
-            # Replace FreeType's native ftsystem.c with LVGL's implementation
+        if(_lvgl_dir)
+            set(_lv_ftsystem "${_lvgl_dir}/src/libs/freetype/lv_ftsystem.c")
+        else()
+            set(_lv_ftsystem "")
+        endif()
+
+        if(_lv_ftsystem AND EXISTS ${_lv_ftsystem})
             get_target_property(_ft_sources freetype SOURCES)
             list(FILTER _ft_sources EXCLUDE REGEX ".*/ftsystem\\.c$")
             set_target_properties(freetype PROPERTIES SOURCES "${_ft_sources}")
 
             target_sources(freetype PRIVATE ${_lv_ftsystem})
             target_include_directories(freetype PRIVATE ${_lvgl_dir})
-
-            message(STATUS "ESP LVGL Adapter: FreeType virtual filesystem enabled (LVGL ${lvgl_ver})")
-        else()
-            message(WARNING "ESP LVGL Adapter: lv_ftsystem.c not found, FreeType will use native filesystem")
         endif()
     endif()
 endif()

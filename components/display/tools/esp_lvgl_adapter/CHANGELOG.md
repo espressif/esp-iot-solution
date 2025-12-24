@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.1.4 (2025-12-22)
+
+* Fixed the LVGL naming compatibility dependency issue
+
 ## v0.1.3 (2025-12-16)
 
 * Fixed the issue with 180-degree rotation
