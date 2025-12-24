@@ -16,4 +16,4 @@ Examples
 API Reference
 -----------------
 
-.. include-build-file:: inc/esp_mcp.inc
+.. include-build-file:: inc/esp_mcp_mgr.inc

@@ -7,17 +7,17 @@ This directory contains unit tests for the MCP C SDK component.
 The test application covers all public APIs:
 
 ### MCP Transport Manager API (`esp_mcp.h`)
-- `esp_mcp_init()` / `esp_mcp_deinit()`
-- `esp_mcp_start()` / `esp_mcp_stop()`
-- `esp_mcp_register_endpoint()` / `esp_mcp_unregister_endpoint()`
-- `esp_mcp_req_handle()` - Request handling with JSON-RPC messages
-- `esp_mcp_req_destroy_response()` - Response buffer cleanup
+- `esp_mcp_mgr_init()` / `esp_mcp_mgr_deinit()`
+- `esp_mcp_mgr_start()` / `esp_mcp_mgr_stop()`
+- `esp_mcp_mgr_register_endpoint()` / `esp_mcp_mgr_unregister_endpoint()`
+- `esp_mcp_mgr_req_handle()` - Request handling with JSON-RPC messages
+- `esp_mcp_mgr_req_destroy_response()` - Response buffer cleanup
 - Error handling (NULL parameters, invalid handles, invalid transport)
-- Integration with `esp_mcp_server_t`
+- Integration with `esp_mcp_t`
 
-### Server API (`esp_mcp_server.h`)
-- `esp_mcp_server_create()` / `esp_mcp_server_destroy()`
-- `esp_mcp_server_add_tool()` / `esp_mcp_server_remove_tool()`
+### MCP Engine API (`esp_mcp_engine.h`)
+- `esp_mcp_create()` / `esp_mcp_destroy()`
+- `esp_mcp_add_tool()` / `esp_mcp_remove_tool()`
 - Error handling (NULL parameters, invalid states)
 
 ### Tool API (`esp_mcp_tool.h`)

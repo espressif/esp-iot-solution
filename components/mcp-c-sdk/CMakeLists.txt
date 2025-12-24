@@ -1,6 +1,6 @@
 set(srcs
-    "src/esp_mcp.c"
-    "src/esp_mcp_server.c"
+    "src/esp_mcp_mgr.c"
+    "src/esp_mcp_engine.c"
     "src/esp_mcp_property.c"
     "src/esp_mcp_tool.c"
     "src/esp_mcp_data.c"

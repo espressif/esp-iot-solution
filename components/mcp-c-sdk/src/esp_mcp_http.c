@@ -14,8 +14,8 @@
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
 #include <sys/queue.h>
-#include "esp_mcp_server_priv.h"
-#include "esp_mcp.h"
+#include "esp_mcp_priv.h"
+#include "esp_mcp_mgr.h"
 
 static const char *TAG = "esp_mcp_http";
 
@@ -25,7 +25,7 @@ static const char *TAG = "esp_mcp_http";
  * Structure containing MCP handle, HTTP server handle, message buffer, and message buffer size.
  */
 typedef struct esp_mcp_http_item_s {
-    esp_mcp_handle_t handle;     /*!< MCP handle */
+    esp_mcp_mgr_handle_t handle;     /*!< MCP handle */
     httpd_handle_t   httpd;      /*!< HTTP server handle */
 } esp_mcp_http_item_t;
 
@@ -58,13 +58,13 @@ static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
     }
     mbuf[total_len] = '\0';
 
-    esp_mcp_req_handle(mcp_http->handle, req->uri + 1, (const uint8_t *)mbuf, total_len, &outbuf, &outlen);
+    esp_mcp_mgr_req_handle(mcp_http->handle, req->uri + 1, (const uint8_t *)mbuf, total_len, &outbuf, &outlen);
     free(mbuf);
     if (outbuf && outlen > 0) {
         httpd_resp_set_hdr(req, "Connection", "keep-alive");
         httpd_resp_set_type(req, "application/json");
         ret = httpd_resp_send(req, (char *)outbuf, outlen);
-        esp_mcp_req_destroy_response(mcp_http->handle, outbuf);
+        esp_mcp_mgr_req_destroy_response(mcp_http->handle, outbuf);
     } else {
         httpd_resp_set_status(req, HTTPD_204);
         httpd_resp_set_type(req, "application/json");
@@ -75,7 +75,7 @@ static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_init(esp_mcp_handle_t handle, esp_mcp_transport_handle_t *transport_handle)
+static esp_err_t esp_mcp_http_init(esp_mcp_mgr_handle_t handle, esp_mcp_transport_handle_t *transport_handle)
 {
     esp_mcp_http_item_t *mcp_http = calloc(1, sizeof(esp_mcp_http_item_t));
     ESP_RETURN_ON_FALSE(mcp_http, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for HTTP item");

@@ -145,7 +145,7 @@ curl -X POST http://192.168.1.100/mcp_server \
   -d '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"self.screen.set_rgb","arguments":{"RGB":{"red":255,"green":128,"blue":0}}}}'
 ```
 
-**Note:** The endpoint name (`/mcp_server`) is set via `esp_mcp_register_endpoint()` in the example code. You can customize it to any path you prefer.
+**Note:** The endpoint name (`/mcp_server`) is set via `esp_mcp_mgr_register_endpoint()` in the example code. You can customize it to any path you prefer.
 
 ## Registered Tools
 
@@ -188,7 +188,7 @@ property = esp_mcp_property_create_with_object("RGB", "{\"red\":0,\"green\":120,
 esp_mcp_tool_add_property(tool, property);
 ```
 
-**Note:** Properties are added to tools using `esp_mcp_tool_add_property()`, and the tool is then registered with the server using `esp_mcp_server_add_tool()`.
+**Note:** Properties are added to tools using `esp_mcp_tool_add_property()`, and the tool is then registered with the server using `esp_mcp_add_tool()`.
 
 ## Troubleshooting
 
@@ -206,17 +206,17 @@ The example uses HTTP transport by default. The MCP server runs as an HTTP serve
 
 ```c
 httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
-esp_mcp_config_t mcp_mgr_config = {
+esp_mcp_mgr_config_t mcp_mgr_config = {
     .transport = esp_mcp_transport_http,
     .config = &http_config,
-    .instance = mcp_server,
+    .instance = mcp,
 };
-ESP_ERROR_CHECK(esp_mcp_init(&mcp_mgr_config, &mcp_http_handle));
-ESP_ERROR_CHECK(esp_mcp_start(mcp_http_handle));
-ESP_ERROR_CHECK(esp_mcp_register_endpoint(mcp_http_handle, "mcp_server", NULL));
+ESP_ERROR_CHECK(esp_mcp_mgr_init(mcp_mgr_config, &mcp_mgr_handle));
+ESP_ERROR_CHECK(esp_mcp_mgr_start(mcp_mgr_handle));
+ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(mcp_mgr_handle, "mcp_server", NULL));
 ```
 
-**Default endpoint:** `/mcp_server` (configurable via `esp_mcp_register_endpoint()`)
+**Default endpoint:** `/mcp_server` (configurable via `esp_mcp_mgr_register_endpoint()`)
 
 **Default port:** 80 (configurable via `httpd_config_t`)
 
@@ -255,7 +255,7 @@ esp_mcp_tool_add_property(tool, property);
 4. **Register the tool** with the server:
 
 ```c
-esp_mcp_server_add_tool(mcp_server, tool);
+esp_mcp_add_tool(mcp, tool);
 ```
 
 **Complete example:**
@@ -269,11 +269,11 @@ static esp_mcp_value_t my_tool_callback(const esp_mcp_property_list_t* propertie
     return esp_mcp_value_create_bool(true);
 }
 
-// In app_main(), after creating the server:
+// In app_main(), after creating the MCP engine:
 esp_mcp_tool_t *tool = esp_mcp_tool_create("my_tool", "My custom tool description", my_tool_callback);
 esp_mcp_property_t *property = esp_mcp_property_create_with_int("param", 10);
 esp_mcp_tool_add_property(tool, property);
-esp_mcp_server_add_tool(mcp_server, tool);
+esp_mcp_add_tool(mcp, tool);
 ```
 
 ## Technical References

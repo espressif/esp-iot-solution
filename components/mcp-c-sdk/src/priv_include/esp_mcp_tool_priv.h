@@ -23,7 +23,7 @@ extern "C" {
  * input properties, and execution callback.
  *
  * @note This is an internal type used only within the MCP server implementation.
- *       Users should use esp_mcp_server_add_tool_with_callback() to add tools.
+ *       Users should use esp_mcp_add_tool_with_callback() to add tools.
  */
 typedef struct esp_mcp_tool_s esp_mcp_tool_t;
 
@@ -57,7 +57,7 @@ typedef struct esp_mcp_tool_foreach_ctx_s {
  * Creates a tool with the specified name, description, input properties,
  * and execution callback function.
  *
- * @note This is an internal API. Users should use esp_mcp_server_add_tool_with_callback()
+ * @note This is an internal API. Users should use esp_mcp_add_tool_with_callback()
  *       instead.
  *
  * @note The function takes ownership of the properties list. The caller must not

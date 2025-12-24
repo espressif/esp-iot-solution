@@ -16,4 +16,4 @@ MCP 组件为访问常用 MCP 功能提供了简化的 API 接口。它支持 HT
 API 参考
 -----------------
 
-.. include-build-file:: inc/esp_mcp.inc
+.. include-build-file:: inc/esp_mcp_mgr.inc

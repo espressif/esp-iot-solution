@@ -58,10 +58,12 @@ cp -r mcp-c-sdk your_project/components/
 ## 🚀 快速开始
 
 ```c
-#include "esp_mcp_server.h"
+#include "esp_mcp_engine.h"
+#include "esp_mcp_mgr.h"
 #include "esp_mcp_tool.h"
 #include "esp_mcp_property.h"
-#include "esp_mcp.h"
+// 传输/管理层（esp_mcp_mgr_*）在 esp_mcp_mgr.h
+// 协议引擎层（esp_mcp_*）在 esp_mcp_engine.h
 
 // 工具回调函数
 static esp_mcp_value_t set_volume_callback(const esp_mcp_property_list_t* properties)
@@ -89,8 +91,8 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
     
     // 创建 MCP 服务器
-    esp_mcp_server_t *mcp_server = NULL;
-    ESP_ERROR_CHECK(esp_mcp_server_create(&mcp_server));
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
     
     // 创建带回调的工具
     esp_mcp_tool_t *tool = esp_mcp_tool_create(
@@ -104,15 +106,15 @@ void app_main(void)
         esp_mcp_property_create_with_range("volume", 0, 100));
     
     // 注册工具到服务器
-    ESP_ERROR_CHECK(esp_mcp_server_add_tool(mcp_server, tool));
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
     
     // 初始化并启动 MCP（使用 HTTP 传输）
-    esp_mcp_handle_t mcp_handle = 0;
-    esp_mcp_config_t config = MCP_SERVER_DEFAULT_CONFIG();
-    config.instance = mcp_server;
+    esp_mcp_mgr_handle_t mcp_handle = 0;
+    esp_mcp_mgr_config_t config = MCP_SERVER_DEFAULT_CONFIG();
+    config.instance = mcp;
     
-    ESP_ERROR_CHECK(esp_mcp_init(&config, &mcp_handle));
-    ESP_ERROR_CHECK(esp_mcp_start(mcp_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &mcp_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(mcp_handle));
     
     ESP_LOGI(TAG, "MCP 服务器已在端口 80 启动");
 }
@@ -124,22 +126,22 @@ void app_main(void)
 
 ```c
 // 创建 MCP 服务器实例
-esp_err_t esp_mcp_server_create(esp_mcp_server_t **server);
+esp_err_t esp_mcp_create(esp_mcp_t **server);
 
 // 使用传输配置初始化 MCP
-esp_err_t esp_mcp_init(esp_mcp_config_t *config, esp_mcp_handle_t *handle);
+esp_err_t esp_mcp_mgr_init(esp_mcp_mgr_config_t *config, esp_mcp_mgr_handle_t *handle);
 
 // 启动 MCP 服务器（启动 HTTP 服务器）
-esp_err_t esp_mcp_start(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_start(esp_mcp_mgr_handle_t handle);
 
 // 停止 MCP 服务器
-esp_err_t esp_mcp_stop(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_stop(esp_mcp_mgr_handle_t handle);
 
 // 清理 MCP 并释放资源
-esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_deinit(esp_mcp_mgr_handle_t handle);
 
 // 销毁 MCP 服务器并释放所有资源
-esp_err_t esp_mcp_server_destroy(esp_mcp_server_t *server);
+esp_err_t esp_mcp_destroy(esp_mcp_t *mcp);
 ```
 
 ### 工具注册
@@ -159,14 +161,14 @@ esp_err_t esp_mcp_tool_add_property(
 );
 
 // 向服务器添加工具
-esp_err_t esp_mcp_server_add_tool(
-    esp_mcp_server_t *server,
+esp_err_t esp_mcp_add_tool(
+    esp_mcp_t *mcp,
     esp_mcp_tool_t *tool
 );
 
 // 从服务器移除工具
-esp_err_t esp_mcp_server_remove_tool(
-    esp_mcp_server_t *server,
+esp_err_t esp_mcp_remove_tool(
+    esp_mcp_t *mcp,
     esp_mcp_tool_t *tool
 );
 ```
@@ -312,21 +314,7 @@ curl -X POST http://your-esp32-ip/mcp \
 
 ### 自定义传输
 
-SDK 通过回调函数支持自定义传输实现：
-
-```c
-typedef struct {
-    uint32_t transport;
-    int (*open)(esp_mcp_handle_t handle, esp_mcp_transport_config_t *config);
-    int (*read)(esp_mcp_handle_t handle, char *buffer, int len, int timeout_ms);
-    int (*write)(esp_mcp_handle_t handle, const char *buffer, int len, int timeout_ms);
-    int (*close)(esp_mcp_handle_t handle);
-} esp_mcp_transport_funcs_t;
-
-// 设置自定义传输函数
-esp_err_t esp_mcp_transport_set_funcs(esp_mcp_handle_t handle, 
-                                     esp_mcp_transport_funcs_t funcs);
-```
+SDK 通过 `esp_mcp_mgr_config_t.transport` 提供的传输函数表 `esp_mcp_transport_t` 支持自定义传输实现。
 
 ## 📖 文档
 

@@ -323,60 +323,59 @@ void app_main(void)
     // Connect to WiFi
     ESP_ERROR_CHECK(example_connect());
 
-    // Initialize MCP server
-    esp_mcp_server_t *mcp_server = NULL;
-    ESP_ERROR_CHECK(esp_mcp_server_create(&mcp_server));
+    // Initialize MCP engine
+    esp_mcp_t *mcp = NULL;
+    esp_mcp_property_t *property = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
 
     // Add get_device_status tool
     esp_mcp_tool_t *tool = esp_mcp_tool_create("self.get_device_status", "Get device status including audio, screen, battery, and network information", get_device_status_callback);
-    esp_mcp_property_t *property = esp_mcp_property_create_with_range("volume", 0, 100);
-    esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
     // Add set_volume tool
-    property = esp_mcp_property_create_with_range("volume", 0, 100);
     tool = esp_mcp_tool_create("self.audio_speaker.set_volume", "Set audio speaker volume (0-100)", set_volume_callback);
+    property = esp_mcp_property_create_with_range("volume", 0, 100);
     esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
     // Add set_brightness tool
     tool = esp_mcp_tool_create("self.screen.set_brightness", "Set screen brightness (0-100)", set_brightness_callback);
     property = esp_mcp_property_create_with_range("brightness", 0, 100);
     esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
     // Add set_theme tool
     tool = esp_mcp_tool_create("self.screen.set_theme", "Set screen theme (light/dark)", set_theme_callback);
     property = esp_mcp_property_create_with_string("theme", "light");
     esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
     // Add set_hsv tool
     // HSV can be partially provided, e.g. [120], [120, 80], [null, 80], [null, null, 50]
-    property = esp_mcp_property_create_with_array("HSV", "[120, 80, 50]");
     tool = esp_mcp_tool_create("self.screen.set_hsv", "Set screen HSV, first value is hue which range is (0, 360), \
                                 second value is saturation which range is (0, 100), \
                                 third value is value which range is (0, 100)", set_hsv_callback);
+    property = esp_mcp_property_create_with_array("HSV", "[120, 80, 50]");
     esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
     // Add set_rgb tool
-    property = esp_mcp_property_create_with_object("RGB", "{\"red\": 0, \"green\": 120, \"blue\": 240}");
     tool = esp_mcp_tool_create("self.screen.set_rgb", "Set screen RGB, red value range is (0, 255), \
                                 green value range is (0, 255), \
                                 blue value range is (0, 255)", set_rgb_callback);
+    property = esp_mcp_property_create_with_object("RGB", "{\"red\": 0, \"green\": 120, \"blue\": 240}");
     esp_mcp_tool_add_property(tool, property);
-    esp_mcp_server_add_tool(mcp_server, tool);
+    esp_mcp_add_tool(mcp, tool);
 
-    esp_mcp_handle_t mcp_http_handle = 0;
+    esp_mcp_mgr_handle_t mcp_mgr_handle = 0;
 
     httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
-    esp_mcp_config_t mcp_mgr_config = {
+    esp_mcp_mgr_config_t mcp_mgr_config = {
         .transport = esp_mcp_transport_http,
         .config = &http_config,
-        .instance = mcp_server,
+        .instance = mcp,
     };
-    ESP_ERROR_CHECK(esp_mcp_init(mcp_mgr_config, &mcp_http_handle));
-    ESP_ERROR_CHECK(esp_mcp_start(mcp_http_handle));
-    ESP_ERROR_CHECK(esp_mcp_register_endpoint(mcp_http_handle, "mcp_server", NULL));
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(mcp_mgr_config, &mcp_mgr_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(mcp_mgr_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(mcp_mgr_handle, "mcp_server", NULL));
 }

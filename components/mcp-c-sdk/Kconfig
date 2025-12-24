@@ -6,7 +6,8 @@ menu "Model Context Protocol"
         help
             Enable the built-in HTTP transport implementation.
             You can disable this if you want to use only custom transport.
-            For other transport methods, implement custom transport using esp_mcp_transport_set_funcs().
+            For other transport methods, implement a custom transport by providing an esp_mcp_transport_t
+            implementation in esp_mcp_mgr_config_t.
 
     config MCP_TOOLCALL_STACK_SIZE
         int "The maximum stack size allowed for the toolcall task"

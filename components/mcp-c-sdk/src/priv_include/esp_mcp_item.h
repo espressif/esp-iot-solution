@@ -95,20 +95,21 @@ typedef struct esp_mcp_tool_list_s {
  * for pending requests identified by their message ID.
  */
 typedef struct esp_mcp_mbuf_t {
+    uint16_t id;                          /*!< Response message ID */
     uint8_t *outbuf;                      /*!< Response data buffer */
     uint16_t outlen;                      /*!< Response data length (bytes) */
 } esp_mcp_mbuf_t;
 
 /**
- * @brief MCP server structure
+ * @brief MCP structure (server-side MCP instance)
  *
- * Structure managing MCP server instance state, including registered tools
+ * Structure managing MCP instance state, including registered tools
  * and message buffers for pending responses.
  */
-typedef struct esp_mcp_server_s {
+typedef struct esp_mcp_s {
     esp_mcp_tool_list_t *tools;       /*!< List of registered tools */
     esp_mcp_mbuf_t mbuf;              /*!< Message buffer for responses */
-} esp_mcp_server_t;
+} esp_mcp_t;
 
 /**
  * @brief MCP endpoint handler function type

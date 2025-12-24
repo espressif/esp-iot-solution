@@ -58,10 +58,12 @@ cp -r mcp-c-sdk your_project/components/
 ## 🚀 Quick Start
 
 ```c
-#include "esp_mcp_server.h"
+#include "esp_mcp_engine.h"
+#include "esp_mcp_mgr.h"
 #include "esp_mcp_tool.h"
 #include "esp_mcp_property.h"
-#include "esp_mcp.h"
+// Transport manager (esp_mcp_mgr_*) lives in esp_mcp_mgr.h
+// MCP engine (esp_mcp_*) lives in esp_mcp_engine.h
 
 // Tool callback function
 static esp_mcp_value_t set_volume_callback(const esp_mcp_property_list_t* properties)
@@ -89,8 +91,8 @@ void app_main(void)
     ESP_ERROR_CHECK(example_connect());
     
     // Create MCP server
-    esp_mcp_server_t *mcp_server = NULL;
-    ESP_ERROR_CHECK(esp_mcp_server_create(&mcp_server));
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
     
     // Create tool with callback
     esp_mcp_tool_t *tool = esp_mcp_tool_create(
@@ -104,15 +106,15 @@ void app_main(void)
         esp_mcp_property_create_with_range("volume", 0, 100));
     
     // Register tool to server
-    ESP_ERROR_CHECK(esp_mcp_server_add_tool(mcp_server, tool));
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
     
     // Initialize and start MCP with HTTP transport
-    esp_mcp_handle_t mcp_handle = 0;
-    esp_mcp_config_t config = MCP_SERVER_DEFAULT_CONFIG();
-    config.instance = mcp_server;
+    esp_mcp_mgr_handle_t mcp_handle = 0;
+    esp_mcp_mgr_config_t config = MCP_SERVER_DEFAULT_CONFIG();
+    config.instance = mcp;
     
-    ESP_ERROR_CHECK(esp_mcp_init(&config, &mcp_handle));
-    ESP_ERROR_CHECK(esp_mcp_start(mcp_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &mcp_handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(mcp_handle));
     
     ESP_LOGI(TAG, "MCP server started on port 80");
 }
@@ -124,22 +126,22 @@ void app_main(void)
 
 ```c
 // Create MCP server instance
-esp_err_t esp_mcp_server_create(esp_mcp_server_t **server);
+esp_err_t esp_mcp_create(esp_mcp_t **server);
 
 // Initialize MCP with transport configuration
-esp_err_t esp_mcp_init(esp_mcp_config_t *config, esp_mcp_handle_t *handle);
+esp_err_t esp_mcp_mgr_init(esp_mcp_mgr_config_t *config, esp_mcp_mgr_handle_t *handle);
 
 // Start MCP server (starts HTTP server)
-esp_err_t esp_mcp_start(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_start(esp_mcp_mgr_handle_t handle);
 
 // Stop MCP server
-esp_err_t esp_mcp_stop(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_stop(esp_mcp_mgr_handle_t handle);
 
 // Deinitialize MCP and cleanup resources
-esp_err_t esp_mcp_deinit(esp_mcp_handle_t handle);
+esp_err_t esp_mcp_mgr_deinit(esp_mcp_mgr_handle_t handle);
 
 // Destroy MCP server and free all resources
-esp_err_t esp_mcp_server_destroy(esp_mcp_server_t *server);
+esp_err_t esp_mcp_destroy(esp_mcp_t *mcp);
 ```
 
 ### Tool Registration
@@ -159,14 +161,14 @@ esp_err_t esp_mcp_tool_add_property(
 );
 
 // Add tool to server
-esp_err_t esp_mcp_server_add_tool(
-    esp_mcp_server_t *server,
+esp_err_t esp_mcp_add_tool(
+    esp_mcp_t *mcp,
     esp_mcp_tool_t *tool
 );
 
 // Remove tool from server
-esp_err_t esp_mcp_server_remove_tool(
-    esp_mcp_server_t *server,
+esp_err_t esp_mcp_remove_tool(
+    esp_mcp_t *mcp,
     esp_mcp_tool_t *tool
 );
 ```
@@ -312,21 +314,8 @@ curl -X POST http://your-esp32-ip/mcp \
 
 ### Custom Transport
 
-The SDK supports custom transport implementations through callback functions:
-
-```c
-typedef struct {
-    uint32_t transport;
-    int (*open)(esp_mcp_handle_t handle, esp_mcp_transport_config_t *config);
-    int (*read)(esp_mcp_handle_t handle, char *buffer, int len, int timeout_ms);
-    int (*write)(esp_mcp_handle_t handle, const char *buffer, int len, int timeout_ms);
-    int (*close)(esp_mcp_handle_t handle);
-} esp_mcp_transport_funcs_t;
-
-// Set custom transport functions
-esp_err_t esp_mcp_transport_set_funcs(esp_mcp_handle_t handle, 
-                                     esp_mcp_transport_funcs_t funcs);
-```
+The SDK supports custom transport implementations via the transport vtable `esp_mcp_transport_t`
+provided in `esp_mcp_mgr_config_t.transport`.
 
 ## 📖 Documentation
 

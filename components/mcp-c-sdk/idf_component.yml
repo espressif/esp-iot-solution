@@ -1,5 +1,5 @@
 version: "0.1.0"
-description: This component implements the core functionality of the MCP SDK for ESP32 devices. Conforms to MCP 2024-11-05 specification.
+description: MCP SDK for ESP32 devices. Conforms to MCP 2024-11-05 specification.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/mcp-c-sdk
 dependencies:
   idf: ">=5.4"
