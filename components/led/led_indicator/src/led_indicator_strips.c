@@ -45,7 +45,7 @@ static esp_err_t led_indicator_strips_init(void *param, void **ret_strips)
     p_strip->max_index = cfg->led_strip_cfg.max_leds;
     LED_STRIPS_CHECK(NULL != p_strip, "calloc failed", return ESP_ERR_NO_MEM);
     switch (cfg->led_strip_driver) {
-#if !CONFIG_IDF_TARGET_ESP32C2
+#if CONFIG_SOC_RMT_SUPPORTED
     case LED_STRIP_RMT: {
         ret = led_strip_new_rmt_device(&cfg->led_strip_cfg, &cfg->led_strip_rmt_cfg, &p_strip->led_strip);
         LED_STRIPS_CHECK(ret == ESP_OK, "Created LED strip object with RMT backend", goto fail);
