@@ -1350,6 +1350,14 @@ build_components_sensors_battery_fuel_gauge_bq27220_test_apps:
   variables:
     EXAMPLE_DIR: components/sensors/battery_fuel_gauge/bq27220/test_apps
 
+build_components_sensors_gas_bme690_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_sensors_gas_bme690_test_apps
+    - .build_idf_ge_than_v5_3
+  variables:
+    EXAMPLE_DIR: components/sensors/gas/bme690/test_apps
+
 build_components_sensors_gesture_apds9960_test_apps:
   extends:
     - .build_examples_template

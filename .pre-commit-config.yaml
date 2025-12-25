@@ -15,9 +15,6 @@ repos:
     hooks:
       - id: file-contents-sorter
         files: 'tools\/ci\/(executable-list\.txt|check_copyright_ignore\.txt)'
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
       - id: trailing-whitespace
         # note: whitespace exclusions use multiline regex, see https://pre-commit.com/#regular-expressions
         # items are:
@@ -37,7 +34,8 @@ repos:
             .*.pb-c.c|
             .*.yuv|
             .*.patch|
-            .*.base64
+            .*.base64|
+            components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)
           )$
       - id: end-of-file-fixer
         exclude: *whitespace_excludes
@@ -45,6 +43,11 @@ repos:
       - id: check-shebang-scripts-are-executable
       - id: mixed-line-ending
         args: ['-f=lf']
+        exclude: |
+          (?x)^(
+            .*.patch|
+            components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)
+          )$
       - id: double-quote-string-fixer
       - id: no-commit-to-branch
         name: Do not use more than one slash in the branch name
@@ -95,3 +98,8 @@ repos:
     hooks:
     - id: codespell
       args: [-w, "--ignore-words=codespell-ignore-list", "--skip=*.js,*.vue,*/pnpm-lock.yaml,*/package-lock.json,*/yarn.lock,*.base64"]
+      exclude: |
+        (?x)^(
+          .*.patch|
+          components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)
+        )$
