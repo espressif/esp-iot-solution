@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.1 - 2025-12-24
+
+* Change learn_param to dynamic allocation
+
 ## v1.0.0 - 2024-08-09
 
 * Update README
