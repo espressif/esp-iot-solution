@@ -1,4 +1,4 @@
-version: "0.1.4"
+version: "0.2.0"
 description: LVGL adapter with unified display management, tearing control, thread safety, and optional filesystem/decoder/FreeType support.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lvgl_adapter
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -10,21 +10,31 @@ dependencies:
   espressif/esp_lv_decoder:
     version: "0.*"
     public: true
+    rules:
+      - if: $CONFIG{ESP_LVGL_ADAPTER_ENABLE_DECODER} == True
   espressif/esp_lv_fs:
     version: "1.*"
     public: true
+    rules:
+      - if: $CONFIG{ESP_LVGL_ADAPTER_ENABLE_FS} == True
   espressif/freetype:
     version: "2.*"
     public: true
+    rules:
+      - if: $CONFIG{ESP_LVGL_ADAPTER_ENABLE_FREETYPE} == True
   espressif/esp_lcd_touch:
     version: "1.*"
     public: true
   espressif/button:
     version: "4.*"
     public: true
+    rules:
+      - if: $CONFIG{ESP_LVGL_ADAPTER_ENABLE_BUTTON} == True
   espressif/knob:
     version: "1.*"
     public: true
+    rules:
+      - if: $CONFIG{ESP_LVGL_ADAPTER_ENABLE_KNOB} == True
 examples:
   - path: ../../../../examples/display/gui/lvgl_common_demo
   - path: ../../../../examples/display/gui/lvgl_dummy_draw

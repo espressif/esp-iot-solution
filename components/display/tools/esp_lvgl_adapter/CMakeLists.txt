@@ -137,7 +137,7 @@ target_compile_options(${COMPONENT_LIB} PUBLIC -include "${CMAKE_CURRENT_SOURCE_
 
 if("${lvgl_name}" IN_LIST build_components)
     idf_component_get_property(lvgl_comp_lib ${lvgl_name} COMPONENT_LIB)
-    if(lvgl_comp_lib)
+    if(lvgl_comp_lib AND TARGET ${lvgl_comp_lib})
         target_compile_definitions(${lvgl_comp_lib} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
         target_compile_options(${lvgl_comp_lib} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
         target_compile_options(${lvgl_comp_lib} PRIVATE -Wno-unused-function)
@@ -156,6 +156,10 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
         return()
     endif()
 
+    if(NOT TARGET ${lvgl_comp_lib})
+        return()
+    endif()
+
     # Link FreeType library to LVGL
     target_link_libraries(${lvgl_comp_lib} PUBLIC idf::${_freetype_component})
 
@@ -165,7 +169,7 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
     idf_build_set_property(COMPILE_DEFINITIONS "FT2_BUILD_LIBRARY" APPEND)
 
     idf_component_get_property(freetype_comp_lib ${_freetype_component} COMPONENT_LIB)
-    if(freetype_comp_lib)
+    if(freetype_comp_lib AND TARGET ${freetype_comp_lib})
         target_compile_definitions(${freetype_comp_lib} INTERFACE
             FT_CONFIG_OPTION_ERROR_STRINGS
             FT2_BUILD_LIBRARY)
