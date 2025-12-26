@@ -1,0 +1,26 @@
+menu "Model Context Protocol"
+
+    config MCP_TRANSPORT_HTTP
+        bool "Enable built-in HTTP transport"
+        default y
+        help
+            Enable the built-in HTTP transport implementation.
+            You can disable this if you want to use only custom transport.
+            For other transport methods, implement a custom transport by providing an esp_mcp_transport_t
+            implementation in esp_mcp_mgr_config_t.
+
+    config MCP_TOOLCALL_STACK_SIZE
+        int "The maximum stack size allowed for the toolcall task"
+        range 4096 16384
+        default 8192
+        help
+            Set the maximum stack size allowed for the toolcall task.
+
+    config MCP_TOOLLIST_MAX_SIZE
+        int "The maximum size allowed for the toollist"
+        range 1024 16384
+        default 8192
+        help
+            Set the maximum size allowed for the toollist.
+
+endmenu

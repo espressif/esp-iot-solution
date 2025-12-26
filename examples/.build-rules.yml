@@ -98,6 +98,11 @@ examples/bluetooth/ble_adv/bthome/bulb:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/mcp/mcp_server:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/camera/basic:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]

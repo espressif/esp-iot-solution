@@ -86,6 +86,7 @@ jobs:
             components/motor/esp_sensorless_bldc_control;
             components/motor/esp_simplefoc;
             components/motor/servo;
+            components/mcp-c-sdk;
             components/openai;
             components/sensors/adc/mcp3201;
             components/sensors/battery_fuel_gauge/adc_battery_estimation;

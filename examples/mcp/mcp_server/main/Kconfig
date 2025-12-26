@@ -1,0 +1,27 @@
+menu "Example Configuration"
+    config MCP_HOST
+        string "MCP host"
+        default "0.0.0.0"
+        help
+            Set the MCP host address.
+
+    config MCP_URI
+        string "MCP URI"
+        default "/mcp_server"
+        help
+            Set the MCP URI path.
+
+    config MCP_PORT
+        int "MCP Port"
+        default 8080
+        help
+            Set the MCP port.
+
+    config MCP_TRANSPORT_TIME
+        int "MCP communication timeout in milliseconds"
+        range 1000 30000
+        default 5000
+        help
+            Set the time to wait for communication timeout. Use a value big enough to avoid retransmissions.
+
+endmenu
