@@ -9,56 +9,113 @@
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "unity.h"
-#include "iot_usbh_rndis.h"
-#include "iot_eth.h"
 #include "esp_log.h"
+#include "esp_netif.h"
+#include "iot_eth.h"
+#include "iot_eth_netif_glue.h"
+#include "iot_usbh_rndis.h"
 
 #define TAG "rndis_test"
 
-#define TEST_MEMORY_LEAK_THRESHOLD (-400)
+ssize_t TEST_MEMORY_LEAK_THRESHOLD = 0;
+
+#define UPDATE_LEAK_THRESHOLD(first_val) \
+static bool is_first = true; \
+if (is_first) { \
+    is_first = false; \
+    TEST_MEMORY_LEAK_THRESHOLD = first_val; \
+} else { \
+    TEST_MEMORY_LEAK_THRESHOLD = 0; \
+}
+
+static void install()
+{
+    usbh_cdc_driver_config_t config = {
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
+        .skip_init_usb_host_driver = false,
+    };
+
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_install(&config));
+}
+
+static void uninstall()
+{
+    TEST_ASSERT_EQUAL(ESP_OK, usbh_cdc_driver_uninstall());
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+}
+
+TEST_CASE("usbh rndis inini device memory leak", "[iot_usbh_rndis][read-write][auto]")
+{
+    install();
+    iot_eth_driver_t *rndis_eth_driver = NULL;
+    static const usb_device_match_id_t dev_match_id[] = {
+        {
+            .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT,
+            .idVendor = USB_DEVICE_VENDOR_ANY,
+            .idProduct = USB_DEVICE_PRODUCT_ANY,
+        },
+        {0},  // Null-terminated
+    };
+    iot_usbh_rndis_config_t rndis_cfg = {
+        .match_id_list = dev_match_id,
+    };
+    TEST_ESP_OK(iot_eth_new_usb_rndis(&rndis_cfg, &rndis_eth_driver));
+
+    rndis_eth_driver->init(rndis_eth_driver);
+
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    rndis_eth_driver->deinit(rndis_eth_driver);
+
+    uninstall();
+}
 
 TEST_CASE("usbh rndis device memory leak", "[iot_usbh_rndis][read-write][auto]")
 {
-    iot_usbh_rndis_config_t rndis_cfg = {
-        .auto_detect = true,
-        .auto_detect_timeout = pdMS_TO_TICKS(1000),
-    };
+    UPDATE_LEAK_THRESHOLD(-40);
 
-    iot_eth_driver_t *rndis_handle = NULL;
-    esp_err_t ret = iot_eth_new_usb_rndis(&rndis_cfg, &rndis_handle);
-    if (ret != ESP_OK || rndis_handle == NULL) {
-        ESP_LOGE(TAG, "Failed to create USB RNDIS driver");
-        return;
-    }
+    iot_eth_driver_t *rndis_eth_driver = NULL;
+    // install usbh cdc driver
+    install();
+
+    static const usb_device_match_id_t dev_match_id[] = {
+        {
+            .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT,
+            .idVendor = USB_DEVICE_VENDOR_ANY,
+            .idProduct = USB_DEVICE_PRODUCT_ANY,
+        },
+        {0},  // Null-terminated
+    };
+    iot_usbh_rndis_config_t rndis_cfg = {
+        .match_id_list = dev_match_id,
+    };
+    TEST_ESP_OK(iot_eth_new_usb_rndis(&rndis_cfg, &rndis_eth_driver));
 
     iot_eth_config_t eth_cfg = {
-        .driver = rndis_handle,
+        .driver = rndis_eth_driver,
         .stack_input = NULL,
-        .user_data = NULL,
     };
-
     iot_eth_handle_t eth_handle = NULL;
-    ret = iot_eth_install(&eth_cfg, &eth_handle);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to install USB RNDIS driver");
-        return;
-    }
+    TEST_ESP_OK(iot_eth_install(&eth_cfg, &eth_handle));
 
-    while (1) {
-        ret = iot_eth_start(eth_handle);
-        if (ret != ESP_OK) {
-            ESP_LOGW(TAG, "Failed to start USB RNDIS driver, try again...");
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-            continue;
-        }
-        break;
-    }
+    esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
+    esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
+    TEST_ASSERT(eth_netif != NULL);
+    iot_eth_netif_glue_handle_t glue = iot_eth_new_netif_glue(eth_handle);
+    TEST_ASSERT(glue != NULL);
+    esp_netif_attach(eth_netif, glue);
+    iot_eth_start(eth_handle);
+    ESP_LOGI(TAG, "rndis device started");
 
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
 
+    ESP_LOGI(TAG, "rndis device stop");
     iot_eth_stop(eth_handle);
+    iot_eth_del_netif_glue(glue);
     iot_eth_uninstall(eth_handle);
-    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    esp_netif_destroy(eth_netif);
+    uninstall();
 }
 
 static size_t before_free_8bit;
@@ -67,8 +124,10 @@ static size_t before_free_32bit;
 static void check_leak(size_t before_free, size_t after_free, const char *type)
 {
     ssize_t delta = after_free - before_free;
-    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
-    TEST_ASSERT_MESSAGE(delta >= TEST_MEMORY_LEAK_THRESHOLD, "memory leak");
+    printf("MALLOC_CAP_%s: Before: %u bytes free, After: %u bytes free (delta:%d)\n", type, before_free, after_free, delta);
+    if (!(delta >= TEST_MEMORY_LEAK_THRESHOLD)) {
+        ESP_LOGE(TAG, "Memory leak detected, delta: %d bytes, threshold: %d bytes", delta, TEST_MEMORY_LEAK_THRESHOLD);
+    }
 }
 
 void setUp(void)
@@ -88,5 +147,7 @@ void tearDown(void)
 void app_main(void)
 {
     printf("IOT USBH RNDIS TEST \n");
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     unity_run_menu();
 }

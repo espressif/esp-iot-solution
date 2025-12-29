@@ -3,96 +3,210 @@ USB Host CDC
 
 :link_to_translation:`zh_CN:[中文]`
 
-The ``iot_usbh_cdc`` component implements a simple version of the USB host CDC driver. The API is designed similar like `ESP-IDF UART driver <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/uart.html>`_, which can be used to replace the original UART driver to realize the update from UART to USB.
+The ``iot_usbh_cdc`` component implements a simplified USB host CDC driver. With simple configuration, users can use USB CDC devices. The component supports hot‑plug and optionally enables an internal ring buffer to simplify data sending and receiving.
 
-User Guide
+Usage Guide
 ---------------
 
-1. Use ``usbh_cdc_driver_install`` to configure the USB CDC driver. Users can set up the driver and initialize the USB Host Driver protocol stack internally by setting the ``skip_init_usb_host_driver`` option.
+1. Use ``usbh_cdc_driver_install`` to configure the USB CDC driver. By setting the ``skip_init_usb_host_driver`` option, the component can initialize the USB Host Driver stack internally. When other USB drivers also need to use the USB Host Driver stack, set this option to true to avoid repeated initialization.
 
 .. code:: c
 
-    /* Install the USB CDC driver and initialize the USB Host Driver protocol stack internally */
+    /* Install the USB CDC driver and initialize the USB Host Driver stack inside the driver */
     usbh_cdc_driver_config_t config = {
-        .driver_task_stack_size = 1024 * 4,
-        .driver_task_priority = 5,
-        .xCoreID = 0,
+        .task_stack_size = 1024 * 4,
+        .task_priority = 5,
+        .task_coreid = 0,
         .skip_init_usb_host_driver = false,
-        .new_dev_cb = cdc_new_dev_cb,
     };
+    usbh_cdc_driver_install(&config);
 
-2. Use ``usbh_cdc_create`` to configure the interface number (``itf_num``) and the size of the internal ring buffer. Additionally, users can configure hot-plug callbacks such as ``connect``, ``disconnect``, and ``recv_data``:
+2. Use ``usbh_cdc_register_dev_event_cb`` to register a CDC device event, and configure the device match list ``dev_match_id_list``. When a new USB device is connected, the driver will match it against this list. If any item matches, the driver will invoke the event callback. In this callback, the user can call ``usbh_cdc_port_open`` to open one or more ports of the device for communication as needed by the application.
 
 .. code:: c
 
-    /* Install the USB Host CDC driver and configure bulk endpoint addresses and internal ring buffer size */
-    usbh_cdc_device_config_t dev_config = {
-        .vid = 0,
-        .pid = 0,
-        .itf_num = 1,
-        /* if the value is not 0, the internal ring buffer is enabled */
-        .rx_buffer_size = 2048,
-        .tx_buffer_size = 2048,
-        .cbs = {
-            .connect = cdc_connect_cb,
-            .disconnect = cdc_disconnect_cb,
-            .user_data = NULL
+    static void device_event_cb(usbh_cdc_device_event_t event, usbh_cdc_device_event_data_t *event_data, void *user_ctx)
+    {
+        switch (event) {
+        case CDC_HOST_DEVICE_EVENT_CONNECTED: {
+            ESP_LOGI(TAG, "Device connected: dev_addr=%d, matched_intf_num=%d",
+                    event_data->new_dev.dev_addr, event_data->new_dev.matched_intf_num);
+
+            usbh_cdc_port_handle_t cdc_port = NULL;
+            usbh_cdc_port_config_t cdc_port_config = {
+                .dev_addr = event_data->new_dev.dev_addr,
+                .itf_num = 0,
+                .in_transfer_buffer_size = 512,
+                .out_transfer_buffer_size = 512,
+                .cbs = {
+                    .notif_cb = NULL,
+                    .recv_data = NULL,
+                    .closed = NULL,
+                    .user_data = NULL,
+                },
+            };
+            usbh_cdc_port_open(&cdc_port_config, &cdc_port);
+            } break;
+
+        case CDC_HOST_DEVICE_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "Device disconnected: dev_addr=%d, dev_hdl=%p",
+                    event_data->dev_gone.dev_addr, event_data->dev_gone.dev_hdl);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    const static usb_device_match_id_t match_id_list[] = {
+        {
+            .match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT,
+            .idVendor = USB_DEVICE_VENDOR_ANY,
+            .idProduct = USB_DEVICE_PRODUCT_ANY,
         },
+        { 0 }
     };
+    usbh_cdc_register_dev_event_cb(match_id_list, device_event_cb, NULL);
 
-    usbh_cdc_handle_t handle = NULL;
-    usbh_cdc_create(&dev_config, &handle);
-    /* If multiple interfaces are required, configure them like this */
-    #if (EXAMPLE_BULK_ITF_NUM > 1)
-    config.itf_num = 3;
-    usbh_cdc_handle_t handle2 = NULL;
-    usbh_cdc_create(&dev_config, &handle2);
-    #endif
+The parameter ``dev_match_id_list`` pointer requires an array that is not on the stack and must be null-terminated. An array entry can specify conditions to match one or more devices. For example, the above example uses ``USB_DEVICE_VENDOR_ANY`` and ``USB_DEVICE_PRODUCT_ANY`` to match all USB devices. Users can also specify specific ``idVendor`` and ``idProduct`` to match specific devices. You can further specify conditions using ``match_flags``, such as ``USB_DEVICE_ID_MATCH_DEV_CLASS``, ``USB_DEVICE_ID_MATCH_DEV_SUBCLASS``, ``USB_DEVICE_ID_MATCH_DEV_PROTOCOL``, etc. For more matching conditions, see :cpp:type:`usb_dev_match_flags_t`.
 
-3. After the driver is initialized, the internal state machine will automatically handle USB hot-plug events.
-4. Once successfully connected, the host will automatically receive USB data from the CDC device into an internal ``ringbuffer``. Users can poll the buffer size using ``usbh_cdc_get_rx_buffer_size`` or register a callback to get notified when data is ready. Data can then be read using ``usbh_cdc_read_bytes``.
-5. ``usbh_cdc_write_bytes`` can be used to send data to the USB device. The data is first written to an internal transmission ``ringbuffer`` and then sent over the USB bus when it is idle.
-6. ``usbh_cdc_delete`` can be used to delete the USB CDC device and release the associated ring buffer and other resources.
-7. ``usbh_cdc_driver_uninstall`` can completely uninstall the USB driver and release all resources.
+Do not call communication functions such as ``usbh_cdc_write_bytes`` in the ``device_event_cb`` callback, because this callback runs in the USB task context and calling these functions can cause a deadlock. It is recommended to create a new task in the ``device_event_cb`` callback or send an event to the application task, and perform device communication in the new task or the application task.
 
-Without Internal Ring Buffer
------------------------------
+3. After a port is opened, the host will automatically receive USB data from the CDC device into the USB buffer. The user can poll ``usbh_cdc_get_rx_buffer_size`` to read the buffered data length, or register a receive callback to be notified when data is ready. Then ``usbh_cdc_read_bytes`` can be used to read the buffered data. When ``in_ringbuf_size`` is greater than 0, the driver enables an internal ring buffer to cache received data.
+4. ``usbh_cdc_write_bytes`` can be used to send data to the USB device. When ``out_ringbuf_size`` is greater than 0, data is first written to the internal transmission ``ringbuffer`` instead of directly to the USB buffer.
+5. ``usbh_cdc_port_close`` can delete the USB CDC device and release its resources.
+6. ``usbh_cdc_driver_uninstall`` can fully uninstall the USB driver to release all resources; if a device is still connected, the driver cannot be uninstalled directly.
 
-If you don't want to use the internal ring buffer, you can set ``rx_buffer_size`` and ``tx_buffer_size`` to 0.
+.. note::
+    Since USB device hot‑plug is asynchronous, a USB device may be unplugged at any time during runtime. Users must ensure that when calling functions such as ``usbh_cdc_write_bytes`` or ``usbh_cdc_read_bytes``, the device is still connected and the port is open; otherwise these functions will return an error.
 
-.. code:: c
+Supported CDC Device Descriptors
+----------------------------------
 
-    /* Install USB Host CDC driver and configure bulk endpoint addresses and internal ring buffer size */
-    usbh_cdc_device_config_t dev_config = {
-        .vid = 0,
-        .pid = 0,
-        .itf_num = 1,
-        /* If value is 0, internal ring buffer is disabled */
-        .rx_buffer_size = 0,
-        .tx_buffer_size = 0,
-        .cbs = {
-            /* Configure receive callback function */
-            .recv_data = cdc_recv_data_cb,
-            .connect = cdc_connect_cb,
-            .disconnect = cdc_disconnect_cb,
-            .user_data = NULL
-        },
-    };
+The driver supports the following standard CDC device descriptors:
 
-    usbh_cdc_handle_t handle = NULL;
-    usbh_cdc_create(&dev_config, &handle);
-    /* If multiple interfaces are required, configure them like this */
-    #if (EXAMPLE_BULK_ITF_NUM > 1)
-    config.itf_num = 3;
-    usbh_cdc_handle_t handle2 = NULL;
-    usbh_cdc_create(&dev_config, &handle2);
-    #endif
+.. code:: 
 
-1. The ``recv_data`` callback function should be configured, which will be called when data is received.
-2. In the callback function, call ``usbh_cdc_get_rx_buffer_size`` to get the data size, then call ``usbh_cdc_read_bytes`` to read the data. Note that the ``ticks_to_wait`` parameter should be set to 0, as blocking reads are not supported.
-3. To send data, call ``usbh_cdc_write_bytes``. You can set the wait time by configuring the ``ticks_to_wait`` parameter. If the wait times out, it will return an ``ESP_ERR_TIMEOUT`` error.
+            ------------------- IAD Descriptor --------------------
+    bLength                  : 0x08 (8 bytes)
+    bDescriptorType          : 0x0B (Interface Association Descriptor)
+    bFirstInterface          : 0x00 (Interface 0)
+    bInterfaceCount          : 0x02 (2 Interfaces)
+    bFunctionClass           : 0x02 (Communications and CDC Control)
+    bFunctionSubClass        : 0x06
+    bFunctionProtocol        : 0x00
+    iFunction                : 0x07 (String Descriptor 7)
+    Language 0x0409         : ""
 
-Examples
+            ---------------- Interface Descriptor -----------------
+    bLength                  : 0x09 (9 bytes)
+    bDescriptorType          : 0x04 (Interface Descriptor)
+    bInterfaceNumber         : 0x00 (Interface 0)
+    bAlternateSetting        : 0x00
+    bNumEndpoints            : 0x01 (1 Endpoint)
+    bInterfaceClass          : 0x02 (Communications and CDC Control)
+    bInterfaceSubClass       : 0x06 (Ethernet Networking Control Model)
+    bInterfaceProtocol       : 0x00 (No class specific protocol required)
+    iInterface               : 0x07 (String Descriptor 7)
+    Language 0x0409         : ""
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x87 (Direction=IN EndpointID=7)
+    bmAttributes             : 0x03 (TransferType=Interrupt)
+    wMaxPacketSize           : 0x0020
+    Bits 15..13             : 0x00 (reserved, must be zero)
+    Bits 12..11             : 0x00 (0 additional transactions per microframe -> allows 1..1024 bytes per packet)
+    Bits 10..0              : 0x20 (32 bytes per packet)
+    bInterval                : 0x09 (256 microframes -> 32 ms)
+
+            ---------------- Interface Descriptor -----------------
+    bLength                  : 0x09 (9 bytes)
+    bDescriptorType          : 0x04 (Interface Descriptor)
+    bInterfaceNumber         : 0x01 (Interface 1)
+    bAlternateSetting        : 0x00
+    bNumEndpoints            : 0x00 (Default Control Pipe only)
+    bInterfaceClass          : 0x0A (CDC-Data)
+    bInterfaceSubClass       : 0x00
+    bInterfaceProtocol       : 0x00
+    iInterface               : 0x00 (No String Descriptor)
+
+            ---------------- Interface Descriptor -----------------
+    bLength                  : 0x09 (9 bytes)
+    bDescriptorType          : 0x04 (Interface Descriptor)
+    bInterfaceNumber         : 0x01 (Interface 1)
+    bAlternateSetting        : 0x01
+    bNumEndpoints            : 0x02 (2 Endpoints)
+    bInterfaceClass          : 0x0A (CDC-Data)
+    bInterfaceSubClass       : 0x00
+    bInterfaceProtocol       : 0x00
+    iInterface               : 0x00 (No String Descriptor)
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x0C (Direction=OUT EndpointID=12)
+    bmAttributes             : 0x02 (TransferType=Bulk)
+    wMaxPacketSize           : 0x0200 (max 512 bytes)
+    bInterval                : 0x00 (never NAKs)
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x83 (Direction=IN EndpointID=3)
+    bmAttributes             : 0x02 (TransferType=Bulk)
+    wMaxPacketSize           : 0x0200 (max 512 bytes)
+    bInterval                : 0x00 (never NAKs)
+
+The driver also supports some vendor-specific CDC device descriptors, for example:
+
+.. code:: 
+
+            ---------------- Interface Descriptor -----------------
+    bLength                  : 0x09 (9 bytes)
+    bDescriptorType          : 0x04 (Interface Descriptor)
+    bInterfaceNumber         : 0x03 (Interface 3)
+    bAlternateSetting        : 0x00
+    bNumEndpoints            : 0x03 (3 Endpoints)
+    bInterfaceClass          : 0xFF (Vendor Specific)
+    bInterfaceSubClass       : 0x00
+    bInterfaceProtocol       : 0x00
+    iInterface               : 0x09 (String Descriptor 9)
+    Language 0x0409         : "Mobile AT Interface"
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x85 (Direction=IN EndpointID=5)
+    bmAttributes             : 0x03 (TransferType=Interrupt)
+    wMaxPacketSize           : 0x0010
+    Bits 15..13             : 0x00 (reserved, must be zero)
+    Bits 12..11             : 0x00 (0 additional transactions per microframe -> allows 1..1024 bytes per packet)
+    Bits 10..0              : 0x10 (16 bytes per packet)
+    bInterval                : 0x09 (256 microframes -> 32 ms)
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x82 (Direction=IN EndpointID=2)
+    bmAttributes             : 0x02 (TransferType=Bulk)
+    wMaxPacketSize           : 0x0200 (max 512 bytes)
+    bInterval                : 0x00 (never NAKs)
+
+            ----------------- Endpoint Descriptor -----------------
+    bLength                  : 0x07 (7 bytes)
+    bDescriptorType          : 0x05 (Endpoint Descriptor)
+    bEndpointAddress         : 0x0B (Direction=OUT EndpointID=11)
+    bmAttributes             : 0x02 (TransferType=Bulk)
+    wMaxPacketSize           : 0x0200 (max 512 bytes)
+    bInterval                : 0x00 (never NAKs)
+
+.. note::
+
+    When connecting multiple devices using a USB HUB, if the HOST's channels are insufficient, you can try enabling the :c:type:`USBH_CDC_FLAGS_DISABLE_NOTIFICATION` flag in :c:struct:`usbh_cdc_port_config_t` to forcibly disable interrupt endpoint and reduce the use of one channel. This will not work if the device itself does not have interrupt endpoint.
+
+Example Code
 -------------------------------
 
 :example:`usb/host/usb_cdc_basic`
@@ -101,3 +215,5 @@ API Reference
 -------------------------------
 
 .. include-build-file:: inc/iot_usbh_cdc.inc
+
+.. include-build-file:: inc/usbh_helper.inc

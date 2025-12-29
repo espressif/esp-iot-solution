@@ -1,0 +1,55 @@
+menu "Example Configuration"
+
+    config EXAMPLE_USB_ECM_IPERF
+        bool "Enable USB ECM Iperf"
+        help
+            Enable USB ECM Iperf test, which is used to test the performance of USB ECM module.
+
+    config EXAMPLE_USB_ECM_DOWNLOAD_SPEED_TEST
+        bool "Enable USB ECM Download Speed Test"
+        default n
+        help
+            Enable USB ECM Download Speed Test, which is used to test the download speed of USB ECM module.
+
+    config EXAMPLE_USB_ECM_LIGHT_SLEEP_TEST
+        bool "Enable USB ECM Light Sleep Test"
+        default n
+        select EXAMPLE_ENABLE_AT_CMD
+        help
+            Enable USB ECM Light Sleep Test, which is used to test USB ECM module in light sleep mode.
+
+    config EXAMPLE_MODULE_RST_GPIO_NUM
+        depends on EXAMPLE_USB_ECM_LIGHT_SLEEP_TEST
+        int "USB ECM Module RST GPIO Number"
+        default 5
+        help
+            Set the USB ECM module RST GPIO number.
+
+    config EXAMPLE_MODULE_WAKEUP_GPIO_NUM
+        depends on EXAMPLE_USB_ECM_LIGHT_SLEEP_TEST
+        int "USB ECM Module WAKEUP GPIO Number"
+        default 3
+        help
+            Set the USB ECM module WAKEUP GPIO number.
+
+    config EXAMPLE_MODULE_WAKEUP_LEVEL
+        depends on EXAMPLE_USB_ECM_LIGHT_SLEEP_TEST
+        int "USB ECM Module WAKEUP Level"
+        default 0
+        range 0 1
+        help
+            Set the USB ECM module WAKEUP level.
+
+    config EXAMPLE_ENABLE_AT_CMD
+        bool "Enable USB ECM AT Command"
+        default n
+        help
+            Enable USB ECM AT Command.
+
+    config EXAMPLE_AT_INTERFACE_NUM
+        depends on EXAMPLE_ENABLE_AT_CMD
+        int "USB ECM AT Interface Number"
+        default 2
+        help
+            Set the USB ECM AT interface number.
+endmenu

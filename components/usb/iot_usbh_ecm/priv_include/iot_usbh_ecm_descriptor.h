@@ -12,6 +12,17 @@
 extern "C" {
 #endif
 
+typedef struct {
+    uint8_t bFunctionLength;
+    uint8_t bDescriptorType;
+    uint8_t bDescriptorSubtype;
+    uint8_t iMACAddress;
+    uint32_t bmEthernetStatistics;
+    uint16_t wMaxSegmentSize;
+    uint16_t wNumberMCFilters;
+    uint8_t bNumberPowerFilters;
+} USB_DESC_ATTR usb_ecm_function_desc_t;
+
 /**
  * @brief Check for the presence of an ECM interface descriptor.
  *
@@ -31,20 +42,20 @@ extern "C" {
 esp_err_t usbh_ecm_interface_check(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, int *itf_num);
 
 /**
- * @brief Check and get MAC address string index from ECM device descriptor
+ * @brief Get the ECM function Descriptor.
  *
  * This function scans through the USB configuration descriptor to find the
- * Ethernet Networking Functional Descriptor and extracts the MAC address string index.
+ * Ethernet Networking Functional Descriptor.
  *
  * @param[in] device_desc Pointer to USB device descriptor
  * @param[in] config_desc Pointer to USB configuration descriptor
- * @param[out] mac_str_index Pointer to store the MAC address string index
+ * @param[out] ret_desc Pointer to store the found ECM function descriptor
  *
  * @return
- *      - ESP_OK: MAC address string index found and stored successfully
- *      - ESP_ERR_NOT_FOUND: MAC address string index not found
+ *      - ESP_OK: ECM function descriptor found and stored successfully
+ *      - ESP_ERR_NOT_FOUND: ECM function descriptor not found
  */
-esp_err_t usbh_ecm_mac_str_index_check(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, uint8_t *mac_str_index);
+esp_err_t usbh_get_ecm_function_desc(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, const usb_ecm_function_desc_t **ret_desc);
 
 #ifdef __cplusplus
 }

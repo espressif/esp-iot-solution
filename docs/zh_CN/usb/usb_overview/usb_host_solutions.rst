@@ -102,14 +102,18 @@ ESP USB 4G 联网方案
 
 * 芯片： ESP32-S2，ESP32-S3，ESP32-P4
 * 外设：USB-OTG
-* 4G 模组：支持 Cat.1 Cat.4 等网络制式 4G 模组，需要模组支持 PPP 协议
+* 4G 模组：支持 Cat.1 Cat.4 等网络制式 4G 模组，需要模组支持 PPP/ECM/RNDIS 协议
 
 链接:
 ~~~~~~~~
 
 * `USB 4G Demo 视频 <https://www.bilibili.com/video/BV1fj411K7bW>`_
 * `iot_usbh_modem 组件 <https://components.espressif.com/components/espressif/iot_usbh_modem>`_
-* 示例代码: 4G Wi-Fi 路由器 :example:`usb/host/usb_cdc_4g_module`
+* `iot_usbh_ecm 组件 <https://components.espressif.com/components/espressif/iot_usbh_ecm>`_
+* `iot_usbh_rndis 组件 <https://components.espressif.com/components/espressif/iot_usbh_rndis>`_
+* 示例代码: 4G PPP 拨号上网 :example:`usb/host/usb_cdc_4g_module`
+* 示例代码: 4G RNDIS 拨号上网 :example:`usb/host/usb_rndis_4g_module`
+* 示例代码: 4G ECM 拨号上网 :example:`usb/host/usb_ecm_4g_module`
 
 ESP USB 存储方案
 ^^^^^^^^^^^^^^^^^^

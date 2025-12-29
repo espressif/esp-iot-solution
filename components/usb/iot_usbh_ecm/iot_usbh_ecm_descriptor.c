@@ -8,12 +8,8 @@
 #include "esp_log.h"
 #include "usb/usb_host.h"
 #include "usb/usb_helpers.h"
-
-/**
- * @brief Ethernet Networking Functional Descriptor.
- *        See section 5.2.3 table 13 in CDC120
- */
-#define USB_ETH_NETWORK_FUNCTION_DESC  (0x0F)
+#include "iot_usbh_cdc_type.h"
+#include "iot_usbh_ecm_descriptor.h"
 
 typedef struct {
     uint8_t bFunctionLength;
@@ -21,17 +17,6 @@ typedef struct {
     uint8_t bDescriptorSubtype;
     uint16_t bcdCDC;
 } USB_DESC_ATTR usb_class_specific_desc_header_t;
-
-typedef struct {
-    uint8_t bFunctionLength;
-    uint8_t bDescriptorType;
-    uint8_t bDescriptorSubtype;
-    uint8_t iMACAddress;
-    uint32_t bmEthernetStatistics;
-    uint16_t wMaxSegmentSize;
-    uint16_t wNumberMCFilters;
-    uint8_t bNumberPowerFilters;
-} USB_DESC_ATTR usb_ecm_function_desc_t;
 
 esp_err_t usbh_ecm_interface_check(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, int *itf_num)
 {
@@ -42,7 +27,9 @@ esp_err_t usbh_ecm_interface_check(const usb_device_desc_t *device_desc, const u
     const usb_standard_desc_t *current_desc = (const usb_standard_desc_t *)config_desc;
     while ((current_desc = usb_parse_next_descriptor_of_type(current_desc, total_length, USB_B_DESCRIPTOR_TYPE_INTERFACE, &desc_offset))) {
         const usb_intf_desc_t *intf_desc = (const usb_intf_desc_t *)current_desc;
-        if ((intf_desc->bInterfaceClass == 0x02) && (intf_desc->bInterfaceSubClass == 0x06)) {
+        if ((intf_desc->bInterfaceClass == USB_COMMUNICATIONS_INTERFACE_CLASS) &&
+                (intf_desc->bInterfaceSubClass == USB_COMMUNICATIONS_INTERFACE_SUBCLASS_ETHERNET_NETWORKING_CONTROL_MODEL) &&
+                (intf_desc->bInterfaceProtocol == 0x00)) {
 
             *itf_num = intf_desc->bInterfaceNumber;
             return ESP_OK;
@@ -51,7 +38,7 @@ esp_err_t usbh_ecm_interface_check(const usb_device_desc_t *device_desc, const u
     return ESP_ERR_NOT_FOUND;
 }
 
-esp_err_t usbh_ecm_mac_str_index_check(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, uint8_t *mac_str_index)
+esp_err_t usbh_get_ecm_function_desc(const usb_device_desc_t *device_desc, const usb_config_desc_t *config_desc, const usb_ecm_function_desc_t **ret_desc)
 {
     size_t total_length = config_desc->wTotalLength;
     int desc_offset = 0;
@@ -60,9 +47,8 @@ esp_err_t usbh_ecm_mac_str_index_check(const usb_device_desc_t *device_desc, con
     const usb_standard_desc_t *current_desc = (const usb_standard_desc_t *)config_desc;
     while ((current_desc = usb_parse_next_descriptor_of_type(current_desc, total_length, 0x24, &desc_offset))) {
         const usb_class_specific_desc_header_t *desc = (const usb_class_specific_desc_header_t *)current_desc;
-        if (desc->bDescriptorSubtype == USB_ETH_NETWORK_FUNCTION_DESC) {
-            const usb_ecm_function_desc_t *func_desc = (const usb_ecm_function_desc_t *)(current_desc);
-            *mac_str_index = func_desc->iMACAddress;
+        if (desc->bDescriptorSubtype == USB_CS_DESCRIPTOR_SUBTYPE_ETHERNET_NETWORKING) {
+            *ret_desc = (const usb_ecm_function_desc_t *)(current_desc);
             return ESP_OK;
         }
     }

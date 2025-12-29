@@ -21,63 +21,11 @@ menu "4G Modem Example Config"
 
     endchoice
 
-    config EXAMPLE_ENABLE_WEB_ROUTER
-        bool "Open web configuration"
-        default y
+    config EXAMPLE_USB_PPP_DOWNLOAD_SPEED_TEST
+        bool "Enable USB PPP Download Speed Test"
+        default n
         help
-            Open the web router, you can configure the system parameters
-
-    config EXAMPLE_WEB_MOUNT_POINT
-        string "Website mount point in VFS"
-        default "/spiffs"
-        depends on EXAMPLE_ENABLE_WEB_ROUTER
-        help
-            Specify the mount point in VFS.
-
-    config EXAMPLE_WEB_USERNAME
-        string "Default login username"
-        default "esp32"
-        depends on EXAMPLE_ENABLE_WEB_ROUTER
-        help
-            Default username for logging in to the server.
-
-    config EXAMPLE_WEB_PASSWORD
-        string "Default login password"
-        default "12345678"
-        depends on EXAMPLE_ENABLE_WEB_ROUTER
-        help
-            Default password for logging in to the server.
-
-    config EXAMPLE_ENTER_PPP_DURING_INIT
-        bool "Auto enter ppp mode"
-        default y
-        help
-            If not enable, just stay in command mode, user can call modem_board_ppp_start to enter network mode later
-
-    config EXAMPLE_AUTO_UPDATE_DNS
-        bool "Auto update Wi-Fi soft ap DNS address"
-        default y
-        default n if IDF_TARGET_ESP32P4
-        help
-            If true using dns address got from ppp
-
-    config EXAMPLE_PING_NETWORK
-        bool "Ping network to check the state"
-        default y
-
-    config EXAMPLE_PING_MANUAL
-        bool "Ping manual address"
-        default y
-
-    config EXAMPLE_PING_MANUAL_ADDR
-        string "Manual address"
-        default "8.8.8.8"
-        depends on EXAMPLE_PING_MANUAL
-
-    config EXAMPLE_PING_TIMEOUT
-        int "ping timeout value (ms)"
-        default 2000
-        depends on EXAMPLE_PING_NETWORK
+            Enable Download Speed Test.
 
     config DUMP_SYSTEM_STATUS
         bool "Dump system task status"
@@ -85,16 +33,4 @@ menu "4G Modem Example Config"
         help
             Dump system task status, stack left, cpu load, etc.
 
-    config EXAMPLE_LED_RED_SYSTEM_GPIO
-        int "System status led (red) gpio, set 0 if not use"
-        default 21 if IDF_TARGET_ESP32P4
-        default 15
-    config EXAMPLE_LED_BLUE_WIFI_GPIO
-        int "Wi-Fi status led (blue) gpio, set 0 if not use"
-        default 22 if IDF_TARGET_ESP32P4
-        default 17
-    config EXAMPLE_LED_GREEN_4GMODEM_GPIO
-        int "Modem status led (green) gpio, set 0 if not use"
-        default 26 if IDF_TARGET_ESP32P4
-        default 16
 endmenu

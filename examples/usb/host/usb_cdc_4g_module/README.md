@@ -6,226 +6,176 @@ This example demonstrates the **ESP32-S2**, **ESP32-S3** series SoC as a USB hos
 
 In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster speeds. It can also enable hotspot sharing by connecting an external ESP32 chip with Wi-Fi capability.
 
-**Features Supported:**
+**Implemented features:**
 
-* USB CDC host communication
-* Compatible with mainstream 4G module AT commands
-* PPP dial-up
-* Wi-Fi hotspot
-* 4G module status management
-* Router management interface
-* Status led indicator
+- USB CDC host communication
+- Compatible with mainstream 4G module AT commands
+- PPP dial‑up
+- Wi‑Fi hotspot sharing
+- 4G module status management
+- Router management interface
 
 ![ESP32-S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
 
-* [Demo video](https://b23.tv/8flUAS)
+## Hardware preparation
 
-## Hardware requirement
+**Supported ESP chips:**
 
-**Supported ESP Soc:**
+- ESP32-S2
+- ESP32-S3
+- ESP32-P4
 
-* ESP32-S2
-* ESP32-S3
-* ESP32-P4
+> We recommend using ESP modules or chips that integrate 4 MB or more of Flash and 2 MB or more of PSRAM. PSRAM is disabled by default in this example; you can enable it for your own tests. In theory, increasing buffer sizes can improve average throughput.
 
-> We recommend using ESP modules or chips that integrate 4MB above Flash, and 2MB above PSRAM. The example does not enable PSRAM by default, but users can add to tests by themselves. In theory, increasing the Wi-Fi buffer size can increase the average data throughput rate.
+**Supported 4G module models:**
 
-**Hardware wiring:**
+See `https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_ppp.html`.
 
-Default GPIO as follows:
+**Hardware wiring**
 
-|        Functions         |  GPIO   |     Notes     |
-| :----------------------: | :-----: | :-----------: |
-|    **USB D+ (green)**    | **20**  | **Necessary** |
-|    **USB D- (white)**    | **19**  | **Necessary** |
-|     **GND (black)**      | **GND** | **Necessary** |
-|      **+5V (red)**       | **+5V** | **Necessary** |
-|   Modem Power Control    |   12    | Not Necessary |
-| **Modem Reset Control**  | **13**  | **Necessary** |
-| System Status LED (red)  |   15    | Not Necessary |
-| Wi-Fi Status LED (blue)  |   17    | Not Necessary |
-| Modem Status LED (green) |   16    | Not Necessary |
+```
+┌─────────────┐          ┌─────────────────┐
+│             ┼──────────┼5V               │
+│  4G Module  ┼──────────┼GND              │
+│             │          │    ESP32-xx     │
+│             │          │                 │
+│             ┼──────────┼USB D+           │
+│             ┼──────────┼USB D-           │
+│             │          │                 │
+└─────────────┘          │                 │
+                         └─────────────────┘
+```
 
-> User can change GPIO in `menuconfig -> 4G Modem Configuration -> gpio config`
+## Usage
 
-## User Guide
+**Wi‑Fi name and password:**
 
-**Wi-Fi SSID and Password:**
+You can modify Wi‑Fi configuration in `menuconfig` under `4G Modem WiFi Config`.
 
-User can modify SSID and Password in `menuconfig -> 4G Modem Configuration -> WiFi soft AP `
-
-1. Default Wi-Fi: `esp_4g_router`
-2. Default Password: `12345678`
-
-**LED Indicator Status:**
-
-|     Indicator     |    Blink    |                Status                 |
-| :---------------: | :---------: | :-----------------------------------: |
-| **System (Red)**  | extinguish  |                  NA                   |
-|                   | quick blink |           restart 4G Modem            |
-|                   |    solid    | internal error(check SIM card please) |
-| **Wi-Fi (Blue)**  | extinguish  |                  NA                   |
-|                   | slow blink  |     waiting for device connection     |
-|                   |    solid    |           device connected            |
-| **Modem (Green)** | extinguish  |                  NA                   |
-|                   | slow blink  |    waiting for internet connection    |
-|                   |    solid    |          internet connected           |
+1. Default Wi‑Fi name: `ESP-USB-4G`
+2. No password by default
 
 **Router management interface**
-You can configure whether to open the router management interface in `4G Modem Configuration → Web router config ` of `menuconfig`, and change the login account and password of the router management interface.
 
-1. The default login account is `esp32`.
-2. The default password is `12345678`.
-3. Search `192.168.4.1` on the webpage to enter the router background
-4. Currently supported features.
-    * Support account login authentication
-    * Support modify hotspot name, password, invisible or not, channel, bandwidth, security mode
-    * Support to view the current connected device information, note the host name, a key to kick out the device
-    * Support to view the network status and network time of the device
+In `menuconfig` under `4G Modem WiFi Config → Open web configuration`, you can enable or disable the router management interface (enabled by default) and change the login account and password.
 
-## How to build example
+1. Default login account: `esp32`
+2. Default password: `12345678`
+3. Visit `192.168.4.1` in a browser to enter the router dashboard
+4. Currently supported features:
+   - Account login authentication
+   - Modify hotspot name, password, hidden or not, channel, bandwidth, security mode
+   - View currently connected devices, note hostnames, one‑click kick out
+   - View device network status and network uptime
 
-> You can also download then burn the firmware we have build. Download address: https://esp32.com/viewtopic.php?f=22&t=24468
+## Build the example
 
-1. Confirm that the `ESP-IDF` environment is successfully set up, and switch to the `release/v4.4` branch
+1. Set the correct build target (for example, **ESP32-S3**):
 
-2. Add the `ESP-IDF` environment variable, the Linux method is as follows, other platforms please refer [Set up the environment variables](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#step-4-set-up-the-environment-variables)
+```bash
+idf.py set-target esp32s3
+```
 
-    ```bash
-    . $HOME/esp/esp-idf/export.sh
-    ```
+2. Build, flash, and monitor:
 
-3. Set the IDF build target to `esp32s2` or `esp32s3`
-
-    ```bash
-    idf.py set-target esp32s2
-    ```
-
-4. Select the Cat.1 module model `Menuconfig → Component config → ESP-MODEM → Choose Modem Board`, if the your module is not in the list, please refer to `Other 4G Cat.1 Module Adaptation Methods` to configure.
-
-    ![choose_modem](./_static/choose_modem.png)
-
-5. Build, download, check log output
-
-    ```bash
-    idf.py build flash monitor
-    ```
+```bash
+idf.py build flash monitor
+```
 
 **Log**
 
 ```
-I (540) 4g_main: ====================================
-I (540) 4g_main:      ESP 4G Cat.1 Wi-Fi Router
-I (540) 4g_main: ====================================
-I (544) modem_board: iot_usbh_modem, version: 1.1.4
-I (549) modem_board: Force reset modem board....
-I (553) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
-I (561) modem_board: Resetting modem using io=13, level=0
-I (766) modem_board: Waiting for modem initialize ready
-I (5766) USBH_CDC: iot usbh cdc version: 1.1.0
-I (5796) esp-modem: --------- Modem PreDefined Info ------------------
-I (5797) esp-modem: Model: User Defined
-I (5797) esp-modem: Modem itf 3
-I (5798) esp-modem: ----------------------------------------------------
-I (5805) gpio: GPIO[12]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
-I (5813) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0
-Found NOTIF endpoint: 138
-Found IN endpoint: 130
-Found OUT endpoint: 1
-....
-I (7634) modem_board: DTE reconnect, reconnecting ...
-
-I (7639) 4g_main: Modem Board Event: USB connected
-I (7643) USBH_CDC: Opened cdc device: 1
-I (7647) USBH_CDC: New device connected, address: 1
-I (8639) modem_board: reconnect after 5s...
-I (9639) modem_board: reconnect after 4s...
-I (10639) modem_board: reconnect after 3s...
-I (11639) modem_board: reconnect after 2s...
-I (12639) modem_board: reconnect after 1s...
-I (12639) modem_board: Modem state STAGE_SYNC, Start
-I (12649) modem_board: Network Auto reconnecting ...
-I (12650) modem_board: Modem state STAGE_SYNC, Success!
-W (12650) 4g_main: Modem Board Event: Network disconnected
-I (12750) modem_board: Modem state STAGE_CHECK_SIM, Start
-I (12751) modem_board: SIM Card Ready
-I (12752) modem_board: Modem state STAGE_CHECK_SIM, Success!
-I (12752) 4g_main: Modem Board Event: SIM Card Connected
-I (12852) modem_board: Modem state STAGE_CHECK_SIGNAL, Start
-I (12852) modem_board: Signal quality: rssi=26, ber=99
-I (12853) modem_board: Modem state STAGE_CHECK_SIGNAL, Success!
-I (12956) modem_board: Modem state STAGE_CHECK_REGIST, Start
-I (12956) modem_board: Network registered, Operator: "46000"
-I (12957) modem_board: Modem state STAGE_CHECK_REGIST, Success!
-I (13061) modem_board: Modem state STAGE_START_PPP, Start
-I (13062) modem_board: Modem state STAGE_START_PPP, Success!
-I (13162) modem_board: Modem state STAGE_WAIT_IP, Start
-W (13162) modem_board: Modem event! 0
-I (13742) esp-netif_lwip-ppp: Connected
-I (13742) modem_board: IP event! 6
-I (13742) modem_board: Modem Connected to PPP Server
-I (13742) modem_board: ppp ip: 10.101.18.249, mask: 255.255.255.255, gw: 10.64.64.64
-I (13750) modem_board: Main DNS: 211.136.150.86
-I (13754) modem_board: Backup DNS: 211.136.150.88
-I (13758) modem_board: Modem state STAGE_WAIT_IP, Success!
-I (13758) esp-modem-netif: PPP state changed event 0: (NETIF_PPP_ERRORNONE)
-I (13770) 4g_main: Modem Board Event: Network connected
-I (13758) 4g_router_server: ssid : Can't find in NVS!
-I (13780) 4g_router_server: password : Can't find in NVS!
-I (13785) 4g_router_server: auth_mode : Can't find in NVS!
-I (13790) 4g_router_server: channel : Can't find in NVS!
-I (13795) 4g_router_server: hide_ssid : Can't find in NVS!
-I (13800) 4g_router_server: bandwidth : Can't find in NVS!
-I (13806) 4g_router_server: max_connection : Can't find in NVS!
-I (13849) 4g_router_server: Partition size: total: 956561, used: 182477
-I (13850) 4g_router_server: Starting server on port: '80'
-I (13851) 4g_router_server: Registering URI handlers
-I (13855) 4g_router_server: Starting webserver
+I (471) USBH_CDC: iot usbh cdc version: 3.0.0
+I (501) PPP_4G_main: ====================================
+I (501) PPP_4G_main:      ESP 4G Cat.1 Wi-Fi Router
+I (501) PPP_4G_main: ====================================
+I (505) modem_board: iot_usbh_modem, version: 2.0.0
+I (509) iot_eth: IoT ETH Version: 0.1.0
+I (513) esp-modem-dte: USB PPP network interface init success
+I (519) iot_eth.netif_glue: ethernet attached to netif
+I (523) PPP_4G_main: modem board installed
+I (882) USBH_CDC: New device connected, address: 1
+I (882) USBH_CDC: Detect hub device, skip
+I (1053) USBH_CDC: New device connected, address: 2
+I (1054) esp-modem-dte: USB CDC device connected, VID: 0x2c7c, PID: 0x0903
+I (1054) esp-modem-dte: No matched USB Modem found, ignore this connection
+I (1225) USBH_CDC: New device connected, address: 3
+I (1226) esp-modem-dte: USB CDC device connected, VID: 0x2cb7, PID: 0x0d01
+I (1226) esp-modem-dte: Matched USB Modem: "Fibocom, LE270-CN", AT Interface: 2, DATA Interface: -1
+I (1234) cdc_descriptor: Found NOTIF endpoint: 3
+I (1239) cdc_descriptor: Found OUT endpoint: 2
+I (1243) cdc_descriptor: Found IN endpoint: 4
+I (1247) modem_board: DTE connected
+I (1250) modem_board: Handling stage = STAGE_SYNC
+I (1258) modem_board: Modem manufacturer ID: Fibocom Wireless Inc.
+I (1262) modem_board: Modem module ID: LE270-CN
+I (1266) modem_board: Modem revision ID: 12007.6005.00.02.03.04
+I (1270) modem_board: Modem auto connect enabled, starting PPP...
+I (1376) modem_board: Handling stage = STAGE_START_PPP
+I (1376) modem_board: Check SIM card state...
+I (1377) modem_board: Check signal quality...
+I (1381) modem_board: PDP context: "+CGDCONT: 1,"IPV4V6","cmiot","10.48.54.63,2409:8d1e:123:7d31:1870:1b56:8ecb:4a14",0,0"
+I (1388) modem_board: Check network registration...
+I (1394) modem_board: PPP Dial up...
+I (2200) iot_eth: Ethernet link up
+I (2200) PPP_4G_main: IOT_ETH_EVENT_START
+W (2200) iot_eth: Driver does not support get_addr
+I (2200) PPP_4G_main: IOT_ETH_EVENT_CONNECTED
+I (2208) iot_eth.netif_glue: netif "ppp" Got IP Address
+I (2208) esp-netif_lwip-ppp: Connected
+I (2209) iot_eth.netif_glue: ~~~~~~~~~~~
+I (2216) iot_eth.netif_glue: ETHIP:10.48.54.63
+I (2220) iot_eth.netif_glue: ETHMASK:255.255.255.255
+I (2225) iot_eth.netif_glue: ETHGW:10.64.64.64
+I (2229) iot_eth.netif_glue: Main DNS: 211.136.150.86
+I (2234) iot_eth.netif_glue: Backup DNS: 211.136.150.88
+I (2239) iot_eth.netif_glue: ~~~~~~~~~~~
+I (2242) PPP_4G_main: GOT_IP
+......
 ```
 
-## Debugging method
+## Code debugging
 
 **1. Debugging mode**
 
-Enable the `4G Modem Configuration -> Dump system task status` option in `menuconfig` to print task detailed information.
+Enable `4G Modem Configuration -> Dump system task status` in `menuconfig` to print detailed task information.
 
-	```
-    I (79530) main: Task dump
-    I (79531) main: Load    Stack left      Name    PRI
-    I (79531) main: 3.24    1080    main    1
-    I (79532) main: 95.25   1248    IDLE    0
-    I (79536) main: 0.03    1508    bulk-out        6
-    I (79541) main: 0.03    1540    port    9
-    I (79546) main: 0.01    1752    Tmr Svc         1
-    I (79550) main: 0.04    2696    tiT     18
-    I (79554) main: 1.21    1352    usb_event       4
-    I (79559) main: 0.01    1532    bulk-in         5
-    I (79564) main: 0.05    3540    esp_timer       22
-    I (79569) main: 0.13    4632    wifi    23
-    I (79573) main: 0.00    1532    dflt    8
-    I (79577) main: 0.00    1092    sys_evt         20
-    I (79582) main: Free heap=37088 bigst=16384, internal=36968 bigst=16384
-    I (79589) main: ..............
-	```
+```
+I (79530) main: Task dump
+I (79531) main: Load    Stack left      Name    PRI
+I (79531) main: 3.24    1080    main    1
+I (79532) main: 95.25   1248    IDLE    0
+I (79536) main: 0.03    1508    bulk-out        6
+I (79541) main: 0.03    1540    port    9
+I (79546) main: 0.01    1752    Tmr Svc         1
+I (79550) main: 0.04    2696    tiT     18
+I (79554) main: 1.21    1352    usb_event       4
+I (79559) main: 0.01    1532    bulk-in         5
+I (79564) main: 0.05    3540    esp_timer       22
+I (79569) main: 0.13    4632    wifi    23
+I (79573) main: 0.00    1532    dflt    8
+I (79577) main: 0.00    1092    sys_evt         20
+I (79582) main: Free heap=37088 bigst=16384, internal=36968 bigst=16384
+I (79589) main: ..............
+```
 
 **2. Performance optimization**
 
-1. If there is a requirement for throughput, please select the `FDD` standard module and operator;
-2. Modify `APN` to the name provided by the operator `menuconfig -> 4G Modem Configuration -> Set Modem APN`, for example, when using China Mobile's ordinary 4G card, it can be changed to `cmnet`;
-3. Configure ESP32-Sx CPU to 240MHz (`Component config → ESP32S2-specific → CPU frequency`), if it supports dual cores, please turn on both cores at the same time;
-4. Add and enable PSRAM (`Component config → ESP32S2-specific → Support for external`), and increase the PSRAM clock frequency (`Component config → ESP32S2-specific → Support for external → SPI RAM config → Set RAM clock speed`) select 80MHz. And open `Try to allocate memories of WiFi and LWIP in SPIRAM firstly.` in this directory;
-5. Increase the FreeRTOS Tick frequency `Component config → FreeRTOS → Tick rate` to `1000 Hz`;
-6. Optimization of other application layers.
+1. Check module and operator support. If you require higher throughput, choose the `FDD` mode module and operator.
+2. Configure ESP32‑Sx CPU to 240 MHz (`Component config → ESP32S2-specific → CPU frequency`). If dual‑core is supported, enable both cores.
+3. Add and enable PSRAM (`Component config → ESP32S2-specific → Support for external`) and set PSRAM clock to 80 MHz (`Component config → ESP32S2-specific → Support for external → SPI RAM config → Set RAM clock speed`). Also enable `Try to allocate memories of WiFi and LWIP in SPIRAM firstly.` in the same section.
+4. Increase the FreeRTOS Tick rate (`Component config → FreeRTOS → Tick rate`) to `1000 Hz`.
+5. Other application‑layer optimizations.
 
-## Performance test
+## Performance
 
 **Test environment:**
 
-* ESP32-S2, CPU 240 MHz
-* 4 MB flash, no PSRAM
-* ML302-DNLM module
-* China Mobile 4G SIM card
-* Normal office environment
+- ESP32‑S2, CPU 240 MHz
+- 4 MB flash, no PSRAM
+- ML302‑DNLM module dev board
+- China Mobile 4G SIM card
+- Normal office environment
 
 **Test result:**
 
@@ -234,5 +184,5 @@ Enable the `4G Modem Configuration -> Dump system task status` option in `menuco
 | Download  | 6.4 Mbps | 4 Mbps  |
 |  Upload   |  5 Mbps  | 2 Mbps  |
 
-> **4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps**
-> The actual communication rate is affected by the operator's network, test software, Wi-Fi interference, and the number of terminal connections, etc.
+> 4G Cat.1 theoretical peak download rate is 10 Mbps, peak upload rate is 5 Mbps.
+> Actual communication rate is affected by the operator network, test software, Wi‑Fi interference, and number of connected terminals.

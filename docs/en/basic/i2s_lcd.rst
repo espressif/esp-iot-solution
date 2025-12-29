@@ -1,2 +1,7 @@
+I2S LCD Driver
+=================
 
-.. include:: ../../zh_CN/basic/i2s_lcd.rst
+API Reference
+----------------------
+
+.. include-build-file:: inc/i2s_lcd_driver.inc

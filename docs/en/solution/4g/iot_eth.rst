@@ -18,16 +18,49 @@ User Guide
 
 .. code:: c
 
-    iot_usbh_rndis_config_t rndis_cfg = {
-        .auto_detect = true,  // auto detect 4G module
-        .auto_detect_timeout = pdMS_TO_TICKS(1000),  // auto detect timeout
-    };
+    static esp_err_t drv_init(iot_eth_driver_t *driver)
+    {
+        ESP_LOGI(TAG, "network interface init success");
+        return ESP_OK;
+    }
 
-    iot_eth_driver_t *rndis_handle = NULL;
-    esp_err_t ret = iot_eth_new_usb_rndis(&rndis_cfg, &rndis_handle);
-    if (ret != ESP_OK || rndis_handle == NULL) {
-        ESP_LOGE(TAG, "Failed to create USB RNDIS driver");
-        return;
+    static esp_err_t drv_set_mediator(iot_eth_driver_t *driver, iot_eth_mediator_t *mediator)
+    {
+        net_ctx_t *net = __containerof(driver, net_ctx_t, base);
+        net->mediator = mediator;
+        ESP_LOGI(TAG, "network interface set mediator success");
+        return ESP_OK;
+    }
+
+    static esp_err_t usbh_rndis_transmit(iot_eth_driver_t *h, uint8_t *buffer, size_t buflen)
+    {
+        ESP_LOGI(TAG, "network interface transmit success");
+        return ESP_OK;
+    }
+
+    static esp_err_t drv_get_addr(iot_eth_driver_t *driver, uint8_t *mac)
+    {
+        ESP_LOGI(TAG, "network interface get mac success");
+        return ESP_OK;
+    }
+
+    static esp_err_t drv_deinit(iot_eth_driver_t *driver)
+    {
+        ESP_LOGI(TAG, "network interface deinit success");
+        free(driver);
+        return ESP_OK;
+    }
+
+    static iot_eth_driver_t * new_rndis_eth_driver()
+    {
+        net_ctx_t *net = calloc(1, sizeof(net_ctx_t));
+        net->base.name = "test drv";
+        net->base.init = drv_init;
+        net->base.deinit = drv_deinit;
+        net->base.set_mediator = drv_set_mediator;
+        net->base.get_addr = drv_get_addr;
+        net->base.transmit = usbh_rndis_transmit;
+        return &net->base;
     }
 
 2. Initialize the `iot_eth` layer
@@ -37,7 +70,6 @@ User Guide
     iot_eth_config_t eth_cfg = {
         .driver = rndis_handle,
         .stack_input = NULL,
-        .user_data = NULL,
     };
 
     iot_eth_handle_t eth_handle = NULL;
@@ -53,7 +85,7 @@ User Guide
 
     ret = iot_eth_start(eth_handle);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start USB RNDIS driver");
+        ESP_LOGE(TAG, "Failed to start eth driver");
         return;
     }
 

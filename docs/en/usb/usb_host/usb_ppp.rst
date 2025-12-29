@@ -1,120 +1,85 @@
 USB PPP
-===========
+=============
 
 :link_to_translation:`zh_CN:[中文]`
 
-PPP (Point-to-Point Protocol) is one of the most fundamental protocols in networking. It is a data link layer protocol designed for simple links to transmit data packets between peer units. These links provide full-duplex operation and sequential packet delivery. PPP offers a common solution for simple connections based on various hosts, bridges, and routers.
+PPP is one of the most fundamental protocols in networking. The Point-to-Point Protocol (PPP) is a data link layer protocol designed for simple links that transmit packets between peers. Such links provide full-duplex operation and deliver packets in order. PPP provides a common solution for simple connections among hosts, bridges, and routers.
 
-The `iot_usbh_modem <https://components.espressif.com/components/espressif/iot_usbh_modem>`_ component implements the complete process of USB host PPP dial-up. It supports connecting 4G Cat.1/4 modules via USB interface to achieve PPP dial-up internet access. It also supports sharing internet connection to other devices through Wi-Fi softAP hotspot.
+`iot_usbh_modem <https://components.espressif.com/components/espressif/iot_usbh_modem>`_ implements the complete process of PPP dialing on the USB host. It supports connecting 4G Cat.1/4 modules via the USB interface to access the Internet using PPP.
 
 Features:
-    * Quick start
+    * Fast startup
     * Hot-plug support
-    * Dual interface support for Modem+AT (module dependent)
-    * PPP standard protocol support (supported by most 4G modules)
-    * 4G to Wi-Fi hotspot conversion
-    * NAPT network address translation support
-    * Power management support
-    * Automatic network recovery
-    * SIM card detection and signal quality monitoring
-    * Web configuration interface support
+    * Supports Modem+AT dual interfaces (requires module support)
+    * Supports the PPP standard (most 4G modules support it)
+    * Supports NAPT network address translation
 
-Supported Module Models:
--------------------------
+Supported module models:
+-----------------------------
 
-The following table lists the supported 4G module models. They can be configured directly in menuconfig through the :c:macro:`MODEM_TARGET` macro. If the configuration is not effective, please select :c:macro:`MODEM_TARGET_USER` in menuconfig and manually configure the ITF interface.
+The table below lists the 4G modules already supported. You can add support for your own module following :ref:`example-label`.
 
 .. note::
 
-    The same module may have multiple functional firmwares. Please consult the module manufacturer for PPP dial-up support.
+    The same module may have multiple firmware variants; please consult the vendor to confirm whether PPP dialing is supported.
 
-+-----------------+
-|  Module Model   |
-+=================+
-| ML302-DNLM/CNLM |
-+-----------------+
-| NT26            |
-+-----------------+
-| EC600NCNLC-N06  |
-+-----------------+
-| AIR780E         |
-+-----------------+
-| MC610_EU        |
-+-----------------+
-| EC20_CE         |
-+-----------------+
-| EG25_GL         |
-+-----------------+
-| YM310_X09       |
-+-----------------+
-| SIM7600E        |
-+-----------------+
-| A7670E          |
-+-----------------+
-| SIM7070G        |
-+-----------------+
-| SIM7080G        |
-+-----------------+
++-----------+---------------------------------------------+----------+----------+----------+
+| Model     | Firmware Version                            | ESP32-S2 | ESP32-S3 | ESP32-P4 |
++===========+=============================================+==========+==========+==========+
+| ML302     | ML302-CNLM_MBRH0S00                         | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| Air780E   | AirM2M_780EVT_V2010_LTE_AT                  | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| EC600N-CN | EC600NCNLDR03A03M16_OCP                     | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| EC20      | EC20CEFHLGR06A07M1G                         | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| YM310     | YM310.X09S_AT.A60_R2.1.3.241121             | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| A7600C1   | Model: A7600C1-LNAS\                        | ✅       | ✅       | ✅       |
+|           | Revision: A7600M6_V8.18.1                   |          |          |          |
++-----------+---------------------------------------------+----------+----------+----------+
+| A7670E    | Model: A7670E-FASE\                         | ✅       | ✅       | ✅       |
+|           | Revision: A7670M7_V1.11.1                   |          |          |          |
++-----------+---------------------------------------------+----------+----------+----------+
+| SIM7080G  | Revision: 1951B17SIM7080                    | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| LE270-CN  | 12007.6005.00.02.03.04                      | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| MC610-EU  | 16000.1000.00.97.20.10                      | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
 
-Setting up PPP Interface
--------------------------
 
-The PPP interface is typically a USB CDC interface that must have a CDC data interface containing two bulk endpoints for input and output data. It may have a CDC notify interface with an interrupt endpoint, which is not used in this application code.
+Add support for a new 4G module
+------------------------------------
 
-The PPP interface can be used for both AT command transmission and PPP data transfer, switching between them by sending "+++" data.
+A 4G module's USB descriptor typically has multiple interfaces, such as a Modem interface, an AT command interface, and a Debug interface. The host can communicate with the cellular communication module via the virtual Modem interface, for example, by sending AT commands for control operations or sending and receiving network data. Normally, the Modem interface switches to data mode to transmit PPP data after a successful dial-up connection, and can return to command mode by sending "+++". Some modules also have a separate AT command interface, allowing data communication and AT command interaction to occur simultaneously. Below are the steps to add support for a new 4G module:
 
-Example Descriptor
-~~~~~~~~~~~~~~~~~~~~
-
-Most PPP interfaces have a bInterfaceClass of 0xFF (Vendor Specific Class). In the example below, the bInterfaceNumber of the PPP interface is 0x03.
-
-Example USB descriptor:
+1. Confirm the 4G module **supports USB PPP dialing**;
+2. Confirm the **4G SIM card is activated** and network access is enabled;
+3. Identify the module's USB descriptor information: ``Vendor ID``, ``Product ID``, the Modem interface number, and the optional AT command interface number. You can use `usbtreeview <https://www.uwe-sieber.de/usbtreeview_e.html>`_ to view them;
+4. Fill the above descriptor information into the :c:struct:`usbh_modem_config_t` structure;
 
 .. note::
 
-    The following descriptor is an example. Not all descriptors follow this format exactly - some may include IAD interface descriptors or may not have interrupt endpoints.
-
-.. code-block:: c
-
-    *** Interface descriptor ***
-    bLength 9
-    bDescriptorType 4
-    bInterfaceNumber 3
-    bAlternateSetting 0
-    bNumEndpoints 3
-    bInterfaceClass 0xff
-    bInterfaceSubClass 0x0
-    bInterfaceProtocol 0x0
-    iInterface 8
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x8a   EP 10 IN
-            bmAttributes 0x3        INT
-            wMaxPacketSize 16
-            bInterval 16
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x82   EP 2 IN
-            bmAttributes 0x2        BULK
-            wMaxPacketSize 64
-            bInterval 0
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x1    EP 1 OUT
-            bmAttributes 0x2        BULK
-            wMaxPacketSize 64
-            bInterval 0
-
-After identifying the PPP interface, you can configure :c:macro:`MODEM_TARGET` as :c:macro:`MODEM_TARGET_USER` and set :c:macro:`MODEM_USB_ITF` to the bInterfaceNumber of the PPP interface.
-
-Dual PPP Interface
-~~~~~~~~~~~~~~~~~~~~
-
-To enable AT command transmission while transferring data, you can use two PPP interfaces - one for data transfer and another for AT commands. This requires additional configuration of :c:macro:`MODEM_USB_ITF2`.
+    The basic AT commands supported by different 4G modules are largely similar, but some special commands may need to be implemented by the user.
 
 .. note::
 
-    The availability of a second AT command interface depends on the device.
+    Some modules expose the PPP interface not as a standard CDC interface but as a Vendor Specific Class interface; the driver also supports some of these modules.
+
+.. note::
+
+    Some 4G modules can automatically switch from data mode to command mode via PPP frames without sending "+++". In this case, disable the ``MODEM_EXIT_PPP_WITH_AT_CMD`` configuration option.
+
+.. _example-label:
+
+Example Code
+-------------------------------
+
+:example:`usb/host/usb_cdc_4g_module`
+
+API Reference
+-------------------
+
+.. include-build-file:: inc/iot_usbh_modem.inc

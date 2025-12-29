@@ -1,0 +1,16 @@
+dependencies:
+  idf: ">=4.4.1"
+  json_parser:
+    version: "1.0.3"
+  espressif/esp_wifi_remote:
+    version: "~0.9.0"
+    rules:
+      - if: "target in [esp32p4, esp32h2]"
+  espressif/esp_hosted:
+    version: "~1"
+    rules:
+      - if: "target in [esp32p4, esp32h2]"
+  espressif/esp-extconn:
+    version: "~0.2.0"
+    rules:
+      - if: "target in [esp32p4]"

@@ -92,6 +92,14 @@
       - IMAGE: espressif/idf:release-v5.5
       - IMAGE: espressif/idf:release-v6.0
 
+.build_idf_version_greater_equal_v5_2:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
     - .build_examples_template
@@ -796,7 +804,7 @@ build_example_usb_host_usb_cdc_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
 
@@ -804,7 +812,7 @@ build_example_usb_host_usb_cdc_basic:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_basic
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_basic
 
@@ -828,7 +836,7 @@ build_example_usb_host_usb_ecm_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_ecm_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_ecm_4g_module
 
@@ -844,7 +852,7 @@ build_example_usb_host_usb_rndis_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_rndis_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
 
@@ -1500,9 +1508,17 @@ build_components_usb_iot_usbh_rndis_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_usb_iot_usbh_rndis_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_version_greater_equal_v5_2
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_rndis/test_apps
+
+build_components_usb_iot_usbh_ecm_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_usb_iot_usbh_ecm_test_apps
+    - .build_idf_version_greater_equal_v5_2
+  variables:
+    EXAMPLE_DIR: components/usb/iot_usbh_ecm/test_apps
 
 build_components_usb_usb_stream_test_apps:
   extends:
@@ -1531,6 +1547,28 @@ build_components_usb_iot_usbh_cdc_test_apps:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/usb/iot_usbh_cdc/test_apps
+
+build_components_modem_at_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_modem_at_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/modem_at/test_apps
+
+build_components_iot_eth_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_iot_eth_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v4.4
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/iot_eth/test_apps
 
 build_components_usb_iot_usbh_modem_test_apps:
   extends:

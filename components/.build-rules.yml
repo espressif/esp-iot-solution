@@ -42,17 +42,27 @@ components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+components/modem_at/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/usb/iot_usbh/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
 components/usb/iot_usbh_cdc/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
+  disable:
+    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
 
 components/usb/iot_usbh_modem/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
+components/usb/iot_usbh_ecm/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 components/i2c_bus/test_apps:
   enable:
