@@ -1,14 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
- 
- #pragma once
 
-#ifndef __DLMOD_H__
-#define __DLMOD_H__
+#pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/queue.h>
 
@@ -18,13 +17,15 @@
 extern "C" {
 #endif
 
-#define FILE_NAME_MAX 32
+#define FILE_NAME_MAX 64
+#define DLMOD_HANDLE_MAGIC 0x444C4D4FUL
 
 /**
  * @brief Structure for recording the dynamic load shared objects
  *
  */
 struct dlmod_slist_t {
+    uint32_t magic;
     char name[FILE_NAME_MAX];
     esp_elf_t *elf;
     SLIST_ENTRY(dlmod_slist_t) next;
@@ -79,6 +80,15 @@ void *dlmod_insert(const char *path, const char *name);
 int dlmod_remove(void *handle);
 
 /**
+ * @brief Validate a module handle returned by dlmod_insert() or dlmod_relocate().
+ *
+ * @param handle - Module handle to validate
+ *
+ * @return true if the handle is a valid module entry, false otherwise.
+ */
+bool dlmod_validate_handle(void *handle);
+
+/**
  * @brief Find a symbol address by name across all loaded modules.
  *
  * @param sym_name - Symbol name to search for
@@ -99,5 +109,4 @@ void dlmod_listsymbol(void);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

@@ -209,7 +209,7 @@ uintptr_t elf_find_sym(const char *sym_name)
 
     uintptr_t sym_addr = esp_elf_find_symbol(sym_name);
     if (sym_addr) {
-        return (uintptr_t)sym_addr;
+        return sym_addr;
     }
 
 #if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT

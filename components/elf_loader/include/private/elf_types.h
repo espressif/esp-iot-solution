@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -66,10 +66,12 @@ extern "C" {
 #define SHF_EXECINSTR   4               /*!< machine code */
 #define SHF_MASKPROG    0xf0000000      /*!< reserved for processor-specific semantics */
 
-#define STB_LOCAL       0               /*!<  BIND */
-#define STB_GLOBAL      1
-#define STB_WEAK        2
-#define STB_NUM         3
+/** @brief Symbol Binding */
+
+#define STB_LOCAL       0               /*!< Local symbols are not visible outside the object file containing their definition. */
+#define STB_GLOBAL      1               /*!< Global symbols are visible to all object files being combined. */
+#define STB_WEAK        2               /*!< Weak symbols resemble global symbols, but their definitions have lower precedence. */
+#define STB_NUM         3               /*!< Number of defined types */
 
 /** @brief Symbol Types */
 
@@ -85,6 +87,8 @@ extern "C" {
 #define STT_HIOS        12              /*!< High OS specific range */
 #define STT_LOPROC      13              /*!< processor specific range */
 #define STT_HIPROC      15              /*!< processor specific link range */
+
+/** @brief Special Section Indices */
 
 #define SHN_UNDEF       0               /*!< undefined */
 
@@ -227,8 +231,8 @@ typedef struct esp_elf_sec {
 } esp_elf_sec_t;
 
 typedef struct esp_symtab {
-    void            *addr;
-    char            *name;
+    void            *addr;              /*!< symbol address */
+    char            *name;              /*!< symbol name */
 } esp_symtab_t;
 
 /** @brief ELF object */
@@ -253,7 +257,7 @@ typedef struct esp_elf {
     uint32_t        mmu_num;            /*!< MMU unit total number */
 #endif
 
-#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+#ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
     uint16_t        num;                /*!< number of symbols in the dynamic object */
     esp_symtab_t    *symtab;            /*!< symbol table of dynamic object pointer */
 #endif

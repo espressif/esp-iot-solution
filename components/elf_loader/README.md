@@ -67,7 +67,16 @@ typedef int (*lib_func1)(void);
     const char *filename = "FilePath/lib.so";
     lib_func1 test_function;
     void *handle = dlopen(filename, RTLD_LAZY);
+    if (!handle) {
+        // To handle errors, you can use dlerror() to get the error information.
+        return;
+    }
     test_function = (lib_func1)dlsym(handle, "function1");
+    if (!test_function) {
+        // Handling errors.
+        dlclose(handle);
+        return;
+    }
     test_function();
     dlclose(handle);
 ```

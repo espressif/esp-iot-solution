@@ -5,7 +5,6 @@ components/usb/esp_tinyuf2/utils/uf2conv.py
 components/utilities/xz/xz-embedded/linux/scripts/xz_wrap.sh
 docs/check_lang_folder_sync.sh
 docs/zh_CN/conf.py
-docs/zh_CN/conf.py
 examples/bluetooth/ble_ota/tools/esp_delta_ota_patch_gen.py
 examples/elf_loader/elf_console_example/main/fs_image/riscv/lib.so
 examples/elf_loader/elf_console_example/main/fs_image/riscv/test_app.elf

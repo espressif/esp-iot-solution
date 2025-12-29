@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -34,14 +34,14 @@ static void fs_init(void)
     ESP_ERROR_CHECK(esp_vfs_littlefs_register(&conf));
     ESP_ERROR_CHECK(esp_littlefs_info(conf.partition_label, &total, &used));
 
-    ESP_LOGI(TAG, "Partition size: total: %d, used: %d", total, used);
+    ESP_LOGI(TAG, "Partition size: total: %zu, used: %zu", total, used);
 }
 
 int app_main(void)
 {
-    fs_init();
-
     ESP_ERROR_CHECK(nvs_flash_init());
+
+    fs_init();
 
 #ifdef CONFIG_ELF_SHELL
     shell_init();

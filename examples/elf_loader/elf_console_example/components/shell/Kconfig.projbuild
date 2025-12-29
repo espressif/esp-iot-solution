@@ -1,7 +1,10 @@
 menu "Shell"
     config ELF_SHELL
         bool "Enable ELF shell command"
-        default n
+        default y
+        help
+            Enable the ELF shell command interface for interactive
+            command execution in the console example.
 
     if ELF_SHELL
         config SHELL_PROMPT
@@ -21,14 +24,14 @@ menu "Shell"
                 config SHELL_CMD_EXEC
                     bool "exec"
                     default y
-                config SHELL_CMD_INSMOD
-                    bool "insmod"
+                config SHELL_CMD_MOD_LOAD
+                    bool "mod_load"
+                    default y
+                config SHELL_CMD_MOD_UNLOAD
+                    bool "mod_unload"
                     default y
                 config SHELL_CMD_LIST
                     bool "list"
-                    default y
-                config SHELL_CMD_RMMOD
-                    bool "rmmod"
                     default y
             endif
         endmenu

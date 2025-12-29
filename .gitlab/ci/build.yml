@@ -1709,14 +1709,7 @@ build_example_elf_loader_elf_console_example:
   extends:
     - .build_examples_template
     - .rules:build:example_elf_loader_elf_console_example
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.0
-      - IMAGE: espressif/idf:release-v5.1
-      - IMAGE: espressif/idf:release-v5.2
-      - IMAGE: espressif/idf:release-v5.3
-      - IMAGE: espressif/idf:release-v5.4
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/elf_loader/elf_console_example
 

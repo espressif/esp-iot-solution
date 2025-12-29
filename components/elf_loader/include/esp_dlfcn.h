@@ -1,24 +1,22 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
-#ifndef __DLFCN_H__
-#define __DLFCN_H__
-
-#include <sys/types.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define RTLD_LAZY   (0 << 0)
-#define RTLD_NOW    (1 << 0)
-#define RTLD_GLOBAL (1 << 1)
-#define RTLD_LOCAL  (1 << 2)
+/** @brief The MODE argument to `dlopen' contains one of the following: */
+
+#define RTLD_LAZY           0x00001 /*!< Lazy function call binding. */
+#define RTLD_NOW            0x00002 /*!< Immediate function call binding. */
+#define RTLD_BINDING_MASK   0x00003 /*!< Mask of binding time value. */
+#define RTLD_NOLOAD         0x00004 /*!< Do not load the object. */
+#define RTLD_DEEPBIND       0x00008 /*!< Use deep binding. */
 
 /**
  * @brief Enum for symbol table list type
@@ -32,22 +30,22 @@ typedef enum {
 /**
  * @brief Dynamic loader compatibility interface - Load a shared object.
  *
- * @param path  - Filesystem path to the ELF binary
- * @param flags - (Unused) Compatibility parameter
+ * @param file - Filesystem path to the ELF binary
+ * @param mode - Mode flags (RTLD_LAZY, RTLD_NOW, etc.)
  *
  * @return Module handle on success, NULL on failure.
  */
-void *dlopen(const char *filename, int flag);
+void *dlopen(const char *file, int mode);
 
 /**
  * @brief Dynamic loader compatibility interface - Look up symbol address.
  *
  * @param handle - Module handle from dlopen()
- * @param symbol - Symbol name to locate
+ * @param name - Symbol name to locate
  *
  * @return Memory address of the symbol if found, NULL otherwise.
  */
-void *dlsym(void *handle, const char *symbol);
+void *dlsym(void *handle, const char *name);
 
 /**
  * @brief Dynamic loader compatibility interface - Close a module handle.
@@ -59,22 +57,15 @@ void *dlsym(void *handle, const char *symbol);
 int dlclose(void *handle);
 
 /**
- * @brief Load and register a module from a filesystem path.
+ * @brief Dynamic loader compatibility interface - Get error message.
  *
- * @param path - Filesystem path to the ELF binary
+ * @note Thread safety: The returned pointer points to a static buffer that
+ *       may be overwritten by subsequent calls to dl* functions from any
+ *       thread. Callers should copy the string immediately if needed.
  *
- * @return Module handle on success, NULL on failure.
+ * @return Pointer to error message string, or NULL if no error occurred.
  */
-void *dlinsmod(const char *path);
-
-/**
- * @brief Unload a module by its filesystem path.
- *
- * @param path - Filesystem path used during module loading
- *
- * @return 0 on success, -1 on failure (invalid path or not loaded).
- */
-int dlrmmod(const char *path);
+const char *dlerror(void);
 
 /**
  * @brief Display system module/symbol information.
@@ -85,5 +76,4 @@ void dllist(dl_list_t type);
 
 #ifdef __cplusplus
 }
-#endif
 #endif

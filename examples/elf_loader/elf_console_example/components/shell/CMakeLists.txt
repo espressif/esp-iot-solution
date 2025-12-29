@@ -1,7 +1,11 @@
+set(srcs "")
+set(include_dir "")
+set(priv_include_dir "")
+
 if(CONFIG_ELF_SHELL)
-    set(srcs  "src/shell_init.c")
-    set(include_dir "include")
-    set(priv_include_dir "private_include")
+    list(APPEND srcs  "src/shell_init.c")
+    list(APPEND include_dir  "include")
+    list(APPEND priv_include_dir "private_include")
 
     if(CONFIG_SHELL_CMD_LS)
         list(APPEND srcs "src/shell_ls.c")
@@ -11,16 +15,16 @@ if(CONFIG_ELF_SHELL)
         list(APPEND srcs "src/shell_exec.c")
     endif()
 
-    if(CONFIG_SHELL_CMD_INSMOD)
-        list(APPEND srcs "src/shell_insmod.c")
+    if(CONFIG_SHELL_CMD_MOD_LOAD)
+        list(APPEND srcs "src/shell_mod_load.c")
     endif()
 
     if(CONFIG_SHELL_CMD_LIST)
         list(APPEND srcs "src/shell_list.c")
     endif()
 
-    if(CONFIG_SHELL_CMD_RMMOD)
-        list(APPEND srcs "src/shell_rmmod.c")
+    if(CONFIG_SHELL_CMD_MOD_UNLOAD)
+        list(APPEND srcs "src/shell_mod_unload.c")
     endif()
 
     if(CONFIG_SHELL_CMD_FREE)

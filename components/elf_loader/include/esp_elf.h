@@ -6,6 +6,9 @@
 
 #pragma once
 
+#include <stdint.h>
+#include <stddef.h>
+
 #include "private/elf_types.h"
 #include "private/elf_symbol.h"
 
@@ -15,8 +18,15 @@ extern "C" {
 
 typedef struct elf_file {
     uint8_t *payload;
-    int size;
+    size_t size;
 } elf_file_t;
+
+/**
+ * @brief Symbol table type
+ *
+ * A symbol table is an array of esp_elfsym structures terminated with ESP_ELFSYM_END.
+ */
+typedef const struct esp_elfsym esp_elf_symbol_table_t;
 
 /**
  * @brief Open and load an ELF file into memory.
@@ -42,24 +52,9 @@ int esp_elf_open(elf_file_t *file, const char *name);
  *
  * @note Releases memory allocated by esp_elf_open() for payload data
  * @note Should be called paired with esp_elf_open() to prevent memory leaks
+ * @note If file is NULL, this function does nothing (null-safe)
  */
 void esp_elf_close(elf_file_t *file);
-
-/**
- * @brief Free memory of ELF object.
- *
- * @param elf - ELF object pointer
- *
- * @return None
- */
-void esp_object_free(esp_elf_t *elf);
-
-/**
- * @brief Symbol table type
- *
- * A symbol table is an array of esp_elfsym structures terminated with ESP_ELFSYM_END.
- */
-typedef const struct esp_elfsym esp_elf_symbol_table_t;
 
 /**
  * @brief Map symbol's address of ELF to physic space.

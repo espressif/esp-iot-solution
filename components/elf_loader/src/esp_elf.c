@@ -20,7 +20,6 @@
 #include "hal/cache_ll.h"
 #endif
 
-#include "esp_elf.h"
 #include "private/elf_platform.h"
 
 #define stype(_s, _t)               ((_s)->type == (_t))
@@ -64,6 +63,11 @@ int esp_elf_open(elf_file_t *file, const char *name)
     char *file_path;
     off_t size;
     uint8_t *pbuf;
+
+    if (!file || !name) {
+        errno = EINVAL;
+        return -1;
+    }
 
     ret = asprintf(&file_path, FS_PATH"/%s", name);
     if (ret < 0) {
@@ -124,6 +128,7 @@ errout_open_file:
  *
  * @note Releases memory allocated by esp_elf_open() for payload data
  * @note Should be called paired with esp_elf_open() to prevent memory leaks
+ * @note If file is NULL, this function does nothing (null-safe)
  */
 void esp_elf_close(elf_file_t *file)
 {
@@ -132,6 +137,8 @@ void esp_elf_close(elf_file_t *file)
     }
 
     esp_elf_free(file->payload);
+    file->payload = NULL;
+    file->size = 0;
 }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
@@ -144,7 +151,6 @@ void esp_elf_close(elf_file_t *file)
  *
  * @return ESP_OK if success or other if failed.
  */
-
 static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 {
     uint32_t entry;
@@ -229,8 +235,8 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
     elf->ptext = esp_elf_malloc(elf->sec[ELF_SEC_TEXT].size, true);
     if (!elf->ptext) {
-        ESP_LOGE(TAG, "Failed to malloc %d bytes for text section",
-                 elf->sec[ELF_SEC_TEXT].size);
+        ESP_LOGE(TAG, "Failed to malloc %"PRIu32" bytes for text section",
+                 (uint32_t)elf->sec[ELF_SEC_TEXT].size);
         return -ENOMEM;
     }
 
@@ -327,7 +333,6 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
  *
  * @return ESP_OK if success or other if failed.
  */
-
 static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
 {
     uint32_t size;
@@ -401,8 +406,8 @@ static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
         if (phdr[i].type == PT_LOAD) {
             memcpy(elf->psegment + phdr[i].vaddr - vaddr_s,
                    (uint8_t *)pbuf + phdr[i].offset, phdr[i].filesz);
-            ESP_LOGD(TAG, "Copy segment[%d], mem_addr: 0x%x, size: 0x%08x",
-                     i, (int)((uint8_t *)elf->psegment + phdr[i].vaddr - vaddr_s), phdr[i].filesz);
+            ESP_LOGD(TAG, "Copy segment[%d], mem_addr: %p, size: 0x%08x",
+                     i, (void *)((uint8_t *)elf->psegment + phdr[i].vaddr - vaddr_s), phdr[i].filesz);
         }
     }
 
@@ -537,7 +542,6 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 #endif
                         if (!addr) {
                             ESP_LOGE(TAG, "Can't find common %s", strtab + sym->name);
-                            esp_elf_deinit(elf);
                             return -ENOSYS;
                         }
 
@@ -563,7 +567,6 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
 #endif
                     if (!addr) {
                         ESP_LOGE(TAG, "Can't find symbol %s", func_name);
-                        esp_elf_deinit(elf);
                         return -ENOSYS;
                     }
 
@@ -592,9 +595,10 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                     elf->symtab = (esp_symtab_t *)esp_elf_malloc(elf->num * sizeof(esp_symtab_t), false);
                     if (!elf->symtab) {
                         ESP_LOGE(TAG, "Failed to malloc for symbol table");
-                        esp_elf_deinit(elf);
                         return -ENOMEM;
                     }
+
+                    memset(elf->symtab, 0, elf->num * sizeof(esp_symtab_t));
                 }
 
                 for (j = 0; j < shdr[i].size / sizeof(elf32_sym_t); j++) {
@@ -611,7 +615,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                         elf->symtab[num].name = esp_elf_malloc(len, false);
                         if (!elf->symtab[num].name) {
                             ESP_LOGE(TAG, "Failed to malloc for symbol table name");
-                            esp_elf_deinit(elf);
+                            elf->num = num;
                             return -ENOMEM;
                         }
 
@@ -660,6 +664,9 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
  * @param elf - ELF object pointer
  *
  * @return None
+ *
+ * @note This function frees all resources allocated by esp_elf_relocate() and
+ *       resets the structure to its initial state (same as after esp_elf_init()).
  */
 void esp_elf_deinit(esp_elf_t *elf)
 {
@@ -697,8 +704,14 @@ void esp_elf_deinit(esp_elf_t *elf)
         }
 
         esp_elf_free(elf->symtab);
+        elf->symtab = NULL;
     }
+
+    elf->num = 0;
 #endif
+
+    /* Reset structure to initial state (same as esp_elf_init) */
+    memset(elf, 0, sizeof(esp_elf_t));
 }
 
 /**

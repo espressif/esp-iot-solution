@@ -1,12 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 #include <dirent.h>
+#include <string.h>
 #include <sys/errno.h>
 
 #include "esp_log.h"
@@ -39,11 +40,22 @@ static int ls_main(int argc, char **argv)
     if (ls_main_arg.dir->count) {
         pwd = ls_main_arg.dir->sval[0];
     } else {
-        pwd = getenv("$PWD");
+        pwd = getenv("PWD");
         if (!pwd) {
-            ESP_LOGE(TAG, "failed to getenv errno=%d", errno);
+            ESP_LOGE(TAG, "PWD environment variable not set");
             return -1;
         }
+    }
+
+    size_t pwd_len = strlen(pwd);
+    if (strcmp(pwd, "..") == 0 || strncmp(pwd, "../", 3) == 0 || strstr(pwd, "/../") ||
+            (pwd_len >= 3 && strcmp(pwd + pwd_len - 3, "/..") == 0)) {
+        ESP_LOGE(TAG, "invalid path traversal: %s", pwd);
+        return -1;
+    }
+
+    while (*pwd == '/') {
+        pwd++;
     }
 
     ret = asprintf(&file_path, SHELL_ROOT_FS_PATH"/%s", pwd);
@@ -59,6 +71,7 @@ static int ls_main(int argc, char **argv)
         return -1;
     }
 
+    errno = 0;
     do {
         de = readdir(dir);
         if (!de) {
@@ -72,13 +85,20 @@ static int ls_main(int argc, char **argv)
         }
     } while (1);
 
+    if (errno != 0) {
+        ESP_LOGE(TAG, "failed to readdir errno=%d", errno);
+        closedir(dir);
+        free(file_path);
+        return -1;
+    }
+
     closedir(dir);
     free(file_path);
 
     return 0;
 }
 
-void shell_regitser_cmd_ls(void)
+void shell_register_cmd_ls(void)
 {
     ls_main_arg.dir = arg_str0(NULL, NULL, "<file_or_directory>", "list directory contents");
     ls_main_arg.end = arg_end(1);

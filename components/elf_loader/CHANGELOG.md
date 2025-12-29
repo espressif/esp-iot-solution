@@ -1,9 +1,8 @@
 # ChangeLog
 
-## v1.2.0 - 2025-03-04
+## v1.3.0 - 2026-01-08
 
-### Features
-* Add dynamic load shared object support.
+* Added support for dynamically loading shared objects
 
 ## v1.2.0 - 2026-01-05
 

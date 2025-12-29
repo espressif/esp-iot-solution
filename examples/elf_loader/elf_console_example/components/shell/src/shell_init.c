@@ -1,10 +1,17 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include "esp_console.h"
 #include "shell_cmd.h"
+#include "esp_log.h"
+
+static const char TAG[] = "SHELL_INIT";
 
 void shell_init(void)
 {
@@ -22,32 +29,36 @@ void shell_init(void)
 #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     esp_console_dev_usb_serial_jtag_config_t usbjtag_config = ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&usbjtag_config, &repl_config, &repl));
+#else
+#error "No console backend configured. Please enable CONFIG_ESP_CONSOLE_UART, CONFIG_ESP_CONSOLE_USB_CDC, or CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG"
 #endif
 
-    ESP_ERROR_CHECK(setenv("$PWD", "", 1));
+    if (setenv("PWD", "/", 1) != 0) {
+        ESP_LOGE(TAG, "Failed to set PWD environment variable: %s", strerror(errno));
+    }
 
 #ifdef CONFIG_SHELL_CMD_LS
-    shell_regitser_cmd_ls();
+    shell_register_cmd_ls();
 #endif
 
 #ifdef CONFIG_SHELL_CMD_FREE
-    shell_regitser_cmd_free();
+    shell_register_cmd_free();
 #endif
 
 #ifdef CONFIG_SHELL_CMD_EXEC
-    shell_regitser_cmd_exec();
+    shell_register_cmd_exec();
 #endif
 
 #ifdef CONFIG_SHELL_CMD_LIST
-    shell_regitser_cmd_list();
+    shell_register_cmd_list();
 #endif
 
-#ifdef CONFIG_SHELL_CMD_INSMOD
-    shell_regitser_cmd_insmod();
+#ifdef CONFIG_SHELL_CMD_MOD_LOAD
+    shell_register_cmd_mod_load();
 #endif
 
-#ifdef CONFIG_SHELL_CMD_RMMOD
-    shell_regitser_cmd_rmmod();
+#ifdef CONFIG_SHELL_CMD_MOD_UNLOAD
+    shell_register_cmd_mod_unload();
 #endif
 
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
