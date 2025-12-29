@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -371,7 +371,7 @@ void app_main(void)
 
     httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
     esp_mcp_mgr_config_t mcp_mgr_config = {
-        .transport = esp_mcp_transport_http,
+        .transport = esp_mcp_transport_http_server,
         .config = &http_config,
         .instance = mcp,
     };

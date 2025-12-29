@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,7 @@
 #include <esp_check.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
+#include <esp_random.h>
 #include <cJSON.h>
 
 #include "esp_mcp_item.h"
@@ -111,6 +112,30 @@ static esp_err_t esp_mcp_reply_error(esp_mcp_t *mcp, int error_code, const char 
     return ESP_OK;
 }
 
+static void esp_mcp_reply_error_formatted(esp_mcp_t *mcp, int error_code, const char *default_msg, const char *extra_info, int request_id)
+{
+    if (!extra_info) {
+        esp_mcp_reply_error(mcp, error_code, default_msg, request_id);
+        return;
+    }
+
+    int needed = snprintf(NULL, 0, "%s: %s", default_msg, extra_info);
+    if (needed < 0) {
+        esp_mcp_reply_error(mcp, error_code, default_msg, request_id);
+        return;
+    }
+
+    char *error_msg = malloc(needed + 1);
+    if (!error_msg) {
+        esp_mcp_reply_error(mcp, error_code, default_msg, request_id);
+        return;
+    }
+
+    snprintf(error_msg, needed + 1, "%s: %s", default_msg, extra_info);
+    esp_mcp_reply_error(mcp, error_code, error_msg, request_id);
+    free(error_msg);
+}
+
 static esp_err_t esp_mcp_parse_capabilities(esp_mcp_t *mcp, const cJSON *capabilities)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
@@ -129,9 +154,8 @@ static esp_err_t esp_mcp_parse_capabilities(esp_mcp_t *mcp, const cJSON *capabil
             int token_len = strlen(token_str);
             if (token_len > 8) {
                 char masked_token[16] = {0};
-                strncpy(masked_token, token_str, 4);
-                strcat(masked_token, "***");
-                strcat(masked_token, token_str + token_len - 4);
+                snprintf(masked_token, sizeof(masked_token), "%.*s***%.*s",
+                         4, token_str, 4, token_str + token_len - 4);
                 ESP_LOGI(TAG, "Vision Token: %s", masked_token);
             } else {
                 ESP_LOGI(TAG, "Vision Token: ***");
@@ -299,17 +323,7 @@ static esp_err_t esp_mcp_handle_tools_list(esp_mcp_t *mcp, const cJSON *params, 
         bool list_not_empty = !esp_mcp_tool_list_is_empty(mcp->tools);
         if (strlen(payload_str) == 12 && list_not_empty) {
             ESP_LOGE(TAG, "tools/list: Failed to add tool %s because of payload size limit", next_cursor);
-            char error_buf[MCP_ERROR_BUF_MAX_SIZE] = {0};
-            snprintf(error_buf, sizeof(error_buf), "%s: ", MCP_ERROR_MESSAGE_FAILED_TO_ADD_TOOL);
-            char *error_msg = calloc(strlen(error_buf) + strlen(next_cursor) + 1, sizeof(char));
-            if (error_msg) {
-                strcpy(error_msg, error_buf);
-                strcat(error_msg, next_cursor);
-                esp_mcp_reply_error(mcp, MCP_ERROR_CODE_FAILED_TO_ADD_TOOL, error_msg, id);
-                free(error_msg);
-            } else {
-                esp_mcp_reply_error(mcp, MCP_ERROR_CODE_FAILED_TO_ADD_TOOL, MCP_ERROR_MESSAGE_FAILED_TO_ADD_TOOL, id);
-            }
+            esp_mcp_reply_error_formatted(mcp, MCP_ERROR_CODE_FAILED_TO_ADD_TOOL, MCP_ERROR_MESSAGE_FAILED_TO_ADD_TOOL, next_cursor, id);
             ret = ESP_ERR_NO_MEM;
         } else {
             esp_mcp_reply_result(mcp, id, payload_str);
@@ -340,6 +354,9 @@ static esp_err_t esp_mcp_tool_args_cb(const esp_mcp_property_t *property, void *
                 }
             }
             esp_mcp_property_list_add_property(ctx->list, esp_mcp_property_create_with_int(name, int_value));
+        } else if (property->type == ESP_MCP_PROPERTY_TYPE_FLOAT) {
+            float float_value = (float)value->valuedouble;
+            esp_mcp_property_list_add_property(ctx->list, esp_mcp_property_create_with_float(name, float_value));
         } else if (property->type == ESP_MCP_PROPERTY_TYPE_STRING) {
             esp_mcp_property_list_add_property(ctx->list, esp_mcp_property_create_with_string(name, value->valuestring));
         } else if (property->type == ESP_MCP_PROPERTY_TYPE_ARRAY) {
@@ -377,23 +394,17 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, int id, const char *tool_n
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
     ESP_RETURN_ON_FALSE(tool_name, ESP_ERR_INVALID_ARG, TAG, "Invalid tool name");
     ESP_RETURN_ON_FALSE(tool_arguments, ESP_ERR_INVALID_ARG, TAG, "Invalid tool arguments");
-    ESP_RETURN_ON_FALSE(stack_size > 0, ESP_ERR_INVALID_ARG, TAG, "Invalid stack size");
+
+    if (stack_size <= 0) {
+        ESP_LOGE(TAG, "tools/call: Invalid stack size");
+        esp_mcp_reply_error(mcp, MCP_ERROR_CODE_INVALID_PARAMS, MCP_ERROR_MESSAGE_INVALID_PARAMS, id);
+        return ESP_ERR_INVALID_ARG;
+    }
 
     esp_mcp_tool_t *tool = esp_mcp_tool_list_find_tool(mcp->tools, tool_name);
     if (!tool) {
         ESP_LOGE(TAG, "tools/call: Unknown tool: %s", tool_name);
-        char *error_msg = NULL;
-        char error_buf[MCP_ERROR_BUF_MAX_SIZE] = {0};
-        snprintf(error_buf, sizeof(error_buf), "%s: ", MCP_ERROR_MESSAGE_INVALID_PARAMS);
-        error_msg = calloc(strlen(error_buf) + strlen(tool_name) + 1, sizeof(char));
-        if (error_msg) {
-            strcpy(error_msg, error_buf);
-            strcat(error_msg, tool_name);
-            esp_mcp_reply_error(mcp, MCP_ERROR_CODE_INVALID_PARAMS, error_msg, id);
-            free(error_msg);
-        } else {
-            esp_mcp_reply_error(mcp, MCP_ERROR_CODE_INVALID_PARAMS, MCP_ERROR_MESSAGE_INVALID_PARAMS, id);
-        }
+        esp_mcp_reply_error_formatted(mcp, MCP_ERROR_CODE_INVALID_PARAMS, MCP_ERROR_MESSAGE_INVALID_PARAMS, tool_name, id);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -446,7 +457,7 @@ static esp_err_t esp_mcp_handle_tools_call(esp_mcp_t *mcp, const cJSON *params, 
     cJSON *tool_name = cJSON_GetObjectItem(params, "name");
     if (!cJSON_IsString(tool_name)) {
         ESP_LOGE(TAG, "tools/call: Missing name");
-        esp_mcp_reply_error(mcp, MCP_ERROR_CODE_INVALID_REQUEST, MCP_ERROR_MESSAGE_INVALID_REQUEST, id);
+        esp_mcp_reply_error(mcp, MCP_ERROR_CODE_INVALID_PARAMS, MCP_ERROR_MESSAGE_INVALID_PARAMS, id);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -620,17 +631,7 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         return esp_mcp_handle_ping(mcp, params, id_int);
     } else {
         ESP_LOGE(TAG, "Method not implemented: %s", method_str);
-        char error_buf[MCP_ERROR_BUF_MAX_SIZE] = {0};
-        snprintf(error_buf, sizeof(error_buf), "%s: ", MCP_ERROR_MESSAGE_METHOD_NOT_FOUND);
-        char *error_msg = calloc(strlen(error_buf) + strlen(method_str) + 1, sizeof(char));
-        if (error_msg) {
-            strcpy(error_msg, error_buf);
-            strcat(error_msg, method_str);
-            esp_mcp_reply_error(mcp, MCP_ERROR_CODE_METHOD_NOT_FOUND, error_msg, id_int);
-            free(error_msg);
-        } else {
-            esp_mcp_reply_error(mcp, MCP_ERROR_CODE_METHOD_NOT_FOUND, MCP_ERROR_MESSAGE_METHOD_NOT_FOUND, id_int);
-        }
+        esp_mcp_reply_error_formatted(mcp, MCP_ERROR_CODE_METHOD_NOT_FOUND, MCP_ERROR_MESSAGE_METHOD_NOT_FOUND, method_str, id_int);
     }
 
     return ESP_OK;
@@ -652,4 +653,227 @@ esp_err_t esp_mcp_parse_message(esp_mcp_t *mcp, const char *message)
     cJSON_Delete(json);
 
     return ret;
+}
+
+static uint16_t esp_mcp_generate_id(void)
+{
+    uint16_t id;
+    do {
+        id = (uint16_t)esp_random();
+    } while (id == 0);
+    return id;
+}
+
+static esp_err_t esp_mcp_req_build(const char *method, cJSON *params, uint16_t id, char **out_json)
+{
+    ESP_RETURN_ON_FALSE(method && out_json, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+
+    cJSON *root = cJSON_CreateObject();
+    if (!root) {
+        if (params) {
+            cJSON_Delete(params);
+        }
+        ESP_LOGE(TAG, "No mem");
+        return ESP_ERR_NO_MEM;
+    }
+
+    cJSON_AddStringToObject(root, "jsonrpc", "2.0");
+    cJSON_AddStringToObject(root, "method", method);
+    cJSON_AddNumberToObject(root, "id", id);
+    if (params) {
+        cJSON_AddItemToObject(root, "params", params);
+    }
+
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    ESP_RETURN_ON_FALSE(json, ESP_ERR_NO_MEM, TAG, "Print failed");
+
+    *out_json = json;
+
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_info_init(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id)
+{
+    (void)mcp;
+    ESP_RETURN_ON_FALSE(output && out_id, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+
+    const char *proto = (info && info->protocol_version) ? info->protocol_version : "2024-11-05";
+    const char *name = (info && info->name) ? info->name : "esp-mcp-client";
+    const char *ver = (info && info->version) ? info->version : "0.1.0";
+
+    cJSON *params = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(params, ESP_ERR_NO_MEM, TAG, "No mem");
+
+    cJSON_AddStringToObject(params, "protocolVersion", proto);
+    cJSON *capabilities = cJSON_CreateObject();
+    if (!capabilities) {
+        cJSON_Delete(params);
+        ESP_LOGE(TAG, "No mem");
+        return ESP_ERR_NO_MEM;
+    }
+    cJSON_AddItemToObject(params, "capabilities", capabilities);
+
+    cJSON *client_info = cJSON_CreateObject();
+    if (!client_info) {
+        cJSON_Delete(params);
+        return ESP_ERR_NO_MEM;
+    }
+    cJSON_AddStringToObject(client_info, "name", name);
+    cJSON_AddStringToObject(client_info, "version", ver);
+    cJSON_AddItemToObject(params, "clientInfo", client_info);
+
+    uint16_t id = esp_mcp_generate_id();
+    char *req_json = NULL;
+    esp_err_t ret = esp_mcp_req_build("initialize", params, id, &req_json);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Build initialize failed: %s", esp_err_to_name(ret));
+
+    *output = req_json;
+    *out_id = id;
+
+    return ret;
+}
+
+esp_err_t esp_mcp_tools_list(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id)
+{
+    (void)mcp;
+    ESP_RETURN_ON_FALSE(output && out_id, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+
+    cJSON *params = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(params, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (info && info->cursor && info->cursor[0] != '\0') {
+        cJSON_AddStringToObject(params, "cursor", info->cursor);
+    }
+
+    uint16_t id = esp_mcp_generate_id();
+    char *req_json = NULL;
+    esp_err_t ret = esp_mcp_req_build("tools/list", params, id, &req_json);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Build tools/list failed: %s", esp_err_to_name(ret));
+
+    *output = req_json;
+    *out_id = id;
+
+    return ret;
+}
+
+esp_err_t esp_mcp_tools_call(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id)
+{
+    (void)mcp;
+    ESP_RETURN_ON_FALSE(output && out_id, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(info, ESP_ERR_INVALID_ARG, TAG, "Invalid info");
+    ESP_RETURN_ON_FALSE(info->tool_name, ESP_ERR_INVALID_ARG, TAG, "Invalid tool_name");
+
+    cJSON *params = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(params, ESP_ERR_NO_MEM, TAG, "No mem");
+    cJSON_AddStringToObject(params, "name", info->tool_name);
+
+    cJSON *args = NULL;
+    if (info->args_json && info->args_json[0] != '\0') {
+        args = cJSON_Parse(info->args_json);
+        if (!args || !cJSON_IsObject(args)) {
+            if (args) {
+                cJSON_Delete(args);
+            }
+            cJSON_Delete(params);
+            return ESP_ERR_INVALID_ARG;
+        }
+    } else {
+        args = cJSON_CreateObject();
+        if (!args) {
+            cJSON_Delete(params);
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    cJSON_AddItemToObject(params, "arguments", args);
+
+    uint16_t id = esp_mcp_generate_id();
+    char *req_json = NULL;
+    esp_err_t ret = esp_mcp_req_build("tools/call", params, id, &req_json);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Build tools/call failed: %s", esp_err_to_name(ret));
+
+    *output = req_json;
+    *out_id = id;
+
+    return ret;
+}
+
+esp_err_t esp_mcp_resp_parse(esp_mcp_t *mcp, const char *input, esp_mcp_resp_t *result)
+{
+    (void)mcp;
+    ESP_RETURN_ON_FALSE(input && result, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+
+    result->output = NULL;
+    result->id = 0;
+    result->is_error = false;
+    result->error_code = 0;
+    result->error_message = NULL;
+
+    cJSON *root = cJSON_Parse(input);
+    if (!root) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    cJSON *id = cJSON_GetObjectItem(root, "id");
+    cJSON *result_obj = cJSON_GetObjectItem(root, "result");
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+
+    if (id && cJSON_IsNumber(id)) {
+        result->id = (uint16_t)id->valueint;
+    }
+
+    char *tmp = NULL;
+    esp_err_t ret = ESP_OK;
+
+    if (error) {
+        cJSON *code = cJSON_GetObjectItem(error, "code");
+        cJSON *message = cJSON_GetObjectItem(error, "message");
+
+        if (code && cJSON_IsNumber(code)) {
+            result->error_code = code->valueint;
+        }
+
+        if (message && cJSON_IsString(message)) {
+            result->error_message = strdup(message->valuestring);
+            if (!result->error_message) {
+                cJSON_Delete(root);
+                return ESP_ERR_NO_MEM;
+            }
+        }
+
+        tmp = cJSON_PrintUnformatted(error);
+        ret = ESP_ERR_INVALID_RESPONSE;
+    } else if (result_obj && cJSON_IsObject(result_obj)) {
+        cJSON *is_error_obj = cJSON_GetObjectItem(result_obj, "isError");
+        if (is_error_obj && cJSON_IsBool(is_error_obj)) {
+            result->is_error = cJSON_IsTrue(is_error_obj);
+        } else {
+            result->is_error = false;
+        }
+
+        tmp = cJSON_PrintUnformatted(result_obj);
+    } else {
+        cJSON_Delete(root);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!tmp) {
+        if (result->error_message) {
+            free(result->error_message);
+            result->error_message = NULL;
+        }
+        cJSON_Delete(root);
+        ESP_LOGE(TAG, "Failed to print JSON");
+        return ESP_ERR_NO_MEM;
+    }
+
+    result->output = tmp;
+    cJSON_Delete(root);
+    return ret;
+}
+
+void esp_mcp_resp_free(char *buf)
+{
+    if (buf) {
+        cJSON_free(buf);
+    }
 }

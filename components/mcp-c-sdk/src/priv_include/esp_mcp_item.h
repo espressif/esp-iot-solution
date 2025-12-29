@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +18,30 @@ extern "C" {
 #include "esp_mcp_data.h"
 #include "esp_mcp_property.h"
 #include "esp_mcp_tool.h"
+
+/**
+ * @brief MCP response parse result structure
+ */
+typedef struct esp_mcp_resp_s {
+    char *output;              /*!< Result or error object JSON string (allocated, free with esp_mcp_resp_free) */
+    uint16_t id;               /*!< Parsed id field */
+    bool is_error;             /*!< Set to true if error payload is present (application-level error),
+                                    false if result payload is present without error */
+    int error_code;            /*!< Error code (only valid when is_error is true or return value is ESP_ERR_INVALID_RESPONSE) */
+    char *error_message;       /*!< Error message string (allocated, free with esp_mcp_resp_free, only valid when error_code is set) */
+} esp_mcp_resp_t;
+
+/**
+ * @brief MCP info structure (internal build params)
+ */
+typedef struct esp_mcp_info_s {
+    const char *protocol_version;   /*!< Protocol version string, default "2024-11-05" if NULL */
+    const char *name;               /*!< Client name */
+    const char *version;            /*!< Client version */
+    const char *cursor;             /*!< Cursor */
+    const char *tool_name;          /*!< Tool name */
+    const char *args_json;          /*!< Arguments JSON */
+} esp_mcp_info_t;
 
 /**
  * @brief MCP property structure

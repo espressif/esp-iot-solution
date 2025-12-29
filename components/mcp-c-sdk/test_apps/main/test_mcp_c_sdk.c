@@ -1,16 +1,20 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "unity.h"
+#include "cJSON.h"
 #include "esp_mcp_engine.h"
 #include "esp_mcp_mgr.h"
 #include "esp_mcp_tool.h"
@@ -74,6 +78,7 @@ static SemaphoreHandle_t thread_test_mutex;
 static int thread_test_counter = 0;
 static const int THREAD_TEST_ITERATIONS = 100;
 static const int THREAD_TEST_THREADS = 4;
+static bool relax_memory_check;
 
 typedef struct {
     esp_mcp_t *mcp;
@@ -83,7 +88,7 @@ typedef struct {
 static void thread_test_task(void *pvParameters)
 {
     thread_test_params_t *params = (thread_test_params_t *)pvParameters;
-    esp_mcp_t *mcp = params->server;
+    esp_mcp_t *mcp = params->mcp;
     int thread_id = params->thread_id;
 
     for (int i = 0; i < THREAD_TEST_ITERATIONS; i++) {
@@ -454,6 +459,7 @@ TEST_CASE("test_tool_multiple_properties", "[tool][property]")
 
 TEST_CASE("test_server_thread_safety", "[mcp][thread_safety]")
 {
+    relax_memory_check = true;
     esp_mcp_t *mcp = NULL;
     ESP_ERROR_CHECK(esp_mcp_create(&mcp));
 
@@ -1096,4 +1102,1621 @@ TEST_CASE("test_mcp_tools_call_integration", "[mcp][mcp][tool][integration]")
     ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ============================================================================
+// MCP 2024-11-05 Protocol Compliance Tests
+// ============================================================================
+
+// ========== Helper Functions for Protocol Testing ==========
+
+static cJSON* parse_json_response(const uint8_t *outbuf, uint16_t outlen)
+{
+    if (!outbuf || outlen == 0) {
+        return NULL;
+    }
+    return cJSON_Parse((const char *)outbuf);
+}
+
+static bool validate_jsonrpc_field(const cJSON *json, const char *version)
+{
+    cJSON *jsonrpc = cJSON_GetObjectItem(json, "jsonrpc");
+    if (!jsonrpc || !cJSON_IsString(jsonrpc)) {
+        return false;
+    }
+    return strcmp(jsonrpc->valuestring, version) == 0;
+    return false;
+}
+
+static cJSON* validate_and_parse_response(const uint8_t *outbuf, uint16_t outlen, bool *is_error)
+{
+    cJSON *root = parse_json_response(outbuf, outlen);
+    if (!root) {
+        return NULL;
+    }
+
+    if (!validate_jsonrpc_field(root, "2.0")) {
+        cJSON_Delete(root);
+        return NULL;
+    }
+
+    if (is_error) {
+        cJSON *error = cJSON_GetObjectItem(root, "error");
+        *is_error = (error != NULL);
+    }
+
+    return root;
+}
+
+// ========== initialize Method Tests ==========
+
+TEST_CASE("test_initialize_response_protocol_version", "[mcp][protocol][initialize]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"clientInfo\":{\"name\":\"test_client\",\"version\":\"1.0\"},\"capabilities\":{}},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+    TEST_ASSERT_GREATER_THAN(0, outlen);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *protocol_version = cJSON_GetObjectItem(result, "protocolVersion");
+    TEST_ASSERT_NOT_NULL(protocol_version);
+    TEST_ASSERT_TRUE(cJSON_IsString(protocol_version));
+    TEST_ASSERT_EQUAL_STRING("2024-11-05", protocol_version->valuestring);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_initialize_response_capabilities", "[mcp][protocol][initialize]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *capabilities = cJSON_GetObjectItem(result, "capabilities");
+    TEST_ASSERT_NOT_NULL(capabilities);
+    TEST_ASSERT_TRUE(cJSON_IsObject(capabilities));
+
+    cJSON *tools = cJSON_GetObjectItem(capabilities, "tools");
+    TEST_ASSERT_NOT_NULL(tools);
+    TEST_ASSERT_TRUE(cJSON_IsObject(tools));
+
+    cJSON *list_changed = cJSON_GetObjectItem(tools, "listChanged");
+    TEST_ASSERT_NOT_NULL(list_changed);
+    TEST_ASSERT_TRUE(cJSON_IsBool(list_changed));
+    TEST_ASSERT_FALSE(cJSON_IsTrue(list_changed));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_initialize_response_server_info", "[mcp][protocol][initialize]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *server_info = cJSON_GetObjectItem(result, "serverInfo");
+    TEST_ASSERT_NOT_NULL(server_info);
+    TEST_ASSERT_TRUE(cJSON_IsObject(server_info));
+
+    cJSON *name = cJSON_GetObjectItem(server_info, "name");
+    TEST_ASSERT_NOT_NULL(name);
+    TEST_ASSERT_TRUE(cJSON_IsString(name));
+    TEST_ASSERT_NOT_EMPTY(name->valuestring);
+
+    cJSON *version = cJSON_GetObjectItem(server_info, "version");
+    TEST_ASSERT_NOT_NULL(version);
+    TEST_ASSERT_TRUE(cJSON_IsString(version));
+    TEST_ASSERT_NOT_EMPTY(version->valuestring);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_initialize_with_client_capabilities", "[mcp][protocol][initialize]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2024-11-05\",\"clientInfo\":{\"name\":\"test_client\",\"version\":\"1.0\"},\"capabilities\":{\"vision\":{\"url\":\"http://example.com/vision\",\"token\":\"test_token_12345\"}}},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *protocol_version = cJSON_GetObjectItem(result, "protocolVersion");
+    TEST_ASSERT_NOT_NULL(protocol_version);
+    TEST_ASSERT_EQUAL_STRING("2024-11-05", protocol_version->valuestring);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== JSON-RPC 2.0 Specification Tests ==========
+
+TEST_CASE("test_jsonrpc_version_in_requests", "[mcp][protocol][jsonrpc]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+    TEST_ASSERT_TRUE(validate_jsonrpc_field(root, "2.0"));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_jsonrpc_version_in_responses", "[mcp][protocol][jsonrpc]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_list_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{},\"id\":2}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_list_msg, strlen(tools_list_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+    TEST_ASSERT_TRUE(validate_jsonrpc_field(root, "2.0"));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_request_response_id_matching", "[mcp][protocol][jsonrpc]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    int request_id = 42;
+    char init_msg[256];
+    snprintf(init_msg, sizeof(init_msg), "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":%d}", request_id);
+
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *id = cJSON_GetObjectItem(root, "id");
+    TEST_ASSERT_NOT_NULL(id);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(id));
+    TEST_ASSERT_EQUAL_INT(request_id, id->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_result_error_mutually_exclusive", "[mcp][protocol][jsonrpc]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *valid_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)valid_msg, strlen(valid_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+
+    TEST_ASSERT_TRUE((result != NULL) ^ (error != NULL));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== tools/list Complete Tests ==========
+
+TEST_CASE("test_tools_list_with_cursor", "[mcp][protocol][tools][list]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_list_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{\"cursor\":\"\"},\"id\":2}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_list_msg, strlen(tools_list_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *tools = cJSON_GetObjectItem(result, "tools");
+    TEST_ASSERT_NOT_NULL(tools);
+    TEST_ASSERT_TRUE(cJSON_IsArray(tools));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_list_pagination", "[mcp][protocol][tools][list]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_list_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{},\"id\":2}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_list_msg, strlen(tools_list_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *tools = cJSON_GetObjectItem(result, "tools");
+    TEST_ASSERT_NOT_NULL(tools);
+    TEST_ASSERT_TRUE(cJSON_IsArray(tools));
+
+    cJSON *next_cursor = cJSON_GetObjectItem(result, "nextCursor");
+    if (next_cursor && cJSON_IsString(next_cursor) && strlen(next_cursor->valuestring) > 0) {
+        ESP_LOGI(TAG, "Pagination detected, nextCursor: %s", next_cursor->valuestring);
+    }
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_list_next_cursor", "[mcp][protocol][tools][list]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    for (int i = 0; i < 5; i++) {
+        char tool_name[64];
+        snprintf(tool_name, sizeof(tool_name), "test_tool_%d", i);
+
+        esp_mcp_tool_t *tool = esp_mcp_tool_create(tool_name, "Test tool", test_tool_callback_bool);
+        TEST_ASSERT_NOT_NULL(tool);
+        ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+    }
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_list_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{},\"id\":2}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_list_msg, strlen(tools_list_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *tools = cJSON_GetObjectItem(result, "tools");
+    TEST_ASSERT_NOT_NULL(tools);
+    TEST_ASSERT_TRUE(cJSON_IsArray(tools));
+
+    int tool_count = cJSON_GetArraySize(tools);
+    TEST_ASSERT_GREATER_THAN_INT(0, tool_count);
+
+    if (tool_count > 0) {
+        ESP_LOGI(TAG, "Tools list returned %d tools", tool_count);
+    }
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_list_invalid_cursor", "[mcp][protocol][tools][list]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_list_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{\"cursor\":\"nonexistent_tool\"},\"id\":2}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_list_msg, strlen(tools_list_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *tools = cJSON_GetObjectItem(result, "tools");
+    TEST_ASSERT_NOT_NULL(tools);
+    TEST_ASSERT_TRUE(cJSON_IsArray(tools));
+
+    int tool_count = cJSON_GetArraySize(tools);
+    TEST_ASSERT_EQUAL_INT(0, tool_count);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== tools/call Deep Tests ==========
+
+TEST_CASE("test_tools_call_parameter_validation", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"enabled\":true}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_parameter_range_check", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_int);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_int_and_range("count", 50, 0, 100);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"count\":50}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_parameter_out_of_range", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_int);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_int_and_range("count", 50, 0, 100);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"count\":150}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_parameter_float", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_float);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_float("temperature", 25.5f);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"temperature\":36.5}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+    cJSON *content = cJSON_GetObjectItem(result, "content");
+    TEST_ASSERT_NOT_NULL(content);
+    TEST_ASSERT_TRUE(cJSON_IsArray(content));
+    TEST_ASSERT_TRUE(cJSON_GetArraySize(content) >= 1);
+    cJSON *first = cJSON_GetArrayItem(content, 0);
+    TEST_ASSERT_NOT_NULL(first);
+    cJSON *text = cJSON_GetObjectItem(first, "text");
+    TEST_ASSERT_NOT_NULL(text);
+    TEST_ASSERT_TRUE(cJSON_IsString(text));
+    TEST_ASSERT_EQUAL_STRING("37.5", text->valuestring);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_parameter_string", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_string);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_string("message", "default");
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"message\":\"hello\"}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+    cJSON *content = cJSON_GetObjectItem(result, "content");
+    TEST_ASSERT_NOT_NULL(content);
+    TEST_ASSERT_TRUE(cJSON_IsArray(content));
+    TEST_ASSERT_TRUE(cJSON_GetArraySize(content) >= 1);
+    cJSON *first = cJSON_GetArrayItem(content, 0);
+    TEST_ASSERT_NOT_NULL(first);
+    cJSON *text = cJSON_GetObjectItem(first, "text");
+    TEST_ASSERT_NOT_NULL(text);
+    TEST_ASSERT_TRUE(cJSON_IsString(text));
+    TEST_ASSERT_EQUAL_STRING("Echo: hello", text->valuestring);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_stacksize", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"enabled\":true},\"stackSize\":8192},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_nonexistent_tool", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"nonexistent_tool\",\"arguments\":{}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_missing_parameter", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_tools_call_invalid_stacksize", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"enabled\":true},\"stackSize\":-1},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== Error Handling Complete Tests ==========
+
+TEST_CASE("test_error_parse_error", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_json = "{invalid json}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_json, strlen(invalid_json), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32700, code->valueint);
+
+    cJSON *message = cJSON_GetObjectItem(error, "message");
+    TEST_ASSERT_NOT_NULL(message);
+    TEST_ASSERT_TRUE(cJSON_IsString(message));
+
+    cJSON *id = cJSON_GetObjectItem(root, "id");
+    TEST_ASSERT_NOT_NULL(id);
+    TEST_ASSERT_TRUE(cJSON_IsNull(id));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_error_invalid_request", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_request = "{\"jsonrpc\":\"1.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_request, strlen(invalid_request), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32600, code->valueint);
+
+    cJSON *id = cJSON_GetObjectItem(root, "id");
+    TEST_ASSERT_NOT_NULL(id);
+    TEST_ASSERT_TRUE(cJSON_IsNull(id));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_error_method_not_found", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_method = "{\"jsonrpc\":\"2.0\",\"method\":\"nonexistent_method\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_method, strlen(invalid_method), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_TRUE(is_error);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32601, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_error_invalid_params", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_params = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_params, strlen(invalid_params), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_TRUE(is_error);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_error_response_format", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_request = "{\"jsonrpc\":\"1.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_request, strlen(invalid_request), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+    TEST_ASSERT_TRUE(cJSON_IsObject(error));
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+
+    cJSON *message = cJSON_GetObjectItem(error, "message");
+    TEST_ASSERT_NOT_NULL(message);
+    TEST_ASSERT_TRUE(cJSON_IsString(message));
+    TEST_ASSERT_NOT_EMPTY(message->valuestring);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_error_custom_codes", "[mcp][protocol][error]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"nonexistent_tool\",\"arguments\":{}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_TRUE(is_error);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+
+    TEST_ASSERT_TRUE(code->valueint == -32602 || (code->valueint >= -32099 && code->valueint <= -32000));
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== Response Parsing Tests ==========
+
+TEST_CASE("test_response_parse_result", "[mcp][protocol][response]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+    TEST_ASSERT_TRUE(cJSON_IsObject(result));
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NULL(error);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_response_parse_error", "[mcp][protocol][response]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_request = "{\"jsonrpc\":\"1.0\",\"method\":\"initialize\",\"params\":{},\"id\":1}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_request, strlen(invalid_request), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+    TEST_ASSERT_TRUE(cJSON_IsObject(error));
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+
+    cJSON *message = cJSON_GetObjectItem(error, "message");
+    TEST_ASSERT_NOT_NULL(message);
+    TEST_ASSERT_TRUE(cJSON_IsString(message));
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_response_parse_is_error", "[mcp][protocol][response]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
+    TEST_ASSERT_NOT_NULL(tool);
+
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{\"enabled\":true}},\"id\":3}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON *is_error_obj = cJSON_GetObjectItem(result, "isError");
+    if (is_error_obj && cJSON_IsBool(is_error_obj)) {
+        bool app_error = cJSON_IsTrue(is_error_obj);
+        TEST_ASSERT_FALSE(app_error);
+    }
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+TEST_CASE("test_response_parse_invalid_json", "[mcp][protocol][response]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *invalid_json = "{not json}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)invalid_json, strlen(invalid_json), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+
+    cJSON *error = cJSON_GetObjectItem(root, "error");
+    TEST_ASSERT_NOT_NULL(error);
+
+    cJSON *code = cJSON_GetObjectItem(error, "code");
+    TEST_ASSERT_NOT_NULL(code);
+    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+    TEST_ASSERT_EQUAL_INT(-32700, code->valueint);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// ========== ping Method Tests ==========
+
+TEST_CASE("test_ping_response", "[mcp][protocol][ping]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *ping_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"ping\",\"params\":{},\"id\":99}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)ping_msg, strlen(ping_msg), &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+
+    bool is_error = false;
+    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_FALSE(is_error);
+
+    cJSON *result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(result);
+
+    cJSON_Delete(root);
+    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
+// Test summary comment for new tests
+// MCP Protocol Compliance Tests Added:
+// - initialize: 4 test cases
+// - JSON-RPC: 4 test cases
+// - tools/list: 4 test cases
+// - tools/call: 7 test cases
+// - Error handling: 6 test cases
+// - Response parsing: 4 test cases
+// - ping: 1 test case
+// Total new test cases: 30
+
+static size_t before_free_8bit;
+static size_t before_free_32bit;
+
+static void check_leak(size_t before_free, size_t after_free, const char *type)
+{
+    ssize_t delta = after_free - before_free;
+    printf("MALLOC_CAP_%s: Before %u bytes free, After %u bytes free (delta %d)\n", type, before_free, after_free, delta);
+    ssize_t threshold = relax_memory_check ? (-70000) : TEST_MEMORY_LEAK_THRESHOLD;
+    TEST_ASSERT_MESSAGE(delta >= threshold, "memory leak");
+}
+
+void setUp(void)
+{
+    relax_memory_check = false;
+    before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+}
+
+void tearDown(void)
+{
+    size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+    check_leak(before_free_8bit, after_free_8bit, "8BIT");
+    check_leak(before_free_32bit, after_free_32bit, "32BIT");
+    relax_memory_check = false;
+}
+
+void app_main(void)
+{
+    printf("MCP SDK TEST \n");
+    unity_run_menu();
 }

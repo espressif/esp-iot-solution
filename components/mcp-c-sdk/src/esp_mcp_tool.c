@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -341,6 +341,7 @@ esp_err_t esp_mcp_tool_list_remove_tool(esp_mcp_tool_list_t *list, esp_mcp_tool_
     ESP_RETURN_ON_FALSE(list, ESP_ERR_INVALID_ARG, TAG, "Invalid list");
     ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
 
+    esp_err_t ret = ESP_ERR_NOT_FOUND;
     if (list->mutex) {
         if (xSemaphoreTake(list->mutex, portMAX_DELAY) == pdTRUE) {
             esp_mcp_tool_item_t *info = NULL;
@@ -350,15 +351,15 @@ esp_err_t esp_mcp_tool_list_remove_tool(esp_mcp_tool_list_t *list, esp_mcp_tool_
                     continue;
                 }
                 SLIST_REMOVE(&list->tools, info, esp_mcp_tool_item_s, next);
-                esp_mcp_tool_destroy(info->tools);
                 free(info);
+                ret = ESP_OK;
                 break;
             }
             xSemaphoreGive(list->mutex);
         }
     }
 
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t esp_mcp_tool_list_destroy(esp_mcp_tool_list_t *list)

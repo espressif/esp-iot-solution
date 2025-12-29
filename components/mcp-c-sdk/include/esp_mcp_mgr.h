@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
+#include <stdint.h>
 #include "esp_err.h"
 
 #ifdef __cplusplus
@@ -32,6 +33,66 @@ typedef uint32_t esp_mcp_mgr_handle_t;
 typedef uint32_t esp_mcp_transport_handle_t;
 
 /**
+ * @brief Response callback type for outbound requests
+ *
+ * This callback is invoked when a response is received for an outbound MCP request.
+ * The meaning of parameters depends on the response type:
+ *
+ * @param error_code Error indicator or error code, meaning depends on resp_json:
+ *                   - If resp_json is not NULL and contains application result:
+ *                     * 0: Application-level success (result.isError = false or not present)
+ *                     * 1: Application-level error (result.isError = true)
+ *                   - If resp_json is not NULL and contains protocol error:
+ *                     * JSON-RPC error code (negative integer, e.g., -32601 for "Method not found")
+ *                     * See MCP_ERROR_CODE_* constants in esp_mcp_error.h
+ *                   - If resp_json is NULL (parse failure):
+ *                     * esp_err_t error code (e.g., ESP_ERR_INVALID_ARG, ESP_ERR_NO_MEM)
+ *
+ * @param ep_name    Endpoint name or tool name (may be NULL);
+ *                   valid only during callback execution, do NOT free
+ *
+ * @param resp_json  Response JSON body, meaning depends on error_code:
+ *                   - If error_code is 0 or 1: Contains result object JSON (application-level response)
+ *                   - If error_code is negative (JSON-RPC error code): Contains error message string (protocol-level error)
+ *                   - If error_code is positive esp_err_t: NULL (parse failure)
+ *                   Valid only during callback execution, do NOT free
+ *
+ * @param user_ctx   User context provided when sending the request
+ *
+ * @return ESP_OK on success, or error code if callback processing failed
+ *
+ * @note The callback is called synchronously. The ep_name and resp_json pointers are valid
+ *       only during the callback execution. The framework will free these resources after
+ *       the callback returns. The callback should NOT attempt to free these strings.
+ */
+typedef esp_err_t (*esp_mcp_mgr_resp_cb_t)(int error_code, const char *ep_name, const char *resp_json, void *user_ctx);
+
+/**
+ * @brief MCP request structure
+ *
+ * Structure for transmitting MCP requests.
+ */
+typedef struct {
+    const char *ep_name;                         /*!< Endpoint name */
+    esp_mcp_mgr_resp_cb_t cb;                    /*!< Response callback */
+    void *user_ctx;                              /*!< User context */
+    union {
+        struct {
+            const char *protocol_version;   /*!< Protocol version string, default "2024-11-05" if NULL */
+            const char *name;               /*!< Client name */
+            const char *version;            /*!< Client version */
+        } init;                             /*!< Parameters for initialize request */
+        struct {
+            const char *cursor;                  /*!< Cursor */
+        } list;                             /*!< Parameters for tools/list request */
+        struct {
+            const char *tool_name;               /*!< Tool name */
+            const char *args_json;               /*!< Tool arguments JSON */
+        } call;                             /*!< Parameters for tools/call request */
+    } u;                                     /*!< Union containing request-specific parameters */
+} esp_mcp_mgr_req_t;
+
+/**
  * @brief MCP transport function table
  *
  * Structure defining the function callbacks for a specific MCP transport implementation.
@@ -48,6 +109,7 @@ typedef struct esp_mcp_transport_s {
     esp_err_t (*delete_config)(void *config);                                              /*!< Destroy transport-specific configuration */
     esp_err_t (*register_endpoint)(esp_mcp_transport_handle_t handle, const char *ep_name, void *priv_data);   /*!< Register an MCP endpoint for message routing */
     esp_err_t (*unregister_endpoint)(esp_mcp_transport_handle_t handle, const char *ep_name);     /*!< Unregister an MCP endpoint */
+    esp_err_t (*request)(esp_mcp_transport_handle_t handle, const uint8_t *inbuf, uint16_t inlen); /*!< Perform an outbound MCP request (client-side), optional, fire-and-forget */
 } esp_mcp_transport_t;
 
 /**
@@ -62,6 +124,17 @@ typedef struct {
     void *instance;                 /*!< MCP instance context (esp_mcp_t *) for handling MCP protocol messages */
 } esp_mcp_mgr_config_t;
 
+extern const esp_mcp_transport_t esp_mcp_transport_http_server;
+extern const esp_mcp_transport_t esp_mcp_transport_http_client;
+
+/**
+ * @brief Deprecated: Use esp_mcp_transport_http_server or esp_mcp_transport_http_client instead
+ *
+ * @deprecated This symbol is deprecated and will be removed in a future release.
+ *             Use esp_mcp_transport_http_server for server mode or esp_mcp_transport_http_client for client mode.
+ *             This alias currently maps to esp_mcp_transport_http_server for backward compatibility.
+ */
+__attribute__((deprecated("Use esp_mcp_transport_http_server or esp_mcp_transport_http_client instead")))
 extern const esp_mcp_transport_t esp_mcp_transport_http;
 
 /**
@@ -184,6 +257,73 @@ esp_err_t esp_mcp_mgr_unregister_endpoint(esp_mcp_mgr_handle_t handle, const cha
  * @note If the function returns an error, outbuf may be NULL or contain an error response.
  */
 esp_err_t esp_mcp_mgr_req_handle(esp_mcp_mgr_handle_t handle, const char *ep_name, const uint8_t *inbuf, uint16_t inlen, uint8_t **outbuf, uint16_t *outlen);
+
+/**
+ * @brief Perform an outbound MCP request via the configured transport (client-side)
+ *
+ * Sends a JSON-RPC request to a remote MCP server endpoint over the configured transport.
+ * The transport must implement the optional `transport.request` callback.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] inbuf Input buffer containing the MCP protocol message (JSON-RPC request)
+ * @param[in] inlen Length of the input buffer in bytes
+ * @return
+ *      - ESP_OK: Request performed successfully (fire-and-forget)
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments
+ *      - ESP_ERR_NOT_SUPPORTED: Transport does not support outbound requests
+ *      - Other: Transport-specific failure
+ */
+esp_err_t esp_mcp_mgr_perform_handle(esp_mcp_mgr_handle_t handle, const uint8_t *inbuf, uint16_t inlen);
+
+/**
+ * @brief Build and send initialize request to remote MCP server
+ *
+ * Constructs and sends an MCP initialize request to establish a session with a remote MCP server.
+ * The response will be delivered via the callback specified in the request structure.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] req Request structure containing endpoint name, callback, and initialization parameters
+ *                 (protocol_version, name, version)
+ * @return
+ *      - ESP_OK: Request sent successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments (NULL handle or request)
+ *      - ESP_ERR_NOT_SUPPORTED: Transport does not support outbound requests
+ *      - Other: Transport-specific failure
+ */
+esp_err_t esp_mcp_mgr_post_info_init(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
+
+/**
+ * @brief Build and send tools/list request to remote MCP server
+ *
+ * Constructs and sends an MCP tools/list request to retrieve available tools from a remote MCP server.
+ * Supports cursor-based pagination. The response will be delivered via the callback specified in the request structure.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] req Request structure containing endpoint name, callback, and optional cursor for pagination
+ * @return
+ *      - ESP_OK: Request sent successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments (NULL handle or request)
+ *      - ESP_ERR_NOT_SUPPORTED: Transport does not support outbound requests
+ *      - Other: Transport-specific failure
+ */
+esp_err_t esp_mcp_mgr_post_tools_list(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
+
+/**
+ * @brief Build and send tools/call request to remote MCP server
+ *
+ * Constructs and sends an MCP tools/call request to execute a tool on a remote MCP server.
+ * The tool name and arguments (as JSON string) must be provided. The response will be delivered
+ * via the callback specified in the request structure.
+ *
+ * @param[in] handle MCP transport manager handle
+ * @param[in] req Request structure containing endpoint name, callback, tool name, and arguments JSON
+ * @return
+ *      - ESP_OK: Request sent successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid arguments (NULL handle, request, or missing tool_name)
+ *      - ESP_ERR_NOT_SUPPORTED: Transport does not support outbound requests
+ *      - Other: Transport-specific failure
+ */
+esp_err_t esp_mcp_mgr_post_tools_call(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
 
 /**
  * @brief Destroy a MCP response buffer

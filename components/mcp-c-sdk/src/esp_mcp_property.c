@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -336,6 +336,7 @@ esp_err_t esp_mcp_property_list_remove_property(esp_mcp_property_list_t *list, e
         return ESP_ERR_INVALID_STATE;
     }
 
+    esp_err_t ret = ESP_ERR_NOT_FOUND;
     esp_mcp_property_item_t *info = NULL;
     esp_mcp_property_item_t *info_next = NULL;
     SLIST_FOREACH_SAFE(info, &list->properties, next, info_next) {
@@ -343,13 +344,13 @@ esp_err_t esp_mcp_property_list_remove_property(esp_mcp_property_list_t *list, e
             continue;
         }
         SLIST_REMOVE(&list->properties, info, esp_mcp_property_item_s, next);
-        esp_mcp_property_destroy(info->property);
         free(info);
+        ret = ESP_OK;
         break;
     }
     xSemaphoreGive(list->mutex);
 
-    return ESP_OK;
+    return ret;
 }
 
 static esp_mcp_property_t *esp_mcp_property_list_get_property(const esp_mcp_property_list_t *list, const char *name)

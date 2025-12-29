@@ -1,13 +1,21 @@
 menu "Model Context Protocol"
 
-    config MCP_TRANSPORT_HTTP
-        bool "Enable built-in HTTP transport"
+    config MCP_TRANSPORT_HTTP_SERVER
+        bool "Enable built-in HTTP server transport"
         default y
         help
-            Enable the built-in HTTP transport implementation.
+            Enable the built-in HTTP server transport implementation.
             You can disable this if you want to use only custom transport.
             For other transport methods, implement a custom transport by providing an esp_mcp_transport_t
             implementation in esp_mcp_mgr_config_t.
+
+    config MCP_TRANSPORT_HTTP_CLIENT
+        bool "Enable built-in HTTP client transport"
+        default y
+        help
+            Enable the built-in HTTP client transport implementation (outbound MCP requests).
+            This is used when ESP device acts as an MCP client to call a remote MCP server endpoint
+            over HTTP (POST /<endpoint>).
 
     config MCP_TOOLCALL_STACK_SIZE
         int "The maximum stack size allowed for the toolcall task"

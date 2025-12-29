@@ -30,13 +30,32 @@ A comprehensive C SDK implementing the **Model Context Protocol (MCP)** for ESP3
 - **🚀 Clean API**: Intuitive interface for tool registration and management
 - **🔧 Dynamic Registration**: Register tools at runtime with flexible property schemas
 - **📦 Modular Design**: Standalone component, easy to integrate into existing projects
-- **🌐 HTTP Transport**: Built-in HTTP-based JSON-RPC 2.0 for maximum compatibility
+- **🌐 HTTP Transport**: Built-in HTTP server/client transports for JSON-RPC 2.0
 - **🔌 Custom Transport**: Support for custom transport implementations through callbacks
 - **📊 Type Safety**: Comprehensive data type support (boolean, integer, float, string, array, object)
 - **🛡️ Memory Safe**: Automatic memory management and cleanup
 - **✅ Parameter Validation**: Built-in parameter validation with range constraints
 - **🔒 Thread Safe**: All list operations are protected by mutex for multi-threaded environments
 - **🎯 MCP Compliant**: Fully compliant with MCP specification
+
+## 🧱 Architecture & Naming (3 Layers)
+
+This SDK follows a **3-layer unified naming architecture**:
+
+- **Manager/Router layer**: `esp_mcp_mgr_*` (init/start/stop, endpoint routing, transport integration)
+- **Transport layer**: `esp_mcp_transport_*` (specific transports like HTTP server/client)
+- **Engine layer**: `esp_mcp_*` (protocol semantics + tool scheduling: JSON-RPC, initialize, tools/list, tools/call)
+
+## 📡 MCP Client (Outbound)
+
+When ESP acts as an **MCP client** to call a remote MCP server:
+
+- Use **manager outbound API**: `esp_mcp_mgr_post_info_init()`, `esp_mcp_mgr_post_tools_list()`, `esp_mcp_mgr_post_tools_call()`
+- Use **built-in HTTP client transport**: `esp_mcp_transport_http_client` (defined in `esp_mcp_mgr.h`)
+
+The manager layer routes requests through Transport implementations to the Engine layer for protocol handling. For client usage, you can either:
+- Use the high-level `esp_mcp_mgr_post_*` functions which build and send complete MCP requests automatically
+- Use `esp_mcp_mgr_perform_handle()` directly if you need to send custom JSON-RPC requests (requires building the JSON yourself)
 
 ## 📦 Installation
 

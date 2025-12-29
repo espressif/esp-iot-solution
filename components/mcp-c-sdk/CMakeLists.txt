@@ -6,11 +6,15 @@ set(srcs
     "src/esp_mcp_data.c"
 )
 
-set(priv_req "esp_common" "app_update" "json" "esp_http_server")
+set(priv_req "esp_common" "app_update" "json" "esp_http_server" "esp_http_client" "http_parser")
 
 # Conditionally compile built-in HTTP transport
-if(CONFIG_MCP_TRANSPORT_HTTP)
-    list(APPEND srcs "src/esp_mcp_http.c")
+if(CONFIG_MCP_TRANSPORT_HTTP_SERVER)
+    list(APPEND srcs "src/transports/esp_mcp_http_server.c")
+endif()
+
+if(CONFIG_MCP_TRANSPORT_HTTP_CLIENT)
+    list(APPEND srcs "src/transports/esp_mcp_http_client.c")
 endif()
 
 set(include "include")

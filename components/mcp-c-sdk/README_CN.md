@@ -30,13 +30,29 @@
 - **🚀 简洁 API**：直观的工具注册和管理接口
 - **🔧 动态注册**：运行时注册工具，支持灵活的参数模式
 - **📦 模块化设计**：独立组件，易于集成到现有项目
-- **🌐 HTTP 传输**：内置基于 HTTP 的 JSON-RPC 2.0，最大兼容性
+- **🌐 HTTP 传输**：内置 HTTP 服务端/客户端传输，基于 JSON-RPC 2.0
 - **🔌 自定义传输**：通过回调函数支持自定义传输实现
 - **📊 类型安全**：全面的数据类型支持（布尔、整数、浮点、字符串、数组、对象）
 - **🛡️ 内存安全**：自动内存管理和清理
 - **✅ 参数验证**：内置参数验证和范围约束
 - **🔒 线程安全**：所有链表操作都有 mutex 保护，适用于多线程环境
 - **🎯 MCP 兼容**：完全符合 MCP 规范
+
+## 🧱 架构与命名（统一三层体系）
+
+本 SDK 遵循 **（管理/路由）-（transport）-（协议语义/工具调度）** 三层统一命名体系：
+
+- **管理/路由层**：`esp_mcp_mgr_*`（init/start/stop、endpoint 路由、与 transport 交互）
+- **传输层**：`esp_mcp_transport_*`（具体 transport，如 HTTP server/client）
+- **协议语义/工具调度层（engine）**：`esp_mcp_*`（JSON-RPC、initialize、tools/list、tools/call 等）
+
+## 📡 MCP Client（主动发起请求）
+
+当 ESP 作为 **MCP client** 调用远端 MCP server 时：
+
+- 使用 **manager 出站 API**：`esp_mcp_mgr_req_perform()`
+- 使用 **内置 HTTP client transport**：`esp_mcp_transport_http_client`（见 `esp_mcp_transport_http_client.h`）
+- 可选使用 **client 便捷封装**：`esp_mcp_client_*`（见 `esp_mcp_client.h`）
 
 ## 📦 安装
 
@@ -56,6 +72,8 @@ cp -r mcp-c-sdk your_project/components/
 ```
 
 ## 🚀 快速开始
+
+### 服务器模式
 
 ```c
 #include "esp_mcp_engine.h"
@@ -117,6 +135,145 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_mcp_mgr_start(mcp_handle));
     
     ESP_LOGI(TAG, "MCP 服务器已在端口 80 启动");
+}
+```
+
+### 客户端模式
+
+```c
+#include "esp_mcp_engine.h"
+#include "esp_mcp_mgr.h"
+#include "esp_http_client.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include <stdatomic.h>
+// 客户端模式需要包含 esp_mcp_mgr.h 和 esp_http_client.h
+
+static SemaphoreHandle_t resp_sem = NULL;
+static atomic_int pending_responses = 0;
+
+// 响应回调函数
+static esp_err_t resp_cb(bool is_error, const char *ep_name, const char *resp_json, void *user_ctx)
+{
+    if (is_error) {
+        ESP_LOGE(TAG, "请求失败: ep_name=%s", ep_name ? ep_name : "<null>");
+    } else {
+        ESP_LOGI(TAG, "收到响应: ep_name=%s, resp_json=%s", ep_name ? ep_name : "<null>", resp_json ? resp_json : "<empty>");
+    }
+    
+    // 释放响应 JSON 和端点名称（回调负责释放该内存）
+    if (resp_json) {
+        free((void *)resp_json);
+    }
+    if (ep_name) {
+        free((void *)ep_name);
+    }
+    
+    // 递减请求计数（响应已收到，请求完成）
+    atomic_fetch_sub(&pending_responses, 1);
+    
+    // 通知等待的线程
+    SemaphoreHandle_t sem = resp_sem;
+    if (sem) {
+        xSemaphoreGive(sem);
+    }
+    
+    return ESP_OK;
+}
+
+void app_main(void)
+{
+    // 初始化 Wi-Fi (使用 example_connect)
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(example_connect());
+    
+    // 创建 MCP 实例（客户端也需要）
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+    
+    // 配置 HTTP 客户端传输
+    char base_url[128] = {0};
+    snprintf(base_url, sizeof(base_url), "http://%s:%d", CONFIG_MCP_REMOTE_HOST, CONFIG_MCP_REMOTE_PORT);
+    
+    esp_http_client_config_t httpc_cfg = {
+        .url = base_url,
+        .timeout_ms = 5000,
+    };
+    
+    // 初始化 MCP 管理器（客户端模式）
+    esp_mcp_mgr_config_t mgr_cfg = {
+        .transport = esp_mcp_transport_http_client,  // 使用 HTTP 客户端传输
+        .config = &httpc_cfg,
+        .instance = mcp,
+    };
+    
+    esp_mcp_mgr_handle_t mgr = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(mgr_cfg, &mgr));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(mgr));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(mgr, "mcp", NULL));
+    
+    // 创建信号量用于响应同步
+    resp_sem = xSemaphoreCreateCounting(10, 0);
+    ESP_ERROR_CHECK(resp_sem ? ESP_OK : ESP_ERR_NO_MEM);
+    atomic_store(&pending_responses, 0);
+    
+    // 发送 initialize 请求
+    esp_mcp_mgr_req_t req = {
+        .ep_name = "mcp",
+        .cb = resp_cb,
+        .user_ctx = NULL,
+        .u.init = {
+            .protocol_version = "2024-11-05",
+            .name = "mcp_client",
+            .version = "0.1.0"
+        },
+    };
+    atomic_fetch_add(&pending_responses, 1);
+    ESP_ERROR_CHECK(esp_mcp_mgr_post_info_init(mgr, &req));
+    
+    // 发送 tools/list 请求
+    req.u.list.cursor = NULL;
+    atomic_fetch_add(&pending_responses, 1);
+    ESP_ERROR_CHECK(esp_mcp_mgr_post_tools_list(mgr, &req));
+    
+    // 发送 tools/call 请求
+    req.u.call.tool_name = "get_device_status";
+    req.u.call.args_json = "{}";
+    atomic_fetch_add(&pending_responses, 1);
+    ESP_ERROR_CHECK(esp_mcp_mgr_post_tools_call(mgr, &req));
+    
+    // 等待所有响应完成（带超时）
+    const int timeout_ms = 30000; // 30 秒超时
+    TickType_t start_tick = xTaskGetTickCount();
+    while (atomic_load(&pending_responses) > 0) {
+        TickType_t elapsed_ticks = xTaskGetTickCount() - start_tick;
+        int elapsed_ms = (int)(elapsed_ticks * portTICK_PERIOD_MS);
+        if (elapsed_ms >= timeout_ms) {
+            break;
+        }
+        int remaining_ms = timeout_ms - elapsed_ms;
+        int wait_ms = (remaining_ms > 1000) ? 1000 : remaining_ms;
+        xSemaphoreTake(resp_sem, pdMS_TO_TICKS(wait_ms));
+    }
+    int remaining = atomic_load(&pending_responses);
+    if (remaining > 0) {
+        ESP_LOGW(TAG, "等待 %d 个待处理响应超时", remaining);
+    } else {
+        ESP_LOGI(TAG, "所有响应已接收");
+    }
+    
+    // 清理：先停止管理器，再删除信号量
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(mgr));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(mgr));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+    
+    // 在删除信号量前将其置为 NULL，防止延迟回调使用已释放的信号量
+    SemaphoreHandle_t local_sem = resp_sem;
+    resp_sem = NULL;
+    if (local_sem) {
+        vSemaphoreDelete(local_sem);
+    }
 }
 ```
 
@@ -217,7 +374,58 @@ esp_mcp_value_t esp_mcp_value_create_float(float value);
 esp_mcp_value_t esp_mcp_value_create_string(const char* value);
 ```
 
+### 客户端 API
+
+```c
+// 执行出站 MCP 请求（客户端模式）
+// 通过配置的传输层发送 JSON-RPC 请求到远程 MCP 服务器端点
+// @param handle MCP 传输管理器句柄
+// @param ep_name 端点名称（例如 "mcp_server"）
+// @param tool_name 工具名称（用于日志记录，可为 NULL）
+// @param req_id 请求 ID
+// @param inbuf 输入缓冲区，包含 MCP 协议消息（JSON-RPC 请求）
+// @param inlen 输入缓冲区长度（字节）
+// @param cb 响应回调函数，当收到响应时调用
+// @param user_ctx 用户上下文，传递给回调函数
+// @return ESP_OK 请求执行成功；ESP_ERR_INVALID_ARG 无效参数；ESP_ERR_NOT_SUPPORTED 传输不支持出站请求
+esp_err_t esp_mcp_mgr_req_perform(esp_mcp_mgr_handle_t handle,
+                                   const char *ep_name, const char *tool_name, uint16_t req_id,
+                                   const uint8_t *inbuf, uint16_t inlen,
+                                   esp_mcp_mgr_resp_cb_t cb, void *user_ctx);
+
+// HTTP 客户端传输初始化函数
+// 在 esp_mcp_mgr_config_t 中使用 esp_mcp_transport_http_client 作为传输
+extern const esp_mcp_transport_t esp_mcp_transport_http_client;
+
+// 构建并发送 initialize 请求到远程 MCP 服务器
+// @param handle MCP 传输管理器句柄
+// @param req 请求结构，包含端点名称、回调和初始化参数（protocol_version, name, version）
+// @return ESP_OK 请求发送成功；ESP_ERR_INVALID_ARG 无效参数；ESP_ERR_NOT_SUPPORTED 传输不支持出站请求
+esp_err_t esp_mcp_mgr_post_info_init(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
+
+// 构建并发送 tools/list 请求到远程 MCP 服务器
+// @param handle MCP 传输管理器句柄
+// @param req 请求结构，包含端点名称、回调和可选的游标（用于分页）
+// @return ESP_OK 请求发送成功；ESP_ERR_INVALID_ARG 无效参数；ESP_ERR_NOT_SUPPORTED 传输不支持出站请求
+esp_err_t esp_mcp_mgr_post_tools_list(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
+
+// 构建并发送 tools/call 请求到远程 MCP 服务器
+// @param handle MCP 传输管理器句柄
+// @param req 请求结构，包含端点名称、回调、工具名称和参数 JSON
+// @return ESP_OK 请求发送成功；ESP_ERR_INVALID_ARG 无效参数（包括缺少 tool_name）；ESP_ERR_NOT_SUPPORTED 传输不支持出站请求
+esp_err_t esp_mcp_mgr_post_tools_call(esp_mcp_mgr_handle_t handle, const esp_mcp_mgr_req_t *req);
+
+// 响应回调类型
+// @param is_error true 表示传输/协议解析失败或服务器返回错误
+// @param ep_name 端点名称（可能为 NULL）；回调负责释放该内存
+// @param resp_json 响应 JSON 体（错误时可能为 NULL）；回调负责释放该内存
+// @param user_ctx 发送请求时提供的用户上下文
+typedef esp_err_t (*esp_mcp_mgr_resp_cb_t)(bool is_error, const char *ep_name, const char *resp_json, void *user_ctx);
+```
+
 ## 📊 示例
+
+### 服务器示例
 
 组件在 `examples/mcp/mcp_server/` 中包含完整示例，演示：
 
@@ -248,6 +456,57 @@ idf.py build flash monitor
 4. **screen.set_theme** - 设置屏幕主题（亮色/暗色）
 5. **screen.set_hsv** - 以 HSV 格式设置屏幕颜色（数组参数）
 6. **screen.set_rgb** - 以 RGB 格式设置屏幕颜色（对象参数）
+
+### 客户端使用示例
+
+组件在 `examples/mcp/mcp_client/` 中包含完整客户端示例，演示：
+
+- Wi-Fi 连接设置
+- MCP 客户端初始化和配置
+- HTTP 客户端传输配置
+- 发送 initialize 请求
+- 发送 tools/list 请求
+- 发送 tools/call 请求
+- 处理异步响应回调
+- 同步等待多个响应
+
+#### 客户端示例代码片段
+
+```c
+#include "esp_mcp_engine.h"
+#include "esp_mcp_mgr.h"
+#include "esp_http_client.h"
+
+// 配置 HTTP 客户端传输
+esp_http_client_config_t httpc_cfg = {
+    .url = "http://192.168.1.100:80",  // 远程 MCP 服务器地址
+    .timeout_ms = 5000,
+};
+
+esp_mcp_mgr_config_t mgr_cfg = {
+    .transport = esp_mcp_transport_http_client,  // 使用 HTTP 客户端传输
+    .config = &httpc_cfg,
+    .instance = mcp,
+};
+
+// 初始化并启动客户端
+esp_mcp_mgr_handle_t mgr = 0;
+esp_mcp_mgr_init(mgr_cfg, &mgr);
+esp_mcp_mgr_start(mgr);
+esp_mcp_mgr_register_endpoint(mgr, "mcp", NULL);
+
+// 发送工具调用请求
+esp_mcp_mgr_req_t req = {
+    .ep_name = "mcp",
+    .cb = resp_cb,  // 响应回调函数
+    .user_ctx = NULL,
+    .u.call = {
+        .tool_name = "get_device_status",
+        .args_json = "{}"
+    },
+};
+esp_mcp_mgr_post_tools_call(mgr, &req);
+```
 
 ## 🧪 测试
 

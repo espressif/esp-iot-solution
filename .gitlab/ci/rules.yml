@@ -467,8 +467,8 @@
   - "components/motor/esp_sensorless_bldc_control/include/bldc_control.h"
   - "components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h"
   - "components/motor/servo/include/iot_servo.h"
-  - "components/mcp-c-sdk/include/esp_mcp.h"
-  - "components/mcp-c-sdk/include/esp_mcp_server.h"
+  - "components/mcp-c-sdk/include/esp_mcp_mgr.h"
+  - "components/mcp-c-sdk/include/esp_mcp_engine.h"
   - "components/mcp-c-sdk/include/esp_mcp_tool.h"
   - "components/mcp-c-sdk/include/esp_mcp_data.h"
   - "components/mcp-c-sdk/include/esp_mcp_property.h"
@@ -666,6 +666,9 @@
 
 .patterns-example_mcp_server: &patterns-example_mcp_server
   - "examples/mcp/mcp_server/**/*"
+
+.patterns-example_mcp_client: &patterns-example_mcp_client
+  - "examples/mcp/mcp_client/**/*"
 
 .patterns-example_ota_simple_ota_example: &patterns-example_ota_simple_ota_example
   - "examples/ota/simple_ota_example/**/*"
@@ -1509,6 +1512,18 @@
       changes: *patterns-components_mcp_c_sdk
     - <<: *if-dev-push
       changes: *patterns-example_mcp_server
+
+.rules:build:example_mcp_client:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_mcp_c_sdk
+    - <<: *if-dev-push
+      changes: *patterns-example_mcp_client
 
 .rules:build:example_ota_simple_ota_example:
   rules:

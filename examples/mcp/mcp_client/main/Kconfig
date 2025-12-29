@@ -1,0 +1,28 @@
+menu "Example Configuration"
+    config MCP_REMOTE_HOST
+        string "Remote MCP server host"
+        default "192.168.1.100"
+        help
+            Remote MCP server host/IP.
+
+    config MCP_REMOTE_PORT
+        int "Remote MCP server port"
+        range 1 65535
+        default 8080
+        help
+            Remote MCP server port.
+
+    config MCP_REMOTE_EP
+        string "Remote MCP endpoint name"
+        default "mcp_server"
+        help
+            Remote MCP endpoint name, used as HTTP path: POST /<endpoint>.
+
+    config MCP_TRANSPORT_TIME
+        int "MCP communication timeout in milliseconds"
+        range 1000 30000
+        default 5000
+        help
+            Set the time to wait for communication timeout in milliseconds.
+
+endmenu
