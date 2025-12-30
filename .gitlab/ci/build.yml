@@ -1563,10 +1563,7 @@ build_components_iot_eth_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_iot_eth_test
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v4.4
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/iot_eth/test_apps
 
