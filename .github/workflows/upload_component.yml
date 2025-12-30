@@ -24,6 +24,12 @@ jobs:
           cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_freetype_font/components/
           mkdir -p examples/display/gui/lvgl_light_sleep_demo/components/
           cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_light_sleep_demo/components/
+          mkdir -p examples/usb/host/usb_cdc_4g_module/components/
+          cp -r examples/common_components/web_wifi examples/common_components/network_test examples/usb/host/usb_cdc_4g_module/components/
+          mkdir -p examples/usb/host/usb_ecm_4g_module/components/
+          cp -r examples/common_components/web_wifi examples/common_components/network_test examples/usb/host/usb_ecm_4g_module/components/
+          mkdir -p examples/usb/host/usb_rndis_4g_module/components/
+          cp -r examples/common_components/web_wifi examples/common_components/network_test examples/usb/host/usb_rndis_4g_module/components/
       - name: Upload components to component service
         uses: espressif/upload-components-ci-action@v1
         with:

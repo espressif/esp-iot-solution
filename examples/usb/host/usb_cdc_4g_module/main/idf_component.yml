@@ -5,3 +5,11 @@ dependencies:
   iot_usbh_modem:
     version: "*"
     override_path: "../../../../../components/usb/iot_usbh_modem"
+
+  web_wifi:
+    version: "*"
+    override_path: ../../../../common_components/web_wifi
+
+  network_test:
+    version: "*"
+    override_path: ../../../../common_components/network_test

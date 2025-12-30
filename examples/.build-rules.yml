@@ -85,6 +85,10 @@ examples/bluetooth/ble_services/ble_wss:
 examples/bluetooth/ble_ota:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
+  disable:
+    - if: IDF_TARGET in ["esp32c5"]
+      temporary: true
+      reason: "The ble_ota component does not currently support ESP32C5."
 
 examples/bluetooth/ble_remote_control:
   enable:

@@ -9,9 +9,9 @@ dependencies:
   modem_at:
     version: "*"
     override_path: ../../../../../components/modem_at
-  app_wifi:
+  web_wifi:
     version: "*"
-    override_path: ../../usb_cdc_4g_module/components/app_wifi
+    override_path: ../../../../common_components/web_wifi
   network_test:
     version: "*"
-    override_path: ../../usb_cdc_4g_module/components/network_test
+    override_path: ../../../../common_components/network_test
