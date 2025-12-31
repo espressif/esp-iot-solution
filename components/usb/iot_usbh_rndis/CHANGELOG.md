@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.1 - 2025-12-31
+
+### Bug Fixes:
+
+* Fixed the issue of excessively long waiting time when obtaining the IP address.
+
 ## v0.3.0 - 2025-10-15
 
 ### Bug Fixes:
