@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.0 (2026-01-07)
+
+* Added monochrome display support for LVGL v8 and v9
+* Add migration guide from esp_lvgl_port to esp_lvgl_adapter
+* Reverted conditional dependency management
+
 ## v0.2.0 (2025-12-24)
 
 * Optimized dependency management by adding conditional rules for optional dependencies

@@ -96,11 +96,24 @@ void display_manager_flush_ready(lv_disp_drv_t *drv)
 #endif
 
 /* Buffer management */
+#if LVGL_VERSION_MAJOR >= 9
+static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
+                                            esp_lv_adapter_display_render_mode_t mode,
+                                            lv_color_format_t color_format);
+#else
 static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
                                             esp_lv_adapter_display_render_mode_t mode,
                                             size_t color_size);
+#endif
 static void *display_manager_alloc_draw_buffer(size_t size, bool use_psram);
+static bool display_manager_alloc_mono_buffer(esp_lv_adapter_display_runtime_config_t *cfg,
+                                              const esp_lv_adapter_display_profile_t *profile);
 static size_t display_manager_ppa_alignment(void);
+#if LVGL_VERSION_MAJOR >= 9
+static size_t display_manager_calc_draw_buf_bytes(const esp_lv_adapter_display_profile_t *profile,
+                                                  size_t draw_buf_pixels,
+                                                  lv_color_format_t color_format);
+#endif
 static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_node_t *node);
 
 /* Frame buffer helpers */
@@ -375,6 +388,11 @@ static void display_manager_destroy_node(esp_lv_adapter_display_node_t *node)
         node->cfg.te_ctx = NULL;
     }
 
+    if (node->cfg.mono_buf) {
+        free(node->cfg.mono_buf);
+        node->cfg.mono_buf = NULL;
+    }
+
     /* Destroy the bridge (hardware interface) */
     if (node->bridge && node->bridge->destroy) {
         node->bridge->destroy(node->bridge);
@@ -535,6 +553,10 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
     const esp_lv_adapter_display_config_t *pub = &cfg->base;
     esp_lv_adapter_display_render_mode_t render_mode = display_manager_pick_render_mode(cfg);
+    const bool mono_enabled = (pub->profile.mono_layout != ESP_LV_ADAPTER_MONO_LAYOUT_NONE);
+
+    cfg->mono_layout = pub->profile.mono_layout;
+    cfg->mono_buf = NULL;
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
     /* Initialize FPS statistics */
@@ -547,6 +569,14 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE && pub->profile.rotation != ESP_LV_ADAPTER_ROTATE_0 && pub->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
         ESP_LOGE(TAG, "rotation not supported under TEAR_AVOID_MODE_NONE");
         return false;
+    }
+
+    if ((pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE ||
+            pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) &&
+            pub->profile.rotation != ESP_LV_ADAPTER_ROTATE_0 &&
+            pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER &&
+            pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE) {
+        ESP_LOGW(TAG, "SPI rotation is not handled by adapter; use esp_lcd_panel_swap_xy/esp_lcd_panel_mirror in panel init");
     }
 
     if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
@@ -572,14 +602,38 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
         return false;
     }
 
-    size_t color_size = lv_color_format_get_size(lv_display_get_color_format(disp));
-    if (!display_manager_prepare_buffers(node, render_mode, color_size)) {
+    lv_color_format_t color_format = lv_display_get_color_format(disp);
+
+    if (mono_enabled) {
+        if (pub->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+            ESP_LOGE(TAG, "monochrome requires panel interface OTHER");
+            lv_display_delete(disp);
+            return false;
+        }
+        if (color_format != LV_COLOR_FORMAT_I1) {
+            ESP_LOGE(TAG, "monochrome requires LV_COLOR_FORMAT_I1 (current=%d)", (int)color_format);
+            lv_display_delete(disp);
+            return false;
+        }
+        if (pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_VTILED &&
+                ((pub->profile.hor_res % 8U) != 0 || (pub->profile.ver_res % 8U) != 0)) {
+            ESP_LOGW(TAG, "vtiled layout expects width/height multiple of 8");
+        }
+        cfg->draw_buf_pixels = (size_t)pub->profile.hor_res * pub->profile.ver_res;
+        render_mode = ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL;
+    } else if (color_format == LV_COLOR_FORMAT_I1) {
+        ESP_LOGE(TAG, "LV_COLOR_FORMAT_I1 requires mono_layout configuration");
+        lv_display_delete(disp);
+        return false;
+    }
+
+    if (!display_manager_prepare_buffers(node, render_mode, color_format)) {
         lv_display_delete(disp);
         node->lv_disp = NULL;
         return false;
     }
 
-    size_t buf_bytes = cfg->draw_buf_pixels * color_size;
+    size_t buf_bytes = display_manager_calc_draw_buf_bytes(&pub->profile, cfg->draw_buf_pixels, color_format);
 
     lv_display_set_buffers(disp,
                            cfg->draw_buf_primary,
@@ -591,6 +645,13 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
+
+    if (mono_enabled && !display_manager_alloc_mono_buffer(cfg, &pub->profile)) {
+        display_manager_free_draw_buffers(node);
+        lv_display_delete(disp);
+        node->lv_disp = NULL;
+        return false;
+    }
 
     /* Create display bridge based on LVGL version */
     esp_lv_adapter_display_bridge_t *bridge = esp_lv_adapter_display_bridge_v9_create(cfg);
@@ -624,6 +685,26 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     lv_coord_t ver_res = (pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_90 ||
                           pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_270) ? pub->profile.hor_res : pub->profile.ver_res;
 
+    if (mono_enabled) {
+        if (pub->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+            ESP_LOGE(TAG, "monochrome requires panel interface OTHER");
+            return false;
+        }
+        if (LV_COLOR_DEPTH != 1) {
+            ESP_LOGE(TAG, "monochrome requires LV_COLOR_DEPTH=1");
+            return false;
+        }
+        if (pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_VTILED &&
+                ((pub->profile.hor_res % 8U) != 0 || (pub->profile.ver_res % 8U) != 0)) {
+            ESP_LOGW(TAG, "vtiled layout expects width/height multiple of 8");
+        }
+        cfg->draw_buf_pixels = (size_t)hor_res * ver_res;
+        render_mode = ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL;
+    } else if (LV_COLOR_DEPTH == 1) {
+        ESP_LOGE(TAG, "LV_COLOR_DEPTH=1 requires mono_layout configuration");
+        return false;
+    }
+
     size_t color_size = sizeof(lv_color_t);
     if (!display_manager_prepare_buffers(node, render_mode, color_size)) {
         return false;
@@ -654,6 +735,12 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
+    if (mono_enabled && !display_manager_alloc_mono_buffer(cfg, &pub->profile)) {
+        display_manager_free_draw_buffers(node);
+        lv_disp_remove(disp);
+        node->lv_disp = NULL;
+        return false;
+    }
     if (node->bridge && node->bridge->set_dummy_draw) {
         node->bridge->set_dummy_draw(node->bridge, node->cfg.dummy_draw_enabled);
     }
@@ -747,6 +834,52 @@ static void *display_manager_alloc_draw_buffer(size_t size, bool use_psram)
     return heap_caps_malloc(size, caps);
 }
 
+static size_t display_manager_i1_stride_bytes(uint16_t hor_res)
+{
+    uint16_t aligned = (hor_res + 7U) & ~7U;
+    return (size_t)aligned / 8U;
+}
+
+static size_t display_manager_i1_buffer_bytes(uint16_t hor_res, uint16_t ver_res, bool include_palette)
+{
+    size_t bytes = display_manager_i1_stride_bytes(hor_res) * (size_t)ver_res;
+    if (include_palette) {
+        bytes += 8U;
+    }
+    return bytes;
+}
+
+/**
+ * @brief Allocate monochrome conversion buffer if needed
+ *
+ * @param cfg Configuration to update with allocated buffer
+ * @param profile Display profile containing layout and resolution
+ * @return true if allocation successful or not needed, false on failure
+ */
+static bool display_manager_alloc_mono_buffer(esp_lv_adapter_display_runtime_config_t *cfg,
+                                              const esp_lv_adapter_display_profile_t *profile)
+{
+    /* Only allocate for VTILED or when rotation is enabled with HTILED */
+    bool need_buffer = (profile->mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_VTILED ||
+                        (profile->mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_HTILED &&
+                         profile->rotation != ESP_LV_ADAPTER_ROTATE_0));
+
+    if (!need_buffer) {
+        cfg->mono_buf = NULL;
+        return true;
+    }
+
+    size_t mono_bytes = display_manager_i1_buffer_bytes(profile->hor_res,
+                                                        profile->ver_res,
+                                                        false);
+    cfg->mono_buf = display_manager_alloc_draw_buffer(mono_bytes, profile->use_psram);
+    if (!cfg->mono_buf) {
+        ESP_LOGE(TAG, "alloc monochrome buffer %zu bytes failed", mono_bytes);
+        return false;
+    }
+    return true;
+}
+
 /**
  * @brief Prepare all required buffers for display operation
  */
@@ -814,6 +947,145 @@ static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_nod
     return rebound;
 }
 
+#if LVGL_VERSION_MAJOR >= 9
+static size_t display_manager_calc_draw_buf_bytes(const esp_lv_adapter_display_profile_t *profile,
+                                                  size_t draw_buf_pixels,
+                                                  lv_color_format_t color_format)
+{
+    if (color_format == LV_COLOR_FORMAT_I1) {
+        size_t height = 0;
+        if (profile->hor_res) {
+            height = draw_buf_pixels / profile->hor_res;
+            if (draw_buf_pixels % profile->hor_res) {
+                ESP_LOGW(TAG, "I1 buffer pixels not aligned to width, rounding height");
+                height += 1;
+            }
+        }
+        if (height == 0) {
+            height = profile->ver_res;
+        }
+        return display_manager_i1_buffer_bytes(profile->hor_res, (uint16_t)height, true);
+    }
+
+    size_t bpp = lv_color_format_get_bpp(color_format);
+    return (draw_buf_pixels * bpp + 7U) / 8U;
+}
+
+static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
+                                            esp_lv_adapter_display_render_mode_t mode,
+                                            lv_color_format_t color_format)
+{
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    esp_lv_adapter_display_config_t *pub = &cfg->base;
+    esp_lv_adapter_display_profile_t *profile = &pub->profile;
+
+    if (!profile->hor_res || !profile->ver_res) {
+        ESP_LOGE(TAG, "invalid resolution %ux%u", profile->hor_res, profile->ver_res);
+        return false;
+    }
+
+    size_t color_size = lv_color_format_get_size(color_format); /* Used for panel FB fetch */
+    uint8_t required_frames = display_manager_required_frame_buffer_count(pub->tear_avoid_mode, pub->profile.rotation);
+    /* For interfaces that manage their own frame timing (SPI/I2C) or GPIO TE mode, skip panel FB fetch */
+    if ((pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER && pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) ||
+            pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        required_frames = 0;
+    }
+    bool have_panel_fb = false;
+    if (required_frames) {
+        have_panel_fb = display_manager_fetch_panel_frame_buffers(node, required_frames, color_size);
+    }
+
+    size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
+
+    /* Try to use panel frame buffers for tearing modes */
+    switch (pub->tear_avoid_mode) {
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
+        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+            return true;
+        }
+        ESP_LOGW(TAG, "double direct mode falling back to allocated buffers");
+        break;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
+        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+            return true;
+        }
+        ESP_LOGW(TAG, "double full mode falling back to allocated buffers");
+        break;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
+        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 1, 2)) {
+            return true;
+        }
+        ESP_LOGW(TAG, "triple full mode falling back to allocated buffers");
+        break;
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
+        if (!have_panel_fb || node->cfg.frame_buffer_count < 3) {
+            ESP_LOGW(TAG, "triple partial mode without panel frame buffers, behaviour degraded");
+        }
+        cfg->draw_buf_pixels = (size_t)profile->hor_res * profile->buffer_height;
+        size_t partial_bytes = display_manager_calc_draw_buf_bytes(profile, cfg->draw_buf_pixels, color_format);
+        void *buf = display_manager_alloc_draw_buffer(partial_bytes, false);
+        if (!buf) {
+            ESP_LOGE(TAG, "alloc primary buffer %zu bytes failed", partial_bytes);
+            return false;
+        }
+        cfg->draw_buf_primary = buf;
+        cfg->draw_buf_secondary = NULL;
+
+        return true;
+    default:
+        break;
+    }
+
+    /* Allocate buffers manually */
+    uint8_t buffer_count = display_manager_required_buffer_count(cfg, mode);
+
+    if (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE && profile->require_double_buffer) {
+        if (buffer_count < 2) {
+            buffer_count = 2;
+        }
+    }
+
+    if (!cfg->draw_buf_pixels) {
+        cfg->draw_buf_pixels = display_manager_default_buffer_pixels(cfg, mode);
+    }
+
+    size_t buf_bytes = display_manager_calc_draw_buf_bytes(profile, cfg->draw_buf_pixels, color_format);
+    if (!buf_bytes) {
+        ESP_LOGE(TAG, "draw buffer size invalid (pixels=%zu format=%d)", cfg->draw_buf_pixels, (int)color_format);
+        return false;
+    }
+
+    bool need_secondary = buffer_count >= 2;
+    bool use_psram = profile->use_psram;
+
+    if (!cfg->draw_buf_primary) {
+        void *buf = display_manager_alloc_draw_buffer(buf_bytes, use_psram);
+        if (!buf) {
+            ESP_LOGE(TAG, "alloc primary buffer %zu bytes failed", buf_bytes);
+            return false;
+        }
+        cfg->draw_buf_primary = buf;
+    }
+
+    if (need_secondary && !cfg->draw_buf_secondary) {
+        void *buf = display_manager_alloc_draw_buffer(buf_bytes, use_psram);
+        if (!buf) {
+            ESP_LOGE(TAG, "alloc secondary buffer %zu bytes failed", buf_bytes);
+            cfg->draw_buf_secondary = NULL;
+            return false;
+        }
+        cfg->draw_buf_secondary = buf;
+    } else {
+        if (!need_secondary && cfg->draw_buf_secondary) {
+            ESP_LOGW(TAG, "secondary buffer provided but not required by mode");
+        }
+        cfg->draw_buf_secondary = NULL;
+    }
+
+    return true;
+}
+#else
 static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
                                             esp_lv_adapter_display_render_mode_t mode,
                                             size_t color_size)
@@ -927,6 +1199,7 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
 
     return true;
 }
+#endif
 
 /**********************
  *   FRAME BUFFER HELPERS
@@ -1184,6 +1457,19 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
 
     esp_lv_adapter_tear_avoid_mode_t mode = cfg->tear_avoid_mode;
     bool te_gpio_enabled = esp_lv_adapter_te_sync_is_enabled(&cfg->te_sync);
+    bool mono_enabled = (cfg->profile.mono_layout != ESP_LV_ADAPTER_MONO_LAYOUT_NONE);
+
+    if (mono_enabled) {
+        if (cfg->profile.interface != ESP_LV_ADAPTER_PANEL_IF_OTHER) {
+            ESP_LOGE(TAG, "monochrome requires panel interface OTHER");
+            return false;
+        }
+        if (mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
+                mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+            ESP_LOGE(TAG, "monochrome supports tear mode NONE or TE_SYNC only");
+            return false;
+        }
+    }
 
     switch (cfg->profile.interface) {
     case ESP_LV_ADAPTER_PANEL_IF_RGB:
@@ -1401,8 +1687,10 @@ esp_err_t display_manager_rebind_draw_buffers(lv_display_t *disp)
 
 #if LVGL_VERSION_MAJOR >= 9
     esp_lv_adapter_display_render_mode_t render_mode = display_manager_pick_render_mode(cfg);
-    size_t color_size = lv_color_format_get_size(lv_display_get_color_format(disp));
-    size_t buf_bytes = cfg->draw_buf_pixels * color_size;
+    lv_color_format_t color_format = lv_display_get_color_format(disp);
+    size_t buf_bytes = display_manager_calc_draw_buf_bytes(&cfg->base.profile,
+                                                           cfg->draw_buf_pixels,
+                                                           color_format);
 
     lv_display_render_mode_t lv_mode = LV_DISPLAY_RENDER_MODE_PARTIAL;
     if (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL) {

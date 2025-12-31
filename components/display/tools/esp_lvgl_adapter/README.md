@@ -229,10 +229,12 @@ Choose the configuration macro based on your display interface:
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (with PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 | SPI/I2C/I80/QSPI (without PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
+| MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 
 **Notes**:
 - Only MIPI DSI and RGB support tearing modes
 - SPI/I2C/I80/QSPI are collectively called "OTHER" interfaces in the adapter and support only `NONE` mode
+- MONO (Monochrome) interface supports I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts, and **supports rotation**
 
 #### Computing Frame Buffer Count
 
@@ -267,6 +269,7 @@ Choose the appropriate tearing mode based on your use case:
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
 - OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+- MONO (Monochrome) interface **supports software rotation** (0°/90°/180°/270°) with pixel-level rotation handled by LVGL
 - `TE_SYNC` mode requires panel to provide TE output signal and connect TE pin to ESP GPIO; use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` macro for configuration. The `examples/display/gui/lvgl_common_demo` automatically detects and uses TE synchronization if available
 
 #### Memory Estimation
@@ -610,11 +613,17 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-  
+
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - Adapter does not apply 90°/270° rotation
   - For rotation, configure panel orientation (swap XY/mirror) during LCD initialization
   - Must also adjust touch coordinate mapping
+
+- **MONO (Monochrome)**:
+  - **Fully supports rotation** (0°/90°/180°/270°)
+  - Rotation is handled at the software level by LVGL
+  - Supports both I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts
+  - No additional configuration needed, just set via the `rotation` parameter
 
 ### Buffering and Render Modes
 

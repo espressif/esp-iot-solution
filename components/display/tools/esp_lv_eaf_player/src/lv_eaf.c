@@ -155,6 +155,7 @@ static void next_frame_task_cb(lv_timer_t * t);
 static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, size_t data_size);
 static esp_err_t decode_current_frame(lv_eaf_t * eaf_obj);
 static bool is_eaf_format(const uint8_t * data);
+static bool eaf_has_alpha_palette(esp_eaf_format_handle_t handle);
 
 /**********************
  *  STATIC VARIABLES
@@ -209,6 +210,9 @@ void lv_eaf_set_src(lv_obj_t * obj, const void * src)
             free(eaf_obj->frame_buffer);
             eaf_obj->frame_buffer = NULL;
         }
+        eaf_obj->frame_buffer_size = 0;
+        eaf_obj->color_buffer_size = 0;
+        eaf_obj->use_alpha = false;
         if (eaf_obj->file_data) {
             free(eaf_obj->file_data);
             eaf_obj->file_data = NULL;
@@ -446,6 +450,8 @@ static void lv_eaf_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
     eaf_obj->eaf_handle = NULL;
     eaf_obj->frame_buffer = NULL;
     eaf_obj->frame_buffer_size = 0;
+    eaf_obj->color_buffer_size = 0;
+    eaf_obj->use_alpha = false;
     eaf_obj->file_data = NULL;
     eaf_obj->current_frame = 0;
     eaf_obj->total_frames = 0;
@@ -473,6 +479,9 @@ static void lv_eaf_destructor(const lv_obj_class_t * class_p, lv_obj_t * obj)
     if (eaf_obj->frame_buffer) {
         free(eaf_obj->frame_buffer);
     }
+    eaf_obj->frame_buffer_size = 0;
+    eaf_obj->color_buffer_size = 0;
+    eaf_obj->use_alpha = false;
 
     if (eaf_obj->file_data) {
         free(eaf_obj->file_data);
@@ -538,6 +547,48 @@ static bool is_eaf_format(const uint8_t * data)
     return false;
 }
 
+static bool eaf_has_alpha_palette(esp_eaf_format_handle_t handle)
+{
+    int total_frames = esp_eaf_format_get_total_frames(handle);
+    if (total_frames <= 0) {
+        LV_LOG_WARN("Alpha scan skipped: no frames available");
+        return false;
+    }
+    for (int frame = 0; frame < total_frames; frame++) {
+        const uint8_t *frame_data = esp_eaf_format_get_frame_data(handle, frame);
+        int frame_size = esp_eaf_format_get_frame_size(handle, frame);
+        if (!frame_data || frame_size <= 0) {
+            LV_LOG_WARN("Alpha scan skipped for frame %d: data unavailable", frame);
+            continue;
+        }
+
+        esp_eaf_header_t header;
+        esp_eaf_format_t format = esp_eaf_header_parse(frame_data, frame_size, &header);
+        if (format != ESP_EAF_FORMAT_VALID) {
+            LV_LOG_WARN("Alpha scan skipped for frame %d: header parse failed", frame);
+            continue;
+        }
+
+        bool found_alpha = false;
+        if ((header.bit_depth == 4 || header.bit_depth == 8) && header.palette != NULL && header.num_colors > 0) {
+            for (int i = 0; i < header.num_colors; i++) {
+                const uint8_t *color_data = &header.palette[i * 4];
+                if (color_data[3] < 0xFF) {
+                    found_alpha = true;
+                    break;
+                }
+            }
+        }
+        esp_eaf_free_header(&header);
+
+        if (found_alpha) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, size_t data_size)
 {
     if (!is_eaf_format(data)) {
@@ -553,6 +604,7 @@ static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, si
 
     eaf_obj->total_frames = esp_eaf_format_get_total_frames(eaf_obj->eaf_handle);
     eaf_obj->current_frame = 0;
+    eaf_obj->use_alpha = eaf_has_alpha_palette(eaf_obj->eaf_handle);
 
     if (eaf_obj->total_frames <= 0) {
         LV_LOG_ERROR("No frames found in EAF");
@@ -579,9 +631,11 @@ static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, si
         return ESP_FAIL;
     }
 
-    // Allocate frame buffer for RGB565 format (prefer PSRAM for large buffers)
+    // Allocate frame buffer for RGB565 or RGB565A8 format (prefer PSRAM for large buffers)
     // Use aligned allocation for hardware JPEG decoder compatibility
-    size_t required_size = eaf_obj->eaf_header.width * eaf_obj->eaf_header.height * 2;
+    eaf_obj->color_buffer_size = eaf_obj->eaf_header.width * eaf_obj->eaf_header.height * 2;
+    size_t alpha_buffer_size = eaf_obj->use_alpha ? (eaf_obj->eaf_header.width * eaf_obj->eaf_header.height) : 0;
+    size_t required_size = eaf_obj->color_buffer_size + alpha_buffer_size;
     size_t allocated_size = 0;
     eaf_obj->frame_buffer = (uint8_t *)esp_eaf_malloc_aligned_prefer_psram(required_size, 0, &allocated_size);
     if (!eaf_obj->frame_buffer) {
@@ -597,7 +651,7 @@ static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, si
 #if LVGL_VERSION_MAJOR >= 9
     eaf_obj->imgdsc.header.magic = LV_IMAGE_HEADER_MAGIC;
     eaf_obj->imgdsc.header.flags = LV_IMAGE_FLAGS_MODIFIABLE;
-    eaf_obj->imgdsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    eaf_obj->imgdsc.header.cf = eaf_obj->use_alpha ? LV_COLOR_FORMAT_RGB565A8 : LV_COLOR_FORMAT_RGB565;
     eaf_obj->imgdsc.header.h = eaf_obj->eaf_header.height;
     eaf_obj->imgdsc.header.w = eaf_obj->eaf_header.width;
     eaf_obj->imgdsc.header.stride = eaf_obj->eaf_header.width * 2;
@@ -605,10 +659,10 @@ static esp_err_t load_eaf_from_data(lv_eaf_t * eaf_obj, const uint8_t * data, si
     eaf_obj->imgdsc.header.always_zero = 0;
     eaf_obj->imgdsc.header.w = eaf_obj->eaf_header.width;
     eaf_obj->imgdsc.header.h = eaf_obj->eaf_header.height;
-    eaf_obj->imgdsc.header.cf = LV_IMG_CF_TRUE_COLOR;
+    eaf_obj->imgdsc.header.cf = eaf_obj->use_alpha ? LV_IMG_CF_RGB565A8 : LV_IMG_CF_TRUE_COLOR;
 #endif
     eaf_obj->imgdsc.data = eaf_obj->frame_buffer;
-    eaf_obj->imgdsc.data_size = eaf_obj->frame_buffer_size;
+    eaf_obj->imgdsc.data_size = required_size;
 
     // Decode first frame
     return decode_current_frame(eaf_obj);
@@ -640,20 +694,28 @@ static esp_err_t decode_current_frame(lv_eaf_t * eaf_obj)
     memset(eaf_obj->frame_buffer, 0, eaf_obj->frame_buffer_size);
 
     size_t block_stride = (size_t)eaf_obj->eaf_header.block_height * eaf_obj->eaf_header.width * 2;
+    uint8_t *alpha_plane = NULL;
+    if (eaf_obj->use_alpha) {
+        alpha_plane = eaf_obj->frame_buffer + eaf_obj->color_buffer_size;
+    }
+
+    /* Initialize frame-level palette cache */
+    esp_eaf_palette_cache_t palette_cache;
+    memset(palette_cache.color, 0xFF, sizeof(palette_cache.color));
 
     /* Decode all blocks for this frame */
     for (int block = 0; block < eaf_obj->eaf_header.blocks; block++) {
         size_t block_offset = (size_t)block * block_stride;
-        if (block_offset >= eaf_obj->frame_buffer_size) {
+        if (block_offset >= eaf_obj->color_buffer_size) {
             LV_LOG_WARN("Block %d exceeds frame buffer", block);
             break;
         }
         uint8_t *block_buffer = eaf_obj->frame_buffer + block_offset;
 
-        esp_err_t ret = esp_eaf_block_decode(&eaf_obj->eaf_header, frame_data, block, block_buffer, false);
+        esp_err_t ret = esp_eaf_block_decode(&eaf_obj->eaf_header, frame_data, block, block_buffer,
+                                             alpha_plane, false, &palette_cache);
         if (ret != ESP_OK) {
             LV_LOG_WARN("Failed to decode block %d of frame %d", block, eaf_obj->current_frame);
-            /* Continue with next block instead of failing completely */
         }
     }
 
