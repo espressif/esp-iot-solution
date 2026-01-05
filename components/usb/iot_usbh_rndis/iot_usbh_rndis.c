@@ -232,10 +232,10 @@ static esp_err_t usbh_rndis_connect(usbh_rndis_t *handle)
         case OID_GEN_MEDIA_CONNECT_STATUS:
             ret = usbh_rndis_query_msg_request(rndis, OID_GEN_MEDIA_CONNECT_STATUS, 4, data, &data_len);
             ESP_GOTO_ON_ERROR(ret, query_errorout, TAG, "OID_GEN_MEDIA_CONNECT_STATUS query error, ret: %s", esp_err_to_name(ret));
-            if (NDIS_MEDIA_STATE_CONNECTED == data[0]) {
-                rndis->connect_status = true;
-            } else {
-                rndis->connect_status = false;
+            bool connect_status = (NDIS_MEDIA_STATE_CONNECTED == data[0]);
+            if (connect_status != rndis->connect_status) {
+                rndis->connect_status = connect_status;
+                xEventGroupSetBits(rndis->event_group, RNDIS_LINE_CHANGE);
             }
             break;
         case OID_802_3_MAXIMUM_LIST_SIZE:
@@ -307,10 +307,6 @@ static esp_err_t usbh_rndis_transmit(iot_eth_driver_t *h, uint8_t *buffer, size_
     rndis_data_packet_t *hdr;
     uint32_t len;
     esp_err_t ret = ESP_OK;
-
-    if (rndis->connect_status == false) {
-        return ESP_ERR_INVALID_STATE;
-    }
 
     hdr = (rndis_data_packet_t *)malloc(sizeof(rndis_data_packet_t) + buflen);
     ESP_RETURN_ON_FALSE(hdr != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for RNDIS data packet");
@@ -494,14 +490,13 @@ static void _usbh_rndis_task(void *arg)
 {
     esp_err_t ret = ESP_OK;
     usbh_rndis_t *rndis = (usbh_rndis_t *)arg;
+    uint32_t delay_time_ms = 500;
     while (1) {
-        uint32_t events = xEventGroupWaitBits(rndis->event_group, RNDIS_EVENT_ALL, pdTRUE, pdFALSE, pdMS_TO_TICKS(5000));
+        uint32_t events = xEventGroupWaitBits(rndis->event_group, RNDIS_EVENT_ALL, pdTRUE, pdFALSE, pdMS_TO_TICKS(delay_time_ms));
         if (events & RNDIS_CONNECTED) {
             ret = usbh_rndis_connect(rndis);
             if (ret == ESP_OK) {
                 ESP_LOGI(TAG, "RNDIS connected success");
-                iot_eth_link_t link = IOT_ETH_LINK_UP;
-                rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
             } else {
                 ESP_LOGE(TAG, "RNDIS connected failed, please reconnect");
             }
@@ -510,28 +505,25 @@ static void _usbh_rndis_task(void *arg)
             rndis->request_id = 0;
             iot_eth_link_t link = IOT_ETH_LINK_DOWN;
             rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
+            delay_time_ms = 500;
         }
         if (events & RNDIS_LINE_CHANGE) {
             ESP_LOGI(TAG, "RNDIS line change: %d", rndis->connect_status);
             iot_eth_link_t link = rndis->connect_status ? IOT_ETH_LINK_UP : IOT_ETH_LINK_DOWN;
             rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
+            delay_time_ms = rndis->connect_status ? 5000 : 500;
         }
         if (events & RNDIS_STOP) {
             ESP_LOGI(TAG, "RNDIS stop");
             break;
         }
         if (events == 0 && rndis->cdc_port != NULL) {
-            // Timeout occurred, send keepalive
             ret = usbh_rndis_get_connect_status(rndis);
             if (ret != ESP_OK) {
                 ESP_LOGW(TAG, "Failed to get connect status");
                 continue;
             }
-            if (rndis->connect_status == false) {
-                ESP_LOGD(TAG, "No events for 5s, sending keepalive");
-                ret = usbh_rndis_keepalive(rndis);
-            }
-
+            // Timeout occurred, send keepalive
             ESP_LOGD(TAG, "No events for 5s, sending keepalive");
             ret = usbh_rndis_keepalive(rndis);
             if (ret != ESP_OK) {
