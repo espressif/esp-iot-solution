@@ -156,6 +156,12 @@ When `CONSOLE_CONTROL` is enabled in the project configuration, you can control 
 | `panthera_set_version_matrix` | Set the vision calibration matrix | `panthera_set_version_matrix -1 <m1> -2 <m2> ... -9 <m9>` |
 | `panthera_get_version_matrix` | Read and display the current calibration matrix | `panthera_get_version_matrix` |
 
+### Vision Commands
+
+| Command | Description | Usage |
+|---------|-------------|-------|
+| `panthera_change_color` | Change color detection HSV range | `panthera_change_color --h_min <H> --s_min <S> --v_min <V> --h_max <H> --s_max <S> --v_max <V>`<br>Examples:<br>• Red: `--h_min 170 --s_min 100 --v_min 100 --h_max 10 --s_max 255 --v_max 255`<br>• Yellow: `--h_min 20 --s_min 100 --v_min 100 --h_max 35 --s_max 255 --v_max 255`<br>• Green: `--h_min 35 --s_min 100 --v_min 100 --h_max 85 --s_max 255 --v_max 255`<br>• Blue: `--h_min 100 --s_min 100 --v_min 100 --h_max 130 --s_max 255 --v_max 255` |
+
 ### Example Usage
 
 ```bash
@@ -170,6 +176,9 @@ panthera_set_version_matrix -1 -0.000002 -2 -0.001861 -3 0.867622 -4 -0.001776 -
 
 # Verify the matrix
 panthera_get_version_matrix
+
+# Change color detection HSV range (example: green color)
+panthera_change_color --h_min 35 --s_min 100 --v_min 100 --h_max 85 --s_max 255 --v_max 255
 ```
 
 ## Project Configuration

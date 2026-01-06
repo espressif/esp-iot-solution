@@ -4,11 +4,7 @@ dependencies:
     version: '>=5.5'
   espressif/esp32_p4_function_ev_board: "5.0.3"
   lvgl/lvgl: "9.4.0"
-  espressif/usb_host_uvc:
-    # Temporary, will use the package manager component after merge
-    git: "https://github.com/YanKE01/esp-usb"
-    version: fix/add_frame_checks_for_uvc
-    path: host/class/uvc/usb_host_uvc
+  espressif/usb_host_uvc: "2.4.1"
   color_detect:
     # Temporary, will use the package manager component after merge
     git: "https://github.com/YanKE01/esp-dl"

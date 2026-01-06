@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -96,11 +96,6 @@ extern "C" void app_main(void)
     // Initialize the USB camera
     usb_camera_init(640, 480);
 
-    // Initialize the console
-#if CONFIG_CONSOLE_CONTROL
-    app_console_init(motor_control);
-#endif
-
     // Initialize the app manager
     Manager* manager = Manager::get_instance(motor_control);
     if (manager == nullptr) {
@@ -111,6 +106,11 @@ extern "C" void app_main(void)
         ESP_LOGE(TAG, "Failed to register ESP-NOW receiver");
         return;
     }
+
+// Initialize the console
+#if CONFIG_CONSOLE_CONTROL
+    app_console_init(motor_control, manager);
+#endif
 
     while (1) {
         uint16_t free_sram_size_kb = heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024;

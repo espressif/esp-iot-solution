@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <vector>
+#include "lvgl.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -33,6 +35,8 @@ public:
     }
 
     esp_err_t register_esp_now_receiver(uart_port_t uart_port, int32_t baud_rate);
+
+    void change_change_color(const std::vector<uint8_t> &hsv_min, const std::vector<uint8_t> &hsv_max);
 
 private:
     Manager(damiao::Motor_Control* motor_control);
@@ -100,6 +104,7 @@ private:
     float target_gripper_pos_;                           /*!< Target gripper position */
     static constexpr float POSITION_TOLERANCE = 0.05f;   /*!< Position tolerance in radians */
     static constexpr float GRIPPER_TOLERANCE = 0.1f;     /*!< Gripper position tolerance */
+    static constexpr TickType_t GRIPPER_TIMEOUT_MS = 5000;      /*!< Gripper operation timeout in milliseconds (only for initial check) */
     bool motors_enabled_;                                 /*!< Whether motors are enabled via switch */
 
     // LVGL related
