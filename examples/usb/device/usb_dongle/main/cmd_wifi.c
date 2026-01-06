@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -28,6 +28,10 @@
 #include "esp_system.h"
 #include "esp_smartconfig.h"
 #include "esp_private/wifi.h"
+#include "esp_mac.h"
+#if CONFIG_IDF_TARGET_ESP32P4
+#include "esp_hosted_misc.h"
+#endif
 
 #include "tinyusb_net.h"
 #include "tinyusb.h"
@@ -35,7 +39,9 @@
 
 static const char *TAG = "esp_network";
 
+#if !CONFIG_IDF_TARGET_ESP32P4
 static TaskHandle_t Smart_Config_Handle = NULL;
+#endif
 
 static bool reconnect = true;
 static bool wifi_start = false;
@@ -98,11 +104,24 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
     char *wifi_event_buf = (char *)malloc(128);
+#if !CONFIG_IDF_TARGET_ESP32P4
     size_t length = 0;
+#endif
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         uint8_t *tud_network_mac_address_dummy = tud_network_mac_address;
+#if CONFIG_IDF_TARGET_ESP32P4
+        // Try to update MAC address, but if it fails, keep the one set in usb_dongle_main.c
+        esp_err_t mac_ret = esp_hosted_iface_mac_addr_get(tud_network_mac_address_dummy, 6, ESP_MAC_WIFI_STA);
+        if (mac_ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to get MAC in event handler: %s, using previously set MAC", esp_err_to_name(mac_ret));
+        }
+#else
         esp_wifi_get_mac(ESP_IF_WIFI_STA, tud_network_mac_address_dummy);
+#endif
+        ESP_LOGI(TAG, "tud_network_mac_address: %02X:%02X:%02X:%02X:%02X:%02X",
+                 tud_network_mac_address[0], tud_network_mac_address[1], tud_network_mac_address[2],
+                 tud_network_mac_address[3], tud_network_mac_address[4], tud_network_mac_address[5]);
         // esp_wifi_connect();
         wifi_start = true;
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
@@ -110,6 +129,13 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         s_wifi_is_connected = false;
         esp_wifi_internal_reg_rxcb(ESP_IF_WIFI_STA, NULL);
 
+#if CONFIG_TINYUSB_NET_MODE_ECM || CONFIG_TINYUSB_NET_MODE_NCM
+        // Notify USB host that network link is down
+        if (tud_ready()) {
+            tud_network_link_state(0, false);
+            ESP_LOGI(TAG, "Notified USB host: link DOWN");
+        }
+#endif
         if (reconnect && tud_ready()) {
             ESP_LOGI(TAG, "sta disconnect, reconnect...");
             esp_wifi_connect();
@@ -127,14 +153,23 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             xEventGroupClearBits(wifi_event_group, DISCONNECTED_BIT);
             xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
             ESP_LOGI(TAG, "CONNECTED_BIT\r\n");
+
+#if CONFIG_TINYUSB_NET_MODE_ECM || CONFIG_TINYUSB_NET_MODE_NCM
+            // Notify USB host that network link is down
+            if (tud_ready()) {
+                tud_network_link_state(0, true);
+                ESP_LOGI(TAG, "Notified USB host: link UP");
+            }
+#endif
         }
-    } else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) {
+    }
+#if !CONFIG_IDF_TARGET_ESP32P4
+    else if (event_base == SC_EVENT && event_id == SC_EVENT_SCAN_DONE) {
         ESP_LOGI(TAG, "Scan done");
     } else if (event_base == SC_EVENT && event_id == SC_EVENT_FOUND_CHANNEL) {
         ESP_LOGI(TAG, "Found channel");
     } else if (event_base == SC_EVENT && event_id == SC_EVENT_GOT_SSID_PSWD) {
         ESP_LOGI(TAG, "Got SSID and password");
-
         smartconfig_event_got_ssid_pswd_t *evt = (smartconfig_event_got_ssid_pswd_t *)event_data;
         wifi_config_t wifi_config;
         uint8_t ssid[33] = { 0 };
@@ -176,6 +211,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         xEventGroupClearBits(wifi_event_group, DISCONNECTED_BIT);
         xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
     }
+#endif
     free(wifi_event_buf);
 }
 
@@ -342,6 +378,7 @@ esp_err_t wifi_cmd_query(void)
     return ESP_OK;
 }
 
+#if !CONFIG_IDF_TARGET_ESP32P4
 static void smartconfig_task(void * param)
 {
     EventBits_t uxBits;
@@ -398,6 +435,7 @@ esp_err_t wifi_cmd_stop_smart_config(void)
     }
     return ESP_FAIL;
 }
+#endif
 
 void wifi_buffer_free(void *buffer, void *ctx)
 {
@@ -441,7 +479,9 @@ void initialise_wifi(void)
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL));
+#if !CONFIG_IDF_TARGET_ESP32P4
     ESP_ERROR_CHECK(esp_event_handler_register(SC_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL));
+#endif
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
                                                         WIFI_EVENT_SCAN_DONE,
                                                         &scan_done_handler,

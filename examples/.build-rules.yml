@@ -278,7 +278,8 @@ examples/usb/device/bootloader_uf2:
 
 examples/usb/device/usb_dongle:
   enable:
-    - if: SOC_USB_OTG_SUPPORTED == 1
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
 
 examples/touch/touch_button:
   enable:
