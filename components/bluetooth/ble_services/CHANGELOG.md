@@ -1,3 +1,8 @@
+## v1.1.0 - 2025.12.26
+
+Features:
+- MIDI: Support BLE MIDI Service
+
 ## v1.0.0 - 2024.12.27
 
 Features:

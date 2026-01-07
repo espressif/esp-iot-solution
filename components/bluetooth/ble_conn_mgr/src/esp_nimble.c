@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1374,6 +1374,51 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             esp_ble_conn_advertise(conn_session);
             break;
         case BLE_GAP_EVENT_SUBSCRIBE:
+            /* Handle CCCD (Client Characteristic Configuration Descriptor) update */
+            uint16_t conn_handle_sub = event->subscribe.conn_handle;
+            uint16_t char_handle = event->subscribe.attr_handle;
+            bool notify_enable = event->subscribe.cur_notify != 0;
+            bool indicate_enable = event->subscribe.cur_indicate != 0;
+
+            /* Find characteristic by handle */
+            attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(char_handle);
+            if (attr_mbuf) {
+                /* Find characteristic by UUID */
+                esp_ble_conn_character_t *chr = NULL;
+                svc_uuid_t *svc_uuid = NULL;
+
+                SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
+                    for (int i = 0; i < svc_uuid->svc.nu_lookup_count; i++) {
+                        if (BLE_UUID_CMP(attr_mbuf->type, svc_uuid->svc.nu_lookup[i].uuid, attr_mbuf->uuid)) {
+                            chr = &svc_uuid->svc.nu_lookup[i];
+                            break;
+                        }
+                    }
+                    if (chr) {
+                        break;
+                    }
+                }
+
+                if (chr) {
+                    /* Send CCCD update event */
+                    esp_ble_conn_cccd_update_t cccd_update = {
+                        .conn_handle = conn_handle_sub,
+                        .char_handle = char_handle,
+                        .uuid_type = chr->type,
+                        .uuid = chr->uuid,
+                        .notify_enable = notify_enable,
+                        .indicate_enable = indicate_enable,
+                    };
+                    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CCCD_UPDATE,
+                                &cccd_update, sizeof(cccd_update), portMAX_DELAY);
+                    ESP_LOGI(TAG, "CCCD updated: notify=%d, indicate=%d for char handle=%d UUID type=%d",
+                            notify_enable, indicate_enable, char_handle, chr->type);
+                } else {
+                    ESP_LOGW(TAG, "Characteristic not found for handle=%d", char_handle);
+                }
+            } else {
+                ESP_LOGW(TAG, "Attribute not found for handle=%d", char_handle);
+            }
             break;
         case BLE_GAP_EVENT_MTU:
             ESP_LOGI(TAG, "mtu update event; conn_handle=%d cid=%d mtu=%d",
@@ -1919,9 +1964,19 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
     }
 
     if (config->include_service_uuid) {
-        uuid_data.type = BLE_CONN_DATA_UUID16_ALL;
-        uuid_data.length = sizeof(config->adv_uuid16);
-        uuid_data.value = (uint8_t *)(&(config->adv_uuid16));
+        /* Default to 16-bit UUID if not specified (for backward compatibility) */
+        if (config->adv_uuid_type == 0 || config->adv_uuid_type == BLE_CONN_UUID_TYPE_16) {
+            uuid_data.type = BLE_CONN_DATA_UUID16_ALL;
+            uuid_data.length = sizeof(config->adv_uuid16);
+            uuid_data.value = (uint8_t *)(&(config->adv_uuid16));
+        } else if (config->adv_uuid_type == BLE_CONN_UUID_TYPE_128) {
+            uuid_data.type = BLE_CONN_DATA_UUID128_ALL;
+            uuid_data.length = sizeof(config->adv_uuid128);
+            uuid_data.value = (uint8_t *)(config->adv_uuid128);
+        } else {
+            ESP_LOGE(TAG, "Unsupported UUID type: %d", config->adv_uuid_type);
+            goto ble_init_error;
+        }
         conn_session->adv_data_len += uuid_data.length + 2;
     }
 
@@ -2269,6 +2324,55 @@ esp_err_t esp_ble_conn_disconnect(void)
     }
 
     return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_get_conn_handle(uint16_t *out_conn_handle)
+{
+    if (!out_conn_handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_conn_handle = (s_conn_session ? s_conn_session->conn_handle : 0);
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu)
+{
+    if (!out_mtu) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (s_conn_session && s_conn_session->gatt_mtu > 23) {
+        *out_mtu = s_conn_session->gatt_mtu;
+    } else {
+        *out_mtu = 23;   /* Default minimum BLE ATT MTU */
+    }
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params)
+{
+    if (!params) {
+        return ESP_ERR_INVALID_ARG;
+    }
+#ifndef CONFIG_BLE_CONN_MGR_EXTENDED_ADV
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    if (!conn_session || conn_session->conn_handle != conn_handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    struct ble_gap_upd_params nim_params = {
+        .itvl_min = params->itvl_min,
+        .itvl_max = params->itvl_max,
+        .latency  = params->latency,
+        .supervision_timeout = params->supervision_timeout,
+        .min_ce_len = params->min_ce_len,
+        .max_ce_len = params->max_ce_len,
+    };
+    int rc = ble_gap_update_params(conn_handle, &nim_params);
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
+#else
+    (void)conn_handle;
+    (void)params;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff)

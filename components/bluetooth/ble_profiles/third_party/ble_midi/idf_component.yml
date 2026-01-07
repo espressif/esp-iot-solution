@@ -1,0 +1,14 @@
+version: "0.1.0"
+description: BLE profile for MIDI over BLE (BLE-MIDI)
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/third_party/ble_midi
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../../../../examples/bluetooth/ble_profiles/ble_midi
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
+dependencies:
+  idf: ">=4.3"
+  ble_conn_mgr:
+    version: "~0.*"
+    override_path: "../../../ble_conn_mgr"

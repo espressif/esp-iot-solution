@@ -40,6 +40,10 @@
   - "components/bluetooth/ble_profiles/std/ble_htp/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_profiles_third_party_ble_midi: &patterns-components_bluetooth_ble_profiles_third_party_ble_midi
+  - "components/bluetooth/ble_profiles/third_party/ble_midi/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bluetooth_ble_profiles_esp_ble_ota: &patterns-components_bluetooth_ble_profiles_esp_ble_ota
   - "components/bluetooth/ble_profiles/esp/ble_ota/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -503,6 +507,9 @@
 .patterns-example_bluetooth_ble_htp: &patterns-example_bluetooth_ble_htp
   - "examples/bluetooth/ble_htp/**/*"
 
+.patterns-example_bluetooth_ble_midi: &patterns-example_bluetooth_ble_midi
+  - "examples/bluetooth/ble_profiles/ble_midi/**/*"
+
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"
 
@@ -879,6 +886,17 @@
       changes: *patterns-components_bluetooth_ble_profiles_std_ble_htp
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_htp
+
+.rules:build:example_bluetooth_ble_midi:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_third_party_ble_midi
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_midi
 
 .rules:build:example_bluetooth_ble_services:
   rules:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -129,7 +129,8 @@ typedef enum {
 
     ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< When the periodic adv report, the event comes */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST   = 8,    /*!< When the periodic sync lost, the event comes */
-    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9     /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9,    /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_CCCD_UPDATE          = 10   /*!< When CCCD (Client Characteristic Configuration Descriptor) is written, the event comes */
 } esp_ble_conn_event_t;
 
 /**
@@ -213,7 +214,11 @@ typedef struct {
     const char *extended_adv_rsp_data;              /*!< Extended advertising responses data */
 
     uint16_t    include_service_uuid: 1;            /*!< If include service UUID in advertising */
-    uint16_t    adv_uuid16;                         /*!< NOTE: Only Support one 16-bit UUID */
+    esp_ble_conn_uuid_type_t adv_uuid_type;         /*!< UUID type: BLE_CONN_UUID_TYPE_16 or BLE_CONN_UUID_TYPE_128. */
+    union {
+        uint16_t adv_uuid16;                        /*!< 16-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_16) */
+        uint8_t  adv_uuid128[BLE_UUID128_VAL_LEN];  /*!< 128-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_128) */
+    };                                              /*!< Service UUID for advertising */
 } esp_ble_conn_config_t;
 
 /**
@@ -259,6 +264,30 @@ typedef struct {
     uint16_t sync_handle;                           /*!< Periodic sync handle */
     int reason;                                     /*!< Reason for sync lost */
 } esp_ble_conn_periodic_sync_lost_t;
+
+/**
+ * @brief   This structure represents CCCD (Client Characteristic Configuration Descriptor) update event.
+ */
+typedef struct {
+    uint16_t conn_handle;                             /*!< Connection handle */
+    uint16_t char_handle;                             /*!< Characteristic handle */
+    uint8_t uuid_type;                                /*!< UUID type */
+    esp_ble_conn_uuid_t uuid;                         /*!< Characteristic UUID */
+    bool notify_enable;                                /*!< Notification enabled (bit 0) */
+    bool indicate_enable;                             /*!< Indication enabled (bit 1) */
+} esp_ble_conn_cccd_update_t;
+
+/**
+ * @brief   BLE connection parameters.
+ */
+typedef struct {
+    uint16_t itvl_min;            /*!< Connection event interval minimum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t itvl_max;            /*!< Connection event interval maximum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t latency;             /*!< Peripheral latency. This is in units of connection events to skip. Valid range: 0x0000–0x01F3 */
+    uint16_t supervision_timeout; /*!< Supervision timeout. This is in units of 10ms. (e.g. 400 = 4s). Valid range: 0x000A–0x0C80. Must be larger than the connection interval (itvl_max * 1.25ms) */
+    uint16_t min_ce_len;          /*!< Minimum connection event length. This is in units of 0.625ms. 0 if unused. */
+    uint16_t max_ce_len;          /*!< Maximum connection event length. This is in units of 0.625ms. 0 if unused. */
+} esp_ble_conn_params_t;
 
 #define BLE_UUID_CMP(type, src, dst) \
             ((type == BLE_CONN_UUID_TYPE_16) && (src.uuid16 == dst.uuid16)) ||  \
@@ -349,6 +378,41 @@ esp_err_t esp_ble_conn_connect(void);
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_disconnect(void);
+
+/**
+ * @brief   Get current connection handle (read-only).
+ *
+ * @param[out] out_conn_handle  Pointer to store current connection handle. 0 if not connected.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_conn_handle is NULL
+ */
+esp_err_t esp_ble_conn_get_conn_handle(uint16_t *out_conn_handle);
+
+/**
+ * @brief   Get current negotiated GATT MTU (read-only).
+ *
+ * @param[out] out_mtu  Pointer to store current MTU. Defaults to 23 if unknown.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_mtu is NULL
+ */
+esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu);
+
+/**
+ * @brief   Request connection parameter update.
+ *
+ * @param[in] conn_handle  Connection handle (use esp_ble_conn_get_conn_handle to query)
+ * @param[in] params       Desired connection parameters
+ *
+ * @return
+ *  - ESP_OK on success (request accepted)
+ *  - ESP_ERR_INVALID_ARG on wrong parameters
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params);
 
 /**
  * @brief This api is typically used to notify actively
