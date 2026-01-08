@@ -1,6 +1,4 @@
 variables:
-  DOCKER_TARGET_TEST_v5_0_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.0:3"
-  DOCKER_TARGET_TEST_v5_1_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.1:1"
   DOCKER_TARGET_TEST_v5_3_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.3:1"
   DOCKER_TARGET_TEST_v5_4_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.4:2"
   DOCKER_TARGET_TEST_v5_5_ENV_IMAGE: "$CI_DOCKER_REGISTRY/target-test-env-v5.5:2"
@@ -216,7 +214,7 @@ components_test_ir_learn:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "esp-box-3"
   tags:
     - ${IDF_TARGET}
@@ -237,7 +235,7 @@ components_test_button:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "button"
   tags:
     - ${IDF_TARGET}
@@ -256,7 +254,7 @@ components_test_led_indicator:
       artifacts: true
   parallel:
     matrix:
-      - IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+      - IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         IDF_TARGET: esp32s3
         ENV_TAG: "led_indicator"
   tags:
@@ -343,7 +341,7 @@ components_test_esp_lcd_panel_io_additions:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}
@@ -672,7 +670,7 @@ components_led_lightbulb_driver_test:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: generic
   tags:
     - ${IDF_TARGET}
@@ -734,7 +732,7 @@ examples_test_usb_uf2_ota:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: usb-otg_camera
   tags:
     - ${IDF_TARGET}
@@ -836,7 +834,7 @@ tools_test_cmake_utilities:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.1", "5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
         ENV_TAG: "generic"
   tags:
     - ${IDF_TARGET}

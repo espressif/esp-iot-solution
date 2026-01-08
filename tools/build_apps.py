@@ -91,7 +91,7 @@ def get_cmake_apps(
         target=target,
         build_dir=f'{idf_ver}/build_@t_@w',
         config_rules_str=config_rules_str,
-        # build_log_filename='build_log.txt',
+        build_log_filename='build_log.txt',
         size_json_filename='size.json',
         check_warnings=not ignore_warnings,
         no_preserve=False,
