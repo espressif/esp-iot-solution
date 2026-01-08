@@ -252,6 +252,12 @@ uint8_t button_adc_get_key_level(button_driver_t *button_driver)
     return BUTTON_INACTIVE;
 }
 
+static uint32_t button_adc_get_channel(button_driver_t *button_driver)
+{
+    button_adc_obj *adc_btn = __containerof(button_driver, button_adc_obj, base);
+    return adc_btn->ch;
+}
+
 esp_err_t iot_button_new_adc_device(const button_config_t *button_config, const button_adc_config_t *adc_config, button_handle_t *ret_button)
 {
     esp_err_t ret = ESP_OK;
@@ -314,6 +320,7 @@ esp_err_t iot_button_new_adc_device(const button_config_t *button_config, const 
     adc_btn->ch = adc_config->adc_channel;
     adc_btn->index = adc_config->button_index;
     adc_btn->base.get_key_level = button_adc_get_key_level;
+    adc_btn->base.get_hardware_data = button_adc_get_channel;
     adc_btn->base.del = button_adc_del;
     ret = iot_button_create(button_config, &adc_btn->base, ret_button);
     ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Create button failed");
