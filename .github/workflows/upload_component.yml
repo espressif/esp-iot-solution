@@ -37,6 +37,7 @@ jobs:
             components/audio/adc_mic;
             components/audio/pwm_audio;
             components/avi_player;
+            components/bluetooth/ble_adv/bthome;
             components/bluetooth/ble_conn_mgr;
             components/bluetooth/ble_hci;
             components/bluetooth/ble_profiles/esp/ble_ota;
@@ -100,6 +101,7 @@ jobs:
             components/sensors/battery_fuel_gauge/max17048;
             components/sensors/battery_fuel_gauge/bq27220;
             components/sensors/power_measure;
+            components/sensors/gas/bme690;
             components/sensors/gesture/apds9960;
             components/sensors/humiture/aht20;
             components/sensors/humiture/hdc2010;

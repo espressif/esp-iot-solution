@@ -17,3 +17,4 @@ Sensors
     Power Measure<power_measure>
     Battery Fuel Gauge<battery_fuel_gauge>
     ADC Sensor<adc>
+    Gas Sensor<gas>

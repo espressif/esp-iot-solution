@@ -46,6 +46,9 @@ not_formatted_permanent:
     - "examples/usb/host/usb_camera_lcd_display/components/esp_painter/font/"
     - "examples/usb/host/usb_camera_mic_spk/main/wave_1ch_16bits.c"
     - "examples/robot/ragtime_panther/follower/main/ui/"
+    - "components/sensors/gas/bme690/bme69x.c"
+    - "components/sensors/gas/bme690/bme69x.h"
+    - "components/sensors/gas/bme690/bme69x_defs.h"
 
 docs:
   # Docs directory contains some .inc files, which are not C include files

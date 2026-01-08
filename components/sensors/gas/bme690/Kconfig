@@ -1,0 +1,16 @@
+menu "BME690 Configuration"
+    config BME690_I2C_TIMEOUT_VALUE_MS
+        int "I2C timeout value in milliseconds"
+        default 50
+        range 1 1000
+        help
+            Set the I2C timeout value in milliseconds.
+
+    config BME690_AMBIENT_TEMP
+        int "Ambient temperature"
+        default 25
+        range 10 50
+        help
+            Set the ambient temperature in degrees Celsius, used for defining
+            the heater temperature.
+endmenu

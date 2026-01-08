@@ -112,6 +112,10 @@ components/sensors/adc/mcp3201:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
 
+components/sensors/gas/bme690/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/sensors/radar/at581x/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -253,11 +257,11 @@ components/usb/usb_device_uvc/test_apps:
 
 components/utilities/adc_tp_calibration/test_apps:
   enable:
-      - if: IDF_TARGET in ["esp32", "esp32s2"]
+    - if: IDF_TARGET in ["esp32", "esp32s2"]
 
 components/sensors/power_monitor/ina236/test_apps:
   enable:
-    - if:  INCLUDE_DEFAULT == 1
+    - if: INCLUDE_DEFAULT == 1
 
 components/bluetooth/ble_hci/test_apps:
   enable:
