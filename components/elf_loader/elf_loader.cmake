@@ -33,7 +33,7 @@ macro(project_elf project_name)
     set(elf_app "${CMAKE_PROJECT_NAME}.app.elf")
 
     # Remove more unused sections
-    string(REPLACE "-elf-gcc" "-elf-strip" ${CMAKE_STRIP} ${CMAKE_C_COMPILER})
+    string(REPLACE "-elf-gcc" "-elf-strip" CMAKE_STRIP ${CMAKE_C_COMPILER})
     set(strip_flags --strip-unneeded
                     --remove-section=.comment
                     --remove-section=.got.loc
@@ -49,18 +49,19 @@ macro(project_elf project_name)
 
     # Link input list of libraries to ELF
     list(PREPEND ELF_COMPONENTS "main")
+    set(elf_libs "")
+    set(elf_dependencies "")
     if(ELF_COMPONENTS)
         foreach(c ${ELF_COMPONENTS})
             list(APPEND elf_libs "esp-idf/${c}/lib${c}.a")
-
             if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
                 add_custom_command(OUTPUT elf_${c}_app
                         COMMAND +${CMAKE_MAKE_PROGRAM} "__idf_${c}/fast"
                         COMMENT "Build Component: ${c}"
                 )
-                list(APPEND elf_dependeces "elf_${c}_app")
+                list(APPEND elf_dependencies "elf_${c}_app")
             else()
-                list(APPEND elf_dependeces "idf::${c}")
+                list(APPEND elf_dependencies "idf::${c}")
             endif()
         endforeach()
     endif()
@@ -69,11 +70,15 @@ macro(project_elf project_name)
     endif()
     spaces2list(elf_libs)
 
-    add_custom_command(OUTPUT elf_app
+    # Define how to build the ELF file
+    add_custom_command(
+        OUTPUT ${elf_app}
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}
         COMMAND ${CMAKE_STRIP} ${strip_flags} ${elf_app}
-        DEPENDS ${elf_dependeces}
+        DEPENDS ${elf_dependencies}
         COMMENT "Build ELF: ${elf_app}"
-        )
-    add_custom_target(elf ALL DEPENDS elf_app)
+    )
+
+    # Create a custom target to generate the ELF file
+    add_custom_target(elf ALL DEPENDS ${elf_app})
 endmacro()

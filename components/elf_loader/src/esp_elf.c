@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,14 +17,21 @@
 #include "hal/cache_ll.h"
 #endif
 
-#include "private/elf_symbol.h"
+#include "esp_elf.h"
 #include "private/elf_platform.h"
 
 #define stype(_s, _t)               ((_s)->type == (_t))
 #define sflags(_s, _f)              (((_s)->flags & (_f)) == (_f))
 #define ADDR_OFFSET                 (0x400)
 
+#ifdef CONFIG_ELF_LOADER_NUMBER_SYMBOLS
+#define SYMBOL_TABLES_NO            CONFIG_ELF_LOADER_NUMBER_SYMBOLS
+#else
+#define SYMBOL_TABLES_NO            (32)
+#endif
+
 static const char *TAG = "ELF";
+static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
@@ -383,7 +390,7 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
         return ret;
     }
 
-    ESP_LOGI(TAG, "elf->entry=%p\n", elf->entry);
+    ESP_LOGI(TAG, "elf->entry=%p", elf->entry);
 
     /* Relocation section data */
 
@@ -646,4 +653,89 @@ void esp_elf_print_sec(esp_elf_t *elf)
     }
 
     ESP_LOGI(TAG, "entry:  %p", elf->entry);
+}
+
+/**
+ * @brief Register symbol table to global symbol tables array.
+ *
+ * @param symbol_table - Pointer to symbol table structure (array of esp_elfsym terminated by ESP_ELFSYM_END)
+ *
+ * @return 0 if success, -EINVAL if symbol_table is NULL, -EEXIST if already registered, -ENOMEM if no space.
+ *
+ * @note This function is not thread-safe. External synchronization must be used if calling
+ *       this function concurrently from multiple threads.
+ */
+int esp_elf_register_symbol(esp_elf_symbol_table_t *symbol_table)
+{
+    if (!symbol_table) {
+        return -EINVAL;
+    }
+
+    for (int i = 0; i < SYMBOL_TABLES_NO; i++) {
+        if (g_symbol_tables[i] == symbol_table) {
+            return -EEXIST;
+        } else if (g_symbol_tables[i] == NULL) {
+            g_symbol_tables[i] = symbol_table;
+            return 0;
+        }
+    }
+
+    return -ENOMEM;
+}
+
+/**
+ * @brief Unregister symbol table from global symbol tables array.
+ *
+ * @param symbol_table - Pointer to symbol table structure to remove
+ *
+ * @return 0 if success, -EINVAL if symbol_table is NULL or symbol table not found.
+ *
+ * @note This function is not thread-safe. External synchronization must be used if calling
+ *       this function concurrently from multiple threads.
+ */
+int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table)
+{
+    if (!symbol_table) {
+        return -EINVAL;
+    }
+
+    for (int i = 0; i < SYMBOL_TABLES_NO; i++) {
+        if (g_symbol_tables[i] == symbol_table) {
+            g_symbol_tables[i] = NULL;
+            return 0;
+        }
+    }
+
+    return -EINVAL;
+}
+
+/**
+ * @brief Find symbol address by symbol name in registered tables.
+ *
+ * @param sym_name - Symbol name string to search
+ *
+ * @return Symbol address if found, 0 if not found.
+ * @note Search order is registration order (earliest registered first).
+ */
+uintptr_t esp_elf_find_symbol(const char *sym_name)
+{
+    if (!sym_name) {
+        return 0;
+    }
+
+    esp_elf_symbol_table_t *syms;
+    for (int i = 0; i < SYMBOL_TABLES_NO; i++) {
+        if (g_symbol_tables[i]) {
+            syms = g_symbol_tables[i];
+            while (syms->name) {
+                if (!strcmp(syms->name, sym_name)) {
+                    return (uintptr_t)syms->sym;
+                }
+
+                syms++;
+            }
+        }
+    }
+
+    return 0;
 }

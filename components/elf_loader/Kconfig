@@ -48,6 +48,14 @@ menu "Espressif ELF Loader Configuration"
             config ELF_LOADER_CUSTOMER_SYMBOLS
                 bool "Customer Symbols Table"
                 default n
+
+            config ELF_LOADER_NUMBER_SYMBOLS
+                int "Maximum Number of registered symbol tables"
+                range 1 4096
+                default 32
+                help
+                    This configuration is the maximum number of registered symbol tables,
+                    which can be configured according to the number of embedded ELF applications
         endmenu
     endif
 endmenu
