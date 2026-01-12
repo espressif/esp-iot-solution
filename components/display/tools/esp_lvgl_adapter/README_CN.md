@@ -225,10 +225,12 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (带 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 | SPI/I2C/I80/QSPI (无 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
+| MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 
 **注意**：
 - 仅 MIPI DSI 和 RGB 支持防撕裂模式
 - SPI/I2C/I80/QSPI 等接口在适配器中统称为 "OTHER" 接口，仅支持 `NONE` 模式
+- MONO（单色显示）接口支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局，且**支持旋转**
 
 #### 计算帧缓冲数量
 
@@ -263,6 +265,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
 - OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
+- MONO (单色显示) 接口**支持软件旋转**（0°/90°/180°/270°），通过 LVGL 进行像素级旋转处理
 - `TE_SYNC` 模式要求面板提供 TE 输出信号，并将 TE 引脚连接到 ESP GPIO；使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` 宏进行配置。`examples/display/gui/lvgl_common_demo` 会自动检测并在可用时使用 TE 同步
 
 #### 内存估算
@@ -606,11 +609,17 @@ esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // 重新绑定面板，�
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-  
+
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - 适配器不对 90°/270° 进行旋转处理
   - 如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像）
   - 同时需要相应调整触摸坐标映射
+
+- **MONO (单色显示)**：
+  - **完全支持旋转**（0°/90°/180°/270°）
+  - 旋转由 LVGL 在软件层面处理
+  - 支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局
+  - 无需额外配置，直接通过 `rotation` 参数设置
 
 ### 缓冲与渲染模式
 

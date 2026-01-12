@@ -21,11 +21,19 @@ endif()
 message(STATUS "esp_lv_eaf_player: LVGL version: ${lvgl_ver}")
 
 set(extra_libs idf::${lvgl_name})
-if("esp_new_jpeg" IN_LIST build_components)
-    list(APPEND extra_libs idf::esp_new_jpeg)
-endif()
-if("espressif__esp_new_jpeg" IN_LIST build_components)
-    list(APPEND extra_libs idf::espressif__esp_new_jpeg)
+
+# Conditionally link software JPEG decoder based on Kconfig
+if(CONFIG_ESP_LV_EAF_ENABLE_SW_JPEG)
+    if("esp_new_jpeg" IN_LIST build_components)
+        list(APPEND extra_libs idf::esp_new_jpeg)
+        message(STATUS "esp_lv_eaf_player: Software JPEG decoder enabled (esp_new_jpeg)")
+    endif()
+    if("espressif__esp_new_jpeg" IN_LIST build_components)
+        list(APPEND extra_libs idf::espressif__esp_new_jpeg)
+        message(STATUS "esp_lv_eaf_player: Software JPEG decoder enabled (espressif__esp_new_jpeg)")
+    endif()
+else()
+    message(STATUS "esp_lv_eaf_player: Software JPEG decoder DISABLED (saves ~19KB DRAM)")
 endif()
 
 # Add hardware JPEG decoder support for chips that have it

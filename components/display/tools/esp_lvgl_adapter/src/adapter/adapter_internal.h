@@ -60,6 +60,8 @@ typedef struct {
     size_t frame_buffer_size;               /*!< Size of each frame buffer in bytes */
     bool dummy_draw_enabled;                /*!< Dummy draw mode flag */
     bool panel_detached;                    /*!< Panel detached flag for sleep management */
+    esp_lv_adapter_mono_layout_t mono_layout;      /*!< Monochrome layout selection */
+    uint8_t *mono_buf;                      /*!< Monochrome conversion buffer (VTILED) */
     esp_lv_adapter_dummy_draw_callbacks_t dummy_draw_cbs; /*!< Dummy draw callback collection */
     void *dummy_draw_user_ctx;              /*!< User context for dummy draw callbacks */
     void (*rounder_cb)(lv_area_t *, void *); /*!< Area rounding callback */

@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.2.0"
 description: LVGL EAF (Emote Animation Format) decoder/player tailored for esp-iot-solution.
 url: https://github.com/espressif/esp-iot-solution
 repository: https://github.com/espressif/esp-iot-solution.git

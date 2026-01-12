@@ -271,16 +271,28 @@ esp_err_t esp_eaf_hw_jpeg_deinit(void);
  **********************/
 
 /**
+ * @brief Palette cache entry (0xFFFFFFFF = not cached)
+ */
+typedef struct {
+    uint32_t color[256];   /*!< RGB565 color cache (0xFFFFFFFF = not cached) */
+    uint8_t alpha[256];    /*!< Alpha value cache */
+    bool initialized;      /*!< Whether cache has been initialized */
+} esp_eaf_palette_cache_t;
+
+/**
  * @brief Decode a block of EAF data
  * @param header EAF header information
  * @param frame_data Pointer to the frame data
  * @param block_index Index of the block to decode
- * @param decode_buffer Buffer to store decoded data
+ * @param decode_buffer Buffer to store decoded RGB565 data (block start)
+ * @param alpha_buffer Optional pointer to the start of the alpha plane (NULL if not used)
  * @param swap_color Whether to swap color bytes
+ * @param cache Optional palette cache for frame-level caching (NULL to use block-level cache)
  * @return ESP_OK on success, ESP_FAIL on failure
  */
 esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *frame_data,
-                               int block_index, uint8_t *decode_buffer, bool swap_color);
+                               int block_index, uint8_t *decode_buffer, uint8_t *alpha_buffer,
+                               bool swap_color, esp_eaf_palette_cache_t *cache);
 
 /**********************
  *  FORMAT OPERATIONS

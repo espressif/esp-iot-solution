@@ -38,6 +38,15 @@ typedef enum {
 } esp_lv_adapter_panel_interface_t;
 
 /**
+ * @brief Monochrome buffer layout
+ */
+typedef enum {
+    ESP_LV_ADAPTER_MONO_LAYOUT_NONE = 0,  /*!< Not monochrome */
+    ESP_LV_ADAPTER_MONO_LAYOUT_HTILED,    /*!< I1 horizontal tiled layout (LVGL native) */
+    ESP_LV_ADAPTER_MONO_LAYOUT_VTILED,    /*!< I1 vertical tiled layout (page mode) */
+} esp_lv_adapter_mono_layout_t;
+
+/**
  * @brief Display rotation angle enumeration
  */
 typedef enum {
@@ -114,6 +123,7 @@ typedef struct {
     bool use_psram;                         /*!< Use PSRAM for buffers if available */
     bool enable_ppa_accel;                  /*!< Enable PPA hardware acceleration */
     bool require_double_buffer;             /*!< Require double buffering */
+    esp_lv_adapter_mono_layout_t mono_layout;      /*!< Monochrome layout selection */
 } esp_lv_adapter_display_profile_t;
 
 /**
@@ -137,7 +147,8 @@ typedef struct {
     .buffer_height         = 50,                                                          \
     .use_psram             = false,                                                       \
     .enable_ppa_accel      = false,                                                       \
-    .require_double_buffer = false
+    .require_double_buffer = false,                                                       \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
 /* RGB interface default configuration */
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_RGB_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation)  \
@@ -146,7 +157,8 @@ typedef struct {
     .buffer_height         = 50,                                                          \
     .use_psram             = false,                                                       \
     .enable_ppa_accel      = false,                                                       \
-    .require_double_buffer = false
+    .require_double_buffer = false,                                                       \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
 /* SPI/I2C and other interfaces default configuration with PSRAM*/
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation)     \
@@ -154,7 +166,8 @@ typedef struct {
     ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                        \
     .buffer_height         = _ver_res,                                                               \
     .use_psram             = true,                                                                   \
-    .enable_ppa_accel      = false
+    .enable_ppa_accel      = false,                                                                  \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation)    \
     ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation),          \
@@ -171,7 +184,17 @@ typedef struct {
     .buffer_height         = 10,                                                                       \
     .use_psram             = false,                                                                    \
     .enable_ppa_accel      = false,                                                                    \
-    .require_double_buffer = false
+    .require_double_buffer = false,                                                                    \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
+
+#define ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout) \
+    .interface             = ESP_LV_ADAPTER_PANEL_IF_OTHER,                                            \
+    ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                          \
+    .buffer_height         = (_ver_res),                                                               \
+    .use_psram             = false,                                                                    \
+    .enable_ppa_accel      = false,                                                                    \
+    .require_double_buffer = false,                                                                    \
+    .mono_layout           = (_mono_layout)
 
 /**
  * @brief Display configuration structure
@@ -218,6 +241,13 @@ typedef struct {
                                   ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation), \
                                   ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT,                                                         \
                                   ESP_LV_ADAPTER_TE_SYNC_DISABLED())
+
+#define ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _mono_layout)                 \
+    ESP_LV_ADAPTER_DISPLAY_CONFIG(_panel, _panel_io,                                                                                 \
+                                  ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout), \
+                                  ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT,                                                            \
+                                  ESP_LV_ADAPTER_TE_SYNC_DISABLED())
+
 /**
  * @brief SPI with PSRAM and TE synchronization default configuration
  *

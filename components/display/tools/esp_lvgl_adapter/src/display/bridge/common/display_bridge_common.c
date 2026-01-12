@@ -497,7 +497,8 @@ void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *run
                  runtime->frame_buffer_size, total_pixels, color_bytes * 8);
     }
 
-    if (runtime->color_bytes != 2 && runtime->color_bytes != 3) {
+    if (runtime->color_bytes != 2 && runtime->color_bytes != 3 &&
+            cfg->base.profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE) {
         ESP_LOGW(TAG, "color depth %u bytes not HW-accelerated; using CPU fallback",
                  runtime->color_bytes);
     }

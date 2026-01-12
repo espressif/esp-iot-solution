@@ -543,7 +543,8 @@ static inline int esp_eaf_get_block_rows(const esp_eaf_header_t *header, int blo
 }
 
 esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *frame_data,
-                               int block_index, uint8_t *decode_buffer, bool swap_color)
+                               int block_index, uint8_t *decode_buffer, uint8_t *alpha_buffer,
+                               bool swap_color, esp_eaf_palette_cache_t *cache)
 {
     /* Calculate block offsets */
     uint32_t *offsets = (uint32_t *)esp_eaf_malloc_prefer_psram(header->blocks * sizeof(uint32_t));
@@ -582,6 +583,11 @@ esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *fr
     }
 
     size_t pixel_count = (size_t)width * block_height;
+    uint8_t *alpha_block = NULL;
+    if (alpha_buffer != NULL) {
+        size_t alpha_offset = (size_t)block_index * header->block_height * width;
+        alpha_block = alpha_buffer + alpha_offset;
+    }
     size_t decode_capacity = 0;
     bool is_jpeg = (encoding_type == ESP_EAF_ENCODING_JPEG);
 
@@ -631,6 +637,9 @@ esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *fr
     }
 
     if (is_jpeg) {
+        if (alpha_block != NULL) {
+            memset(alpha_block, 0xFF, pixel_count);
+        }
         free(offsets);
         return ESP_OK;
     }
@@ -649,6 +658,9 @@ esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *fr
         for (size_t i = 0; i < pixel_count; i++) {
             const uint8_t *bgr = &work_buffer[i * 3];
             dest[dest_index++] = esp_eaf_rgb565_from_bgr(bgr, swap_color);
+            if (alpha_block != NULL) {
+                alpha_block[i] = 0xFF;
+            }
         }
         break;
     }
@@ -666,9 +678,34 @@ esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *fr
             return ESP_FAIL;
         }
         for (size_t i = 0; i < pixel_count; i++) {
-            uint8_t color_index = work_buffer[i];
-            esp_eaf_color_t color = esp_eaf_palette_get_color(header, color_index, swap_color);
-            dest[dest_index++] = color.full;
+            uint8_t ci = work_buffer[i];
+            uint16_t color;
+            uint8_t a;
+
+            if (cache && cache->color[ci] != 0xFFFFFFFF) {
+                /* Cache hit */
+                color = (uint16_t)cache->color[ci];
+                a = cache->alpha[ci];
+            } else {
+                /* Cache miss - compute color */
+                const uint8_t *p = &header->palette[ci * 4];
+                a = p[3];
+                uint16_t rgb = ((p[2] & 0xF8) << 8) | ((p[1] & 0xFC) << 3) | ((p[0] & 0xF8) >> 3);
+                color = swap_color ? __builtin_bswap16(rgb) : rgb;
+                if (cache) {
+                    cache->color[ci] = color;
+                    cache->alpha[ci] = a;
+                }
+            }
+
+            if (a) {
+                dest[dest_index++] = color;
+            } else {
+                dest_index++;
+            }
+            if (alpha_block != NULL) {
+                alpha_block[i] = a;
+            }
         }
         break;
     }
@@ -679,21 +716,64 @@ esp_err_t esp_eaf_block_decode(const esp_eaf_header_t *header, const uint8_t *fr
             free(work_buffer);
             return ESP_FAIL;
         }
-        size_t pixel_written = 0;
-        for (size_t i = 0; i < out_size && pixel_written < pixel_count; i++) {
-            uint8_t packed = work_buffer[i];
-            uint8_t high = (packed >> 4) & 0x0F;
-            esp_eaf_color_t color_high = esp_eaf_palette_get_color(header, high, swap_color);
-            dest[pixel_written++] = color_high.full;
-            if (pixel_written >= pixel_count) {
+        size_t px = 0;
+        for (size_t i = 0; i < out_size && px < pixel_count; i++) {
+            uint8_t hi = (work_buffer[i] >> 4) & 0x0F;
+            uint16_t color_hi;
+            uint8_t a_hi;
+
+            if (cache && cache->color[hi] != 0xFFFFFFFF) {
+                color_hi = (uint16_t)cache->color[hi];
+                a_hi = cache->alpha[hi];
+            } else {
+                const uint8_t *p = &header->palette[hi * 4];
+                a_hi = p[3];
+                uint16_t rgb = ((p[2] & 0xF8) << 8) | ((p[1] & 0xFC) << 3) | ((p[0] & 0xF8) >> 3);
+                color_hi = swap_color ? __builtin_bswap16(rgb) : rgb;
+                if (cache) {
+                    cache->color[hi] = color_hi;
+                    cache->alpha[hi] = a_hi;
+                }
+            }
+
+            if (a_hi) {
+                dest[px++] = color_hi;
+            } else {
+                px++;
+            }
+            if (alpha_block != NULL) {
+                alpha_block[px - 1] = a_hi;
+            }
+            if (px >= pixel_count) {
                 break;
             }
-            uint8_t low = packed & 0x0F;
-            esp_eaf_color_t color_low = esp_eaf_palette_get_color(header, low, swap_color);
-            dest[pixel_written++] = color_low.full;
-        }
-        if (pixel_written < pixel_count) {
-            ESP_LOGW(TAG, "Incomplete 4-bit block %d (%zu/%zu pixels)", block_index, pixel_written, pixel_count);
+
+            uint8_t lo = work_buffer[i] & 0x0F;
+            uint16_t color_lo;
+            uint8_t a_lo;
+
+            if (cache && cache->color[lo] != 0xFFFFFFFF) {
+                color_lo = (uint16_t)cache->color[lo];
+                a_lo = cache->alpha[lo];
+            } else {
+                const uint8_t *p = &header->palette[lo * 4];
+                a_lo = p[3];
+                uint16_t rgb = ((p[2] & 0xF8) << 8) | ((p[1] & 0xFC) << 3) | ((p[0] & 0xF8) >> 3);
+                color_lo = swap_color ? __builtin_bswap16(rgb) : rgb;
+                if (cache) {
+                    cache->color[lo] = color_lo;
+                    cache->alpha[lo] = a_lo;
+                }
+            }
+
+            if (a_lo) {
+                dest[px++] = color_lo;
+            } else {
+                px++;
+            }
+            if (alpha_block != NULL) {
+                alpha_block[px - 1] = a_lo;
+            }
         }
         break;
     }
@@ -970,7 +1050,8 @@ esp_err_t esp_eaf_jpeg_decode(const uint8_t *jpeg_data, size_t jpeg_size,
     jpeg_dec_close(jpeg_dec);
     return ESP_OK;
 #else
-    ESP_LOGW(TAG, "JPEG decoder support disabled at build time");
+    ESP_LOGW(TAG, "JPEG block detected but software JPEG decoder is DISABLED");
+    ESP_LOGW(TAG, "Enable CONFIG_ESP_LV_EAF_ENABLE_SW_JPEG in menuconfig to decode JPEG blocks");
     return ESP_ERR_NOT_SUPPORTED;
 #endif
 }

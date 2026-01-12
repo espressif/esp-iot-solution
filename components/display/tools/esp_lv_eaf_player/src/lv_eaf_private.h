@@ -42,6 +42,8 @@ struct _lv_eaf_t {
     esp_eaf_header_t eaf_header;           /*!< Current frame header */
     uint8_t *frame_buffer;                 /*!< Buffer for decoded frame data */
     uint32_t frame_buffer_size;            /*!< Size of frame buffer */
+    uint32_t color_buffer_size;            /*!< Size of RGB565 buffer */
+    bool use_alpha;                        /*!< Whether RGB565A8 format is used */
     uint8_t *file_data;                    /*!< Buffer for file data (when loaded from file) */
     int current_frame;                     /*!< Current frame index */
     int total_frames;                      /*!< Total number of frames */
