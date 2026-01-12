@@ -35,6 +35,8 @@ void wifi_buffer_free(void *buffer, void *ctx);
 
 esp_err_t wifi_recv_callback(void *buffer, uint16_t len, void *ctx);
 
+extern uint8_t tud_network_mac_address[6];
+
 #ifdef __cplusplus
 }
 #endif

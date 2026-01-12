@@ -12,8 +12,9 @@ menu "Example Configuration"
         int "UART port number"
         range 0 2 if IDF_TARGET_ESP32   || IDF_TARGET_ESP32S3
         range 0 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3
+        range 0 5 if IDF_TARGET_ESP32P4
         default 2 if IDF_TARGET_ESP32   || IDF_TARGET_ESP32S3
-        default 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32C3
+        default 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32P4
         help
             UART communication port number for the example.
             See UART documentation for available port numbers.
