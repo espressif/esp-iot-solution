@@ -37,6 +37,10 @@ You can modify Wi‑Fi configuration in `menuconfig` under `4G Modem WiFi Config
 
 Users can Enable AT commands by setting `Example Configuration` in menuconfig. Then, enter the correct interface number, recompile, and run the program. It will periodically print the module's signal quality.
 
+## Enable Download Speed Test
+
+Users can enable download speed test by setting `Example Configuration → USB RNDIS Download Speed Test` in menuconfig. After enabling this option and successfully obtaining an IP address, the program will automatically test the download speed by downloading a test file from a remote server.
+
 ## Example Output
 
 ```

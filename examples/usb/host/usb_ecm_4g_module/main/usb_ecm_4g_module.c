@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 *
 * SPDX-License-Identifier: Apache-2.0
 */
@@ -76,7 +76,7 @@ static void _at_recv_data_cb(usbh_cdc_port_handle_t cdc_port_handle, void *arg)
     modem_at_get_response_buffer(at_ctx->at_handle, &buffer, &buffer_remain);
     if (buffer_remain < length) {
         length = buffer_remain;
-        ESP_LOGE(TAG, "data size is too big, truncated to %d", length);
+        ESP_LOGE(TAG, "data size is too big, truncated to %zu", length);
     }
     usbh_cdc_read_bytes(cdc_port_handle, (uint8_t *)buffer, &length, 0);
     // Parse the AT command response
@@ -195,7 +195,7 @@ static void sleep_timer_cb(TimerHandle_t xTimer)
     esp_sleep_pd_config(ESP_PD_DOMAIN_CNNT, ESP_PD_OPTION_ON);
 #endif
 
-    ESP_LOGW(TAG, "Entering deep sleep");
+    ESP_LOGW(TAG, "Entering light sleep");
     vTaskDelay(pdMS_TO_TICKS(10));
     esp_light_sleep_start();
     ESP_LOGW(TAG, "Wake up from light sleep");
@@ -293,6 +293,9 @@ static void usb_lib_task(void *arg)
         .skip_phy_setup = false,
         .intr_flags = ESP_INTR_FLAG_LEVEL1,
         .enum_filter_cb = usb_host_enum_filter_cb,
+#if CONFIG_EXAMPLE_USE_USB_HOST_FULLSPEED
+        .peripheral_map = BIT1, // Only valid for ESP32-P4 and ESP_IDF_VERSION >= v5.5
+#endif
     };
     ESP_ERROR_CHECK(usb_host_install(&host_config));
 
@@ -336,6 +339,10 @@ static void install_ecm(uint16_t idVendor, uint16_t idProduct, const char *netif
     iot_eth_netif_glue_handle_t glue = NULL;
 
     usb_device_match_id_t *dev_match_id = calloc(2, sizeof(usb_device_match_id_t));
+    if (dev_match_id == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for device match ID");
+        return;
+    }
     dev_match_id[0].match_flags = USB_DEVICE_ID_MATCH_VID_PID;
     dev_match_id[0].idVendor = idVendor;
     dev_match_id[0].idProduct = idProduct;
@@ -347,8 +354,10 @@ static void install_ecm(uint16_t idVendor, uint16_t idProduct, const char *netif
     ret = iot_eth_new_usb_ecm(&ecm_cfg, &s_ecm_eth_driver);
     if (ret != ESP_OK || s_ecm_eth_driver == NULL) {
         ESP_LOGE(TAG, "Failed to create USB ECM driver");
+        free(dev_match_id);
         return;
     }
+    // Note: dev_match_id is now managed by the driver, don't free it here
 
     iot_eth_config_t eth_cfg = {
         .driver = s_ecm_eth_driver,
@@ -397,14 +406,14 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     s_event_group = xEventGroupCreate();
-    ESP_RETURN_ON_FALSE(s_event_group != NULL,, TAG, "Failed to create event group");
+    ESP_RETURN_VOID_ON_FALSE(s_event_group != NULL, TAG, "Failed to create event group");
     esp_event_handler_register(IOT_ETH_EVENT, ESP_EVENT_ANY_ID, iot_event_handle, NULL);
     esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, iot_event_handle, NULL);
 
 #if CONFIG_USB_HOST_ENABLE_ENUM_FILTER_CALLBACK
     BaseType_t task_created = xTaskCreatePinnedToCore(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), 5, NULL, 0);
-    ESP_RETURN_ON_FALSE(task_created == pdPASS,, TAG, "xTaskCreatePinnedToCore failed");
-    // Wait unit the USB host library is installed
+    ESP_RETURN_VOID_ON_FALSE(task_created == pdPASS, TAG, "xTaskCreatePinnedToCore failed");
+    // Wait until the USB host library is installed
     uint32_t notify_value = ulTaskNotifyTake(false, pdMS_TO_TICKS(1000));
     if (notify_value == 0) {
         ESP_LOGE(TAG, "USB host library not installed");
