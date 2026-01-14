@@ -33,6 +33,10 @@ ESP-IoT-Solution 包含的内容如下:
 |   release/v1.1   |      v4.0.1      | IDF 版本更新，删除已经移动到其它仓库的代码 | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 备份，停止维护               |
 |   release/v1.0   |      v3.2.2      |                  历史版本                  | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护               |
 
+> **Note**
+>
+> 不同芯片推荐的 ESP-IDF 首选版本也不同，具体可参考 [ESP-IDF 版本与乐鑫芯片版本兼容性](https://github.com/espressif/esp-idf/blob/master/COMPATIBILITY_CN.md)。
+
 ## 快速参考
 
 ### 硬件准备

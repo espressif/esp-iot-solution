@@ -44,6 +44,10 @@ Please note that different versions of ESP-IoT-Solution may depend on different 
 |   release/v1.1   |      v4.0.1       | IDF version update, remove no longer supported code | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | archived                    |
 |   release/v1.0   |      v3.2.2       |                   legacy version                    | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | archived                    |
 
+> **Note**
+>
+> The recommended ESP-IDF version varies for different chips. For details, please refer to [Compatibility Between ESP-IDF Releases and Revisions of Espressif SoCs](https://github.com/espressif/esp-idf/blob/master/COMPATIBILITY.md).
+
 > Since the `master` branch uses the `ESP Component Manager` to manager components, each of them is a separate package, and each package may support a different version of the ESP-IDF, which will be declared in the component's `idf_component.yml` file
 
 #### Get Components from ESP Component Registry
