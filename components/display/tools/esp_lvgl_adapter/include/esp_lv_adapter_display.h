@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -166,16 +166,17 @@ typedef struct {
     ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                        \
     .buffer_height         = _ver_res,                                                               \
     .use_psram             = true,                                                                   \
-    .enable_ppa_accel      = false,                                                                  \
-    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
+    .enable_ppa_accel      = false
 
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation)    \
     ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation),          \
-    .require_double_buffer = true
+    .require_double_buffer = true,                                                                     \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation) \
     ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation),          \
-    .require_double_buffer = false
+    .require_double_buffer = false,                                                                    \
+    .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
 /* SPI/I2C and other interfaces default configuration without PSRAM*/
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation) \
@@ -244,7 +245,7 @@ typedef struct {
 
 #define ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _mono_layout)                 \
     ESP_LV_ADAPTER_DISPLAY_CONFIG(_panel, _panel_io,                                                                                 \
-                                  ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout), \
+                                  ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout),    \
                                   ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT,                                                            \
                                   ESP_LV_ADAPTER_TE_SYNC_DISABLED())
 

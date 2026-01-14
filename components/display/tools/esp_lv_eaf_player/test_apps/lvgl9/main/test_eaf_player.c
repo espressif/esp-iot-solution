@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +22,6 @@ static const char *TAG = "eaf player";
 extern const uint8_t test_eaf_start[] asm("_binary_test_eaf_start");
 extern const uint8_t test_eaf_end[] asm("_binary_test_eaf_end");
 
-static lv_image_dsc_t s_test_eaf_dsc;
 static SemaphoreHandle_t flush_sem;
 static lv_display_t *s_disp;
 static lv_color_t *s_draw_buf_mem;
@@ -69,24 +68,13 @@ TEST_CASE("Validate EAF player loads built-in animation", "[eaf][lv_eaf_set_src]
 {
     lvgl_test_env_init();
 
-    /* Initialize embedded EAF image descriptor */
     size_t eaf_size = test_eaf_end - test_eaf_start;
     ESP_LOGI(TAG, "Embedded EAF size: %d bytes", eaf_size);
-
-    s_test_eaf_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
-    s_test_eaf_dsc.header.cf = LV_COLOR_FORMAT_RAW;
-    s_test_eaf_dsc.header.flags = 0;
-    s_test_eaf_dsc.header.w = 1;
-    s_test_eaf_dsc.header.h = 1;
-    s_test_eaf_dsc.header.stride = 0;
-    s_test_eaf_dsc.header.reserved_2 = 0;
-    s_test_eaf_dsc.data_size = eaf_size;
-    s_test_eaf_dsc.data = test_eaf_start;
 
     lv_obj_t *anim = lv_eaf_create(lv_scr_act());
     TEST_ASSERT_NOT_NULL(anim);
 
-    lv_eaf_set_src(anim, &s_test_eaf_dsc);
+    lv_eaf_set_src_data(anim, test_eaf_start, eaf_size);
     TEST_ASSERT_TRUE(lv_eaf_is_loaded(anim));
 
     int32_t total_frames = lv_eaf_get_total_frames(anim);

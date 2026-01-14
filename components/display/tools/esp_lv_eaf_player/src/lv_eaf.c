@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -302,6 +302,35 @@ void lv_eaf_set_src(lv_obj_t * obj, const void * src)
     lv_timer_reset(eaf_obj->timer);
 
     next_frame_task_cb(eaf_obj->timer);
+}
+
+void lv_eaf_set_src_data(lv_obj_t * obj, const void * data, size_t len)
+{
+    if (data == NULL || len == 0) {
+        LV_LOG_ERROR("Invalid EAF data or length");
+        return;
+    }
+
+    lv_eaf_src_dsc_t dsc;
+    memset(&dsc, 0, sizeof(dsc));
+#if LVGL_VERSION_MAJOR >= 9
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.cf = LV_COLOR_FORMAT_RAW;
+    dsc.header.flags = 0;
+    dsc.header.w = 1;
+    dsc.header.h = 1;
+    dsc.header.stride = 0;
+    dsc.header.reserved_2 = 0;
+#else
+    dsc.header.always_zero = 0;
+    dsc.header.cf = LV_IMG_CF_RAW;
+    dsc.header.w = 1;
+    dsc.header.h = 1;
+#endif
+    dsc.data_size = len;
+    dsc.data = data;
+
+    lv_eaf_set_src(obj, &dsc);
 }
 
 void lv_eaf_restart(lv_obj_t * obj)

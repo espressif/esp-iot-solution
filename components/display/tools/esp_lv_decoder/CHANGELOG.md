@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.3.3 (2026-01-22)
+
+* Fixed missing `esp_mm` and `esp_driver_jpeg` dependency declarations in CMakeLists.txt which caused build failures when using the component from the component registry.
+
 ## v0.3.2 (2025-11-17)
 
 * Fix the issue where the buffer space is insufficient when reading the image header.

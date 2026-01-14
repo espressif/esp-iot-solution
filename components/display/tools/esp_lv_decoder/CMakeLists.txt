@@ -1,6 +1,12 @@
+set(PRIV_REQUIRES_LIST esp_mm)
+if(IDF_TARGET STREQUAL "esp32p4")
+    list(APPEND PRIV_REQUIRES_LIST esp_driver_jpeg)
+endif()
+
 idf_component_register(
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "priv_include"
+    PRIV_REQUIRES ${PRIV_REQUIRES_LIST}
 )
 
 # Get LVGL version
@@ -46,7 +52,7 @@ if("libpng" IN_LIST build_components)
     list(APPEND ADD_LIBS idf::libpng)
 endif()
 
-if(${target} STREQUAL "esp32p4")
+if(IDF_TARGET STREQUAL "esp32p4")
     list(APPEND ADD_LIBS idf::esp_driver_jpeg)
 endif()
 

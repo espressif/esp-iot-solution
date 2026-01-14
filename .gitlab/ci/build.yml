@@ -320,7 +320,6 @@ build_example_display_lcd_hdmi_video_renderer:
     - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
-  allow_failure: true # Temporarily disable build CI check, remove this line to restore strict checking after issues are fixed
 
 build_example_display_lcd_lcd_layer_blending:
   extends:
@@ -337,6 +336,14 @@ build_example_display_lcd_lcd_with_te:
     - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_with_te
+
+build_example_display_lcd_lcd_pattern_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_lcd_pattern_test
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/lcd_pattern_test
 
 build_example_display_lcd_mipi_dsi_avoid_tearing:
   extends:
@@ -426,12 +433,28 @@ build_example_display_gui_lvgl_light_sleep_demo:
     EXAMPLE_DIR: examples/display/gui/lvgl_light_sleep_demo
     IMAGE: espressif/idf:release-v5.5
 
+build_example_display_gui_lvgl_mono_demo:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_mono_demo
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_mono_demo
+
 build_example_display_gui_lvgl_eaf_player:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_eaf_player
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_eaf_player
+    IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_lottie_player:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_lottie_player
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_lottie_player
     IMAGE: espressif/idf:release-v5.5
 
 build_example_extended_vfs_gpio_gpio_simple:
@@ -1202,6 +1225,16 @@ build_components_display_tools_esp_lv_eaf_player_test_apps:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lv_eaf_player/test_apps
+
+build_components_display_tools_esp_lv_lottie_player_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lv_lottie_player_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lv_lottie_player/test_apps
 
 build_components_expander_io_expander_mcp23017_test_apps:
   extends:

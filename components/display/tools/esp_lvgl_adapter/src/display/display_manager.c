@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -166,6 +166,9 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
     }
 
     node->cfg.base = *cfg;
+
+    /* Initialize for proper initial buffer sync in direct-rotation path */
+    node->prev_flush_status = ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL;
 
     if (!display_manager_init_node(node)) {
         display_manager_destroy_node(node);

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -1351,78 +1351,82 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
 }
 
 /**
- * @brief Direct mode with rotation support
+ * @brief Direct mode flush with rotation support (double buffering)
  */
 static void display_bridge_v8_flush_direct_rotate(esp_lv_adapter_display_bridge_v8_t *impl,
                                                   lv_disp_drv_t *drv,
                                                   const lv_area_t *area,
                                                   uint8_t *color_map)
 {
-    esp_lcd_panel_handle_t panel_handle = impl->panel;
-    const int offsetx1 = area->x1;
-    const int offsetx2 = area->x2;
-    const int offsety1 = area->y1;
-    const int offsety2 = area->y2;
-    void *next_fb = NULL;
-    esp_lv_adapter_display_flush_probe_t probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
+    esp_lcd_panel_handle_t panel = impl->panel;
     lv_disp_t *disp = _lv_refr_get_disp_refreshing();
+    void *next_fb = NULL;
+    void *sync_fb = NULL;
     esp_err_t ret;
 
-    if (lv_disp_flush_is_last(drv)) {
-        if (drv->full_refresh) {
-            drv->full_refresh = 0;
+    if (!lv_disp_flush_is_last(drv)) {
+        display_manager_flush_ready(drv);
+        return;
+    }
 
-            uint8_t color_bytes = bridge_color_bytes(impl);
+    uint8_t color_bytes = bridge_color_bytes(impl);
+    if (drv->full_refresh) {
+        /* Full refresh: rotate entire screen content to frame buffer */
+        drv->full_refresh = 0;
 
-            next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-            rotate_copy_region(impl, color_map, next_fb,
-                               offsetx1, offsety1, offsetx2, offsety2,
-                               LV_HOR_RES, LV_VER_RES, bridge_rotation(impl), color_bytes);
+        next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+        rotate_copy_region(impl, color_map, next_fb,
+                           0, 0, LV_HOR_RES - 1, LV_VER_RES - 1,
+                           LV_HOR_RES, LV_VER_RES,
+                           bridge_rotation(impl), color_bytes);
 
-            ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
-            if (ret != ESP_OK) {
-                ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
-            }
-
-            ulTaskNotifyValueClear(NULL, ULONG_MAX);
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-            void *sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-            flush_dirty_copy(impl, sync_fb, color_map, &impl->dirty);
-            display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-        } else {
-            probe_result = flush_copy_probe(drv, disp);
-
-            if (probe_result == ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY) {
-                flush_dirty_save(&impl->dirty);
-
-                drv->full_refresh = 1;
-                disp->rendering_in_progress = false;
-                display_manager_flush_ready(drv);
-
-                lv_refr_now(_lv_refr_get_disp_refreshing());
-                return;
-            } else {
-                next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-                flush_dirty_save(&impl->dirty);
-                flush_dirty_copy(impl, next_fb, color_map, &impl->dirty);
-
-                ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
-                if (ret != ESP_OK) {
-                    ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
-                }
-
-                ulTaskNotifyValueClear(NULL, ULONG_MAX);
-                ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-                if (probe_result == ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY) {
-                    flush_dirty_save(&impl->dirty);
-                    void *sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-                    flush_dirty_copy(impl, sync_fb, color_map, &impl->dirty);
-                    display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-                }
-            }
+        ret = display_lcd_blit_full(panel, &impl->runtime, next_fb);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         }
+
+        ulTaskNotifyValueClear(NULL, ULONG_MAX);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        /* Sync entire buffer to prevent flickering on buffer switch */
+        sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+        if (sync_fb && next_fb && sync_fb != next_fb) {
+            memcpy(sync_fb, next_fb, impl->runtime.frame_buffer_size);
+            display_cache_msync_framebuffer(sync_fb, impl->runtime.frame_buffer_size);
+        }
+        display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+
+    } else {
+        /* Direct mode: check if full refresh is needed */
+        esp_lv_adapter_display_flush_probe_t probe = flush_copy_probe(drv, disp);
+        if (probe == ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY) {
+            flush_dirty_save(&impl->dirty);
+            drv->full_refresh = 1;
+            disp->rendering_in_progress = false;
+            display_manager_flush_ready(drv);
+            lv_refr_now(_lv_refr_get_disp_refreshing());
+            return;
+        }
+
+        /* Copy dirty regions to next buffer */
+        next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+        flush_dirty_save(&impl->dirty);
+        flush_dirty_copy(impl, next_fb, color_map, &impl->dirty);
+
+        ret = display_lcd_blit_full(panel, &impl->runtime, next_fb);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        }
+
+        ulTaskNotifyValueClear(NULL, ULONG_MAX);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        /* Sync dirty regions to another buffer */
+        flush_dirty_save(&impl->dirty);
+        sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+        flush_dirty_copy(impl, sync_fb, color_map, &impl->dirty);
+        display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+
     }
 
     display_manager_flush_ready(drv);

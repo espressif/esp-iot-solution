@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -140,10 +140,12 @@ void app_main()
         .buffer_size = DISPLAY_BUFFER_SIZE,
         .audio_dev = audio_dev,
 #ifdef CONFIG_BSP_LCD_COLOR_FORMAT_RGB888
-        .jpeg_config = APP_STREAM_JPEG_CONFIG_DEFAULT_RGB888()
+        .jpeg_config = APP_STREAM_JPEG_CONFIG_DEFAULT_RGB888(),
 #else
-        .jpeg_config = APP_STREAM_JPEG_CONFIG_DEFAULT_RGB565()
+        .jpeg_config = APP_STREAM_JPEG_CONFIG_DEFAULT_RGB565(),
 #endif
+        .target_width = BSP_LCD_H_RES,
+        .target_height = BSP_LCD_V_RES,
     };
 
     ret = app_stream_adapter_init(&adapter_config, &stream_adapter);

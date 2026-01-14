@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -194,7 +194,6 @@ static void audio_task(void *arg)
 {
     app_extractor_t *extractor = (app_extractor_t *)arg;
     audio_frame_item_t *frame_item;
-    uint32_t processed_frames = 0;
 
     while (extractor->audio_task_running) {
         if (xQueueReceive(extractor->audio_queue, &frame_item,
@@ -207,16 +206,10 @@ static void audio_task(void *arg)
             }
 
             free(frame_item);  // Free entire structure
-            processed_frames++;
-
-            // Log every 100 frames to reduce overhead
-            if (processed_frames % 100 == 0) {
-                ESP_LOGD(TAG, "Audio processed %" PRIu32 " frames", processed_frames);
-            }
         }
     }
 
-    ESP_LOGI(TAG, "Audio task stopped, processed %" PRIu32 " frames", processed_frames);
+    ESP_LOGI(TAG, "Audio task stopped");
     extractor->audio_task_handle = NULL;
     vTaskDelete(NULL);
 }
