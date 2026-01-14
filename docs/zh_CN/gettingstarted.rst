@@ -37,6 +37,9 @@ ESP-IoT-Solution 自 ``release/v2.0`` 起采用组件化管理，各组件与示
      - 历史版本
      - 备份，停止维护
 
+.. note::
+
+    不同芯片推荐的 ESP-IDF 首选版本也不同，具体可参考 `ESP-IDF 版本与乐鑫芯片版本兼容性 <https://github.com/espressif/esp-idf/blob/master/COMPATIBILITY_CN.md>`__。
 
 开发环境搭建
 --------------------------
