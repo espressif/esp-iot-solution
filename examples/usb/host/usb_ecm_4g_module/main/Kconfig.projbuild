@@ -1,5 +1,9 @@
 menu "Example Configuration"
 
+    config ESP_IDF_VERSION
+       string
+       option env="ESP_IDF_VERSION"
+
     config EXAMPLE_USB_ECM_IPERF
         bool "Enable USB ECM Iperf"
         help
@@ -52,4 +56,11 @@ menu "Example Configuration"
         default 2
         help
             Set the USB ECM AT interface number.
+
+    config EXAMPLE_USE_USB_HOST_FULLSPEED
+        bool "Use USB Host Full Speed"
+        depends on IDF_TARGET_ESP32P4 && ESP_IDF_VERSION >= 5.5
+        default n
+        help
+            By default, USB Host High Speed is used. Enable this option to use USB Host Full Speed instead.
 endmenu

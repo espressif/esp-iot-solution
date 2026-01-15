@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.1 - 2026-01-12
+
+### Bug Fixes:
+
+* Fixed incorrect interface number in ECM_SET_ETHERNET_PACKET_FILTER request. Changed from hardcoded 0 to use actual interface number (`ecm->itf_num`).
+
 ## v0.2.0 - 2025-10-15
 
 ### Bug Fixes:

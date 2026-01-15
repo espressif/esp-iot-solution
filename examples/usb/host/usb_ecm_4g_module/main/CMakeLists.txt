@@ -1,2 +1,2 @@
-idf_component_register(SRCS "usb_ecm_4g_module.c"
+idf_component_register(SRC_DIRS "."
                     INCLUDE_DIRS ".")

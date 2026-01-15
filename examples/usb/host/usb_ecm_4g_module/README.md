@@ -28,6 +28,10 @@ For devices where ECM is not on the default configuration descriptor 1, please e
 
 Once connected to the 4G module and successfully obtains an IP address, the Wi-Fi hotspot sharing network will be enabled.
 
+**USB Host Interface Selection (ESP32-P4 only):**
+
+For ESP32-P4, by default the USB Host uses High Speed (HS) interface. If you want to use Full Speed (FS) interface via GPIO26/27, you can enable `Example Configuration → Use USB Host Full Speed` in menuconfig. This will configure the USB Host to use FS_PHY2 (D+ on GPIO27, D- on GPIO26) instead of the default HS interface.
+
 **Wi‑Fi name and password:**
 
 You can modify Wi‑Fi configuration in `menuconfig` under `4G Modem WiFi Config`.
@@ -38,6 +42,10 @@ You can modify Wi‑Fi configuration in `menuconfig` under `4G Modem WiFi Config
 ## Enable AT commands
 
 Users can Enable AT commands by setting `Example Configuration → USB ECM AT Command` in menuconfig. Then, enter the correct interface number, recompile, and run the program. It will periodically print the module's signal quality.
+
+## Enable Download Speed Test
+
+Users can enable download speed test by setting `Example Configuration → USB ECM Download Speed Test` in menuconfig. After enabling this option and successfully obtaining an IP address, the program will automatically test the download speed by downloading a test file from a remote server.
 
 ## Example Output
 

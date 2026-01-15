@@ -68,6 +68,10 @@ In `menuconfig` under `4G Modem WiFi Config → Open web configuration`, you can
    - View currently connected devices, note hostnames, one‑click kick out
    - View device network status and network uptime
 
+**Enable Download Speed Test**
+
+You can enable download speed test by setting `4G Modem Example Config → Enable USB PPP Download Speed Test` in menuconfig. After enabling this option and successfully obtaining an IP address, the program will automatically test the download speed by downloading a test file from a remote server.
+
 ## Build the example
 
 1. Set the correct build target (for example, **ESP32-S3**):

@@ -107,7 +107,7 @@ static esp_err_t _ecm_config_intf(usbh_ecm_t *ecm)
     bmRequestType = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
     bRequest = ECM_SET_ETHERNET_PACKET_FILTER;
     wValue =  PACKET_TYPE_BROADCAST | PACKET_TYPE_DIRECTED | PACKET_TYPE_ALL_MULTICAST; // 0x0E
-    wIndex = 0; // Interface number
+    wIndex = ecm->itf_num; // Interface number
     wLength = 0; // No data
 
     // Setting ETHERNET packet filter to enable network interface

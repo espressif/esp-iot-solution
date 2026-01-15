@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 *
 * SPDX-License-Identifier: Apache-2.0
 */
@@ -71,7 +71,7 @@ static void _at_recv_data_cb(usbh_cdc_port_handle_t cdc_port_handle, void *arg)
     modem_at_get_response_buffer(at_ctx->at_handle, &buffer, &buffer_remain);
     if (buffer_remain < length) {
         length = buffer_remain;
-        ESP_LOGE(TAG, "data size is too big, truncated to %d", length);
+        ESP_LOGE(TAG, "data size is too big, truncated to %zu", length);
     }
     usbh_cdc_read_bytes(cdc_port_handle, (uint8_t *)buffer, &length, 0);
     // Parse the AT command response
@@ -158,6 +158,10 @@ static void install_rndis(uint16_t idVendor, uint16_t idProduct, const char *net
     iot_eth_netif_glue_handle_t glue = NULL;
 
     usb_device_match_id_t *dev_match_id = calloc(2, sizeof(usb_device_match_id_t));
+    if (dev_match_id == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for device match ID");
+        return;
+    }
     dev_match_id[0].match_flags = USB_DEVICE_ID_MATCH_VID_PID;
     dev_match_id[0].idVendor = idVendor;
     dev_match_id[0].idProduct = idProduct;
@@ -169,8 +173,10 @@ static void install_rndis(uint16_t idVendor, uint16_t idProduct, const char *net
     ret = iot_eth_new_usb_rndis(&rndis_cfg, &s_rndis_eth_driver);
     if (ret != ESP_OK || s_rndis_eth_driver == NULL) {
         ESP_LOGE(TAG, "Failed to create USB RNDIS driver");
+        free(dev_match_id);
         return;
     }
+    // Note: dev_match_id is now managed by the driver, don't free it here
 
     iot_eth_config_t eth_cfg = {
         .driver = s_rndis_eth_driver,
@@ -221,7 +227,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     s_event_group = xEventGroupCreate();
-    ESP_RETURN_ON_FALSE(s_event_group != NULL,, TAG, "Failed to create event group");
+    ESP_RETURN_VOID_ON_FALSE(s_event_group != NULL, TAG, "Failed to create event group");
     esp_event_handler_register(IOT_ETH_EVENT, ESP_EVENT_ANY_ID, iot_event_handle, NULL);
     esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, iot_event_handle, NULL);
 
