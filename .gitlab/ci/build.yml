@@ -1728,3 +1728,11 @@ build_components_zero_detection_test_apps:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/zero_detection/test_apps
+
+build_components_touch_ic_bs8112a3_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_touch_ic_bs8112a3_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/touch_ic/touch_ic_bs8112a3/test_apps

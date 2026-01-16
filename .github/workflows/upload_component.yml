@@ -118,6 +118,7 @@ jobs:
             components/spi_bus;
             components/modem_at;
             components/storage/eeprom/at24c02;
+            components/touch_ic/touch_ic_bs8112a3;
             components/touch/touch_button;
             components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
