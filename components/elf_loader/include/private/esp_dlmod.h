@@ -21,8 +21,7 @@ extern "C" {
 #define DLMOD_HANDLE_MAGIC 0x444C4D4FUL
 
 /**
- * @brief Structure for recording the dynamic load shared objects
- *
+ * @brief Module list entry used as a module handle.
  */
 struct dlmod_slist_t {
     uint32_t magic;
@@ -56,9 +55,9 @@ void *dlmod_gethandle(const char *name);
  *
  * @param path - Filesystem path to the ELF binary
  *
- * @return Pointer to the relocated ELF structure, NULL on relocation failure.
+ * @return Pointer to the relocated ELF structure (esp_elf_t), NULL on relocation failure.
  */
-void *dlmod_relocate(const char *path);
+esp_elf_t *dlmod_relocate(const char *path);
 
 /**
  * @brief Insert a new module into the global module list.
@@ -66,9 +65,10 @@ void *dlmod_relocate(const char *path);
  * @param path - Filesystem path to the ELF binary
  * @param name - Module name to register (should match filename base)
  *
- * @return Pointer to the new module entry, NULL on failure (existing entry or relocation error).
+ * @return Pointer to the new module entry (struct dlmod_slist_t), NULL on failure
+ *         (existing entry or relocation error).
  */
-void *dlmod_insert(const char *path, const char *name);
+struct dlmod_slist_t *dlmod_insert(const char *path, const char *name);
 
 /**
  * @brief Remove a module from the global module list and free resources.
@@ -80,13 +80,13 @@ void *dlmod_insert(const char *path, const char *name);
 int dlmod_remove(void *handle);
 
 /**
- * @brief Validate a module handle returned by dlmod_insert() or dlmod_relocate().
+ * @brief Validate a module handle returned by dlmod_insert() or dlmod_gethandle().
  *
  * @param handle - Module handle to validate
  *
  * @return true if the handle is a valid module entry, false otherwise.
  */
-bool dlmod_validate_handle(void *handle);
+bool dlmod_validate_handle(struct dlmod_slist_t *handle);
 
 /**
  * @brief Find a symbol address by name across all loaded modules.

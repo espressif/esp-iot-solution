@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <stdio.h>
 #include "argtable3/argtable3.h"
 #include "esp_console.h"
 

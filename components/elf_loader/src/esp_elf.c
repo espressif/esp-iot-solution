@@ -58,7 +58,7 @@ static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
  */
 int esp_elf_open(elf_file_t *file, const char *name)
 {
-    int ret;
+    ssize_t ret;
     int fd;
     char *file_path;
     off_t size;
@@ -95,13 +95,13 @@ int esp_elf_open(elf_file_t *file, const char *name)
 
     pbuf = esp_elf_malloc(size, false);
     if (!pbuf) {
-        ESP_LOGE(TAG, "Failed to malloc %lu bytes", size);
+        ESP_LOGE(TAG, "Failed to malloc %" PRId64 " bytes", (int64_t)size);
         goto errout_lseek_end;
     }
 
     ret = read(fd, pbuf, size);
-    if (ret != size) {
-        ESP_LOGE(TAG, "Failed to read ret=%d", ret);
+    if (ret != (ssize_t)size) {
+        ESP_LOGE(TAG, "Failed to read ret=%zd", ret);
         goto errout_read_fs;
     }
 

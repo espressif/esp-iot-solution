@@ -202,7 +202,12 @@ void *dlsym(void *handle, const char *name)
 
     struct dlmod_slist_t *mod = (struct dlmod_slist_t *)handle;
 
-    if (mod->elf && mod->elf->num > 0 && mod->elf->symtab) {
+    if (!mod->elf || !mod->elf->symtab) {
+        dlerror_set("Module has no symbol table");
+        return NULL;
+    }
+
+    if (mod->elf->num > 0) {
         for (size_t i = 0; i < mod->elf->num; i++) {
             if (mod->elf->symtab[i].name &&
                     strcmp(mod->elf->symtab[i].name, name) == 0) {

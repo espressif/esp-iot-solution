@@ -38,7 +38,7 @@ static void dlmod_mutex_init(void)
     taskEXIT_CRITICAL(&g_dlmod_mutex_init_lock);
 }
 
-bool dlmod_validate_handle(void *handle)
+bool dlmod_validate_handle(struct dlmod_slist_t *handle)
 {
     if (!handle) {
         return false;
@@ -90,12 +90,16 @@ char *dlmod_getname(const char *path, char *filename, size_t len)
 
     const char *extension_start = strrchr(filename_start, '.');
     size_t filename_len = (extension_start ? extension_start - filename_start : strlen(filename_start));
-    if (filename_len >= len || len == 0) {
+    if (filename_len >= len) {
         return NULL;
     }
 
     strncpy(filename, filename_start, filename_len);
     filename[filename_len] = '\0';
+
+    if (filename[0] == '\0') {
+        return NULL;
+    }
 
     return filename;
 }
@@ -205,9 +209,9 @@ void dlmod_listsymbol(void)
  *
  * @param path - Filesystem path to the ELF binary
  *
- * @return Pointer to the relocated ELF structure, NULL on relocation failure.
+ * @return Pointer to the relocated ELF structure (esp_elf_t), NULL on relocation failure.
  */
-void *dlmod_relocate(const char *path)
+esp_elf_t *dlmod_relocate(const char *path)
 {
     if (!path || path[0] == '\0') {
         return NULL;
@@ -248,7 +252,7 @@ void *dlmod_relocate(const char *path)
     }
 
     esp_elf_close(&file);
-    return (void *)elf_dl;
+    return elf_dl;
 }
 
 /**
@@ -257,9 +261,10 @@ void *dlmod_relocate(const char *path)
  * @param path - Filesystem path to the ELF binary
  * @param name - Module name to register (should match filename base)
  *
- * @return Pointer to the new module entry, NULL on failure (existing entry or relocation error).
+ * @return Pointer to the new module entry (struct dlmod_slist_t), NULL on failure
+ *         (existing entry or relocation error).
  */
-void *dlmod_insert(const char *path, const char *name)
+struct dlmod_slist_t *dlmod_insert(const char *path, const char *name)
 {
     if (!path || path[0] == '\0' || !name || name[0] == '\0') {
         return NULL;
@@ -298,7 +303,7 @@ void *dlmod_insert(const char *path, const char *name)
     new_node->magic = DLMOD_HANDLE_MAGIC;
     strncpy(new_node->name, name, FILE_NAME_MAX - 1);
     new_node->name[FILE_NAME_MAX - 1] = '\0';
-    new_node->elf = (esp_elf_t *)dlmod_relocate(path);
+    new_node->elf = dlmod_relocate(path);
     if (!new_node->elf) {
         ESP_LOGE(TAG, "Failed to relocate");
         esp_elf_free(new_node);
