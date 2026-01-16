@@ -23,6 +23,8 @@ Any ESP boards that have USB-OTG supported.
 
 * ESP32-S3
 
+* ESP32-P4
+
 ### 2.2 Hardware Connection
 
 Pin assignment is only needed for ESP chips that have an USB-OTG peripheral. If your board doesn't have a USB connector connected to the USB-OTG dedicated GPIOs, you may have to DIY a cable and connect **D+** and **D-** to the pins listed below.
@@ -42,6 +44,8 @@ Refer to `soc/usb_pins.h` to find the real GPIO number of **USBPHY_DP_NUM** and 
 |             | USB_DP | USB_DM |
 | ----------- | ------ | ------ |
 | ESP32-S2/S3 | GPIO20 | GPIO19 |
+| ESP32-P4 2.0 | pin 50 | pin 49 |
+| ESP32-P4 1.1 | GPIO27 | GPIO26 |
 
 * ESP32-S2-Saola
 

@@ -21,6 +21,8 @@
 
 * ESP32-S3
 
+* ESP32-P4
+
 ### <span id = "connect">2.2 引脚分配</span>
 
 只有具有 USB-OTG 外设的 ESP 芯片才需要引脚分配。 如果您的电路板没有连接到 USB-OTG 专用 GPIO 的 USB 连接器，您可能需要自己动手制作电缆并将 **D+** 和 **D-** 连接到下面列出的引脚
@@ -38,6 +40,8 @@ ESP BOARD          USB CONNECTOR (type A)
 |             | USB_DP | USB_DM |
 | ----------- | ------ | ------ |
 | ESP32-S2/S3 | GPIO20 | GPIO19 |
+| ESP32-P4 2.0 | pin 50 | pin 49 |
+| ESP32-P4 1.1 | GPIO27 | GPIO26 |
 
 * ESP32-S2-Saola
 
