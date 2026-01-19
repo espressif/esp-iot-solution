@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -85,6 +85,8 @@ void app_main(void)
 {
     /* Not a warning, just highlighted */
     ESP_LOGW(TAG, "Lightbulb Example Start");
+
+    lightbulb_handle_t handle = NULL;
 
     lightbulb_config_t config = {
         //1. Select and configure the chip
@@ -184,8 +186,8 @@ void app_main(void)
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    esp_err_t err = lightbulb_init(&config);
-    if (err != ESP_OK) {
+    handle = lightbulb_init(&config);
+    if (handle == NULL) {
         ESP_LOGE(TAG, "There may be some errors in the configuration, please check the log.");
         return;
     }
@@ -194,7 +196,7 @@ void app_main(void)
      * @brief Initialize console function
      *
      */
-    err = lightbulb_example_console_init();
+    esp_err_t err = lightbulb_example_console_init(handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Unable to initialize console, please check the log.");
     } else {
@@ -226,8 +228,8 @@ void app_main(void)
     test_case |= LIGHTING_BASIC_FIVE;
     test_case |= LIGHTING_WHITE_EFFECT;
 #endif
-    lightbulb_lighting_output_test(test_case, 2000);
-    lightbulb_deinit();
+    lightbulb_lighting_output_test(handle, test_case, 2000);
+    lightbulb_deinit(handle);
     vTaskDelay(pdMS_TO_TICKS(2000));
 
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812

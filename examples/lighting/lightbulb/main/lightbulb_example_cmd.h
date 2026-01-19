@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 #include "esp_err.h"
+#include "lightbulb.h"
 
 /**
  * @brief Initializes the console for the lightbulb example.
@@ -14,11 +15,13 @@
  * preparing it for receiving commands and interacting with the user. It must be
  * called before any console commands are processed.
  *
+ * @param[in] handle The lightbulb handle to be used in console commands
+ *
  * @return
  *    - ESP_OK: Success in initializing the console.
  *    - other: Specific error code indicating what went wrong during initialization.
  */
-esp_err_t lightbulb_example_console_init(void);
+esp_err_t lightbulb_example_console_init(lightbulb_handle_t handle);
 
 /**
  * @brief Deinitializes the console for the lightbulb example.

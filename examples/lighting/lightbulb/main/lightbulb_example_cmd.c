@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -15,6 +15,7 @@ static const char *TAG = "lightbulb example cmd";
 
 static esp_console_repl_t *s_repl = NULL;
 static bool is_active = false;
+static lightbulb_handle_t s_lightbulb_handle = NULL;
 
 static struct {
     struct arg_int *ch;
@@ -50,13 +51,13 @@ static int do_set_hsv_cmd(int argc, char **argv)
         arg_print_errors(stderr, set_hsv_args.end, argv[0]);
         return 1;
     }
-    if (lightbulb_set_hsv(set_hsv_args.hsv->ival[0], set_hsv_args.hsv->ival[1], set_hsv_args.hsv->ival[2]) != ESP_OK) {
+    if (lightbulb_set_hsv(s_lightbulb_handle, set_hsv_args.hsv->ival[0], set_hsv_args.hsv->ival[1], set_hsv_args.hsv->ival[2]) != ESP_OK) {
         return 1;
     }
 
     return 0;
 }
-extern esp_err_t lightbulb_set_channel_group(uint16_t ch1, uint16_t ch2, uint16_t ch3, uint16_t ch4, uint16_t ch5);
+extern esp_err_t lightbulb_set_channel_group(lightbulb_handle_t handle, uint16_t ch1, uint16_t ch2, uint16_t ch3, uint16_t ch4, uint16_t ch5);
 
 static int do_set_ch_cmd(int argc, char **argv)
 {
@@ -66,14 +67,14 @@ static int do_set_ch_cmd(int argc, char **argv)
         arg_print_errors(stderr, set_ch_args.end, argv[0]);
         return 1;
     }
-    if (lightbulb_set_channel_group(set_ch_args.ch->ival[0], set_ch_args.ch->ival[1], set_ch_args.ch->ival[2], set_ch_args.ch->ival[3], set_ch_args.ch->ival[4]) != ESP_OK) {
+    if (lightbulb_set_channel_group(s_lightbulb_handle, set_ch_args.ch->ival[0], set_ch_args.ch->ival[1], set_ch_args.ch->ival[2], set_ch_args.ch->ival[3], set_ch_args.ch->ival[4]) != ESP_OK) {
         return 1;
     }
 
     return 0;
 }
 
-extern esp_err_t lightbulb_set_rgb(uint16_t r, uint8_t g, uint8_t b);
+extern esp_err_t lightbulb_set_rgb(lightbulb_handle_t handle, uint8_t r, uint8_t g, uint8_t b);
 
 static int do_set_rgb_cmd(int argc, char **argv)
 {
@@ -84,7 +85,7 @@ static int do_set_rgb_cmd(int argc, char **argv)
         return 1;
     }
 
-    lightbulb_set_rgb(set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2]);
+    lightbulb_set_rgb(s_lightbulb_handle, set_rgb_args.rgb->ival[0], set_rgb_args.rgb->ival[1], set_rgb_args.rgb->ival[2]);
 
     return 0;
 }
@@ -98,7 +99,7 @@ static int do_set_cctb_cmd(int argc, char **argv)
         return 1;
     }
 
-    if (lightbulb_set_cctb(set_cctb_args.cctb->ival[0], set_cctb_args.cctb->ival[1]) != ESP_OK) {
+    if (lightbulb_set_cctb(s_lightbulb_handle, set_cctb_args.cctb->ival[0], set_cctb_args.cctb->ival[1]) != ESP_OK) {
         return 1;
     }
 
@@ -114,10 +115,10 @@ static int do_update_config_cmd(int argc, char **argv)
         return 1;
     }
     if (set_config_args.fade_ms) {
-        lightbulb_set_fade_time(set_config_args.fade_ms->ival[0]);
+        lightbulb_set_fade_time(s_lightbulb_handle, set_config_args.fade_ms->ival[0]);
     }
     if (set_config_args.enable_fade) {
-        lightbulb_set_fades_function(set_config_args.enable_fade->ival[0]);
+        lightbulb_set_fades_function(s_lightbulb_handle, set_config_args.enable_fade->ival[0]);
     }
 
     return 0;
@@ -132,8 +133,9 @@ static int do_quit_cmd(int argc, char **argv)
     return 0;
 }
 
-esp_err_t lightbulb_example_console_init(void)
+esp_err_t lightbulb_example_console_init(lightbulb_handle_t handle)
 {
+    s_lightbulb_handle = handle;
     esp_err_t err = ESP_OK;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
     repl_config.prompt = ">";

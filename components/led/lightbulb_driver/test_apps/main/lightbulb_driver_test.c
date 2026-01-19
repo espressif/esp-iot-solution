@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,7 +8,7 @@
 #include "lightbulb.h"
 
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -140,6 +140,8 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .white_curve_coefficient = 2.0,
     };
 
+    lightbulb_handle_t handle = NULL;
+
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
         .type = DRIVER_BP57x8D,
@@ -168,18 +170,19 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    handle = lightbulb_init(&config1);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
@@ -213,18 +216,19 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    handle = lightbulb_init(&config2);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
@@ -244,14 +248,15 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    handle = lightbulb_init(&config3);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 
 TEST_CASE("Power Check 2", "[Application Layer]")
@@ -271,6 +276,8 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .white_curve_coefficient = 2.0,
     };
 
+    lightbulb_handle_t handle = NULL;
+
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
         .type = DRIVER_BP57x8D,
@@ -299,18 +306,19 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    handle = lightbulb_init(&config1);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
@@ -344,18 +352,19 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    handle = lightbulb_init(&config2);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
@@ -375,14 +384,15 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    handle = lightbulb_init(&config3);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 
 TEST_CASE("Power Check 3", "[Application Layer]")
@@ -402,6 +412,8 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .white_curve_coefficient = 2.0,
     };
 
+    lightbulb_handle_t handle = NULL;
+
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
         .type = DRIVER_BP57x8D,
@@ -430,18 +442,19 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    handle = lightbulb_init(&config1);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
@@ -475,18 +488,19 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config2));
+    handle = lightbulb_init(&config2);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
@@ -506,14 +520,15 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config3));
+    handle = lightbulb_init(&config3);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 10) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 
 TEST_CASE("Power Check 4", "[Application Layer]")
@@ -532,6 +547,8 @@ TEST_CASE("Power Check 4", "[Application Layer]")
         .color_curve_coefficient = 2.0,
         .white_curve_coefficient = 2.0,
     };
+
+    lightbulb_handle_t handle = NULL;
 
     lightbulb_config_t config1 = {
         .type = DRIVER_BP57x8D,
@@ -566,18 +583,19 @@ TEST_CASE("Power Check 4", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config1));
+    handle = lightbulb_init(&config1);
+    TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
-            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(i, j, 100));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(handle, i, j, 100));
             vTaskDelay(10);
         }
     }
     for (int i = 0; i <= 100; i += 10) {
-        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(i, 100));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_cctb(handle, i, 100));
         vTaskDelay(10);
     }
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 
 #ifdef CONFIG_ENABLE_PWM_DRIVER
@@ -674,10 +692,11 @@ TEST_CASE("PWM", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -799,10 +818,11 @@ TEST_CASE("SM2135EH", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -919,10 +939,11 @@ TEST_CASE("BP57x8D", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1054,10 +1075,11 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1129,10 +1151,11 @@ TEST_CASE("SM2182E", "[Application Layer]")
         .init_status.brightness = 100,
         .init_status.cct_percentage = 0,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_COLD_TO_WARM | LIGHTING_WARM_TO_COLD, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_COLD_TO_WARM | LIGHTING_WARM_TO_COLD, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1277,10 +1300,11 @@ TEST_CASE("SM2x35EGH", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1319,10 +1343,11 @@ TEST_CASE("WS2812", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_RAINBOW, 1000);
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    lightbulb_lighting_output_test(handle, LIGHTING_RAINBOW, 1000);
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1466,11 +1491,12 @@ TEST_CASE("KP18058", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
     vTaskDelay(pdMS_TO_TICKS(2000));
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
 }
 #endif
 
@@ -1564,11 +1590,12 @@ TEST_CASE("SM16825E", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_init(&config));
+    lightbulb_handle_t handle = lightbulb_init(&config);
+    TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
-    lightbulb_lighting_output_test(LIGHTING_BASIC_FIVE, 1000);
+    lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
     vTaskDelay(pdMS_TO_TICKS(2000));
-    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
     spi_bus_free(SPI2_HOST);
 }
 

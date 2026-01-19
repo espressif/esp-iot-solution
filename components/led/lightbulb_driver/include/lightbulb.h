@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -53,6 +53,8 @@ extern "C" {
 #ifdef CONFIG_ENABLE_KP18058_DRIVER
 #include "kp18058.h"
 #endif
+
+typedef struct lightbulb_t *lightbulb_handle_t;
 
 /**
  * @brief Supported drivers
@@ -432,60 +434,68 @@ typedef struct {
 } lightbulb_effect_config_t;
 
 /**
- * @brief Initialize the lightbulb.
+ * @brief Create and initialize a lightbulb instance.
  *
  * @param config Pointer to the configuration parameters for the lightbulb.
- * @return esp_err_t
+ * @return lightbulb_handle_t Handle to the created lightbulb instance, or NULL on failure.
+ *
+ * @note This replaces the old lightbulb_init() function to support multiple instances.
  */
-esp_err_t lightbulb_init(lightbulb_config_t *config);
+lightbulb_handle_t lightbulb_init(lightbulb_config_t *config);
 
 /**
- * @brief Deinitialize the lightbulb and release resources.
+ * @brief Destroy a lightbulb instance and release resources.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return esp_err_t
  */
-esp_err_t lightbulb_deinit(void);
+esp_err_t lightbulb_deinit(lightbulb_handle_t handle);
 
 /**
  * @brief Set lightbulb fade time.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param fade_time_ms Fade time in milliseconds (ms). Range: 100ms - 3000ms.
  * @return esp_err_t
  */
-esp_err_t lightbulb_set_fade_time(uint32_t fade_time_ms);
+esp_err_t lightbulb_set_fade_time(lightbulb_handle_t handle, uint32_t fade_time_ms);
 
 /**
  * @brief Enable/Disable the lightbulb fade function.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param is_enable A boolean flag indicating whether to enable (true) or disable (false) the fade function.
  * @return esp_err_t
  */
-esp_err_t lightbulb_set_fades_function(bool is_enable);
+esp_err_t lightbulb_set_fades_function(lightbulb_handle_t handle, bool is_enable);
 
 /**
  * @brief Enable/Disable the lightbulb storage function.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param is_enable A boolean flag indicating whether to enable (true) or disable (false) the storage function.
  * @return esp_err_t
  */
-esp_err_t lightbulb_set_storage_function(bool is_enable);
+esp_err_t lightbulb_set_storage_function(lightbulb_handle_t handle, bool is_enable);
 
 /**
  * @brief Re-update the lightbulb status.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param new_status Pointer to the new status to be applied to the lightbulb.
  * @param trigger A boolean flag indicating whether the update should be triggered immediately.
  * @return esp_err_t
  */
-esp_err_t lightbulb_update_status(lightbulb_status_t *new_status, bool trigger);
+esp_err_t lightbulb_update_status(lightbulb_handle_t handle, lightbulb_status_t *new_status, bool trigger);
 
 /**
  * @brief Get lightbulb fade function enabled status.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return true if the fade function is enabled.
  * @return false if the fade function is disabled.
  */
-bool lightbulb_get_fades_function_status(void);
+bool lightbulb_get_fades_function_status(lightbulb_handle_t handle);
 
 /**
  * @brief Convert HSV model to RGB model.
@@ -546,176 +556,197 @@ esp_err_t lightbulb_rgb2xyy(uint8_t red, uint8_t green, uint8_t blue, float *x, 
 /**
  * @brief Convert CCT (Color Temperature) kelvin to percentage.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param kelvin Default range: 2200k - 7000k (Color Temperature in kelvin).
  * @param percentage Pointer to a variable to store the resulting percentage (0 - 100).
  * @return esp_err_t
  */
-esp_err_t lightbulb_kelvin2percentage(uint16_t kelvin, uint8_t *percentage);
+esp_err_t lightbulb_kelvin2percentage(lightbulb_handle_t handle, uint16_t kelvin, uint8_t *percentage);
 
 /**
  * @brief Convert percentage to CCT (Color Temperature) kelvin.
  * @attention
  *
+ * @param handle Handle to the lightbulb instance.
  * @param percentage Percentage value in the range of 0 to 100.
  * @param kelvin Pointer to a variable to store the resulting Color Temperature in kelvin.
  *               Default range: 2200k - 7000k.
  * @return esp_err_t
  */
-esp_err_t lightbulb_percentage2kelvin(uint8_t percentage, uint16_t *kelvin);
+esp_err_t lightbulb_percentage2kelvin(lightbulb_handle_t handle, uint8_t percentage, uint16_t *kelvin);
 
 /**
  * @brief Set the hue value.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param hue Hue value in the range of 0-360 degrees.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_hue(uint16_t hue);
+esp_err_t lightbulb_set_hue(lightbulb_handle_t handle, uint16_t hue);
 
 /**
  * @brief Set the saturation value.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param saturation Saturation value in the range of 0-100.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_saturation(uint8_t saturation);
+esp_err_t lightbulb_set_saturation(lightbulb_handle_t handle, uint8_t saturation);
 
 /**
  * @brief Set the value (brightness) of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param value Brightness value in the range of 0-100.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_value(uint8_t value);
+esp_err_t lightbulb_set_value(lightbulb_handle_t handle, uint8_t value);
 
 /**
  * @brief Set the color temperature (CCT) of the lightbulb.
  * @note Supports using either percentage or Kelvin values.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param cct CCT value in the range of 0-100 or 2200-7000.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_cct(uint16_t cct);
+esp_err_t lightbulb_set_cct(lightbulb_handle_t handle, uint16_t cct);
 
 /**
  * @brief Set the brightness of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param brightness Brightness value in the range of 0-100.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_brightness(uint8_t brightness);
+esp_err_t lightbulb_set_brightness(lightbulb_handle_t handle, uint8_t brightness);
 
 /**
  * @brief Set the xyY color model for the lightbulb.
  * @attention The xyY color model cannot fully correspond to the HSV color model, so the color may be biased.
  *            The grayscale will be recalculated in lightbulb, so we cannot directly operate the underlying driver through the xyY interface.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param x x-coordinate value in the range of 0 to 1.0.
  * @param y y-coordinate value in the range of 0 to 1.0.
  * @param Y Y-coordinate (luminance) value in the range of 0 to 100.0.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_xyy(float x, float y, float Y);
+esp_err_t lightbulb_set_xyy(lightbulb_handle_t handle, float x, float y, float Y);
 
 /**
  * @brief Set the HSV (Hue, Saturation, Value) color model for the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param hue Hue value in the range of 0 to 360 degrees.
  * @param saturation Saturation value in the range of 0 to 100.
  * @param value Value (brightness) value in the range of 0 to 100.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_hsv(uint16_t hue, uint8_t saturation, uint8_t value);
+esp_err_t lightbulb_set_hsv(lightbulb_handle_t handle, uint16_t hue, uint8_t saturation, uint8_t value);
 
 /**
  * @brief Set the color temperature (CCT) and brightness of the lightbulb.
  * @note Supports using either percentage or Kelvin values.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param cct CCT value in the range of 0-100 or 2200-7000.
  * @param brightness Brightness value in the range of 0-100.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_cctb(uint16_t cct, uint8_t brightness);
+esp_err_t lightbulb_set_cctb(lightbulb_handle_t handle, uint16_t cct, uint8_t brightness);
 
 /**
  * @brief Set the on/off status of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param status On/off status (true for on, false for off).
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_set_switch(bool status);
+esp_err_t lightbulb_set_switch(lightbulb_handle_t handle, bool status);
 
 /**
  * @brief Get the hue value of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int16_t The hue value in the range of 0 to 360 degrees.
  */
-int16_t lightbulb_get_hue(void);
+int16_t lightbulb_get_hue(lightbulb_handle_t handle);
 
 /**
  * @brief Get the saturation value of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int8_t The saturation value in the range of 0 to 100.
  */
-int8_t lightbulb_get_saturation(void);
+int8_t lightbulb_get_saturation(lightbulb_handle_t handle);
 
 /**
  * @brief Get the value (brightness) of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int8_t The brightness value in the range of 0 to 100.
  */
-int8_t lightbulb_get_value(void);
+int8_t lightbulb_get_value(lightbulb_handle_t handle);
 
 /**
  * @brief Get the color temperature (CCT) percentage of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int8_t The CCT percentage value in the range of 0 to 100.
  */
-int8_t lightbulb_get_cct_percentage(void);
+int8_t lightbulb_get_cct_percentage(lightbulb_handle_t handle);
 
 /**
  * @brief Get the color temperature (CCT) Kelvin value of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int16_t The CCT Kelvin value in the range of 2200 to 7000.
  */
-int16_t lightbulb_get_cct_kelvin(void);
+int16_t lightbulb_get_cct_kelvin(lightbulb_handle_t handle);
 
 /**
  * @brief Get the brightness value of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return int8_t The brightness value in the range of 0 to 100.
  */
-int8_t lightbulb_get_brightness(void);
+int8_t lightbulb_get_brightness(lightbulb_handle_t handle);
 
 /**
  * @brief Get the on/off status of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return true The lightbulb is on.
  * @return false The lightbulb is off.
  */
-bool lightbulb_get_switch(void);
+bool lightbulb_get_switch(lightbulb_handle_t handle);
 
 /**
  * @brief Get the work mode of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return lightbulb_works_mode_t The current work mode of the lightbulb.
  */
-lightbulb_works_mode_t lightbulb_get_mode(void);
+lightbulb_works_mode_t lightbulb_get_mode(lightbulb_handle_t handle);
 
 /**
  * @brief Get the power limit of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param power_limit A pointer to a `lightbulb_power_limit_t` structure where the power limit details will be stored.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_get_power_limit(lightbulb_power_limit_t *power_limit);
+esp_err_t lightbulb_get_power_limit(lightbulb_handle_t handle, lightbulb_power_limit_t *power_limit);
 
 /**
  * @brief Get all the status details of the lightbulb.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param status A pointer to a `lightbulb_status_t` structure where the status details will be stored.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_get_all_detail(lightbulb_status_t *status);
+esp_err_t lightbulb_get_all_detail(lightbulb_handle_t handle, lightbulb_status_t *status);
 
 /**
  * @brief Get the lightbulb status from NVS.
@@ -743,32 +774,62 @@ esp_err_t lightbulb_status_erase_nvs_storage(void);
 /**
  * @brief Start some blinking/breathing effects.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param config Pointer to a `lightbulb_effect_config_t` structure containing the configuration for the effect.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_basic_effect_start(lightbulb_effect_config_t *config);
+esp_err_t lightbulb_basic_effect_start(lightbulb_handle_t handle, lightbulb_effect_config_t *config);
 
 /**
  * @brief Stop the effect in progress and keep the current lighting output.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_basic_effect_stop(void);
+esp_err_t lightbulb_basic_effect_stop(lightbulb_handle_t handle);
 
 /**
  * @brief Stop the effect in progress and restore the previous lighting output.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_basic_effect_stop_and_restore(void);
+esp_err_t lightbulb_basic_effect_stop_and_restore(lightbulb_handle_t handle);
 
 /**
  * @brief Used to test lightbulb hardware functionality.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param mask A bitmask representing the test unit or combination of test units to be tested.
  * @param speed_ms The switching speed in milliseconds for the lighting patterns.
  */
-void lightbulb_lighting_output_test(lightbulb_lighting_unit_t mask, uint16_t speed_ms);
+void lightbulb_lighting_output_test(lightbulb_handle_t handle, lightbulb_lighting_unit_t mask, uint16_t speed_ms);
+
+/**
+ * @brief Set all channels directly (Debug/Test mode only).
+ *
+ * @note This API can only be used in debug/test mode.
+ * @param handle Handle to the lightbulb instance.
+ * @param r_ch Red channel value.
+ * @param g_ch Green channel value.
+ * @param b_ch Blue channel value.
+ * @param c_ch Cold/White channel value.
+ * @param w_ch Warm/Yellow channel value.
+ * @return esp_err_t An error code indicating the success or failure of the operation.
+ */
+esp_err_t lightbulb_set_channel_group(lightbulb_handle_t handle, uint16_t r_ch, uint16_t g_ch, uint16_t b_ch, uint16_t c_ch, uint16_t w_ch);
+
+/**
+ * @brief Set RGB values directly (Debug/Test mode only).
+ *
+ * @note This API can only be used in debug/test mode.
+ * @param handle Handle to the lightbulb instance.
+ * @param r Red value (0-255).
+ * @param g Green value (0-255).
+ * @param b Blue value (0-255).
+ * @return esp_err_t An error code indicating the success or failure of the operation.
+ */
+esp_err_t lightbulb_set_rgb(lightbulb_handle_t handle, uint8_t r, uint8_t g, uint8_t b);
 
 #ifdef __cplusplus
 }
