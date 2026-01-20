@@ -17,6 +17,8 @@ Please use the component manager command `idf.py add-dependency` to add `ble_ser
 idf.py add-dependency "espressif/ble_services=*"
 ```
 
+_Note:_ This component requires the [``ble_conn_mgr``](components/bluetooth/ble_conn_mgr) component to function.
+
 ### Examples
 
 To create a project from the example template, please use the component manager command `idf.py create-project-from-example`.
