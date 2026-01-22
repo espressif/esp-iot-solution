@@ -187,13 +187,13 @@ typedef struct {
     .require_double_buffer = false,                                                                    \
     .mono_layout           = ESP_LV_ADAPTER_MONO_LAYOUT_NONE
 
-#define ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout) \
-    .interface             = ESP_LV_ADAPTER_PANEL_IF_OTHER,                                            \
-    ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                          \
-    .buffer_height         = (_ver_res),                                                               \
-    .use_psram             = false,                                                                    \
-    .enable_ppa_accel      = false,                                                                    \
-    .require_double_buffer = false,                                                                    \
+#define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_MONO_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation, _mono_layout) \
+    .interface             = ESP_LV_ADAPTER_PANEL_IF_OTHER,                                                 \
+    ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                               \
+    .buffer_height         = (_ver_res),                                                                    \
+    .use_psram             = false,                                                                         \
+    .enable_ppa_accel      = false,                                                                         \
+    .require_double_buffer = false,                                                                         \
     .mono_layout           = (_mono_layout)
 
 /**
