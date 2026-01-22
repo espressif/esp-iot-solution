@@ -119,6 +119,8 @@ void MT6701::init()
         ESP_RETURN_ON_FALSE(_i2c_device != NULL,, TAG, "MT6701 device create fail");
 
         _is_installed = true;
+        Sensor::init();
+        ESP_LOGI(TAG, "MT6701 init success");
     } else {
         _is_installed = false;
     }

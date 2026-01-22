@@ -41,6 +41,8 @@ void AS5600::init()
     _i2c_device = i2c_bus_device_create(_i2c_bus, 0x36, 0);
     ESP_RETURN_ON_FALSE(_i2c_device != NULL,, TAG, "AS5600 device create fail");
     _is_installed = true;
+    Sensor::init();
+    ESP_LOGI(TAG, "AS5600 init success");
 }
 
 void AS5600::deinit()
