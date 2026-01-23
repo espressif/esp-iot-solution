@@ -1,3 +1,8 @@
+## v1.2.0 - 2026.01.15
+
+Features:
+- OTS: Support Object Transfer Service
+
 ## v1.1.0 - 2025.12.26
 
 Features:

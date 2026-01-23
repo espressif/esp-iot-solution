@@ -12,6 +12,7 @@ BLE 服务
     设备信息服务 <ble_dis>
     心率服务 <ble_hrs>
     健康温度计服务 <ble_hts>
+    文件传输服务 <ble_ots>
     TX 电源服务 <ble_tps>
     用户数据服务 <ble_uds>
     体重秤服务 <ble_wss>
