@@ -102,6 +102,8 @@ void MT6701::init()
         ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus add device fail");
 
         _is_installed = true;
+        Sensor::init();
+        ESP_LOGI(TAG, "MT6701 init success");
     } else if (_i2c_port != I2C_NUM_MAX) {
         // Configuration for the i2c bus
         i2c_config_t i2c_config = {
