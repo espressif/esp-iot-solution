@@ -27,7 +27,7 @@ typedef struct {
  * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *));
+esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *, void *), void *user_data);
 
 /**
  * @brief Deinitialize ws2812 and release resources

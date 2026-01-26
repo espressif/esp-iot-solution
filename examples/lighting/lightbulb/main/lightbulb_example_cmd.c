@@ -135,6 +135,11 @@ static int do_quit_cmd(int argc, char **argv)
 
 esp_err_t lightbulb_example_console_init(lightbulb_handle_t handle)
 {
+    if (handle == NULL) {
+        ESP_LOGE(TAG, "handle is NULL");
+        return ESP_ERR_INVALID_ARG;
+    }
+
     s_lightbulb_handle = handle;
     esp_err_t err = ESP_OK;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();

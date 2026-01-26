@@ -55,7 +55,7 @@ void gpio_reverse(int gpio_num)
 #define HAL_OUT_MAX_CHANNEL                     (5)                     // Maximum number of output channels in the Hardware Abstraction Layer (HAL).
 #define ERROR_COUNT_THRESHOLD                   (6)                     // Threshold for errors in the lower interface.
 
-typedef esp_err_t (*x_init_t)(void *config, void(*hook_func)(void *));
+typedef esp_err_t (*x_init_t)(void *config, void(*hook_func)(void *, void *), void *user_data);
 typedef esp_err_t (*x_regist_channel_t)(int channel, int value);
 typedef esp_err_t (*x_set_channel_t)(int channel, uint16_t value);
 typedef esp_err_t (*x_set_rgb_channel_t)(uint16_t value_r, uint16_t value_g, uint16_t value_b);
@@ -99,6 +99,7 @@ struct hal_context_s {
     fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
     hal_obj_t *interface;
     int s_err_count;
+    bool deiniting;
     bool use_hw_fade;
     bool enable_multi_ch_write;
     uint16_t *table_group;
@@ -115,151 +116,292 @@ struct hal_context_s {
 #endif
 };
 
-static hal_obj_t s_hal_obj_group[] = {
 #ifdef CONFIG_ENABLE_PWM_DRIVER
-    {
-        .type = DRIVER_ESP_PWM,
-        .name = "PWM",
-        .driver_grayscale_level = (1 << 12),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 12),
-        .init = (x_init_t)pwm_init,
-        .set_channel = (x_set_channel_t)pwm_set_channel,
-        .regist_channel = (x_regist_channel_t)pwm_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)pwm_set_shutdown,
-        .set_hw_fade = (x_set_hw_fade_t)pwm_set_hw_fade,
-        .deinit = (x_deinit_t)pwm_deinit,
-        .set_sleep_status = (x_set_sleep_t)pwm_set_sleep,
-    },
-#endif
-#ifdef CONFIG_ENABLE_SM2182E_DRIVER
-    {
-        .type = DRIVER_SM2182E,
-        .name = "SM2182E",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 10) - 1,
-        .init = (x_init_t)sm2182e_init,
-        .set_wy_or_ct_channel = (x_set_wy_or_cb_channel_t)sm2182e_set_cw_channel,
-        .regist_channel = (x_regist_channel_t)sm2182e_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)sm2182e_set_shutdown,
-        .deinit = (x_deinit_t)sm2182e_deinit,
-        .set_sleep_status = (x_set_sleep_t)sm2182e_set_standby_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
-    {
-        .type = DRIVER_SM2135EH,
-        .name = "SM2135EH",
-        .driver_grayscale_level = (1 << 8),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 8) - 1,
-        .init = (x_init_t)sm2135eh_init,
-        .set_channel = (x_set_channel_t)_sm2135eh_set_channel,
-        .regist_channel = (x_regist_channel_t)sm2135eh_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)sm2135eh_set_shutdown,
-        .deinit = (x_deinit_t)sm2135eh_deinit,
-        .set_sleep_status = (x_set_sleep_t)sm2135eh_set_standby_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
-    {
-        .type = DRIVER_SM2x35EGH,
-        .name = "SM2235EGH",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 10) - 1,
-        .init = (x_init_t)sm2x35egh_init,
-        .set_channel = (x_set_channel_t)sm2x35egh_set_channel,
-        .regist_channel = (x_regist_channel_t)sm2x35egh_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)sm2x35egh_set_shutdown,
-        .deinit = (x_deinit_t)sm2x35egh_deinit,
-        .set_sleep_status = (x_set_sleep_t)sm2x35egh_set_standby_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
-    {
-        .type = DRIVER_BP57x8D,
-        .name = "BP57x8D",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 10) - 1,
-        .init = (x_init_t)bp57x8d_init,
-        .set_channel = (x_set_channel_t)bp57x8d_set_channel,
-        .regist_channel = (x_regist_channel_t)bp57x8d_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)bp57x8d_set_shutdown,
-        .deinit = (x_deinit_t)bp57x8d_deinit,
-        .set_sleep_status = (x_set_sleep_t)bp57x8d_set_standby_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
-    {
-        .type = DRIVER_BP1658CJ,
-        .name = "BP1658CJ",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 10) - 1,
-        .init = (x_init_t)bp1658cj_init,
-        .set_channel = (x_set_channel_t)bp1658cj_set_channel,
-        .regist_channel = (x_regist_channel_t)bp1658cj_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)bp1658cj_set_shutdown,
-        .deinit = (x_deinit_t)bp1658cj_deinit,
-        .set_sleep_status = (x_set_sleep_t)bp1658cj_set_sleep_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_KP18058_DRIVER
-    {
-        .type = DRIVER_KP18058,
-        .name = "KP18058",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 10) - 1,
-        .init = (x_init_t)kp18058_init,
-        .set_channel = (x_set_channel_t)kp18058_set_channel,
-        .regist_channel = (x_regist_channel_t)kp18058_regist_channel,
-        .set_shutdown = (x_set_shutdown_t)kp18058_set_shutdown,
-        .deinit = (x_deinit_t)kp18058_deinit,
-        .set_sleep_status = (x_set_sleep_t)kp18058_set_standby_mode,
-    },
-#endif
-#ifdef CONFIG_ENABLE_WS2812_DRIVER
-    {
-        .type = DRIVER_WS2812,
-        .name = "WS2812",
-        .driver_grayscale_level = (1 << 8),
-        .channel_num = 3,
-        .hardware_allow_max_input_value = (1 << 8) - 1,
-        .init = (x_init_t)ws2812_init,
-        .set_rgb_channel = (x_set_rgb_channel_t)_ws2812_set_rgb_channel,
-        .deinit = (x_deinit_t)ws2812_deinit,
-    },
-#endif
-#ifdef CONFIG_ENABLE_SM16825E_DRIVER
-    {
-        .type = DRIVER_SM16825E,
-        .name = "SM16825E",
-        .driver_grayscale_level = (1 << 10),
-        .channel_num = 5,
-        .hardware_allow_max_input_value = (1 << 16) - 1,
-        .init = (x_init_t)sm16825e_init,
-        .regist_channel = (x_regist_channel_t)sm16825e_regist_channel,
-        .set_rgbwy_or_rgbct_channel = (x_set_rgbwy_or_rgbct_channel_t)sm16825e_set_rgbwy_channel,
-        .set_shutdown = (x_set_shutdown_t)sm16825e_set_shutdown,
-        .deinit = (x_deinit_t)sm16825e_deinit,
-        .set_sleep_status = (x_set_sleep_t)sm16825e_set_standby,
-    },
-#endif
-    {
-        .type = DRIVER_SELECT_MAX,
+static hal_obj_t *hal_create_pwm_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for PWM driver");
+        return NULL;
     }
-};
+
+    obj->type = DRIVER_ESP_PWM;
+    obj->name = "PWM";
+    obj->driver_grayscale_level = (1 << 12);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 12);
+    obj->init = (x_init_t)pwm_init;
+    obj->set_channel = (x_set_channel_t)pwm_set_channel;
+    obj->regist_channel = (x_regist_channel_t)pwm_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)pwm_set_shutdown;
+    obj->set_hw_fade = (x_set_hw_fade_t)pwm_set_hw_fade;
+    obj->deinit = (x_deinit_t)pwm_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)pwm_set_sleep;
+
+    // Set unused function pointers to NULL
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+static hal_obj_t *hal_create_sm2182e_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for SM2182E driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_SM2182E;
+    obj->name = "SM2182E";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 10) - 1;
+    obj->init = (x_init_t)sm2182e_init;
+    obj->set_wy_or_ct_channel = (x_set_wy_or_cb_channel_t)sm2182e_set_cw_channel;
+    obj->regist_channel = (x_regist_channel_t)sm2182e_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)sm2182e_set_shutdown;
+    obj->deinit = (x_deinit_t)sm2182e_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)sm2182e_set_standby_mode;
+
+    obj->set_channel = NULL;
+    obj->set_rgb_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
+static hal_obj_t *hal_create_sm2135eh_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for SM2135EH driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_SM2135EH;
+    obj->name = "SM2135EH";
+    obj->driver_grayscale_level = (1 << 8);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 8) - 1;
+    obj->init = (x_init_t)sm2135eh_init;
+    obj->set_channel = (x_set_channel_t)_sm2135eh_set_channel;
+    obj->regist_channel = (x_regist_channel_t)sm2135eh_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)sm2135eh_set_shutdown;
+    obj->deinit = (x_deinit_t)sm2135eh_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)sm2135eh_set_standby_mode;
+
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
+static hal_obj_t *hal_create_sm2x35egh_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for SM2x35EGH driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_SM2x35EGH;
+    obj->name = "SM2235EGH";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 10) - 1;
+    obj->init = (x_init_t)sm2x35egh_init;
+    obj->set_channel = (x_set_channel_t)sm2x35egh_set_channel;
+    obj->regist_channel = (x_regist_channel_t)sm2x35egh_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)sm2x35egh_set_shutdown;
+    obj->deinit = (x_deinit_t)sm2x35egh_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)sm2x35egh_set_standby_mode;
+
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+static hal_obj_t *hal_create_bp57x8d_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for BP57x8D driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_BP57x8D;
+    obj->name = "BP57x8D";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 10) - 1;
+    obj->init = (x_init_t)bp57x8d_init;
+    obj->set_channel = (x_set_channel_t)bp57x8d_set_channel;
+    obj->regist_channel = (x_regist_channel_t)bp57x8d_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)bp57x8d_set_shutdown;
+    obj->deinit = (x_deinit_t)bp57x8d_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)bp57x8d_set_standby_mode;
+
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+static hal_obj_t *hal_create_bp1658cj_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for BP1658CJ driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_BP1658CJ;
+    obj->name = "BP1658CJ";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 10) - 1;
+    obj->init = (x_init_t)bp1658cj_init;
+    obj->set_channel = (x_set_channel_t)bp1658cj_set_channel;
+    obj->regist_channel = (x_regist_channel_t)bp1658cj_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)bp1658cj_set_shutdown;
+    obj->deinit = (x_deinit_t)bp1658cj_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)bp1658cj_set_sleep_mode;
+
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+static hal_obj_t *hal_create_kp18058_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for KP18058 driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_KP18058;
+    obj->name = "KP18058";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 10) - 1;
+    obj->init = (x_init_t)kp18058_init;
+    obj->set_channel = (x_set_channel_t)kp18058_set_channel;
+    obj->regist_channel = (x_regist_channel_t)kp18058_regist_channel;
+    obj->set_shutdown = (x_set_shutdown_t)kp18058_set_shutdown;
+    obj->deinit = (x_deinit_t)kp18058_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)kp18058_set_standby_mode;
+
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+static hal_obj_t *hal_create_ws2812_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for WS2812 driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_WS2812;
+    obj->name = "WS2812";
+    obj->driver_grayscale_level = (1 << 8);
+    obj->channel_num = 3;
+    obj->hardware_allow_max_input_value = (1 << 8) - 1;
+    obj->init = (x_init_t)ws2812_init;
+    obj->set_rgb_channel = (x_set_rgb_channel_t)_ws2812_set_rgb_channel;
+    obj->deinit = (x_deinit_t)ws2812_deinit;
+
+    obj->set_channel = NULL;
+    obj->regist_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_rgbwy_or_rgbct_channel = NULL;
+    obj->set_shutdown = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+    obj->set_sleep_status = NULL;
+
+    return obj;
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+static hal_obj_t *hal_create_sm16825e_driver(void)
+{
+    hal_obj_t *obj = (hal_obj_t *)calloc(1, sizeof(hal_obj_t));
+    if (!obj) {
+        ESP_LOGE(TAG, "Failed to allocate memory for SM16825E driver");
+        return NULL;
+    }
+
+    obj->type = DRIVER_SM16825E;
+    obj->name = "SM16825E";
+    obj->driver_grayscale_level = (1 << 10);
+    obj->channel_num = 5;
+    obj->hardware_allow_max_input_value = (1 << 16) - 1;
+    obj->init = (x_init_t)sm16825e_init;
+    obj->regist_channel = (x_regist_channel_t)sm16825e_regist_channel;
+    obj->set_rgbwy_or_rgbct_channel = (x_set_rgbwy_or_rgbct_channel_t)sm16825e_set_rgbwy_channel;
+    obj->set_shutdown = (x_set_shutdown_t)sm16825e_set_shutdown;
+    obj->deinit = (x_deinit_t)sm16825e_deinit;
+    obj->set_sleep_status = (x_set_sleep_t)sm16825e_set_standby;
+
+    obj->set_channel = NULL;
+    obj->set_rgb_channel = NULL;
+    obj->set_wy_or_ct_channel = NULL;
+    obj->set_hw_fade = NULL;
+    obj->set_init_mode = NULL;
+
+    return obj;
+}
+#endif
 
 #if FADE_TICKS_FROM_GPTIMER
 static void fade_cb(void *priv);
 static IRAM_ATTR bool on_timer_alarm_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
 {
     BaseType_t task_woken = pdFALSE;
-    hal_context_t *hal_ctx = (hal_context_t *)user_ctx;
+    hal_context_t hal_ctx = (hal_context_t)user_ctx;
     vTaskNotifyGiveFromISR(hal_ctx->notify_task, &task_woken);
 
     return task_woken == pdTRUE;
@@ -267,7 +409,7 @@ static IRAM_ATTR bool on_timer_alarm_cb(gptimer_handle_t timer, const gptimer_al
 
 static void fade_tick_task(void *arg)
 {
-    hal_context_t *hal_ctx = (hal_context_t *)arg;
+    hal_context_t hal_ctx = (hal_context_t)arg;
     while (true) {
         ulTaskNotifyTake(true, portMAX_DELAY);
         fade_cb(hal_ctx);
@@ -276,7 +418,7 @@ static void fade_tick_task(void *arg)
 }
 #endif
 
-static float final_processing(hal_context_t *hal_ctx, uint8_t channel, uint16_t src_value)
+static float final_processing(hal_context_t hal_ctx, uint8_t channel, uint16_t src_value)
 {
     return hal_ctx->balance_coefficient[channel] * src_value;
 }
@@ -302,7 +444,7 @@ esp_err_t hal_gamma_table_create(uint16_t *output_gamma_table, uint16_t table_si
     return ESP_OK;
 }
 
-static void force_stop_all_ch(hal_context_t *hal_ctx)
+static void force_stop_all_ch(hal_context_t hal_ctx)
 {
     hal_ctx->fade_data[0].num = 0;
     hal_ctx->fade_data[1].num = 0;
@@ -317,23 +459,25 @@ static void force_stop_all_ch(hal_context_t *hal_ctx)
     hal_ctx->fade_data[4].cycle = 0;
 }
 
-static void cleanup(hal_context_t *hal_ctx)
+static void cleanup(hal_context_t hal_ctx)
 {
+    if (!hal_ctx) {
+        return;
+    }
+
     if (hal_ctx->table_group) {
         free(hal_ctx->table_group);
         hal_ctx->table_group = NULL;
-    }
-    if (hal_ctx->fade_mutex) {
-        vSemaphoreDelete(hal_ctx->fade_mutex);
-        hal_ctx->fade_mutex = NULL;
     }
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (hal_ctx->fade_timer) {
         gptimer_disable(hal_ctx->fade_timer);
         gptimer_del_timer(hal_ctx->fade_timer);
+        hal_ctx->fade_timer = NULL;
     }
     if (hal_ctx->notify_task) {
         vTaskDelete(hal_ctx->notify_task);
+        hal_ctx->notify_task = NULL;
     }
 #else
     if (hal_ctx->fade_timer) {
@@ -341,6 +485,16 @@ static void cleanup(hal_context_t *hal_ctx)
         hal_ctx->fade_timer = NULL;
     }
 #endif
+
+    if (hal_ctx->fade_mutex) {
+        vSemaphoreDelete(hal_ctx->fade_mutex);
+        hal_ctx->fade_mutex = NULL;
+    }
+
+    if (hal_ctx->interface) {
+        free(hal_ctx->interface);
+        hal_ctx->interface = NULL;
+    }
     if (hal_ctx) {
         free(hal_ctx);
     }
@@ -352,7 +506,7 @@ static void cleanup(hal_context_t *hal_ctx)
         if ((HAL_CTX)->use_hw_fade) {                                                                               \
             err |= (HAL_CTX)->interface->set_hw_fade(CH, (HAL_CTX)->fade_data[CH].cur, HARDWARE_RETAIN_RATE_MS);    \
         } else {                                                                                                    \
-            err |= (HAL_CTX)->interface->set_channel(CH, (HAL_CTX)->fade_data[channel].cur);                        \
+            err |= (HAL_CTX)->interface->set_channel(CH, (HAL_CTX)->fade_data[CH].cur);                        \
         }                                                                                                           \
    }                                                                                                                \
 }
@@ -375,9 +529,16 @@ static void cleanup(hal_context_t *hal_ctx)
  */
 static void fade_cb(void *priv)
 {
-    hal_context_t *hal_ctx = (hal_context_t *)priv;
+    hal_context_t hal_ctx = priv;
+    if (!hal_ctx || !hal_ctx->fade_mutex) {
+        return;
+    }
     esp_err_t err = ESP_OK;
     if (xSemaphoreTake(hal_ctx->fade_mutex, 0) == pdFALSE) {
+        return;
+    }
+    if (hal_ctx->deiniting) {
+        xSemaphoreGive(hal_ctx->fade_mutex);
         return;
     }
     int idle_channel_num = 0;
@@ -489,47 +650,39 @@ static void fade_cb(void *priv)
     xSemaphoreGive(hal_ctx->fade_mutex);
 }
 
-// Temporary global pointer for driver_default_hook_func
-static hal_context_t *g_init_hal_ctx = NULL;
-
-static void driver_default_hook_func(void *ctx)
+static void driver_default_hook_func(void *user_data, void *ctx)
 {
-    if (g_init_hal_ctx && g_init_hal_ctx->interface->type == DRIVER_ESP_PWM) {
-        uint32_t grayscale_level = (uint32_t) ctx;
-        g_init_hal_ctx->interface->driver_grayscale_level = grayscale_level;
-        g_init_hal_ctx->interface->hardware_allow_max_input_value = grayscale_level;
+    hal_context_t hal_ctx = (hal_context_t)user_data;
+    if (hal_ctx && hal_ctx->interface->type == DRIVER_ESP_PWM) {
+        uint32_t grayscale_level = (uint32_t)ctx;
+        hal_ctx->interface->driver_grayscale_level = grayscale_level;
+        hal_ctx->interface->hardware_allow_max_input_value = grayscale_level;
     }
 }
 
-hal_context_t *hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma, void *priv_data)
+static hal_context_t hal_output_init_common(hal_obj_t *interface, void *driver_config, lightbulb_gamma_config_t *gamma)
 {
     esp_err_t err = ESP_FAIL;
-    LIGHTBULB_CHECK(config, "config is null", return NULL);
+    LIGHTBULB_CHECK(interface, "interface is null", return NULL);
 
-    hal_context_t *hal_ctx = calloc(1, sizeof(hal_context_t));
-    LIGHTBULB_CHECK(hal_ctx, "alloc fail", return NULL);
+    hal_context_t hal_ctx = calloc(1, sizeof(struct hal_context_s));
+    if (!hal_ctx) {
+        ESP_LOGE(TAG, "alloc fail");
+        free(interface);
+        return NULL;
+    }
 
     hal_ctx->fade_mutex = xSemaphoreCreateBinary();
     if (!hal_ctx->fade_mutex) {
+        free(interface);
         free(hal_ctx);
         return NULL;
     }
     xSemaphoreGive(hal_ctx->fade_mutex);
 
-    for (int i = 0; i < DRIVER_SELECT_MAX; i++) {
-        if (config->type == s_hal_obj_group[i].type) {
-            hal_ctx->interface = &(s_hal_obj_group[i]);
-            break;
-        } else if (s_hal_obj_group[i].type == DRIVER_SELECT_MAX) {
-            break;
-        }
-    }
-    LIGHTBULB_CHECK(hal_ctx->interface, "Unable to find the corresponding driver function", goto EXIT);
+    hal_ctx->interface = interface;
 
-    // Set temporary global for driver callback
-    g_init_hal_ctx = hal_ctx;
-    err = hal_ctx->interface->init(config->driver_data, driver_default_hook_func);
-    g_init_hal_ctx = NULL;
+    err = hal_ctx->interface->init(driver_config, driver_default_hook_func, hal_ctx);
     LIGHTBULB_CHECK(err == ESP_OK, "driver init fail", goto EXIT);
 
     /**
@@ -569,7 +722,10 @@ hal_context_t *hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *g
     }
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    xTaskCreate(fade_tick_task, "fade_tick_task", CONFIG_LB_NOTIFY_TASK_STACK, hal_ctx, CONFIG_LB_NOTIFY_TASK_PRIORITY, &hal_ctx->notify_task);
+    static uint8_t s_task_id = 0;
+    char task_name[16];
+    snprintf(task_name, sizeof(task_name), "%s_%u", hal_ctx->interface->name, s_task_id++);
+    xTaskCreate(fade_tick_task, task_name, CONFIG_LB_NOTIFY_TASK_STACK, hal_ctx, CONFIG_LB_NOTIFY_TASK_PRIORITY, &hal_ctx->notify_task);
     LIGHTBULB_CHECK(hal_ctx->notify_task, "notify task create fail", goto EXIT);
 
     gptimer_clock_source_t clk;
@@ -621,10 +777,84 @@ EXIT:
     return NULL;
 }
 
-esp_err_t hal_output_deinit(hal_context_t *hal_ctx)
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+hal_context_t pwm_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_pwm_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+hal_context_t sm2182e_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_sm2182e_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
+hal_context_t sm2135eh_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_sm2135eh_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
+hal_context_t sm2x35egh_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_sm2x35egh_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+hal_context_t bp57x8d_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_bp57x8d_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+hal_context_t bp1658cj_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_bp1658cj_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+hal_context_t kp18058_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_kp18058_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+hal_context_t ws2812_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_ws2812_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+hal_context_t sm16825e_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma)
+{
+    hal_obj_t *interface = hal_create_sm16825e_driver();
+    return hal_output_init_common(interface, driver_config, gamma);
+}
+#endif
+
+esp_err_t hal_output_deinit(hal_context_t hal_ctx)
 {
     esp_err_t err = ESP_OK;
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
+
+    hal_ctx->deiniting = true;
 
 #ifdef FADE_TICKS_FROM_GPTIMER
     if (hal_ctx->gptimer_is_active) {
@@ -634,6 +864,11 @@ esp_err_t hal_output_deinit(hal_context_t *hal_ctx)
 #else
     esp_timer_stop(hal_ctx->fade_timer);
 #endif
+
+    if (hal_ctx->fade_mutex) {
+        LIGHTBULB_CHECK(xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't quiesce fade callback", return ESP_ERR_INVALID_STATE);
+        xSemaphoreGive(hal_ctx->fade_mutex);
+    }
 
     if (hal_ctx->interface->set_shutdown) {
         err |= hal_ctx->interface->set_shutdown();
@@ -646,7 +881,7 @@ esp_err_t hal_output_deinit(hal_context_t *hal_ctx)
     return err;
 }
 
-esp_err_t hal_regist_channel(hal_context_t *hal_ctx, int channel, gpio_num_t gpio_num)
+esp_err_t hal_regist_channel(hal_context_t hal_ctx, int channel, gpio_num_t gpio_num)
 {
     esp_err_t err = ESP_OK;
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
@@ -657,7 +892,7 @@ esp_err_t hal_regist_channel(hal_context_t *hal_ctx, int channel, gpio_num_t gpi
     return err;
 }
 
-esp_err_t hal_set_channel(hal_context_t *hal_ctx, int channel, uint16_t value, uint16_t fade_ms)
+esp_err_t hal_set_channel(hal_context_t hal_ctx, int channel, uint16_t value, uint16_t fade_ms)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
@@ -751,7 +986,7 @@ esp_err_t hal_set_channel(hal_context_t *hal_ctx, int channel, uint16_t value, u
     return ESP_OK;
 }
 
-esp_err_t hal_set_channel_group(hal_context_t *hal_ctx, uint16_t value[], uint8_t channel_mask, uint16_t fade_ms)
+esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t channel_mask, uint16_t fade_ms)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
@@ -860,7 +1095,7 @@ esp_err_t hal_set_channel_group(hal_context_t *hal_ctx, uint16_t value[], uint8_
     return ESP_OK;
 }
 
-esp_err_t hal_start_channel_action(hal_context_t *hal_ctx, int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag)
+esp_err_t hal_start_channel_action(hal_context_t hal_ctx, int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
@@ -938,7 +1173,7 @@ esp_err_t hal_start_channel_action(hal_context_t *hal_ctx, int channel, uint16_t
     return ESP_OK;
 }
 
-esp_err_t hal_start_channel_group_action(hal_context_t *hal_ctx, uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag)
+esp_err_t hal_start_channel_group_action(hal_context_t hal_ctx, uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
@@ -1018,7 +1253,7 @@ esp_err_t hal_start_channel_group_action(hal_context_t *hal_ctx, uint16_t value_
     return ESP_OK;
 }
 
-esp_err_t hal_stop_channel_action(hal_context_t *hal_ctx, uint8_t channel_mask)
+esp_err_t hal_stop_channel_action(hal_context_t hal_ctx, uint8_t channel_mask)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
@@ -1067,7 +1302,7 @@ esp_err_t hal_stop_channel_action(hal_context_t *hal_ctx, uint8_t channel_mask)
     return ESP_OK;
 }
 
-esp_err_t hal_get_driver_feature(hal_context_t *hal_ctx, hal_feature_query_list_t type, void *out_data)
+esp_err_t hal_get_driver_feature(hal_context_t hal_ctx, hal_feature_query_list_t type, void *out_data)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(out_data, "out_data is null", return ESP_ERR_INVALID_STATE);
@@ -1088,7 +1323,7 @@ esp_err_t hal_get_driver_feature(hal_context_t *hal_ctx, hal_feature_query_list_
     return ESP_OK;
 }
 
-esp_err_t hal_get_curve_table_value(hal_context_t *hal_ctx, uint16_t input, uint16_t *output)
+esp_err_t hal_get_curve_table_value(hal_context_t hal_ctx, uint16_t input, uint16_t *output)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(output, "out_data is null", return ESP_ERR_INVALID_STATE);
@@ -1115,7 +1350,7 @@ esp_err_t hal_get_curve_table_value(hal_context_t *hal_ctx, uint16_t input, uint
     return ESP_OK;
 }
 
-esp_err_t hal_sleep_control(hal_context_t *hal_ctx, bool enable_sleep)
+esp_err_t hal_sleep_control(hal_context_t hal_ctx, bool enable_sleep)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 

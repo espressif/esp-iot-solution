@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -104,20 +104,27 @@ static void send_task(void *arg)
 
 static void clean_up(void)
 {
-    if (s_obj->cmd_queue_handle) {
-        vQueueDelete(s_obj->cmd_queue_handle);
-        s_obj->cmd_queue_handle = NULL;
+    if (!s_obj) {
+        return;
     }
 
     if (s_obj->send_task_handle) {
         vTaskDelete(s_obj->send_task_handle);
         s_obj->send_task_handle = NULL;
     }
+
+    if (s_obj->cmd_queue_handle) {
+        vQueueDelete(s_obj->cmd_queue_handle);
+        s_obj->cmd_queue_handle = NULL;
+    }
 }
 
 esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio_num_t scl_io_num, uint32_t clk_freq_hz)
 {
     esp_err_t err = ESP_FAIL;
+
+    DRIVER_CHECK(s_obj == NULL, "I2C driver already initialized, only one I2C device instance is allowed", return ESP_ERR_INVALID_STATE);
+
     s_obj = calloc(1, sizeof(iic_config_t));
     DRIVER_CHECK(s_obj, "alloc fail", return ESP_ERR_NO_MEM);
 
@@ -175,6 +182,7 @@ EXIT:
 
     if (s_obj) {
         free(s_obj);
+        s_obj = NULL;
     }
 
     return err;
@@ -182,6 +190,8 @@ EXIT:
 
 esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
 {
+    DRIVER_CHECK(s_obj, "I2C driver not initialized", return ESP_ERR_INVALID_STATE);
+
     esp_err_t err = s_obj->last_err;
     if (s_obj->cmd_queue_handle && s_obj->send_task_handle) {
         if (uxQueueSpacesAvailable(s_obj->cmd_queue_handle) == 0) {
@@ -210,6 +220,7 @@ esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
 
 esp_err_t iic_driver_send_task_create(void)
 {
+    DRIVER_CHECK(s_obj, "I2C driver not initialized", return ESP_ERR_INVALID_STATE);
     DRIVER_CHECK(!s_obj->cmd_queue_handle || !s_obj->send_task_handle, "already initialized", return ESP_ERR_INVALID_STATE);
 
     s_obj->cmd_queue_handle = xQueueCreate(IIC_QUEUE_SIZE, sizeof(i2c_send_data_t));
@@ -227,12 +238,17 @@ EXIT:
 
 esp_err_t iic_driver_task_destroy(void)
 {
+    if (!s_obj) {
+        return ESP_OK;
+    }
     clean_up();
     return ESP_OK;
 }
 
 esp_err_t iic_driver_deinit(void)
 {
+    DRIVER_CHECK(s_obj, "not initialized", return ESP_ERR_INVALID_STATE);
+
 #if ENABLE_NEW_IIC_DRIVER
     i2c_master_bus_rm_device(s_obj->i2c_dev_handle);
     i2c_del_master_bus(s_obj->bus_handle);
@@ -240,6 +256,8 @@ esp_err_t iic_driver_deinit(void)
     i2c_driver_delete(s_obj->i2c_master_num);
 #endif
 
-    clean_up();
+    free(s_obj);
+    s_obj = NULL;
+
     return ESP_OK;
 }

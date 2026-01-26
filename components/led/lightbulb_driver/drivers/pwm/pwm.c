@@ -74,7 +74,7 @@ static esp_err_t power_control_lock_create(void)
 }
 #endif
 
-esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
+esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
@@ -129,7 +129,7 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *))
         /* Nothing */
     }
     if (hook_func) {
-        hook_func((void *)grayscale_level);
+        hook_func(user_data, (void *)grayscale_level);
     }
 
     err = ledc_fade_func_install(ESP_INTR_FLAG_IRAM);

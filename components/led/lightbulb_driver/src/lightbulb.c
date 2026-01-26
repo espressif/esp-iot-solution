@@ -39,10 +39,9 @@ static const char *TAG = "lightbulb";
 #define CALCULATE_FADE_TIME(handle)                    ((handle)->cap.enable_fade ? (handle)->cap.fade_time_ms : 0)
 
 /**
- * @brief
+ * @brief NVS namespace for lightbulb status storage
  *
  */
-#define LIGHTBULB_STORAGE_KEY                 ("lb_status")
 #define LIGHTBULB_NAMESPACE                   ("lightbulb")
 
 /**
@@ -60,6 +59,7 @@ struct lightbulb_t {
     TimerHandle_t power_timer;         // Timer handle related to the power management of the lightbulb
     TimerHandle_t storage_timer;       // Timer handle related to the storage status of the lightbulb
     TimerHandle_t effect_timer;        // Timer handle related to the flashing, fading
+    void (*effect_user_cb)(void);      // User callback for effect auto-stop timer
     SemaphoreHandle_t mutex;           // For multi-thread protection
 
     // Structure containing pointers to gamma correction tables for color and white
@@ -88,68 +88,99 @@ struct lightbulb_t {
         int table_size;                                      // Size of the mapping table
     } color_manager;
 
-    // HAL context for this lightbulb instance
-    hal_context_t *hal_ctx;
+    char nvs_key[16];  // NVS key
+    bool deiniting;
+
+    // HAL context for lightbulb instance
+    hal_context_t hal_ctx;
 };
 
+static lightbulb_handle_t lightbulb_init(hal_context_t hal_ctx, lightbulb_driver_t driver_type, lightbulb_config_t *config);
 static esp_err_t lightbulb_hsv2rgb_adjusted(lightbulb_handle_t handle, uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm);
 static esp_err_t _lightbulb_hsv2rgb(lightbulb_handle_t handle, uint16_t hue, uint8_t saturation, uint8_t value, float *red, float *green, float *blue, float *cold, float *warm);
 
-esp_err_t lightbulb_status_set_to_nvs(const lightbulb_status_t *value)
+esp_err_t lightbulb_status_set_to_nvs(lightbulb_handle_t handle, const lightbulb_status_t *value)
 {
+    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(value, "value is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle->nvs_key[0] != '\0', "nvs_key not set", return ESP_ERR_INVALID_STATE);
 
     esp_err_t err = ESP_OK;
-    nvs_handle_t handle = 0;
+    nvs_handle_t nvs_handle = 0;
 
-    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
+    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &nvs_handle);
     LIGHTBULB_CHECK(err == ESP_OK, "nvs open fail, reason code: %d", return err, err);
 
-    err = nvs_set_blob(handle, LIGHTBULB_STORAGE_KEY, value, sizeof(lightbulb_status_t));
-    LIGHTBULB_CHECK(err == ESP_OK, "nvs set fail, reason code: %d", return err, err);
+    err = nvs_set_blob(nvs_handle, handle->nvs_key, value, sizeof(lightbulb_status_t));
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        ESP_LOGE(TAG, "nvs set fail, reason code: %d", err);
+        return err;
+    }
 
-    err = nvs_commit(handle);
-    LIGHTBULB_CHECK(err == ESP_OK, "nvs commit fail", return err);
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        ESP_LOGE(TAG, "nvs commit fail");
+        return err;
+    }
 
-    nvs_close(handle);
+    nvs_close(nvs_handle);
 
     return ESP_OK;
 }
 
-esp_err_t lightbulb_status_get_from_nvs(lightbulb_status_t *value)
+esp_err_t lightbulb_status_get_from_nvs(lightbulb_handle_t handle, lightbulb_status_t *value)
 {
+    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(value, "value is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle->nvs_key[0] != '\0', "nvs_key not set", return ESP_ERR_INVALID_STATE);
 
     esp_err_t err = ESP_OK;
-    nvs_handle_t handle = 0;
+    nvs_handle_t nvs_handle = 0;
     size_t req_len = sizeof(lightbulb_status_t);
 
-    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
+    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &nvs_handle);
     LIGHTBULB_CHECK(err == ESP_OK, "nvs open fail, reason code: %d", return err, err);
 
-    err = nvs_get_blob(handle, LIGHTBULB_STORAGE_KEY, value, &req_len);
-    LIGHTBULB_CHECK(err == ESP_OK, "nvs get fail, reason code: %d", return err, err);
+    err = nvs_get_blob(nvs_handle, handle->nvs_key, value, &req_len);
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        ESP_LOGE(TAG, "nvs get fail, reason code: %d", err);
+        return err;
+    }
 
-    nvs_close(handle);
+    nvs_close(nvs_handle);
 
     return ESP_OK;
 }
 
-esp_err_t lightbulb_status_erase_nvs_storage(void)
+esp_err_t lightbulb_status_erase_nvs_storage(lightbulb_handle_t handle)
 {
-    esp_err_t err = ESP_OK;
-    nvs_handle_t handle = 0;
+    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle->nvs_key[0] != '\0', "nvs_key not set", return ESP_ERR_INVALID_STATE);
 
-    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &handle);
+    esp_err_t err = ESP_OK;
+    nvs_handle_t nvs_handle = 0;
+
+    err = nvs_open(LIGHTBULB_NAMESPACE, NVS_READWRITE, &nvs_handle);
     LIGHTBULB_CHECK(err == ESP_OK, "nvs open fail, reason code: %d", return err, err);
 
-    err = nvs_erase_key(handle, LIGHTBULB_STORAGE_KEY);
-    LIGHTBULB_CHECK(err == ESP_OK, "nvs erase fail, reason code: %d", return err, err);
+    err = nvs_erase_key(nvs_handle, handle->nvs_key);
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        ESP_LOGE(TAG, "nvs erase fail, reason code: %d", err);
+        return err;
+    }
 
-    err = nvs_commit(handle);
-    LIGHTBULB_CHECK(err == ESP_OK, "nvs commit fail, reason code: %d", return err, err);
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        nvs_close(nvs_handle);
+        ESP_LOGE(TAG, "nvs commit fail, reason code: %d", err);
+        return err;
+    }
 
-    nvs_close(handle);
+    nvs_close(nvs_handle);
 
     return ESP_OK;
 }
@@ -159,7 +190,7 @@ static lightbulb_cct_mapping_data_t search_mapping_cct_data(lightbulb_handle_t h
     int low = 0;
     int high = handle->cct_manager.table_size - 1;
     int mid;
-    lightbulb_cct_mapping_data_t result;
+    lightbulb_cct_mapping_data_t result = {0};
     while (low <= high) {
         mid = low + (high - low) / 2;
         lightbulb_cct_mapping_data_t* current_entry = &handle->cct_manager.mix_table[mid];
@@ -500,22 +531,23 @@ static void timercb(TimerHandle_t tmr)
 {
     // Get handle from timer ID
     lightbulb_handle_t handle = (lightbulb_handle_t)pvTimerGetTimerID(tmr);
-    if (!handle) {
+    if (!handle || handle->deiniting) {
         return;
     }
 
     if (tmr == handle->power_timer) {
         hal_sleep_control(handle->hal_ctx, true);
     } else if (tmr == handle->storage_timer) {
-        lightbulb_status_set_to_nvs(&handle->status);
+        lightbulb_status_set_to_nvs(handle, &handle->status);
         if (handle->cap.storage_cb) {
             handle->cap.storage_cb(handle->status);
         }
     } else if (tmr == handle->effect_timer) {
         lightbulb_basic_effect_stop(handle);
-        // Note: For effect timer, we need to rethink how to pass user callback
-        // Since we're using pvTimerID for handle now
-        // TODO: Consider storing user callback in handle structure
+        if (handle->effect_user_cb) {
+            handle->effect_user_cb();
+            handle->effect_user_cb = NULL;
+        }
     }
 }
 
@@ -666,160 +698,154 @@ static void print_func(lightbulb_handle_t handle, char *driver_details, char *dr
     ESP_LOGI(TAG, "---------------------------------------------------------------------");
 }
 
-lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+lightbulb_handle_t lightbulb_new_pwm_device(lightbulb_config_t *config)
 {
-    esp_err_t err = ESP_OK;
-    LIGHTBULB_CHECK(config, "Config is null", return NULL);
-    LIGHTBULB_CHECK(config->type > DRIVER_SELECT_INVALID, "Invalid driver select", return NULL);
-    LIGHTBULB_CHECK(config->type != DRIVER_SM2135E, "This version no longer supports SM2135E chip. Please switch to v0.5.2", return NULL);
-    LIGHTBULB_CHECK(config->capability.led_beads > LED_BEADS_INVALID && config->capability.led_beads < LED_BEADS_MAX, "Invalid led beads combination select", return NULL);
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = pwm_hal_output_init(&config->driver_conf.pwm, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_ESP_PWM, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+lightbulb_handle_t lightbulb_new_sm2182e_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = sm2182e_hal_output_init(&config->driver_conf.sm2182e, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_SM2182E, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
+lightbulb_handle_t lightbulb_new_sm2135eh_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = sm2135eh_hal_output_init(&config->driver_conf.sm2135eh, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_SM2135EH, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
+lightbulb_handle_t lightbulb_new_sm2x35egh_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = sm2x35egh_hal_output_init(&config->driver_conf.sm2x35egh, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_SM2x35EGH, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+lightbulb_handle_t lightbulb_new_bp57x8d_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = bp57x8d_hal_output_init(&config->driver_conf.bp57x8d, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_BP57x8D, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+lightbulb_handle_t lightbulb_new_bp1658cj_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = bp1658cj_hal_output_init(&config->driver_conf.bp1658cj, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_BP1658CJ, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+lightbulb_handle_t lightbulb_new_kp18058_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = kp18058_hal_output_init(&config->driver_conf.kp18058, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_KP18058, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+lightbulb_handle_t lightbulb_new_ws2812_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = ws2812_hal_output_init(&config->driver_conf.ws2812, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_WS2812, config);
+}
+#endif
+
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+lightbulb_handle_t lightbulb_new_sm16825e_device(lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(config, "config is null", return NULL);
+
+    hal_context_t hal_ctx = sm16825e_hal_output_init(&config->driver_conf.sm16825e, config->gamma_conf);
+    if (!hal_ctx) {
+        return NULL;
+    }
+
+    return lightbulb_init(hal_ctx, DRIVER_SM16825E, config);
+}
+#endif
+
+static lightbulb_handle_t lightbulb_init(hal_context_t hal_ctx, lightbulb_driver_t driver_type, lightbulb_config_t *config)
+{
+    LIGHTBULB_CHECK(driver_type > DRIVER_SELECT_INVALID && driver_type < DRIVER_SELECT_MAX, "invalid driver_type", goto CLEANUP_HAL);
+    LIGHTBULB_CHECK(hal_ctx, "hal_ctx is null", return NULL);
+    LIGHTBULB_CHECK(config, "Config is null", goto CLEANUP_HAL);
+    LIGHTBULB_CHECK(config->capability.led_beads > LED_BEADS_INVALID && config->capability.led_beads < LED_BEADS_MAX, "Invalid led beads combination select", goto CLEANUP_HAL);
 
     lightbulb_handle_t handle = (lightbulb_handle_t)calloc(1, sizeof(struct lightbulb_t));
-    LIGHTBULB_CHECK(handle, "calloc fail", return NULL);
+    LIGHTBULB_CHECK(handle, "calloc fail", goto CLEANUP_HAL);
+
+    handle->hal_ctx = hal_ctx;
 
     handle->mutex = xSemaphoreCreateRecursiveMutex();
     LIGHTBULB_CHECK(handle->mutex, "mutex create fail", goto EXIT);
 
-    // hal configuration
-    void *driver_conf = NULL;
+    // Driver details for logging
     char driver_details[224] = {0};
-    char driver_io[32] = {0};
-#ifdef CONFIG_ENABLE_PWM_DRIVER
-    if (config->type == DRIVER_ESP_PWM) {
-        driver_conf = (void *) & (config->driver_conf.pwm);
-        bool invert_level = 0;
-#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
-        invert_level = config->driver_conf.pwm.invert_level;
-#endif
-        sprintf(driver_details, "Pwm Freq: %d Hz, Phase Delay Flag: %d, Invert Level: %d", config->driver_conf.pwm.freq_hz, config->driver_conf.pwm.phase_delay.flag, invert_level);
-    }
-#endif
-#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
-    if (config->type == DRIVER_SM2135EH) {
-        driver_conf = (void *) & (config->driver_conf.sm2135eh);
-        sprintf(driver_details, "SM2135EH IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, WY Current: %d",
-                config->driver_conf.sm2135eh.freq_khz,
-                config->driver_conf.sm2135eh.enable_iic_queue,
-                config->driver_conf.sm2135eh.iic_clk,
-                config->driver_conf.sm2135eh.iic_sda,
-                config->driver_conf.sm2135eh.rgb_current,
-                config->driver_conf.sm2135eh.wy_current);
-    }
-#endif
-#ifdef CONFIG_ENABLE_SM2182E_DRIVER
-    if (config->type == DRIVER_SM2182E) {
-        driver_conf = (void *) & (config->driver_conf.sm2182e);
-        sprintf(driver_details, "SM2182E IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, CW Current: %d",
-                config->driver_conf.sm2182e.freq_khz,
-                config->driver_conf.sm2182e.enable_iic_queue,
-                config->driver_conf.sm2182e.iic_clk,
-                config->driver_conf.sm2182e.iic_sda,
-                config->driver_conf.sm2182e.cw_current);
-        if (config->capability.led_beads > LED_BEADS_2CH_CW) {
-            ESP_LOGW(TAG, "The SM2182E chip only allows the configuration of cold and warm led beads");
-            goto EXIT;
-        }
-    }
-#endif
-#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
-    if (config->type == DRIVER_BP57x8D) {
-        driver_conf = (void *) & (config->driver_conf.bp57x8d);
-        sprintf(driver_details, "BP57x8D IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, Current List:[%d %d %d %d %d]",
-                config->driver_conf.bp57x8d.freq_khz,
-                config->driver_conf.bp57x8d.enable_iic_queue,
-                config->driver_conf.bp57x8d.iic_clk,
-                config->driver_conf.bp57x8d.iic_sda,
-                config->driver_conf.bp57x8d.current[0],
-                config->driver_conf.bp57x8d.current[1],
-                config->driver_conf.bp57x8d.current[2],
-                config->driver_conf.bp57x8d.current[3],
-                config->driver_conf.bp57x8d.current[4]);
-    }
-#endif
-#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
-    if (config->type == DRIVER_BP1658CJ) {
-        driver_conf = (void *) & (config->driver_conf.bp1658cj);
-        sprintf(driver_details, "BP1658CJ IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, CW Current: %d",
-                config->driver_conf.bp1658cj.freq_khz,
-                config->driver_conf.bp1658cj.enable_iic_queue,
-                config->driver_conf.bp1658cj.iic_clk,
-                config->driver_conf.bp1658cj.iic_sda,
-                config->driver_conf.bp1658cj.rgb_current,
-                config->driver_conf.bp1658cj.cw_current);
-    }
-#endif
-#ifdef CONFIG_ENABLE_KP18058_DRIVER
-    if (config->type == DRIVER_KP18058) {
-        driver_conf = (void *) & (config->driver_conf.kp18058);
-        sprintf(driver_details, "KP18058 IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current Multiple: %d, CW Current Multiple: %d, Enable Custom Param: %d",
-                config->driver_conf.kp18058.iic_freq_khz,
-                config->driver_conf.kp18058.enable_iic_queue,
-                config->driver_conf.kp18058.iic_clk,
-                config->driver_conf.kp18058.iic_sda,
-                config->driver_conf.kp18058.rgb_current_multiple,
-                config->driver_conf.kp18058.cw_current_multiple,
-                config->driver_conf.kp18058.enable_custom_param);
-        if (config->driver_conf.kp18058.enable_custom_param) {
-            int offset = strlen(driver_details);
-            sprintf(&driver_details[offset], "\r\n\t\t\tCompensation: %d, Slope, %d, Chopping Freq: %d, Enable Compensation: %d, Enable Chopping Dimming: %d, Enable RC Filter: %d",
-                    config->driver_conf.kp18058.custom_param.compensation,
-                    config->driver_conf.kp18058.custom_param.slope,
-                    config->driver_conf.kp18058.custom_param.chopping_freq,
-                    config->driver_conf.kp18058.custom_param.enable_voltage_compensation,
-                    config->driver_conf.kp18058.custom_param.enable_chopping_dimming,
-                    config->driver_conf.kp18058.custom_param.enable_rc_filter);
-        }
-    }
-#endif
-#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
-    if (config->type == DRIVER_SM2x35EGH) {
-        driver_conf = (void *) & (config->driver_conf.sm2x35egh);
-        sprintf(driver_details, "SM2x35EGH IIC Freq: %d Khz, Queue: %d, SCL: %d, SDA: %d, RGB Current: %d, CW Current: %d",
-                config->driver_conf.sm2x35egh.freq_khz,
-                config->driver_conf.sm2x35egh.enable_iic_queue,
-                config->driver_conf.sm2x35egh.iic_clk,
-                config->driver_conf.sm2x35egh.iic_sda,
-                config->driver_conf.sm2x35egh.rgb_current,
-                config->driver_conf.sm2x35egh.cw_current);
-    }
-#endif
-#ifdef CONFIG_ENABLE_WS2812_DRIVER
-    if (config->type == DRIVER_WS2812) {
-        driver_conf = (void *) & (config->driver_conf.ws2812);
-        sprintf(driver_details, "WS2812 Led Num: %d", config->driver_conf.ws2812.led_num);
-        sprintf(driver_io, "IO List:[%d]", config->driver_conf.ws2812.ctrl_io);
-    }
-#endif
-#ifdef CONFIG_ENABLE_SM16825E_DRIVER
-    if (config->type == DRIVER_SM16825E) {
-        driver_conf = (void *) & (config->driver_conf.sm16825e);
-        sprintf(driver_details, "SM16825E Led Num: %d", config->driver_conf.sm16825e.led_num);
-    }
-#endif
-
-    if (config->type == DRIVER_ESP_PWM) {
-        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.pwm_io.red, config->io_conf.pwm_io.green, config->io_conf.pwm_io.blue, config->io_conf.pwm_io.cold_cct, config->io_conf.pwm_io.warm_brightness);
-    } else if (config->type == DRIVER_SM2182E) {
-        sprintf(driver_io, "IO List:[%d %d]", config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
-    } else if (config->type >= DRIVER_SM2135E && config->type < DRIVER_WS2812) {
-        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.iic_io.red, config->io_conf.iic_io.green, config->io_conf.iic_io.blue, config->io_conf.iic_io.cold_white, config->io_conf.iic_io.warm_yellow);
-    } else if (config->type == DRIVER_WS2812) {
-        // Nothing
-    } else if (config->type == DRIVER_SM16825E) {
-        sprintf(driver_io, "IO List:[%d %d %d %d %d]", config->io_conf.sm16825e_io.red, config->io_conf.sm16825e_io.green, config->io_conf.sm16825e_io.blue, config->io_conf.sm16825e_io.cold_white, config->io_conf.sm16825e_io.warm_yellow);
-    } else {
-        ESP_LOGW(TAG, "The driver has not been updated to the component");
-        abort();
-    }
+    char driver_io[64] = {0};
+    sprintf(driver_details, "HAL context: %p", (void *)hal_ctx);
+    sprintf(driver_io, "Configured via hal_regist_channel");
 
     // Config check
-    if (config->type >= DRIVER_SM2135E && config->type <= DRIVER_KP18058) {
-        if (config->capability.enable_hardware_cct == true) {
-            config->capability.enable_hardware_cct = false;
-            ESP_LOGW(TAG, "The IIC dimming chip must enable CCT mix, rewrite the enable_hardware_cct variable to false.");
-        }
-    }
-
     if (config->capability.enable_hardware_cct == true && config->capability.enable_precise_cct_control == true) {
         ESP_LOGW(TAG, "The detection uses both hardware CCT and precision CCT control. Precision CCT control will be disable.");
         config->capability.enable_precise_cct_control = false;
@@ -835,54 +861,56 @@ lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
         config->capability.enable_precise_cct_control = true;
     }
 
-    //Init HAL
-    hal_config_t hal_conf = {
-        .type = config->type,
-        .driver_data = driver_conf,
-    };
-    handle->hal_ctx = hal_output_init(&hal_conf, config->gamma_conf, (void *)&config->init_status.mode);
-    LIGHTBULB_CHECK(handle->hal_ctx != NULL, "hal init fail", goto EXIT);
-
     // Load init status
     memcpy(&handle->status, &config->init_status, sizeof(lightbulb_status_t));
     memcpy(&handle->cap, &config->capability, sizeof(lightbulb_capability_t));
 
     // Check channel
-    if (handle->cap.led_beads == LED_BEADS_1CH_C || handle->cap.led_beads == LED_BEADS_2CH_CW || handle->cap.led_beads == LED_BEADS_4CH_RGBC || handle->cap.led_beads == LED_BEADS_4CH_RGBCC
-            || handle->cap.led_beads == LED_BEADS_5CH_RGBCW || handle->cap.led_beads == LED_BEADS_5CH_RGBC || handle->cap.led_beads == LED_BEADS_5CH_RGBCC || handle->cap.led_beads == LED_BEADS_5CH_RGBWW) {
-        if (config->type == DRIVER_ESP_PWM) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.pwm_io.cold_cct);
-        } else if (config->type == DRIVER_SM16825E) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.sm16825e_io.cold_white);
+    if (config->capability.led_beads >= LED_BEADS_3CH_RGB) {
+        if (driver_type == DRIVER_ESP_PWM) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_RED, config->io_conf.pwm_io.red) == ESP_OK, "register red channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_GREEN, config->io_conf.pwm_io.green) == ESP_OK, "register green channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_BLUE, config->io_conf.pwm_io.blue) == ESP_OK, "register blue channel fail", goto EXIT);
+        } else if (driver_type == DRIVER_WS2812) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_RED, 0) == ESP_OK, "register red channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_GREEN, 0) == ESP_OK, "register green channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_BLUE, 0) == ESP_OK, "register blue channel fail", goto EXIT);
+        } else if (driver_type == DRIVER_SM16825E) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_RED, config->io_conf.sm16825e_io.red) == ESP_OK, "register red channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_GREEN, config->io_conf.sm16825e_io.green) == ESP_OK, "register green channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_BLUE, config->io_conf.sm16825e_io.blue) == ESP_OK, "register blue channel fail", goto EXIT);
         } else {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.iic_io.cold_white);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_RED, config->io_conf.iic_io.red) == ESP_OK, "register red channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_GREEN, config->io_conf.iic_io.green) == ESP_OK, "register green channel fail", goto EXIT);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_BLUE, config->io_conf.iic_io.blue) == ESP_OK, "register blue channel fail", goto EXIT);
         }
     }
-    if (handle->cap.led_beads == LED_BEADS_1CH_W || handle->cap.led_beads == LED_BEADS_2CH_CW || handle->cap.led_beads == LED_BEADS_4CH_RGBW || handle->cap.led_beads == LED_BEADS_4CH_RGBWW
-            || handle->cap.led_beads == LED_BEADS_5CH_RGBCW || handle->cap.led_beads == LED_BEADS_5CH_RGBW || handle->cap.led_beads == LED_BEADS_5CH_RGBCC || handle->cap.led_beads == LED_BEADS_5CH_RGBWW) {
-        if (config->type == DRIVER_ESP_PWM) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.pwm_io.warm_brightness);
-        } else if (config->type == DRIVER_SM16825E) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.sm16825e_io.warm_yellow);
+    if (config->capability.led_beads == LED_BEADS_1CH_C || config->capability.led_beads == LED_BEADS_2CH_CW || config->capability.led_beads == LED_BEADS_4CH_RGBC || config->capability.led_beads == LED_BEADS_4CH_RGBCC
+            || config->capability.led_beads == LED_BEADS_5CH_RGBCW || config->capability.led_beads == LED_BEADS_5CH_RGBC || config->capability.led_beads == LED_BEADS_5CH_RGBCC || config->capability.led_beads == LED_BEADS_5CH_RGBWW) {
+        if (driver_type == DRIVER_ESP_PWM) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.pwm_io.cold_cct) == ESP_OK, "register cold channel fail", goto EXIT);
+        } else if (driver_type == DRIVER_SM16825E) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.sm16825e_io.cold_white) == ESP_OK, "register cold channel fail", goto EXIT);
         } else {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.iic_io.warm_yellow);
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_COLD_CCT_WHITE, config->io_conf.iic_io.cold_white) == ESP_OK, "register cold channel fail", goto EXIT);
+        }
+    }
+    if (config->capability.led_beads == LED_BEADS_1CH_W || config->capability.led_beads == LED_BEADS_2CH_CW || config->capability.led_beads == LED_BEADS_4CH_RGBW || config->capability.led_beads == LED_BEADS_4CH_RGBWW
+            || config->capability.led_beads == LED_BEADS_5CH_RGBCW || config->capability.led_beads == LED_BEADS_5CH_RGBW || config->capability.led_beads == LED_BEADS_5CH_RGBCC || config->capability.led_beads == LED_BEADS_5CH_RGBWW) {
+        if (driver_type == DRIVER_ESP_PWM) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.pwm_io.warm_brightness) == ESP_OK, "register warm channel fail", goto EXIT);
+        } else if (driver_type == DRIVER_SM16825E) {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.sm16825e_io.warm_yellow) == ESP_OK, "register warm channel fail", goto EXIT);
+        } else {
+            LIGHTBULB_CHECK(hal_regist_channel(hal_ctx, CHANNEL_ID_WARM_BRIGHTNESS_YELLOW, config->io_conf.iic_io.warm_yellow) == ESP_OK, "register warm channel fail", goto EXIT);
         }
     }
 
-    if (handle->cap.led_beads >= LED_BEADS_3CH_RGB) {
-        if (config->type == DRIVER_ESP_PWM) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_RED, config->io_conf.pwm_io.red);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_GREEN, config->io_conf.pwm_io.green);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_BLUE, config->io_conf.pwm_io.blue);
-        } else if (config->type == DRIVER_SM16825E) {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_RED, config->io_conf.sm16825e_io.red);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_GREEN, config->io_conf.sm16825e_io.green);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_BLUE, config->io_conf.sm16825e_io.blue);
-        } else {
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_RED, config->io_conf.iic_io.red);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_GREEN, config->io_conf.iic_io.green);
-            hal_regist_channel(handle->hal_ctx, CHANNEL_ID_BLUE, config->io_conf.iic_io.blue);
-        }
+    // Initialize NVS storage configuration
+    if (config->nvs_key && config->nvs_key[0] != '\0') {
+        snprintf(handle->nvs_key, sizeof(handle->nvs_key), "%s", config->nvs_key);
+    } else if (handle->cap.enable_status_storage) {
+        LIGHTBULB_CHECK(false, "nvs_key must be explicitly set when enable_status_storage is true", goto EXIT);
     }
 
     // Check cct output mode
@@ -943,7 +971,6 @@ lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
                     }
                 } else {
                     ESP_LOGE(TAG, "This led combination does not have a default cct mix table, please income it in from outside.");
-                    err = ESP_ERR_NOT_SUPPORTED;
                     goto EXIT;
                 }
             } else {
@@ -973,7 +1000,6 @@ lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
     }
     if (handle->cct_manager.table_size > 0) {
         bool result = cct_mix_table_data_check(handle);
-        err = ESP_ERR_INVALID_ARG;
         LIGHTBULB_CHECK(result, "mix table check fail", goto EXIT);
     }
 
@@ -995,7 +1021,6 @@ lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
     }
     if (handle->cap.enable_precise_color_control && handle->color_manager.table_size > 0) {
         bool result = color_mix_table_data_check();
-        err = ESP_ERR_INVALID_ARG;
         LIGHTBULB_CHECK(result, "mix table check fail", goto EXIT);
     }
 
@@ -1071,7 +1096,10 @@ lightbulb_handle_t lightbulb_init(lightbulb_config_t *config)
 
 EXIT:
     lightbulb_deinit(handle);
+    return NULL;
 
+CLEANUP_HAL:
+    hal_output_deinit(hal_ctx);
     return NULL;
 }
 
@@ -1079,27 +1107,33 @@ esp_err_t lightbulb_deinit(lightbulb_handle_t handle)
 {
     LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
 
-    if (handle->mutex) {
-        vSemaphoreDelete(handle->mutex);
-        handle->mutex = NULL;
-    }
+    handle->deiniting = true;
+    handle->effect_user_cb = NULL;
 
     if (handle->power_timer) {
-        xTimerStop(handle->power_timer, 0);
-        xTimerDelete(handle->power_timer, 0);
+        vTimerSetTimerID(handle->power_timer, NULL);
+        xTimerStop(handle->power_timer, portMAX_DELAY);
+        xTimerDelete(handle->power_timer, portMAX_DELAY);
         handle->power_timer = NULL;
     }
 
     if (handle->storage_timer) {
-        xTimerStop(handle->storage_timer, 0);
-        xTimerDelete(handle->storage_timer, 0);
+        vTimerSetTimerID(handle->storage_timer, NULL);
+        xTimerStop(handle->storage_timer, portMAX_DELAY);
+        xTimerDelete(handle->storage_timer, portMAX_DELAY);
         handle->storage_timer = NULL;
     }
 
     if (handle->effect_timer) {
-        xTimerStop(handle->effect_timer, 0);
-        xTimerDelete(handle->effect_timer, 0);
+        vTimerSetTimerID(handle->effect_timer, NULL);
+        xTimerStop(handle->effect_timer, portMAX_DELAY);
+        xTimerDelete(handle->effect_timer, portMAX_DELAY);
         handle->effect_timer = NULL;
+    }
+
+    if (handle->mutex) {
+        vSemaphoreDelete(handle->mutex);
+        handle->mutex = NULL;
     }
 
     if (handle->cct_manager.mix_table) {
@@ -1122,6 +1156,7 @@ esp_err_t lightbulb_deinit(lightbulb_handle_t handle)
 
     if (handle->hal_ctx) {
         hal_output_deinit(handle->hal_ctx);
+        handle->hal_ctx = NULL;
     }
 
     free(handle);
@@ -1484,7 +1519,7 @@ esp_err_t lightbulb_kelvin2percentage(lightbulb_handle_t handle, uint16_t kelvin
     LIGHTBULB_CHECK(handle->cct_manager.kelvin_to_percentage, "No conversion function was registered because the this led combination does not support CCT.", return ESP_ERR_INVALID_ARG);
     LIGHTBULB_CHECK(percentage, "percentage is null", return ESP_ERR_INVALID_ARG);
 
-    if (kelvin >= handle->cct_manager.kelvin_range.min && kelvin <= handle->cct_manager.kelvin_range.max) {
+    if (kelvin < handle->cct_manager.kelvin_range.min || kelvin > handle->cct_manager.kelvin_range.max) {
         ESP_LOGW(TAG, "kelvin out of range, will be forcibly converted");
     }
 
@@ -1622,6 +1657,7 @@ esp_err_t lightbulb_set_channel_group(lightbulb_handle_t handle, uint16_t r_ch, 
     color_value[3] = c_ch;
     color_value[4] = w_ch;
 
+    LB_MUTEX_TAKE(handle, portMAX_DELAY);
     err = hal_set_channel_group(handle->hal_ctx, color_value, channel_mask, fade_time);
     LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
@@ -1653,6 +1689,7 @@ esp_err_t lightbulb_set_rgb(lightbulb_handle_t handle, uint8_t r, uint8_t g, uin
     color_value[2] = (float)b / 255 * max_value;
     ESP_LOGI(TAG, "hal write value [r:%d g:%d b:%d], channel_mask:%d fade_ms:%d", color_value[0], color_value[1], color_value[2], channel_mask, fade_time);
 
+    LB_MUTEX_TAKE(handle, portMAX_DELAY);
     err = hal_set_channel_group(handle->hal_ctx, color_value, channel_mask, fade_time);
     LIGHTBULB_CHECK(err == ESP_OK, "set hal channel group fail", goto EXIT);
 
@@ -1813,7 +1850,7 @@ esp_err_t lightbulb_set_switch(lightbulb_handle_t handle, bool status)
 
 int16_t lightbulb_get_hue(lightbulb_handle_t handle)
 {
-    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle, "handle is null", return -1);
     LIGHTBULB_CHECK(IS_COLOR_CHANNEL_SELECTED(handle), "color channel output is disable", return -1);
 
     LB_MUTEX_TAKE(handle, portMAX_DELAY);
@@ -1898,7 +1935,7 @@ esp_err_t lightbulb_get_all_detail(lightbulb_handle_t handle, lightbulb_status_t
 
 bool lightbulb_get_switch(lightbulb_handle_t handle)
 {
-    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle, "handle is null", return false);
     LIGHTBULB_CHECK(IS_WHITE_CHANNEL_SELECTED(handle) || IS_COLOR_CHANNEL_SELECTED(handle), "white or color channel output is disable", return false);
 
     LB_MUTEX_TAKE(handle, portMAX_DELAY);
@@ -1951,7 +1988,7 @@ esp_err_t lightbulb_set_fade_time(lightbulb_handle_t handle, uint32_t fade_time_
 
 bool lightbulb_get_fades_function_status(lightbulb_handle_t handle)
 {
-    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle, "handle is null", return false);
 
     LB_MUTEX_TAKE(handle, portMAX_DELAY);
     bool result = handle->cap.enable_fade;
@@ -1962,7 +1999,7 @@ bool lightbulb_get_fades_function_status(lightbulb_handle_t handle)
 
 lightbulb_works_mode_t lightbulb_get_mode(lightbulb_handle_t handle)
 {
-    LIGHTBULB_CHECK(handle, "handle is null", return ESP_ERR_INVALID_ARG);
+    LIGHTBULB_CHECK(handle, "handle is null", return WORK_INVALID);
 
     LB_MUTEX_TAKE(handle, portMAX_DELAY);
     lightbulb_works_mode_t result = WORK_INVALID;
@@ -2060,17 +2097,20 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_handle_t handle, lightbulb_effe
         handle->effect_flag.allow_interrupt = !config->interrupt_forbidden;
         handle->effect_flag.running = true;
         if (config->total_ms > 0) {
+            handle->effect_user_cb = config->user_cb;
             if (!handle->effect_timer) {
                 handle->effect_timer = xTimerCreate("effect_timer", pdMS_TO_TICKS(config->total_ms), false, handle, timercb);
-                LIGHTBULB_CHECK(handle->effect_timer, "create timer fail", goto EXIT);
+                if (!handle->effect_timer) {
+                    ESP_LOGE(TAG, "create timer fail");
+                    handle->effect_flag.running = false;
+                    handle->effect_user_cb = NULL;
+                    err = ESP_FAIL;
+                    goto EXIT;
+                }
             } else {
                 xTimerChangePeriod(handle->effect_timer, pdMS_TO_TICKS(config->total_ms), 0);
             }
-            if (config->user_cb) {
-                vTimerSetTimerID(handle->effect_timer, config->user_cb);
-            } else {
-                vTimerSetTimerID(handle->effect_timer, handle);
-            }
+            vTimerSetTimerID(handle->effect_timer, handle);
 
             if (xTimerStart(handle->effect_timer, 0) != pdPASS) {
                 ESP_LOGW(TAG, "The auto-stop timer start fail, the effect will continue executing, but will not stop automatically.");
@@ -2079,6 +2119,7 @@ esp_err_t lightbulb_basic_effect_start(lightbulb_handle_t handle, lightbulb_effe
                 ESP_LOGI(TAG, "The auto-stop timer will trigger after %d ms.", config->total_ms);
             }
         } else {
+            handle->effect_user_cb = NULL;
             ESP_LOGI(TAG, "The auto-stop timer is not running, the effect will keep running.");
         }
         ESP_LOGI(TAG, "effect config: \r\n"

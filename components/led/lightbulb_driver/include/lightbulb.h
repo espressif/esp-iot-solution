@@ -313,8 +313,6 @@ typedef lightbulb_chip_out_pin_t lightbulb_iic_out_pin_t;
  * @brief Lightbulb Configuration Options.
  */
 typedef struct {
-    lightbulb_driver_t type;                  /**< Type of the lightbulb driver. */
-
     union {
 #ifdef CONFIG_ENABLE_PWM_DRIVER
         driver_pwm_t pwm;
@@ -404,6 +402,7 @@ typedef struct {
 
     lightbulb_capability_t capability;        /**< Lightbulb capability configuration. */
     lightbulb_status_t init_status;           /**< Initial status of the lightbulb. */
+    const char *nvs_key;                      /**< NVS key */
 } lightbulb_config_t;
 
 /**
@@ -434,14 +433,94 @@ typedef struct {
 } lightbulb_effect_config_t;
 
 /**
- * @brief Create and initialize a lightbulb instance.
+ * @brief Create and initialize a PWM-based lightbulb device.
  *
- * @param config Pointer to the configuration parameters for the lightbulb.
- * @return lightbulb_handle_t Handle to the created lightbulb instance, or NULL on failure.
- *
- * @note This replaces the old lightbulb_init() function to support multiple instances.
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-lightbulb_handle_t lightbulb_init(lightbulb_config_t *config);
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+lightbulb_handle_t lightbulb_new_pwm_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a SM2182E-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+lightbulb_handle_t lightbulb_new_sm2182e_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a SM2135EH-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
+lightbulb_handle_t lightbulb_new_sm2135eh_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a SM2x35EGH-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
+lightbulb_handle_t lightbulb_new_sm2x35egh_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a BP57x8D-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+lightbulb_handle_t lightbulb_new_bp57x8d_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a BP1658CJ-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+lightbulb_handle_t lightbulb_new_bp1658cj_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a KP18058-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+lightbulb_handle_t lightbulb_new_kp18058_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a WS2812-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+lightbulb_handle_t lightbulb_new_ws2812_device(lightbulb_config_t *config);
+#endif
+
+/**
+ * @brief Create and initialize a SM16825E-based lightbulb device.
+ *
+ * @param config Pointer to lightbulb configuration
+ * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
+ */
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+lightbulb_handle_t lightbulb_new_sm16825e_device(lightbulb_config_t *config);
+#endif
 
 /**
  * @brief Destroy a lightbulb instance and release resources.
@@ -751,25 +830,28 @@ esp_err_t lightbulb_get_all_detail(lightbulb_handle_t handle, lightbulb_status_t
 /**
  * @brief Get the lightbulb status from NVS.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param value Pointer to a `lightbulb_status_t` structure where the stored state will be read into.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_status_get_from_nvs(lightbulb_status_t *value);
+esp_err_t lightbulb_status_get_from_nvs(lightbulb_handle_t handle, lightbulb_status_t *value);
 
 /**
  * @brief Store the lightbulb state to NVS.
  *
+ * @param handle Handle to the lightbulb instance.
  * @param value Pointer to a `lightbulb_status_t` structure representing the current running state to be stored.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_status_set_to_nvs(const lightbulb_status_t *value);
+esp_err_t lightbulb_status_set_to_nvs(lightbulb_handle_t handle, const lightbulb_status_t *value);
 
 /**
  * @brief Erase the lightbulb state stored in NVS.
  *
+ * @param handle Handle to the lightbulb instance.
  * @return esp_err_t An error code indicating the success or failure of the operation.
  */
-esp_err_t lightbulb_status_erase_nvs_storage(void);
+esp_err_t lightbulb_status_erase_nvs_storage(lightbulb_handle_t handle);
 
 /**
  * @brief Start some blinking/breathing effects.

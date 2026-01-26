@@ -44,7 +44,6 @@ The PWM scheme is implemented using the LEDC driver, supporting both software an
 ```c
 lightbulb_config_t config = {
     // 1. Select PWM output and configure parameters
-    .type = DRIVER_ESP_PWM,
     .driver_conf.pwm.freq_hz = 4000,
 
     // 2. Capability Selection: Enable/Disable Based on Your Needs
@@ -77,7 +76,7 @@ lightbulb_config_t config = {
     .init_status.saturation = 100,
     .init_status.value = 100,
 };
-lightbulb_init(&config);
+lightbulb_new_pwm_device(&config);
 ```
 
 ## Example of IIC Scheme
@@ -87,7 +86,6 @@ The IIC dimming chip solution now supports configuring all parameters of the IIC
 ```c
 lightbulb_config_t config = {
     // 1. Select the desired chip and configure parameters. Each chip has different configuration parameters. Please carefully refer to the chip manual.
-    .type = DRIVER_BP57x8D,
     .driver_conf.bp57x8d.freq_khz = 300,
     .driver_conf.bp57x8d.enable_iic_queue = true,
     .driver_conf.bp57x8d.iic_clk = 4,
@@ -124,7 +122,7 @@ lightbulb_config_t config = {
     .init_status.saturation = 100,
     .init_status.value = 100,
 };
-lightbulb_init(&config);
+lightbulb_new_bp57x8d_device(&config);
 ```
 
 ## Example of Single-bus Scheme
@@ -136,7 +134,6 @@ Single-bus scheme utilizes the SPI driver to output data for WS2812 LEDs, with d
 ```c
 lightbulb_config_t config = {
     // 1. Select WS2812 output and configure parameters
-    .type = DRIVER_WS2812,
     .driver_conf.ws2812.led_num = 22,
     .driver_conf.ws2812.ctrl_io = 4,
 
@@ -162,7 +159,7 @@ lightbulb_config_t config = {
     .init_status.saturation = 100,
     .init_status.value = 100,
 };
-lightbulb_init(&config);
+lightbulb_new_ws2812_device(&config);
 ```
 
 ### SM16825E usage example
@@ -172,7 +169,6 @@ The SM16825E is an RGBWY five-channel LED driver that uses an SPI interface and 
 ```cpp
 lightbulb_config_t config = {
     //1. Select SM16825E output and configure parameters
-    .type = DRIVER_SM16825E,
     .driver_conf.sm16825e.led_num = 1,        // Number of LED chips
     .driver_conf.sm16825e.ctrl_io = 9,        // Control GPIO pin
     .driver_conf.sm16825e.freq_hz = 3333000,  // SPI frequency (default: 3.33MHz, auto-calculated based on RZ protocol timing)
@@ -199,7 +195,7 @@ lightbulb_config_t config = {
     .init_status.saturation = 100,
     .init_status.value = 100,
 };
-lightbulb_init(&config);
+lightbulb_new_sm16825e_device(&config);
 
 // Optional: Configure channel mapping (if custom pin mapping is needed)
 sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR);

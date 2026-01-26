@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -80,7 +80,7 @@ static void cleanup(void)
     }
 }
 
-esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
+esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
@@ -95,7 +95,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
     memset(s_ws2812->buf, 0, s_ws2812->buf_size);
 
     err = gpio_set_drive_capability(config->ctrl_io, GPIO_DRIVE_CAP_3);
-    DRIVER_CHECK(err == ESP_OK, "set drive capability fail", return err);
+    DRIVER_CHECK(err == ESP_OK, "set drive capability fail", goto EXIT);
 
     spi_bus_config_t buscfg = {
         .mosi_io_num = config->ctrl_io,
@@ -123,7 +123,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
     int dma_chan = SPI2_HOST;
     err = spi_bus_initialize(SPI2_HOST, &buscfg, dma_chan);
 #endif
-    DRIVER_CHECK(err == ESP_OK, "spi_bus_initialize error", return err);
+    DRIVER_CHECK(err == ESP_OK, "spi_bus_initialize error", goto EXIT);
 
 #if !CONFIG_IDF_TARGET_ESP32
     spi_dev_t *hw = spi_periph_signal[SPI2_HOST].hw;

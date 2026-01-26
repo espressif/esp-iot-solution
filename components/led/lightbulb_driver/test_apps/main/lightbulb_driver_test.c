@@ -1,13 +1,4 @@
 /*
- * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
-#include "freertos/FreeRTOS.h"
-#include "lightbulb.h"
-
-/*
  * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -144,7 +135,6 @@ TEST_CASE("Power Check 1", "[Application Layer]")
 
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
         .driver_conf.bp57x8d.iic_clk = 4,
         .driver_conf.bp57x8d.iic_sda = 3,
@@ -170,7 +160,7 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config1);
+    handle = lightbulb_new_bp57x8d_device(&config1);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -186,7 +176,6 @@ TEST_CASE("Power Check 1", "[Application Layer]")
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
         .capability.enable_fade = 0,
         .capability.fade_time_ms = 800,
@@ -216,7 +205,7 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config2);
+    handle = lightbulb_new_pwm_device(&config2);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -232,7 +221,6 @@ TEST_CASE("Power Check 1", "[Application Layer]")
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 22,
         .driver_conf.ws2812.ctrl_io = 2,
         .capability.enable_fade = 0,
@@ -248,7 +236,7 @@ TEST_CASE("Power Check 1", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config3);
+    handle = lightbulb_new_ws2812_device(&config3);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -280,7 +268,6 @@ TEST_CASE("Power Check 2", "[Application Layer]")
 
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
         .driver_conf.bp57x8d.iic_clk = 4,
         .driver_conf.bp57x8d.iic_sda = 3,
@@ -306,7 +293,7 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config1);
+    handle = lightbulb_new_bp57x8d_device(&config1);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -322,7 +309,6 @@ TEST_CASE("Power Check 2", "[Application Layer]")
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
         .capability.enable_fade = 0,
         .capability.fade_time_ms = 800,
@@ -352,7 +338,7 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config2);
+    handle = lightbulb_new_pwm_device(&config2);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -368,7 +354,6 @@ TEST_CASE("Power Check 2", "[Application Layer]")
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 22,
         .driver_conf.ws2812.ctrl_io = 2,
         .capability.enable_fade = 0,
@@ -384,7 +369,7 @@ TEST_CASE("Power Check 2", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config3);
+    handle = lightbulb_new_ws2812_device(&config3);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -416,7 +401,6 @@ TEST_CASE("Power Check 3", "[Application Layer]")
 
     //TEST 1, max value: 1023
     lightbulb_config_t config1 = {
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
         .driver_conf.bp57x8d.iic_clk = 4,
         .driver_conf.bp57x8d.iic_sda = 3,
@@ -442,7 +426,7 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config1);
+    handle = lightbulb_new_bp57x8d_device(&config1);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -458,7 +442,6 @@ TEST_CASE("Power Check 3", "[Application Layer]")
 
     //TEST 2, max value: 4096-8192
     lightbulb_config_t config2 = {
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
         .capability.enable_fade = 0,
         .capability.fade_time_ms = 800,
@@ -488,7 +471,7 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config2);
+    handle = lightbulb_new_pwm_device(&config2);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -504,7 +487,6 @@ TEST_CASE("Power Check 3", "[Application Layer]")
 
     //TEST 3, max value: 255
     lightbulb_config_t config3 = {
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 22,
         .driver_conf.ws2812.ctrl_io = 2,
         .capability.enable_fade = 0,
@@ -520,7 +502,7 @@ TEST_CASE("Power Check 3", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config3);
+    handle = lightbulb_new_ws2812_device(&config3);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 10) {
         for (int j = 0;  j < 100; j += 10) {
@@ -551,7 +533,6 @@ TEST_CASE("Power Check 4", "[Application Layer]")
     lightbulb_handle_t handle = NULL;
 
     lightbulb_config_t config1 = {
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
         .driver_conf.bp57x8d.iic_clk = 4,
         .driver_conf.bp57x8d.iic_sda = 3,
@@ -583,7 +564,7 @@ TEST_CASE("Power Check 4", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    handle = lightbulb_init(&config1);
+    handle = lightbulb_new_bp57x8d_device(&config1);
     TEST_ASSERT_NOT_NULL(handle);
     for (int i = 0; i < 360; i += 30) {
         for (int j = 0;  j < 100; j += 10) {
@@ -611,7 +592,7 @@ TEST_CASE("PWM", "[Underlying Driver]")
     driver_pwm_t conf = {
         .freq_hz = 4000,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
 #if CONFIG_IDF_TARGET_ESP32
@@ -664,7 +645,6 @@ TEST_CASE("PWM", "[Underlying Driver]")
 TEST_CASE("PWM", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
         .capability.enable_fade = true,
         .capability.fade_time_ms = 800,
@@ -692,7 +672,7 @@ TEST_CASE("PWM", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_pwm_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -717,7 +697,7 @@ TEST_CASE("SM2135EH", "[Underlying Driver]")
         .freq_khz = 400,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, sm2135eh_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2135eh_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, sm2135eh_regist_channel(SM2135EH_CHANNEL_R, SM2135EH_PIN_OUT3));
@@ -791,7 +771,6 @@ TEST_CASE("SM2135EH", "[Underlying Driver]")
 TEST_CASE("SM2135EH", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_SM2135EH,
         .driver_conf.sm2135eh.rgb_current = SM2135EH_RGB_CURRENT_24MA,
         .driver_conf.sm2135eh.wy_current = SM2135EH_WY_CURRENT_40MA,
         .driver_conf.sm2135eh.iic_clk = 4,
@@ -818,7 +797,7 @@ TEST_CASE("SM2135EH", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_sm2135eh_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -842,7 +821,7 @@ TEST_CASE("BP57x8D", "[Underlying Driver]")
         .freq_khz = 300,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_R, BP57x8D_PIN_OUT1));
@@ -913,7 +892,6 @@ TEST_CASE("BP57x8D", "[Underlying Driver]")
 TEST_CASE("BP57x8D", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.current = {10, 10, 10, 20, 20},
         .driver_conf.bp57x8d.iic_clk = 4,
         .driver_conf.bp57x8d.iic_sda = 3,
@@ -939,7 +917,7 @@ TEST_CASE("BP57x8D", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_bp57x8d_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -964,7 +942,7 @@ TEST_CASE("BP1658CJ", "[Underlying Driver]")
         .freq_khz = 300,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
@@ -1048,7 +1026,6 @@ TEST_CASE("BP1658CJ", "[Underlying Driver]")
 TEST_CASE("BP1658CJ", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_BP1658CJ,
         .driver_conf.bp1658cj.rgb_current = BP1658CJ_RGB_CURRENT_10MA,
         .driver_conf.bp1658cj.cw_current = BP1658CJ_CW_CURRENT_30MA,
         .driver_conf.bp1658cj.iic_clk = 4,
@@ -1075,7 +1052,7 @@ TEST_CASE("BP1658CJ", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_bp1658cj_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -1097,7 +1074,7 @@ TEST_CASE("SM2182E", "[Underlying Driver]")
         .freq_khz = 300,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2182e_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, sm2182e_regist_channel(SM2182E_CHANNEL_C, SM2182E_PIN_OUT1));
@@ -1128,7 +1105,6 @@ TEST_CASE("SM2182E", "[Underlying Driver]")
 TEST_CASE("SM2182E", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_SM2182E,
         .driver_conf.sm2182e.cw_current = SM2182E_CW_CURRENT_30MA,
         .driver_conf.sm2182e.iic_clk = 4,
         .driver_conf.sm2182e.iic_sda = 3,
@@ -1151,7 +1127,7 @@ TEST_CASE("SM2182E", "[Application Layer]")
         .init_status.brightness = 100,
         .init_status.cct_percentage = 0,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_sm2182e_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_COLD_TO_WARM | LIGHTING_WARM_TO_COLD, 1000);
@@ -1176,7 +1152,7 @@ TEST_CASE("SM2x35EGH", "[Underlying Driver]")
         .freq_khz = 300,
         .enable_iic_queue = true
     };
-    TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_init(&conf, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, sm2x35egh_regist_channel(SM2x35EGH_CHANNEL_R, SM2x35EGH_PIN_OUT3));
@@ -1273,7 +1249,6 @@ TEST_CASE("SM2x35EGH", "[Underlying Driver]")
 TEST_CASE("SM2x35EGH", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_SM2x35EGH,
         .driver_conf.sm2x35egh.rgb_current = SM2235EGH_RGB_CURRENT_20MA,
         .driver_conf.sm2x35egh.cw_current = SM2235EGH_CW_CURRENT_40MA,
         .driver_conf.sm2x35egh.iic_clk = 4,
@@ -1300,7 +1275,7 @@ TEST_CASE("SM2x35EGH", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_sm2x35egh_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -1315,7 +1290,7 @@ TEST_CASE("WS2812", "[Underlying Driver]")
         .led_num = 1,
         .ctrl_io = 4,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, ws2812_init(&ws2812, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_init(&ws2812, NULL, NULL));
     ws2812_set_rgb_channel(255, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(1000));
     ws2812_set_rgb_channel(0, 255, 0);
@@ -1327,7 +1302,6 @@ TEST_CASE("WS2812", "[Underlying Driver]")
 TEST_CASE("WS2812", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 22,
         .driver_conf.ws2812.ctrl_io = 2,
         .capability.enable_fade = true,
@@ -1343,7 +1317,7 @@ TEST_CASE("WS2812", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_ws2812_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_RAINBOW, 1000);
@@ -1362,7 +1336,7 @@ TEST_CASE("KP18058", "[Underlying Driver]")
         .iic_freq_khz = 300,
         .enable_iic_queue = true,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, kp18058_init(&kp18058, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, kp18058_init(&kp18058, NULL, NULL));
 
     //3. regist Check, step 1
     TEST_ASSERT_EQUAL(ESP_OK, kp18058_regist_channel(KP18058_CHANNEL_R, KP18058_PIN_OUT3));
@@ -1464,7 +1438,6 @@ TEST_CASE("KP18058", "[Underlying Driver]")
 TEST_CASE("KP18058", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_KP18058,
         .driver_conf.kp18058.rgb_current_multiple = 3,
         .driver_conf.kp18058.cw_current_multiple = 10,
         .driver_conf.kp18058.iic_clk = 5,
@@ -1491,7 +1464,7 @@ TEST_CASE("KP18058", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_kp18058_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -1508,7 +1481,7 @@ TEST_CASE("SM16825E", "[Underlying Driver]")
         .ctrl_io = 9,
         .current = {150, 150, 150, 150, 150},
     };
-    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
 
     TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTW));
     TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTR));
@@ -1566,7 +1539,6 @@ TEST_CASE("SM16825E", "[Underlying Driver]")
 TEST_CASE("SM16825E", "[Application Layer]")
 {
     lightbulb_config_t config = {
-        .type = DRIVER_SM16825E,
         .driver_conf.sm16825e.led_num = 1,
         .driver_conf.sm16825e.ctrl_io = 9,
         .driver_conf.sm16825e.current = {150, 150, 150, 150, 150},
@@ -1590,7 +1562,7 @@ TEST_CASE("SM16825E", "[Application Layer]")
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_handle_t handle = lightbulb_init(&config);
+    lightbulb_handle_t handle = lightbulb_new_sm16825e_device(&config);
     TEST_ASSERT_NOT_NULL(handle);
     vTaskDelay(pdMS_TO_TICKS(1000));
     lightbulb_lighting_output_test(handle, LIGHTING_BASIC_FIVE, 1000);
@@ -1608,7 +1580,7 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
             .ctrl_io = 9,
             .current = {100, 100, 100, 100, 100},
         };
-        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(1000, 2000, 3000, 4000, 5000));
         vTaskDelay(pdMS_TO_TICKS(1000));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
@@ -1622,7 +1594,7 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
             .ctrl_io = 9,
             .current = {100, 100, 100, 100, 100},
         };
-        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTW));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTY));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 0, 65535, 65535));
@@ -1638,7 +1610,7 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
             .ctrl_io = 9,
             .current = {100, 100, 100, 100, 100},
         };
-        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB));
@@ -1655,7 +1627,7 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
             .ctrl_io = 9,
             .current = {100, 100, 100, 100, 100},
         };
-        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB));
@@ -1674,7 +1646,7 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
             .ctrl_io = 9,
             .current = {100, 100, 100, 100, 100},
         };
-        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&conf, NULL, NULL));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTW));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTR));
         TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTY));
@@ -1687,6 +1659,606 @@ TEST_CASE("SM16825E partial channel registration", "[Underlying Driver]")
     }
 }
 #endif
+
+TEST_CASE("I2C Multi-instance Prevention", "[Underlying Driver][I2C]")
+{
+    ESP_LOGI("TEST", "Step 1: Initializing BP5758D (first I2C device)");
+    driver_bp57x8d_t bp5758d_conf = {
+        .current = {10, 10, 10, 20, 20},
+        .iic_clk = 4,
+        .iic_sda = 3,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_init(&bp5758d_conf, NULL, NULL));
+    ESP_LOGI("TEST", "✔ BP5758D initialized successfully");
+
+    ESP_LOGI("TEST", "Step 2: Attempting to initialize BP1658CJ (second I2C device, should fail)");
+    driver_bp1658cj_t bp1658cj_conf = {
+        .rgb_current = BP1658CJ_RGB_CURRENT_10MA,
+        .cw_current = BP1658CJ_CW_CURRENT_30MA,
+        .iic_clk = 4,
+        .iic_sda = 3,
+        .freq_khz = 300,
+        .enable_iic_queue = true
+    };
+
+    esp_err_t ret = bp1658cj_init(&bp1658cj_conf, NULL, NULL);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, ret);
+    ESP_LOGI("TEST", "✔ BP1658CJ init correctly rejected (ESP_ERR_INVALID_STATE)");
+
+    ESP_LOGI("TEST", "Step 3: Verifying BP5758D still functions correctly");
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_R, BP57x8D_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_G, BP57x8D_PIN_OUT2));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_regist_channel(BP57x8D_CHANNEL_B, BP57x8D_PIN_OUT3));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_rgb_channel(255, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_set_shutdown());
+    ESP_LOGI("TEST", "✔ BP5758D still functioning normally");
+
+    ESP_LOGI("TEST", "Step 4: Deinitializing BP5758D");
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp57x8d_deinit());
+    ESP_LOGI("TEST", "✔ BP5758D deinitialized successfully");
+
+    ESP_LOGI("TEST", "Step 5: Re-attempting to initialize BP1658CJ (should succeed now)");
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_init(&bp1658cj_conf, NULL, NULL));
+    ESP_LOGI("TEST", "✔ BP1658CJ initialized successfully after BP5758D was deinitialized");
+
+    ESP_LOGI("TEST", "Step 6: Verifying BP1658CJ functions correctly");
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_R, BP1658CJ_PIN_OUT1));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_G, BP1658CJ_PIN_OUT2));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_regist_channel(BP1658CJ_CHANNEL_B, BP1658CJ_PIN_OUT3));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_rgb_channel(0, 255, 0));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_set_shutdown());
+    ESP_LOGI("TEST", "✔ BP1658CJ functioning normally");
+
+    ESP_LOGI("TEST", "Step 7: Attempting to initialize BP5758D again (should fail)");
+    ret = bp57x8d_init(&bp5758d_conf, NULL, NULL);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, ret);
+    ESP_LOGI("TEST", "✔ BP5758D init correctly rejected while BP1658CJ is active");
+
+    ESP_LOGI("TEST", "Step 8: Final cleanup");
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, bp1658cj_deinit());
+    ESP_LOGI("TEST", "✔ BP1658CJ deinitialized successfully");
+
+    ESP_LOGI("TEST", "✅ I2C multi-instance prevention test completed successfully!");
+}
+
+TEST_CASE("SPI Multi-instance Prevention", "[Underlying Driver][SPI]")
+{
+    ESP_LOGI("TEST", "=== Testing SPI2_HOST resource conflict between WS2812 and SM16825E ===");
+
+    ESP_LOGI("TEST", "Step 1: Initializing WS2812 (first SPI device using SPI2_HOST)");
+    driver_ws2812_t ws2812_conf = {
+        .led_num = 1,
+        .ctrl_io = 4,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_init(&ws2812_conf, NULL, NULL));
+    ESP_LOGI("TEST", "✔ WS2812 initialized successfully on SPI2_HOST");
+
+    ESP_LOGI("TEST", "Step 2: Attempting to initialize SM16825E (second SPI device, should fail)");
+    driver_sm16825e_t sm16825e_conf = {
+        .led_num = 1,
+        .ctrl_io = 9,
+        .current = {150, 150, 150, 150, 150},
+    };
+
+    esp_err_t ret = sm16825e_init(&sm16825e_conf, NULL, NULL);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, ret);
+    ESP_LOGI("TEST", "✔ SM16825E init correctly rejected (ESP_ERR_INVALID_STATE) - SPI2_HOST conflict detected");
+
+    ESP_LOGI("TEST", "Step 3: Verifying WS2812 still functions correctly");
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_set_rgb_channel(255, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_set_rgb_channel(0, 255, 0));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_set_rgb_channel(0, 0, 255));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    ESP_LOGI("TEST", "✔ WS2812 still functioning normally");
+
+    ESP_LOGI("TEST", "Step 4: Deinitializing WS2812");
+    TEST_ASSERT_EQUAL(ESP_OK, ws2812_deinit());
+    ESP_LOGI("TEST", "✔ WS2812 deinitialized successfully, SPI2_HOST released");
+
+    ESP_LOGI("TEST", "Step 5: Re-attempting to initialize SM16825E (should succeed now)");
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_init(&sm16825e_conf, NULL, NULL));
+    ESP_LOGI("TEST", "✔ SM16825E initialized successfully after WS2812 was deinitialized");
+
+    ESP_LOGI("TEST", "Step 6: Verifying SM16825E functions correctly");
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_R, SM16825E_PIN_OUTR));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_G, SM16825E_PIN_OUTG));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_B, SM16825E_PIN_OUTB));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_W, SM16825E_PIN_OUTW));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_regist_channel(SM16825E_CHANNEL_Y, SM16825E_PIN_OUTY));
+
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(65535, 0, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 65535, 0, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_rgbwy_channel(0, 0, 65535, 0, 0));
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_set_shutdown());
+    ESP_LOGI("TEST", "✔ SM16825E functioning normally");
+
+    ESP_LOGI("TEST", "Step 7: Attempting to initialize WS2812 again (should fail)");
+    ret = ws2812_init(&ws2812_conf, NULL, NULL);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, ret);
+    ESP_LOGI("TEST", "✔ WS2812 init correctly rejected while SM16825E is active");
+
+    ESP_LOGI("TEST", "Step 8: Final cleanup");
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ASSERT_EQUAL(ESP_OK, sm16825e_deinit());
+    spi_bus_free(SPI2_HOST);
+    ESP_LOGI("TEST", "✔ SM16825E deinitialized successfully");
+
+    ESP_LOGI("TEST", "✅ SPI multi-instance prevention test completed successfully!");
+}
+
+TEST_CASE("NVS storage missing nvs_key error", "[Application Layer]")
+{
+    ESP_LOGI("TEST", "Testing that enable_status_storage=true without nvs_key returns an error");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    lightbulb_config_t config = {
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = false,
+        .capability.enable_status_storage = true,   // storage enabled
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+        .nvs_key = NULL,                            // intentionally not set
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io = {
+            .red = 25,
+            .green = 26,
+            .blue = 27,
+        },
+#else
+        .io_conf.pwm_io = {
+            .red = 10,
+            .green = 6,
+            .blue = 7,
+        },
+#endif
+    };
+
+    lightbulb_handle_t handle = lightbulb_new_pwm_device(&config);
+    TEST_ASSERT_NULL(handle);
+    ESP_LOGI("TEST", "✔ lightbulb_new_pwm_device correctly returned NULL when nvs_key is missing");
+#endif
+
+    ESP_LOGI("TEST", "✅ Missing nvs_key error test completed successfully!");
+}
+
+TEST_CASE("Multi-instance NVS storage", "[Application Layer]")
+{
+    ESP_LOGI("TEST", "Testing multi-instance NVS storage functionality 🌟");
+
+    // Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        TEST_ASSERT_EQUAL(ESP_OK, nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+
+    ESP_LOGI("TEST", "Phase 1: Creating two lightbulb instances with separate NVS storage");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    lightbulb_config_t config1 = {
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_5CH_RGBCW,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 120,
+        .init_status.saturation = 80,
+        .init_status.value = 60,
+        .init_status.cct_percentage = 50,
+        .init_status.brightness = 70,
+        .nvs_key = "status_1",
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io = {
+            .red = 25,
+            .green = 26,
+            .blue = 27,
+            .cold_cct = 14,
+            .warm_brightness = 12,
+        },
+#else
+        .io_conf.pwm_io = {
+            .red = 10,
+            .green = 6,
+            .blue = 7,
+            .cold_cct = 3,
+            .warm_brightness = 4,
+        },
+#endif
+    };
+
+    lightbulb_handle_t bulb1 = lightbulb_new_pwm_device(&config1);
+    TEST_ASSERT_NOT_NULL(bulb1);
+    ESP_LOGI("TEST", "Instance 1 (PWM) created with key='status_1'");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    lightbulb_config_t config2 = {
+        .driver_conf.ws2812.led_num = 1,
+        .driver_conf.ws2812.ctrl_io = 2,
+        .capability.enable_fade = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 240,
+        .init_status.saturation = 100,
+        .init_status.value = 80,
+        .nvs_key = "status_2",
+    };
+
+    lightbulb_handle_t bulb2 = lightbulb_new_ws2812_device(&config2);
+    TEST_ASSERT_NOT_NULL(bulb2);
+    ESP_LOGI("TEST", "Instance 2 (WS2812) created with key='status_2'");
+#endif
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+    ESP_LOGI("TEST", "Phase 2: Setting different states and saving to NVS");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    lightbulb_status_t status1 = {
+        .mode = WORK_WHITE,
+        .on = true,
+        .hue = 0,
+        .saturation = 0,
+        .value = 0,
+        .cct_percentage = 75,
+        .brightness = 85,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_set_to_nvs(bulb1, &status1));
+    ESP_LOGI("TEST", "Instance 1 status saved: brightness=%d, cct=%d%%", status1.brightness, status1.cct_percentage);
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    lightbulb_status_t status2 = {
+        .mode = WORK_COLOR,
+        .on = true,
+        .hue = 300,
+        .saturation = 90,
+        .value = 95,
+        .cct_percentage = 0,
+        .brightness = 0,
+    };
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_set_to_nvs(bulb2, &status2));
+    ESP_LOGI("TEST", "Instance 2 status saved: hue=%d, saturation=%d, value=%d", status2.hue, status2.saturation, status2.value);
+#endif
+
+    ESP_LOGI("TEST", "Phase 3: Cleaning up instances 🧹");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb1));
+    ESP_LOGI("TEST", "Instance 1 deinitialized");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb2));
+    ESP_LOGI("TEST", "Instance 2 deinitialized");
+#endif
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+    ESP_LOGI("TEST", "Phase 4: Recreating instances and reading from NVS");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    bulb1 = lightbulb_new_pwm_device(&config1);
+    TEST_ASSERT_NOT_NULL(bulb1);
+
+    lightbulb_status_t read_status1;
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_get_from_nvs(bulb1, &read_status1));
+
+    TEST_ASSERT_EQUAL(status1.mode, read_status1.mode);
+    TEST_ASSERT_EQUAL(status1.on, read_status1.on);
+    TEST_ASSERT_EQUAL(status1.brightness, read_status1.brightness);
+    TEST_ASSERT_EQUAL(status1.cct_percentage, read_status1.cct_percentage);
+    ESP_LOGI("TEST", "Instance 1 status verified: brightness=%d, cct=%d%% ✔",
+             read_status1.brightness, read_status1.cct_percentage);
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    bulb2 = lightbulb_new_ws2812_device(&config2);
+    TEST_ASSERT_NOT_NULL(bulb2);
+
+    lightbulb_status_t read_status2;
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_get_from_nvs(bulb2, &read_status2));
+
+    TEST_ASSERT_EQUAL(status2.mode, read_status2.mode);
+    TEST_ASSERT_EQUAL(status2.on, read_status2.on);
+    TEST_ASSERT_EQUAL(status2.hue, read_status2.hue);
+    TEST_ASSERT_EQUAL(status2.saturation, read_status2.saturation);
+    TEST_ASSERT_EQUAL(status2.value, read_status2.value);
+    ESP_LOGI("TEST", "Instance 2 status verified: hue=%d, saturation=%d, value=%d ✔",
+             read_status2.hue, read_status2.saturation, read_status2.value);
+#endif
+
+    ESP_LOGI("TEST", "Phase 5: Testing NVS erase functionality");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_erase_nvs_storage(bulb1));
+    TEST_ASSERT_NOT_EQUAL(ESP_OK, lightbulb_status_get_from_nvs(bulb1, &read_status1));
+    ESP_LOGI("TEST", "Instance 1 NVS storage erased successfully ✔");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_status_erase_nvs_storage(bulb2));
+    TEST_ASSERT_NOT_EQUAL(ESP_OK, lightbulb_status_get_from_nvs(bulb2, &read_status2));
+    ESP_LOGI("TEST", "Instance 2 NVS storage erased successfully ✔");
+#endif
+
+    ESP_LOGI("TEST", "Phase 6: Final cleanup");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb1));
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb2));
+#endif
+
+    nvs_flash_deinit();
+    ESP_LOGI("TEST", "✔ Multi-instance NVS storage test completed successfully!");
+}
+
+TEST_CASE("Multi-instance Fade and Effect Interaction", "[Application Layer]")
+{
+    ESP_LOGI("TEST", "=== Testing fade timer behavior with multi-instance simultaneous effects ===");
+
+    lightbulb_handle_t bulb1 = NULL;
+    lightbulb_handle_t bulb2 = NULL;
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    ESP_LOGI("TEST", "Phase 1: Initializing first instance (PWM driver) with fade enabled");
+    lightbulb_config_t config1 = {
+        .driver_conf.pwm.freq_hz = 4000,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 1000,  // 1 second fade time
+        .capability.enable_lowpower = false,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .capability.sync_change_brightness_value = true,
+
+#if CONFIG_IDF_TARGET_ESP32
+        .io_conf.pwm_io.red = 25,
+        .io_conf.pwm_io.green = 26,
+        .io_conf.pwm_io.blue = 27,
+#else
+        .io_conf.pwm_io.red = 10,
+        .io_conf.pwm_io.green = 6,
+        .io_conf.pwm_io.blue = 7,
+#endif
+
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+
+    bulb1 = lightbulb_new_pwm_device(&config1);
+    TEST_ASSERT_NOT_NULL(bulb1);
+    ESP_LOGI("TEST", "✔ Instance 1 (PWM) initialized with fade enabled");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    ESP_LOGI("TEST", "Phase 2: Initializing second instance (WS2812 driver) with effects");
+    lightbulb_config_t config2 = {
+        .driver_conf.ws2812.led_num = 22,
+        .driver_conf.ws2812.ctrl_io = 4,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 800,
+        .capability.enable_status_storage = false,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.storage_cb = NULL,
+        .external_limit = NULL,
+        .gamma_conf = NULL,
+        .init_status.mode = WORK_COLOR,
+        .init_status.on = true,
+        .init_status.hue = 0,
+        .init_status.saturation = 100,
+        .init_status.value = 100,
+    };
+
+    bulb2 = lightbulb_new_ws2812_device(&config2);
+    TEST_ASSERT_NOT_NULL(bulb2);
+    ESP_LOGI("TEST", "✔ Instance 2 (WS2812) initialized");
+#endif
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    ESP_LOGI("TEST", "Phase 3: Testing fade with frequent set API calls on Instance 1");
+    ESP_LOGI("TEST", "Starting continuous color transitions with fade...");
+
+    for (int i = 0; i < 5; i++) {
+        uint16_t hue = (i * 72) % 360;  // Cycle through colors: 0, 72, 144, 216, 288
+        ESP_LOGI("TEST", "Setting Instance 1 to hue=%d (fade timer should restart)", hue);
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hue(bulb1, hue));
+
+        vTaskDelay(pdMS_TO_TICKS(300));
+
+        ESP_LOGI("TEST", "Interrupting fade with saturation change");
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_saturation(bulb1, 80));
+        vTaskDelay(pdMS_TO_TICKS(300));
+
+        ESP_LOGI("TEST", "Interrupting fade again with value change");
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_value(bulb1, 90));
+        vTaskDelay(pdMS_TO_TICKS(400));
+    }
+    ESP_LOGI("TEST", "✔ Instance 1 fade interruption test completed");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    ESP_LOGI("TEST", "Phase 4: Starting lighting effect on Instance 2 while Instance 1 continues");
+
+    lightbulb_effect_config_t effect_config = {
+        .effect_type = EFFECT_BREATH,
+        .mode = WORK_COLOR,
+        .hue = 240,  // Blue
+        .saturation = 100,
+        .cct = 0,
+        .min_value_brightness = 10,
+        .max_value_brightness = 100,
+        .effect_cycle_ms = 2000,  // 2 second breath cycle
+        .total_ms = 8000,  // Run for 8 seconds
+        .user_cb = NULL,
+        .interrupt_forbidden = false,
+    };
+
+    ESP_LOGI("TEST", "Starting breath effect on Instance 2 (should run independently)");
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_basic_effect_start(bulb2, &effect_config));
+    ESP_LOGI("TEST", "✔ Breath effect started on Instance 2");
+#endif
+
+#if defined(CONFIG_ENABLE_PWM_DRIVER) && defined(CONFIG_ENABLE_WS2812_DRIVER)
+    ESP_LOGI("TEST", "Phase 5: Testing simultaneous operations on both instances");
+
+    for (int i = 0; i < 4; i++) {
+        uint16_t hue = (i * 90) % 360;
+        ESP_LOGI("TEST", "Cycle %d: Setting Instance 1 to hue=%d while effect runs on Instance 2", i + 1, hue);
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hue(bulb1, hue));
+        vTaskDelay(pdMS_TO_TICKS(500));
+
+        ESP_LOGI("TEST", "Cycle %d: Setting Instance 1 value to %d", i + 1, 100 - (i * 20));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_value(bulb1, 100 - (i * 20)));
+        vTaskDelay(pdMS_TO_TICKS(1500));
+    }
+
+    ESP_LOGI("TEST", "✔ Both instances operated simultaneously without interference");
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    ESP_LOGI("TEST", "Phase 6: Stopping effect on Instance 2");
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_basic_effect_stop(bulb2));
+    ESP_LOGI("TEST", "✔ Effect stopped on Instance 2");
+    vTaskDelay(pdMS_TO_TICKS(500));
+#endif
+
+#if defined(CONFIG_ENABLE_PWM_DRIVER) && defined(CONFIG_ENABLE_WS2812_DRIVER)
+    ESP_LOGI("TEST", "Phase 7: Testing rapid set API calls on both instances");
+
+    for (int i = 0; i < 10; i++) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hue(bulb1, i * 36));
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hue(bulb2, (360 - i * 36)));
+        vTaskDelay(pdMS_TO_TICKS(150));
+    }
+
+    ESP_LOGI("TEST", "✔ Rapid updates on both instances completed");
+#endif
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    ESP_LOGI("TEST", "Phase 8: Testing fade disable/enable cycle on Instance 1");
+
+    // Disable fade
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_fades_function(bulb1, false));
+    ESP_LOGI("TEST", "Fade disabled - color changes should be instant");
+
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(bulb1, 0, 100, 100));  // Red
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(bulb1, 120, 100, 100));  // Green
+    vTaskDelay(pdMS_TO_TICKS(200));
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(bulb1, 240, 100, 100));  // Blue
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    // Re-enable fade
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_fades_function(bulb1, true));
+    ESP_LOGI("TEST", "Fade re-enabled - color changes should be smooth again");
+
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(bulb1, 0, 100, 100));  // Red
+    vTaskDelay(pdMS_TO_TICKS(500));
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(bulb1, 120, 100, 100));  // Green
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    ESP_LOGI("TEST", "✔ Fade enable/disable cycle completed");
+#endif
+
+#if defined(CONFIG_ENABLE_PWM_DRIVER) && defined(CONFIG_ENABLE_WS2812_DRIVER)
+    ESP_LOGI("TEST", "Phase 9: Testing concurrent effects on both instances");
+
+    // Start effect on Instance 1
+    lightbulb_effect_config_t effect1 = {
+        .effect_type = EFFECT_BLINK,
+        .mode = WORK_COLOR,
+        .hue = 0,  // Red
+        .saturation = 100,
+        .cct = 0,
+        .min_value_brightness = 0,
+        .max_value_brightness = 100,
+        .effect_cycle_ms = 1000,
+        .total_ms = 5000,
+        .user_cb = NULL,
+        .interrupt_forbidden = false,
+    };
+
+    // Start effect on Instance 2
+    lightbulb_effect_config_t effect2 = {
+        .effect_type = EFFECT_BREATH,
+        .mode = WORK_COLOR,
+        .hue = 300,  // Purple
+        .saturation = 100,
+        .cct = 0,
+        .min_value_brightness = 10,
+        .max_value_brightness = 100,
+        .effect_cycle_ms = 1500,
+        .total_ms = 5000,
+        .user_cb = NULL,
+        .interrupt_forbidden = false,
+    };
+
+    ESP_LOGI("TEST", "Starting blink effect on Instance 1 and breath effect on Instance 2");
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_basic_effect_start(bulb1, &effect1));
+    TEST_ASSERT_EQUAL(ESP_OK, lightbulb_basic_effect_start(bulb2, &effect2));
+
+    ESP_LOGI("TEST", "Both effects running... waiting for completion");
+    vTaskDelay(pdMS_TO_TICKS(5500));  // Wait for effects to complete
+
+    ESP_LOGI("TEST", "✔ Concurrent effects completed successfully");
+#endif
+
+    ESP_LOGI("TEST", "Phase 10: Cleanup");
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (bulb1) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb1));
+        ESP_LOGI("TEST", "✔ Instance 1 cleaned up");
+    }
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+    if (bulb2) {
+        TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(bulb2));
+        ESP_LOGI("TEST", "✔ Instance 2 cleaned up");
+    }
+#endif
+
+    vTaskDelay(pdMS_TO_TICKS(500));
+    ESP_LOGI("TEST", "✅ Multi-instance fade and effect interaction test completed successfully!");
+}
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)
 {

@@ -15,6 +15,11 @@ static const char *TAG = "output_test";
 
 void lightbulb_lighting_output_test(lightbulb_handle_t handle, lightbulb_lighting_unit_t mask, uint16_t speed_ms)
 {
+    if (handle == NULL) {
+        ESP_LOGE(TAG, "handle is NULL");
+        return;
+    }
+
     // BIT0 rainbow (only color)
     if (mask & LIGHTING_RAINBOW) {
         ESP_LOGW(TAG, "rainbow");

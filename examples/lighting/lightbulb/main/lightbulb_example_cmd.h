@@ -15,8 +15,6 @@
  * preparing it for receiving commands and interacting with the user. It must be
  * called before any console commands are processed.
  *
- * @param[in] handle The lightbulb handle to be used in console commands
- *
  * @return
  *    - ESP_OK: Success in initializing the console.
  *    - other: Specific error code indicating what went wrong during initialization.
