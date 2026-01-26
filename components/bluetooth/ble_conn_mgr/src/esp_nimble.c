@@ -21,7 +21,10 @@
 #include "host/ble_uuid.h"
 #include "host/ble_gap.h"
 #include "host/ble_hs_adv.h"
+#include "host/ble_l2cap.h"
 #include "host/util/util.h"
+#include "os/os_mempool.h"
+#include "os/os_mbuf.h"
 #include "services/gap/ble_svc_gap.h"
 #include "services/gatt/ble_svc_gatt.h"
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
@@ -32,6 +35,47 @@
 #include "esp_nimble.h"
 
 static const char *TAG = "blecm_nimble";
+
+/* BLE disconnect reason sentinel value: indicates no disconnect has occurred yet */
+#define BLE_CONN_DISCONNECT_REASON_INVALID 0xFFFF
+
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+#define L2CAP_COC_MTU CONFIG_BLE_CONN_MGR_L2CAP_COC_MTU
+#define L2CAP_COC_BUF_COUNT (20 * MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM))
+/* L2CAP CoC MTU range:
+ * - Minimum: 23 bytes (mandated by Bluetooth Core Specification Vol 3, Part A, Section 5.1 for LE Credit Based Flow Control Mode)
+ * - Maximum: Use configured L2CAP_COC_MTU value (typically 512 bytes in practical implementations)
+ */
+#define L2CAP_COC_MTU_MIN 23
+#define L2CAP_COC_MTU_MAX L2CAP_COC_MTU
+/* BLE connection handle range: 0x0000 - 0x0EFF (0-3840)
+ * Note: 0x0000 is invalid (used as sentinel value)
+ */
+#define BLE_CONN_HANDLE_MAX 0x0EFF
+/* BLE L2CAP CoC PSM range for LE: 0x0001 - 0x00FF
+ * Per Bluetooth Core Specification Vol 3, Part A, Section 4.2.22 (SPSM for LE Credit Based Flow Control)
+ * - 0x0001 - 0x007F: Fixed Bluetooth SIG-defined services
+ * - 0x0080 - 0x00FF: Dynamic custom services
+ */
+#define L2CAP_COC_PSM_MIN 0x0001
+#define L2CAP_COC_PSM_MAX 0x00FF
+/* BLE L2CAP SDU size range: 23 - 65535 bytes
+ * Per Bluetooth Core Specification, maximum SDU size is 64KB (65535 bytes)
+ * Minimum is aligned with L2CAP_COC_MTU_MIN (23 bytes)
+ * Note: Maximum is naturally limited by uint16_t type (65535), so no upper bound check needed
+ */
+#define L2CAP_COC_SDU_SIZE_MIN L2CAP_COC_MTU_MIN
+#define L2CAP_COC_SDU_SIZE_MAX 65535
+
+static bool s_l2cap_coc_mem_inited = false;
+static SemaphoreHandle_t s_l2cap_coc_mem_lock = NULL;
+static StaticSemaphore_t s_l2cap_coc_mem_lock_buf;
+static portMUX_TYPE s_l2cap_coc_mem_lock_mux = portMUX_INITIALIZER_UNLOCKED;
+#define L2CAP_COC_MEM_LOCK_TIMEOUT_MS 2000
+static struct os_mempool s_l2cap_coc_mbuf_mempool;
+static struct os_mbuf_pool s_l2cap_coc_os_mbuf_pool;
+static os_membuf_t s_l2cap_coc_mem[OS_MEMPOOL_SIZE(L2CAP_COC_BUF_COUNT, L2CAP_COC_MTU)];
+#endif
 
 /* Event source task related definitions */
 ESP_EVENT_DEFINE_BASE(BLE_CONN_MGR_EVENTS);
@@ -95,6 +139,17 @@ typedef struct {
     void *handle;
 } esp_ble_conn_event_ctx_t;
 
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+typedef struct esp_ble_conn_l2cap_coc_cb_ctx_t {
+    SLIST_ENTRY(esp_ble_conn_l2cap_coc_cb_ctx_t) next;
+    esp_ble_conn_l2cap_coc_event_cb_t cb;
+    void *cb_arg;
+    uint16_t psm;
+    bool auto_free; /* true: free on connect failure/disconnect; false: persistent server ctx */
+} esp_ble_conn_l2cap_coc_cb_ctx_t;
+SLIST_HEAD(esp_ble_conn_l2cap_coc_cb_ctx_list, esp_ble_conn_l2cap_coc_cb_ctx_t);
+#endif
+
 /**
  * @brief   This structure maps handler required by session which are used to BLE connection management.
  */
@@ -121,11 +176,14 @@ typedef struct esp_ble_conn_session_t {
 
     uint16_t                    conn_handle;            /* Handle of the relevant connection */
     uint8_t                     own_addr_type;          /* Figure out address to use while advertising */
+    uint16_t                    disconnect_reason;      /* Last disconnect reason */
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     uint16_t                    chrs_handle;            /* Handle of the characteristics discovery process */
     svc_uuid_t                 *svcs_handle;            /* Handle of the service discovery process */
 #endif
+    esp_ble_conn_scan_cb_t      scan_cb;                /* Scan callback */
+    void                       *scan_cb_arg;            /* Scan callback argument */
 
     uint8_t                      gatt_db_count;         /* Number of entries in the gatt_db descriptor table */
     struct ble_gatt_svc_def     *gatt_db;               /* Descriptor table which consists the services and characteristics */
@@ -136,6 +194,10 @@ typedef struct esp_ble_conn_session_t {
     esp_ble_conn_nimble_cb_t    *connect_cb;            /* Client connect callback */
     esp_ble_conn_nimble_cb_t    *disconnect_cb;         /* Client disconnect callback */
     esp_ble_conn_nimble_cb_t    *set_mtu_cb;            /* MTU set callback */
+
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct esp_ble_conn_l2cap_coc_cb_ctx_list l2cap_coc_cb_list; /* L2CAP CoC callback contexts */
+#endif
 
     bool                        ble_sm_sc;              /* BLE Secure Connection flag */
     bool                        ble_bonding;            /* BLE bonding */
@@ -708,9 +770,8 @@ static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
 
     /* Scanning must be stopped before a connection can be initiated. */
     rc = ble_gap_disc_cancel();
-    if (rc) {
-        ESP_LOGE(TAG, "Failed to cancel scan; rc=%d", rc);
-        return;
+    if (rc && rc != BLE_HS_EALREADY) {
+        ESP_LOGW(TAG, "Failed to cancel scan; rc=%d", rc);
     }
 
     /* Try to connect the the advertiser.  Allow 30 seconds (30000 ms) for timeout */
@@ -1214,11 +1275,24 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
         case BLE_GAP_EVENT_DISC:
             ESP_LOGD(TAG, "BLE_GAP_EVENT_DISC");
-            struct ble_hs_adv_fields fields;
-            rc = ble_hs_adv_parse_fields(&fields, event->disc.data, event->disc.length_data);
-            if (rc != ESP_OK) {
-                return 0;
+            if (conn_session->scan_cb) {
+                esp_ble_conn_scan_result_t result = {0};
+                result.addr_type = event->disc.addr.type;
+                memcpy(result.addr, event->disc.addr.val, sizeof(result.addr));
+                result.rssi = event->disc.rssi;
+                result.adv_data_len = MIN(event->disc.length_data, ESP_BLE_CONN_ADV_DATA_MAX_LEN);
+                if (result.adv_data_len) {
+                    memcpy(result.adv_data, event->disc.data, result.adv_data_len);
+                }
+                if (conn_session->scan_cb(&result, conn_session->scan_cb_arg)) {
+                    esp_ble_conn_should_connect(&event->disc);
+                }
             } else {
+                struct ble_hs_adv_fields fields;
+                rc = ble_hs_adv_parse_fields(&fields, event->disc.data, event->disc.length_data);
+                if (rc != ESP_OK) {
+                    return 0;
+                }
                 /* Try to connect to the advertiser if it looks interesting. */
                 if (fields.name != NULL && !memcmp(fields.name, conn_session->device_name, fields.name_len)) {
                     esp_ble_conn_should_connect(&event->disc);
@@ -1837,6 +1911,7 @@ static void esp_ble_conn_connect_cb(struct ble_gap_event *event, void *arg)
     esp_ble_conn_session_t *conn_session = arg;
 
     conn_session->conn_handle = event->connect.conn_handle;
+    conn_session->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     /* Perform service discovery. */
@@ -1850,6 +1925,8 @@ static void esp_ble_conn_connect_cb(struct ble_gap_event *event, void *arg)
 static void esp_ble_conn_disconnect_cb(struct ble_gap_event *event, void *arg)
 {
     esp_ble_conn_session_t *conn_session = arg;
+
+    conn_session->disconnect_reason = event->disconnect.reason;
 
     /* Clear conn_handle value */
     conn_session->conn_handle = 0;
@@ -2047,6 +2124,9 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
 
     SLIST_INIT(&conn_session->uuid_list);
     SLIST_INIT(&conn_session->mbuf_list);
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    SLIST_INIT(&conn_session->l2cap_coc_cb_list);
+#endif
 
     conn_session->connect_cb = esp_ble_conn_connect_cb;
     conn_session->disconnect_cb = esp_ble_conn_disconnect_cb;
@@ -2152,6 +2232,14 @@ esp_err_t esp_ble_conn_deinit(void)
         free(attr_mbuf);
         attr_mbuf = NULL;
     }
+
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    while (!SLIST_EMPTY(&conn_session->l2cap_coc_cb_list)) {
+        esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = SLIST_FIRST(&conn_session->l2cap_coc_cb_list);
+        SLIST_REMOVE_HEAD(&conn_session->l2cap_coc_cb_list, next);
+        free(ctx);
+    }
+#endif
 
     free(conn_session);
     conn_session = NULL;
@@ -2288,6 +2376,63 @@ esp_err_t esp_ble_conn_set_mtu(uint16_t mtu)
     return ESP_OK;
 }
 
+esp_err_t esp_ble_conn_scan_stop(void)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_gap_disc_cancel();
+    if (rc == 0 || rc == BLE_HS_EALREADY) {
+        return ESP_OK;
+    }
+
+    ESP_LOGW(TAG, "Failed to cancel scan; rc=%d", rc);
+    return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint8_t adv_len, uint8_t ad_type,
+                                      const uint8_t **out_data, uint8_t *out_len)
+{
+    if (!adv_data || adv_len == 0 || !out_data || !out_len) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint8_t offset = 0;
+    while (offset < adv_len) {
+        uint8_t len = adv_data[offset];
+        if (len == 0) {
+            break;
+        }
+        if (offset + len >= adv_len) {
+            return ESP_ERR_INVALID_ARG;
+        }
+
+        uint8_t type = adv_data[offset + 1];
+        if (type == ad_type) {
+            *out_data = &adv_data[offset + 2];
+            *out_len = len - 1;
+            return ESP_OK;
+        }
+
+        offset += len + 1;
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t esp_ble_conn_register_scan_callback(esp_ble_conn_scan_cb_t cb, void *cb_arg)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    if (!conn_session) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    conn_session->scan_cb = cb;
+    conn_session->scan_cb_arg = cb_arg;
+    return ESP_OK;
+}
+
 esp_err_t esp_ble_conn_connect(void)
 {
     esp_ble_conn_session_t  *conn_session = s_conn_session;
@@ -2348,6 +2493,340 @@ esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu)
     return ESP_OK;
 }
 
+esp_err_t esp_ble_conn_get_peer_addr(uint8_t out_addr[6])
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    struct ble_gap_conn_desc desc;
+
+    if (!out_addr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!conn_session || conn_session->conn_handle == 0) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    if (ble_gap_conn_find(conn_session->conn_handle, &desc) != 0) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    memcpy(out_addr, desc.peer_ota_addr.val, sizeof(desc.peer_ota_addr.val));
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_get_disconnect_reason(uint16_t *out_reason)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+
+    if (!out_reason) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!conn_session || conn_session->disconnect_reason == BLE_CONN_DISCONNECT_REASON_INVALID) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    *out_reason = conn_session->disconnect_reason;
+    return ESP_OK;
+}
+
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+static SemaphoreHandle_t esp_ble_conn_l2cap_coc_mem_get_lock(void)
+{
+    if (s_l2cap_coc_mem_lock) {
+        return s_l2cap_coc_mem_lock;
+    }
+
+    portENTER_CRITICAL(&s_l2cap_coc_mem_lock_mux);
+    if (!s_l2cap_coc_mem_lock) {
+        s_l2cap_coc_mem_lock = xSemaphoreCreateMutexStatic(&s_l2cap_coc_mem_lock_buf);
+    }
+    portEXIT_CRITICAL(&s_l2cap_coc_mem_lock_mux);
+
+    return s_l2cap_coc_mem_lock;
+}
+#endif
+
+esp_err_t esp_ble_conn_l2cap_coc_mem_init(void)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    SemaphoreHandle_t lock = esp_ble_conn_l2cap_coc_mem_get_lock();
+    if (!lock) {
+        ESP_LOGE(TAG, "Failed to create L2CAP CoC memory lock");
+        return ESP_FAIL;
+    }
+
+    if (xSemaphoreTake(lock, pdMS_TO_TICKS(L2CAP_COC_MEM_LOCK_TIMEOUT_MS)) != pdTRUE) {
+        ESP_LOGE(TAG, "Timeout acquiring L2CAP CoC memory lock");
+        return ESP_ERR_TIMEOUT;
+    }
+    if (s_l2cap_coc_mem_inited) {
+        xSemaphoreGive(lock);
+        return ESP_OK;
+    }
+
+    int rc = os_mempool_init(&s_l2cap_coc_mbuf_mempool, L2CAP_COC_BUF_COUNT,
+                             L2CAP_COC_MTU, s_l2cap_coc_mem, "coc_sdu_pool");
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Error in initializing L2CAP CoC memory pool with err code = %d", rc);
+        xSemaphoreGive(lock);
+        return ESP_FAIL;
+    }
+
+    rc = os_mbuf_pool_init(&s_l2cap_coc_os_mbuf_pool, &s_l2cap_coc_mbuf_mempool,
+                           L2CAP_COC_MTU, L2CAP_COC_BUF_COUNT);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Error in initializing L2CAP CoC mbuf pool with err code = %d", rc);
+        os_mempool_clear(&s_l2cap_coc_mbuf_mempool);
+        memset(&s_l2cap_coc_mbuf_mempool, 0, sizeof(s_l2cap_coc_mbuf_mempool));
+        xSemaphoreGive(lock);
+        return ESP_FAIL;
+    }
+
+    s_l2cap_coc_mem_inited = true;
+    xSemaphoreGive(lock);
+    return ESP_OK;
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_mem_release(void)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    SemaphoreHandle_t lock = esp_ble_conn_l2cap_coc_mem_get_lock();
+    if (!lock) {
+        return ESP_OK;
+    }
+
+    if (xSemaphoreTake(lock, pdMS_TO_TICKS(L2CAP_COC_MEM_LOCK_TIMEOUT_MS)) != pdTRUE) {
+        ESP_LOGE(TAG, "Timeout acquiring L2CAP CoC memory lock");
+        return ESP_ERR_TIMEOUT;
+    }
+    if (!s_l2cap_coc_mem_inited) {
+        xSemaphoreGive(lock);
+        return ESP_OK;
+    }
+
+    if (s_conn_session && !SLIST_EMPTY(&s_conn_session->l2cap_coc_cb_list)) {
+        ESP_LOGW(TAG, "Cannot release L2CAP CoC memory: active CoC contexts present");
+        xSemaphoreGive(lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    os_mempool_clear(&s_l2cap_coc_mbuf_mempool);
+    memset(&s_l2cap_coc_mbuf_mempool, 0, sizeof(s_l2cap_coc_mbuf_mempool));
+    memset(&s_l2cap_coc_os_mbuf_pool, 0, sizeof(s_l2cap_coc_os_mbuf_pool));
+
+    s_l2cap_coc_mem_inited = false;
+    xSemaphoreGive(lock);
+
+    return ESP_OK;
+#else
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_size,
+                                        esp_ble_conn_l2cap_coc_chan_t chan)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct os_mbuf *sdu_rx = NULL;
+    struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
+
+    if (!nimble_chan || conn_handle == 0 || conn_handle > BLE_CONN_HANDLE_MAX ||
+        peer_sdu_size < L2CAP_COC_SDU_SIZE_MIN) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_l2cap_coc_mem_inited) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    sdu_rx = os_mbuf_get_pkthdr(&s_l2cap_coc_os_mbuf_pool, 0);
+    if (!sdu_rx) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    int rc = ble_l2cap_recv_ready(nimble_chan, sdu_rx);
+    if (rc != 0) {
+        os_mbuf_free_chain(sdu_rx);
+        ESP_LOGE(TAG, "L2CAP CoC accept failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+#else
+    (void)conn_handle;
+    (void)peer_sdu_size;
+    (void)chan;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+static esp_ble_conn_l2cap_coc_cb_ctx_t *esp_ble_conn_l2cap_coc_cb_ctx_create(esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                                                            void *cb_arg,
+                                                                            uint16_t psm,
+                                                                            bool auto_free)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = NULL;
+
+    if (!conn_session || !cb) {
+        return NULL;
+    }
+
+    ctx = (esp_ble_conn_l2cap_coc_cb_ctx_t *)calloc(1, sizeof(esp_ble_conn_l2cap_coc_cb_ctx_t));
+    if (!ctx) {
+        return NULL;
+    }
+
+    ctx->cb = cb;
+    ctx->cb_arg = cb_arg;
+    ctx->psm = psm;
+    ctx->auto_free = auto_free;
+    SLIST_INSERT_HEAD(&conn_session->l2cap_coc_cb_list, ctx, next);
+
+    return ctx;
+}
+
+static esp_ble_conn_l2cap_coc_cb_ctx_t *esp_ble_conn_l2cap_coc_cb_ctx_find_by_psm(uint16_t psm)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = NULL;
+
+    if (!conn_session || psm == 0) {
+        return NULL;
+    }
+
+    SLIST_FOREACH(ctx, &conn_session->l2cap_coc_cb_list, next) {
+        if (ctx->psm == psm) {
+            return ctx;
+        }
+    }
+
+    return NULL;
+}
+
+static void esp_ble_conn_l2cap_coc_cb_ctx_remove(esp_ble_conn_l2cap_coc_cb_ctx_t *ctx)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    esp_ble_conn_l2cap_coc_cb_ctx_t *cur = NULL;
+    esp_ble_conn_l2cap_coc_cb_ctx_t *prev = NULL;
+
+    if (!conn_session || !ctx) {
+        return;
+    }
+
+    SLIST_FOREACH(cur, &conn_session->l2cap_coc_cb_list, next) {
+        if (cur == ctx) {
+            break;
+        }
+        prev = cur;
+    }
+
+    if (!cur) {
+        return;
+    }
+
+    if (prev == NULL) {
+        SLIST_REMOVE_HEAD(&conn_session->l2cap_coc_cb_list, next);
+    } else {
+        SLIST_REMOVE_AFTER(prev, next);
+    }
+
+    free(ctx);
+}
+
+static int esp_ble_conn_l2cap_coc_event_shim(struct ble_l2cap_event *event, void *arg)
+{
+    esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = (esp_ble_conn_l2cap_coc_cb_ctx_t *)arg;
+    esp_ble_conn_l2cap_coc_event_t evt = { 0 };
+    int rc = 0;
+
+    if (!ctx || !ctx->cb || !event) {
+        return BLE_HS_EINVAL;
+    }
+
+    switch (event->type) {
+    case BLE_L2CAP_EVENT_COC_CONNECTED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_CONNECTED;
+        evt.connect.status = event->connect.status;
+        evt.connect.conn_handle = event->connect.conn_handle;
+        evt.connect.chan = (esp_ble_conn_l2cap_coc_chan_t)event->connect.chan;
+        rc = ctx->cb(&evt, ctx->cb_arg);
+        if (ctx->auto_free && event->connect.status) {
+            esp_ble_conn_l2cap_coc_cb_ctx_remove(ctx);
+        }
+        return rc;
+    case BLE_L2CAP_EVENT_COC_DISCONNECTED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_DISCONNECTED;
+        evt.disconnect.conn_handle = event->disconnect.conn_handle;
+        evt.disconnect.chan = (esp_ble_conn_l2cap_coc_chan_t)event->disconnect.chan;
+        rc = ctx->cb(&evt, ctx->cb_arg);
+        if (ctx->auto_free) {
+            esp_ble_conn_l2cap_coc_cb_ctx_remove(ctx);
+        }
+        return rc;
+    case BLE_L2CAP_EVENT_COC_ACCEPT:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_ACCEPT;
+        evt.accept.conn_handle = event->accept.conn_handle;
+        evt.accept.peer_sdu_size = event->accept.peer_sdu_size;
+        evt.accept.chan = (esp_ble_conn_l2cap_coc_chan_t)event->accept.chan;
+        return ctx->cb(&evt, ctx->cb_arg);
+    case BLE_L2CAP_EVENT_COC_DATA_RECEIVED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_DATA_RECEIVED;
+        evt.receive.conn_handle = event->receive.conn_handle;
+        evt.receive.chan = (esp_ble_conn_l2cap_coc_chan_t)event->receive.chan;
+        evt.receive.sdu.len = OS_MBUF_PKTLEN(event->receive.sdu_rx);
+        /* Allocate buffer for SDU data. This buffer is managed internally and will be
+         * freed immediately after the callback returns. The callback must not save
+         * the pointer for later use, otherwise it will become invalid.
+         */
+        evt.receive.sdu.data = (uint8_t *)malloc(evt.receive.sdu.len);
+        if (!evt.receive.sdu.data) {
+            ESP_LOGE(TAG, "Error in allocating memory for sdu data");
+            /* Free mbuf before returning, as ownership was transferred to this callback */
+            os_mbuf_free_chain(event->receive.sdu_rx);
+            return BLE_HS_ENOMEM;
+        } else {
+            os_mbuf_copydata(event->receive.sdu_rx, 0, evt.receive.sdu.len, evt.receive.sdu.data);
+        }
+
+        rc = ctx->cb(&evt, ctx->cb_arg);
+        os_mbuf_free_chain(event->receive.sdu_rx);
+        /* Free the SDU buffer immediately after callback returns. The callback should
+         * have copied the data if it needs to use it asynchronously.
+         */
+        free(evt.receive.sdu.data);
+        evt.receive.sdu.data = NULL;
+        evt.receive.sdu.len = 0;
+        return rc;
+    case BLE_L2CAP_EVENT_COC_TX_UNSTALLED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED;
+        evt.tx_unstalled.conn_handle = event->tx_unstalled.conn_handle;
+        evt.tx_unstalled.chan = (esp_ble_conn_l2cap_coc_chan_t)event->tx_unstalled.chan;
+        evt.tx_unstalled.status = event->tx_unstalled.status;
+        return ctx->cb(&evt, ctx->cb_arg);
+    case BLE_L2CAP_EVENT_COC_RECONFIG_COMPLETED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_RECONFIG_COMPLETED;
+        evt.reconfigured.status = event->reconfigured.status;
+        evt.reconfigured.conn_handle = event->reconfigured.conn_handle;
+        evt.reconfigured.chan = (esp_ble_conn_l2cap_coc_chan_t)event->reconfigured.chan;
+        return ctx->cb(&evt, ctx->cb_arg);
+    case BLE_L2CAP_EVENT_COC_PEER_RECONFIGURED:
+        evt.type = ESP_BLE_CONN_L2CAP_COC_EVENT_PEER_RECONFIGURED;
+        evt.reconfigured.status = event->reconfigured.status;
+        evt.reconfigured.conn_handle = event->reconfigured.conn_handle;
+        evt.reconfigured.chan = (esp_ble_conn_l2cap_coc_chan_t)event->reconfigured.chan;
+        return ctx->cb(&evt, ctx->cb_arg);
+    default:
+        return 0;
+    }
+}
+#endif
+
 esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params)
 {
     if (!params) {
@@ -2371,6 +2850,255 @@ esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_pa
 #else
     (void)conn_handle;
     (void)params;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_create_server(uint16_t psm, uint16_t mtu,
+                                               esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                               void *cb_arg)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = NULL;
+
+    if (!cb || psm < L2CAP_COC_PSM_MIN || psm > L2CAP_COC_PSM_MAX ||
+        mtu < L2CAP_COC_MTU_MIN || mtu > L2CAP_COC_MTU_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ctx = esp_ble_conn_l2cap_coc_cb_ctx_find_by_psm(psm);
+    if (ctx) {
+        return ESP_OK;
+    }
+
+    ctx = esp_ble_conn_l2cap_coc_cb_ctx_create(cb, cb_arg, psm, false);
+    if (!ctx) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    int rc = ble_l2cap_create_server(psm, mtu, esp_ble_conn_l2cap_coc_event_shim, ctx);
+    if (rc != 0) {
+        esp_ble_conn_l2cap_coc_cb_ctx_remove(ctx);
+        ESP_LOGE(TAG, "L2CAP CoC create server failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+#else
+    (void)psm;
+    (void)mtu;
+    (void)cb;
+    (void)cb_arg;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_connect(uint16_t conn_handle, uint16_t psm, uint16_t mtu,
+                                         uint16_t sdu_size,
+                                         esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                         void *cb_arg)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct os_mbuf *sdu_rx = NULL;
+    esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = NULL;
+
+    if (!s_conn_session || !cb ||
+        conn_handle == 0 || conn_handle > BLE_CONN_HANDLE_MAX ||
+        psm < L2CAP_COC_PSM_MIN || psm > L2CAP_COC_PSM_MAX ||
+        mtu < L2CAP_COC_MTU_MIN || mtu > L2CAP_COC_MTU_MAX ||
+        sdu_size < L2CAP_COC_SDU_SIZE_MIN) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_l2cap_coc_mem_inited) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    sdu_rx = os_mbuf_get_pkthdr(&s_l2cap_coc_os_mbuf_pool, 0);
+    if (!sdu_rx) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    ctx = esp_ble_conn_l2cap_coc_cb_ctx_create(cb, cb_arg, psm, true);
+    if (!ctx) {
+        os_mbuf_free_chain(sdu_rx);
+        return ESP_ERR_NO_MEM;
+    }
+
+    int rc = ble_l2cap_connect(conn_handle, psm, mtu, sdu_rx,
+                               esp_ble_conn_l2cap_coc_event_shim, ctx);
+    if (rc != 0) {
+        os_mbuf_free_chain(sdu_rx);
+        esp_ble_conn_l2cap_coc_cb_ctx_remove(ctx);
+        ESP_LOGE(TAG, "L2CAP CoC connect failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+#else
+    (void)conn_handle;
+    (void)psm;
+    (void)mtu;
+    (void)sdu_size;
+    (void)cb;
+    (void)cb_arg;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_send(esp_ble_conn_l2cap_coc_chan_t chan,
+                                      const esp_ble_conn_l2cap_coc_sdu_t *sdu)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct os_mbuf *sdu_tx = NULL;
+    struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
+
+    if (!nimble_chan || !sdu || !sdu->data || sdu->len == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_l2cap_coc_mem_inited) {
+        ESP_LOGE(TAG, "L2CAP CoC memory pool not initialized");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    /* Allocate mbuf from the L2CAP CoC memory pool for sending data */
+    sdu_tx = os_mbuf_get_pkthdr(&s_l2cap_coc_os_mbuf_pool, 0);
+    if (!sdu_tx) {
+        ESP_LOGW(TAG, "Failed to allocate mbuf, pool may be exhausted");
+        return ESP_ERR_NO_MEM;
+    }
+
+    /* Append data to mbuf */
+    int rc = os_mbuf_append(sdu_tx, sdu->data, sdu->len);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Failed to append data to mbuf, rc=%d", rc);
+        os_mbuf_free_chain(sdu_tx);
+        return ESP_ERR_NO_MEM;
+    }
+
+    /* Send data. Note: On success, mbuf ownership is transferred to NimBLE.
+     * On failure, mbuf ownership remains with caller and must be freed.
+     */
+    rc = ble_l2cap_send(nimble_chan, sdu_tx);
+    if (rc != 0) {
+        /* Convert NimBLE error codes to ESP error codes */
+        if (rc == BLE_HS_ESTALLED) {
+            ESP_LOGD(TAG, "L2CAP CoC channel stalled, wait for TX_UNSTALLED event");
+            /* Note: When stalled, mbuf ownership may have been transferred.
+             * However, we still need to free it here as the send failed.
+             * The stack will handle retransmission on TX_UNSTALLED event.
+             */
+            os_mbuf_free_chain(sdu_tx);
+            return ESP_ERR_NOT_FINISHED;
+        } else if (rc == BLE_HS_ENOTCONN) {
+            ESP_LOGE(TAG, "L2CAP CoC channel not connected");
+            os_mbuf_free_chain(sdu_tx);
+            return ESP_ERR_INVALID_STATE;
+        } else if (rc == BLE_HS_EAGAIN) {
+            ESP_LOGD(TAG, "L2CAP CoC send would block, rc=%d", rc);
+            os_mbuf_free_chain(sdu_tx);
+            return ESP_ERR_NOT_FINISHED;
+        } else {
+            ESP_LOGE(TAG, "L2CAP CoC send failed, rc=%d", rc);
+            os_mbuf_free_chain(sdu_tx);
+            return ESP_FAIL;
+        }
+    }
+
+    return ESP_OK;
+#else
+    (void)chan;
+    (void)sdu;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_recv_ready(esp_ble_conn_l2cap_coc_chan_t chan,
+                                            uint16_t sdu_size)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct os_mbuf *sdu_rx = NULL;
+    struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
+
+    if (!nimble_chan || sdu_size == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_l2cap_coc_mem_inited) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    sdu_rx = os_mbuf_get_pkthdr(&s_l2cap_coc_os_mbuf_pool, 0);
+    if (!sdu_rx) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    int rc = ble_l2cap_recv_ready(nimble_chan, sdu_rx);
+    if (rc != 0) {
+        os_mbuf_free_chain(sdu_rx);
+        ESP_LOGE(TAG, "L2CAP CoC recv ready failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+#else
+    (void)chan;
+    (void)sdu_size;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_disconnect(esp_ble_conn_l2cap_coc_chan_t chan)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
+
+    if (!nimble_chan) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_l2cap_disconnect(nimble_chan);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "L2CAP CoC disconnect failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+#else
+    (void)chan;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_l2cap_coc_get_chan_info(esp_ble_conn_l2cap_coc_chan_t chan,
+                                               esp_ble_conn_l2cap_coc_chan_info_t *chan_info)
+{
+#if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
+    struct ble_l2cap_chan_info nimble_info;
+    struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
+
+    if (!nimble_chan || !chan_info) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_l2cap_get_chan_info(nimble_chan, &nimble_info);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "L2CAP CoC get channel info failed, rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    chan_info->scid = nimble_info.scid;
+    chan_info->dcid = nimble_info.dcid;
+    chan_info->our_l2cap_mtu = nimble_info.our_l2cap_mtu;
+    chan_info->peer_l2cap_mtu = nimble_info.peer_l2cap_mtu;
+    chan_info->psm = nimble_info.psm;
+    chan_info->our_coc_mtu = nimble_info.our_coc_mtu;
+    chan_info->peer_coc_mtu = nimble_info.peer_coc_mtu;
+
+    return ESP_OK;
+#else
+    (void)chan;
+    (void)chan_info;
     return ESP_ERR_NOT_SUPPORTED;
 #endif
 }

@@ -503,6 +503,9 @@
 .patterns-example_bluetooth_ble_conn_mgr: &patterns-example_bluetooth_ble_conn_mgr
   - "examples/bluetooth/ble_conn_mgr/**/*"
 
+.patterns-example_bluetooth_ble_l2cap_coc: &patterns-example_bluetooth_ble_l2cap_coc
+  - "examples/bluetooth/ble_l2cap_coc/**/*"
+
 .patterns-example_bluetooth_ble_anp: &patterns-example_bluetooth_ble_anp
   - "examples/bluetooth/ble_anp/**/*"
 
@@ -937,6 +940,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_remote_control
+
+.rules:build:example_bluetooth_ble_l2cap_coc:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_l2cap_coc
 
 .rules:build:example_camera_basic:
   rules:

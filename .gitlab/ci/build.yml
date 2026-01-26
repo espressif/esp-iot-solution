@@ -145,6 +145,22 @@ build_example_bluetooth_ble_conn_mgr_ble_spp_server:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_spp/spp_server
 
+build_example_bluetooth_ble_l2cap_coc_central:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_l2cap_coc
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_l2cap_coc/l2cap_coc_central
+
+build_example_bluetooth_ble_l2cap_coc_peripheral:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_l2cap_coc
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_l2cap_coc/l2cap_coc_peripheral
+
 build_example_bluetooth_ble_anp:
   extends:
     - .build_examples_template
