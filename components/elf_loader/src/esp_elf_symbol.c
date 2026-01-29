@@ -20,6 +20,10 @@
 #include "rom/ets_sys.h"
 
 #include "esp_elf.h"
+
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+#include "private/esp_dlmod.h"
+#endif
 #include "private/elf_symbol.h"
 
 extern int __ltdf2(double a, double b);
@@ -203,5 +207,14 @@ uintptr_t elf_find_sym(const char *sym_name)
 
 #endif
 
-    return esp_elf_find_symbol(sym_name);
+    uintptr_t sym_addr = esp_elf_find_symbol(sym_name);
+    if (sym_addr) {
+        return sym_addr;
+    }
+
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+    return (uintptr_t)dlmod_getaddr(sym_name);
+#else
+    return 0;
+#endif
 }

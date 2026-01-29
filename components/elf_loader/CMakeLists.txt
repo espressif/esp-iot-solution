@@ -19,19 +19,24 @@ if(CONFIG_ELF_LOADER)
         list(APPEND srcs "src/arch/esp_elf_riscv.c")
     endif()
 
-    set(include_dirs  "include")
+    if(CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT)
+        list(APPEND srcs "src/dlso/dlfcn.c"
+                         "src/dlso/dlmod.c")
+    endif()
+
+    set(include_dirs "include")
     set(ldfragments "linker.lf")
 endif()
 
+set(priv_req spi_flash)
+
 if(CONFIG_IDF_TARGET_ESP32P4)
-    set(priv_req spi_flash esp_mm)
-else()
-    set(priv_req spi_flash)
+    list(APPEND priv_req esp_mm)
 endif()
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
-                       PRIV_REQUIRES spi_flash ${priv_req}
+                       PRIV_REQUIRES ${priv_req}
                        LDFRAGMENTS ${ldfragments})
 
 include(package_manager)

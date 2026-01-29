@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -66,6 +66,13 @@ extern "C" {
 #define SHF_EXECINSTR   4               /*!< machine code */
 #define SHF_MASKPROG    0xf0000000      /*!< reserved for processor-specific semantics */
 
+/** @brief Symbol Binding */
+
+#define STB_LOCAL       0               /*!< Local symbols are not visible outside the object file containing their definition. */
+#define STB_GLOBAL      1               /*!< Global symbols are visible to all object files being combined. */
+#define STB_WEAK        2               /*!< Weak symbols resemble global symbols, but their definitions have lower precedence. */
+#define STB_NUM         3               /*!< Number of defined types */
+
 /** @brief Symbol Types */
 
 #define STT_NOTYPE      0               /*!< symbol type is unspecified */
@@ -80,6 +87,10 @@ extern "C" {
 #define STT_HIOS        12              /*!< High OS specific range */
 #define STT_LOPROC      13              /*!< processor specific range */
 #define STT_HIPROC      15              /*!< processor specific link range */
+
+/** @brief Special Section Indices */
+
+#define SHN_UNDEF       0               /*!< undefined */
 
 /** @brief Section names */
 
@@ -219,26 +230,36 @@ typedef struct esp_elf_sec {
     size_t          size;               /*!< section size */
 } esp_elf_sec_t;
 
+typedef struct esp_symtab {
+    void            *addr;              /*!< symbol address */
+    char            *name;              /*!< symbol name */
+} esp_symtab_t;
+
 /** @brief ELF object */
 
 typedef struct esp_elf {
-    unsigned char   *psegment;          /*!< segment buffer pointer */
-
-    uint32_t         svaddr;            /*!< start virtual address of segment */
-
+#ifdef CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     unsigned char   *ptext;             /*!< instruction buffer pointer */
-
     unsigned char   *pdata;             /*!< data buffer pointer */
+#else
+    unsigned char   *psegment;          /*!< segment buffer pointer */
+    uint32_t         svaddr;            /*!< start virtual address of segment */
+#endif
 
     esp_elf_sec_t   sec[ELF_SECS];      /*!< ".bss", "data", "rodata", ".text" */
 
     int (*entry)(int argc, char *argv[]);               /*!< Entry pointer of ELF */
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
-    uint32_t        text_off;           /* .text symbol offset */
+    uint32_t        text_off;           /*!< .text symbol offset */
 
-    uint32_t        mmu_off;            /* MMU unit offset */
-    uint32_t        mmu_num;            /* MMU unit total number */
+    uint32_t        mmu_off;            /*!< MMU unit offset */
+    uint32_t        mmu_num;            /*!< MMU unit total number */
+#endif
+
+#ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+    uint16_t        num;                /*!< number of symbols in the dynamic object */
+    esp_symtab_t    *symtab;            /*!< symbol table of dynamic object pointer */
 #endif
 } esp_elf_t;
 

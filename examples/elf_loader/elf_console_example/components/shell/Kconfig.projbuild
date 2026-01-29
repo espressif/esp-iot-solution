@@ -1,0 +1,39 @@
+menu "Shell"
+    config ELF_SHELL
+        bool "Enable ELF shell command"
+        default y
+        help
+            Enable the ELF shell command interface for interactive
+            command execution in the console example.
+
+    if ELF_SHELL
+        config SHELL_PROMPT
+            string "Shell prompt"
+            default "ELF>"
+
+        menu "Shell Command List"
+            config SHELL_CMD_FREE
+                bool "free"
+                default y
+
+            config SHELL_CMD_LS
+                bool "ls"
+                default y
+
+            if ELF_DYNAMIC_LOAD_SHARED_OBJECT
+                config SHELL_CMD_EXEC
+                    bool "exec"
+                    default y
+                config SHELL_CMD_MOD_LOAD
+                    bool "mod_load"
+                    default y
+                config SHELL_CMD_MOD_UNLOAD
+                    bool "mod_unload"
+                    default y
+                config SHELL_CMD_LIST
+                    bool "list"
+                    default y
+            endif
+        endmenu
+    endif
+endmenu
