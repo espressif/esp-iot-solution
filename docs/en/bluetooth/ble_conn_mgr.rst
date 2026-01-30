@@ -27,6 +27,8 @@ Examples
 1. BLE periodic advertiser example: :example:`bluetooth/ble_conn_mgr/ble_periodic_adv`.
 2. BLE periodic sync example: :example:`bluetooth/ble_conn_mgr/ble_periodic_sync`.
 3. BLE serial port profile example: :example:`bluetooth/ble_conn_mgr/ble_spp`.
+4. BLE L2CAP CoC Central example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_central`.
+5. BLE L2CAP CoC Peripheral example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_peripheral`.
 
 API Reference
 -----------------
