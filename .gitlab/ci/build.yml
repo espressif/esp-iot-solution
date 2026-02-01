@@ -193,6 +193,22 @@ build_example_bluetooth_ble_midi:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_midi
 
+build_example_bluetooth_ble_otp_client:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_otp_client
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_otp/ble_otp_client
+
+build_example_bluetooth_ble_otp_server:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_otp_server
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_otp/ble_otp_server
+
 build_example_bluetooth_ble_services_ble_ans:
   extends:
     - .build_examples_template

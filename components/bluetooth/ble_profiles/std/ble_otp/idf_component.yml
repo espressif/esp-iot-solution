@@ -1,0 +1,10 @@
+version: "0.1.0"
+description: BLE standard profile support for Object Transfer Profile (OTP)
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/std/ble_otp
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../../../../examples/bluetooth/ble_profiles/ble_otp/ble_otp_client
+  - path: ../../../../../examples/bluetooth/ble_profiles/ble_otp/ble_otp_server
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

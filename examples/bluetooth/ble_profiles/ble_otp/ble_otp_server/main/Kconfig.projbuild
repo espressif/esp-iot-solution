@@ -1,0 +1,21 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_DEVICE_NAME
+        string "Device name"
+        default "BLE_OTP_SERVER"
+        help
+            The device name used by the BLE connection manager.
+
+    config EXAMPLE_BLE_SUB_ADV
+        string "Subsequent advertisement data"
+        default "SUB_ADV"
+        help
+            The data inside subsequent advertisements.
+
+    config EXAMPLE_OTP_PSM
+        hex "OTP L2CAP CoC PSM (Protocol/Service Multiplexer)"
+        range 0x0001 0x00FF
+        default 0x0025
+        help
+            Protocol/Service Multiplexer value for Object Transfer Channel.
+            Both client and server must use the same PSM value.
+endmenu
