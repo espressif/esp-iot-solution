@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.2 - 2026-2-1
+
+### Fix:
+
+* Fixed `EnSleep` bit writing to incorrect register.
+
 ## v0.1.1 - 2025-4-11
 
 ### Fix:
