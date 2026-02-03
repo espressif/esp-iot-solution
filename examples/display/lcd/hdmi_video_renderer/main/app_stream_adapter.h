@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -75,16 +75,38 @@ typedef esp_err_t (*app_stream_frame_cb_t)(uint8_t *buffer,
                                            void *user_data);
 
 /**
+ * @brief Stream adapter event types
+ */
+typedef enum {
+    APP_STREAM_EVENT_EOS = 0,   /*!< End of stream reached */
+    APP_STREAM_EVENT_ERROR,     /*!< Stream error occurred */
+} app_stream_event_t;
+
+/**
+ * @brief Stream adapter event callback
+ *
+ * @param event Event type
+ * @param error Error code when event is APP_STREAM_EVENT_ERROR
+ * @param user_data User data passed from configuration
+ */
+typedef void (*app_stream_event_cb_t)(app_stream_event_t event,
+                                      esp_err_t error,
+                                      void *user_data);
+
+/**
  * @brief Stream adapter initialization configuration structure
  */
 typedef struct {
     app_stream_frame_cb_t frame_cb;                 /*!< Callback function for decoded frames */
+    app_stream_event_cb_t event_cb;                 /*!< Callback function for EOS/error events */
     void *user_data;                                /*!< User data to be passed to frame callback */
     void **decode_buffers;                          /*!< Array of frame buffer pointers */
     uint32_t buffer_count;                          /*!< Number of frame buffers */
     uint32_t buffer_size;                           /*!< Size of each frame buffer */
     esp_codec_dev_handle_t audio_dev;               /*!< Audio device handle (NULL to disable audio) */
     app_stream_jpeg_config_t jpeg_config;           /*!< JPEG decoder configuration */
+    uint32_t target_width;                          /*!< Target output width for optional PPA scaling */
+    uint32_t target_height;                         /*!< Target output height for optional PPA scaling */
 } app_stream_adapter_config_t;
 
 /**

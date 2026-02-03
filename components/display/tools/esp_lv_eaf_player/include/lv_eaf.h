@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,6 +21,7 @@ extern "C" {
 
 #include "lvgl.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /*********************
@@ -57,6 +58,16 @@ lv_obj_t * lv_eaf_create(lv_obj_t * parent);
  *                  2) path to an EAF file (e.g. "S:/dir/anim.eaf") mounted via LVGL FS
  */
 void lv_eaf_set_src(lv_obj_t * obj, const void * src);
+
+/**
+ * Set the EAF data from raw memory.
+ * @param obj       pointer to an EAF animation object
+ * @param data      pointer to raw EAF data in memory
+ * @param len       size of the EAF data in bytes
+ *
+ * Note: The data must remain valid until a new source is set or the object is deleted.
+ */
+void lv_eaf_set_src_data(lv_obj_t * obj, const void * data, size_t len);
 
 /**
  * Restart an EAF animation.

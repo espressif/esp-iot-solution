@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>  // For read/write functions
+#include <stdlib.h>
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
@@ -22,6 +23,10 @@
 #include "app_stream_adapter.h"
 #include "app_extractor.h"
 #include "driver/jpeg_decode.h"
+#include "driver/ppa.h"
+#include "hal/ppa_ll.h"
+#include "esp_private/esp_cache_private.h"
+#include <math.h>
 
 static const char *TAG = "stream_adapter";
 
@@ -40,6 +45,7 @@ static const char *TAG = "stream_adapter";
 typedef struct app_stream_adapter_t {
     /* Common parameters */
     app_stream_frame_cb_t frame_cb;           /*!< Frame callback function */
+    app_stream_event_cb_t event_cb;           /*!< Event callback function */
     void *user_data;                          /*!< User data to be passed to frame callback */
     void **decode_buffers;                    /*!< Array of frame buffer pointers */
     uint32_t buffer_count;                    /*!< Number of frame buffers */
@@ -53,6 +59,8 @@ typedef struct app_stream_adapter_t {
     uint32_t height;                          /*!< Frame height */
     uint32_t fps;                             /*!< Frames per second */
     uint32_t duration;                        /*!< Duration in milliseconds */
+    uint32_t target_width;                    /*!< Target output width */
+    uint32_t target_height;                   /*!< Target output height */
 
     /* Extractor specific members */
     app_extractor_handle_t extractor_handle;  /*!< Extractor handle */
@@ -69,6 +77,13 @@ typedef struct app_stream_adapter_t {
     // Audio support
     bool extract_audio;                       /*!< Flag to extract audio */
     esp_codec_dev_handle_t audio_dev;         /*!< Audio device handle */
+
+    // PPA scaling support
+    bool enable_ppa;                          /*!< Enable PPA scaling on size mismatch */
+    ppa_client_handle_t ppa_client;           /*!< PPA SRM client handle */
+    void *ppa_input_buffer;                   /*!< PPA input buffer for decoded frames */
+    size_t ppa_input_buffer_size;             /*!< Size of PPA input buffer */
+    bool ppa_input_is_hw;                     /*!< True if buffer allocated by JPEG driver */
 } app_stream_adapter_t;
 
 /**
@@ -92,6 +107,240 @@ static esp_err_t jpeg_hw_init(app_stream_adapter_t *adapter)
     return jpeg_new_decoder_engine(&decode_eng_cfg, &adapter->jpeg_handle);
 }
 
+static void *alloc_jpeg_output_buffer(size_t required_size, size_t *allocated_size, bool *is_hw_buffer)
+{
+    size_t cache_line_size = 0;
+    esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &cache_line_size);
+    if (cache_line_size == 0) {
+        cache_line_size = 64;
+    }
+    size_t aligned_size = (required_size + cache_line_size - 1) & ~(cache_line_size - 1);
+
+    jpeg_decode_memory_alloc_cfg_t mem_cfg = {
+        .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
+    };
+    void *buf = jpeg_alloc_decoder_mem(aligned_size, &mem_cfg, allocated_size);
+    if (buf) {
+        if (is_hw_buffer) {
+            *is_hw_buffer = true;
+        }
+        return buf;
+    }
+
+    buf = heap_caps_aligned_calloc(cache_line_size, 1, aligned_size, MALLOC_CAP_SPIRAM);
+    if (buf) {
+        *allocated_size = aligned_size;
+        if (is_hw_buffer) {
+            *is_hw_buffer = false;
+        }
+    }
+    return buf;
+}
+
+static void free_ppa_input_buffer(app_stream_adapter_t *adapter)
+{
+    if (!adapter || !adapter->ppa_input_buffer) {
+        return;
+    }
+
+    if (adapter->ppa_input_is_hw) {
+        free(adapter->ppa_input_buffer);
+    } else {
+        heap_caps_free(adapter->ppa_input_buffer);
+    }
+    adapter->ppa_input_buffer = NULL;
+    adapter->ppa_input_buffer_size = 0;
+    adapter->ppa_input_is_hw = false;
+}
+
+static esp_err_t ensure_ppa_input_buffer(app_stream_adapter_t *adapter, size_t required_size)
+{
+    if (!adapter->enable_ppa) {
+        return ESP_OK;
+    }
+    if (adapter->ppa_input_buffer && adapter->ppa_input_buffer_size >= required_size) {
+        return ESP_OK;
+    }
+    free_ppa_input_buffer(adapter);
+    adapter->ppa_input_buffer = alloc_jpeg_output_buffer(required_size,
+                                                         &adapter->ppa_input_buffer_size,
+                                                         &adapter->ppa_input_is_hw);
+    if (adapter->ppa_input_buffer == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate PPA input buffer (size=%u)", (unsigned)required_size);
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t get_jpeg_info(const uint8_t *input_buffer, uint32_t input_size,
+                               jpeg_decode_picture_info_t *pic_info)
+{
+    esp_err_t ret = jpeg_decoder_get_info(input_buffer, input_size, pic_info);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to get JPEG info: %d", ret);
+    }
+    return ret;
+}
+
+static ppa_srm_color_mode_t ppa_color_mode_from_jpeg_config(const app_stream_jpeg_config_t *jpeg_config)
+{
+    return (jpeg_config->output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ?
+           PPA_SRM_COLOR_MODE_RGB888 : PPA_SRM_COLOR_MODE_RGB565;
+}
+
+static uint32_t gcd_u32(uint32_t a, uint32_t b)
+{
+    while (b != 0) {
+        uint32_t t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+static uint32_t ceil_div_u64(uint64_t num, uint64_t den)
+{
+    return (uint32_t)((num + den - 1) / den);
+}
+
+static bool ppa_calc_crop_with_legal_scale(uint32_t in_w, uint32_t in_h,
+                                           uint32_t target_w, uint32_t target_h,
+                                           uint32_t *crop_w, uint32_t *crop_h,
+                                           uint32_t *off_x, uint32_t *off_y,
+                                           float *scale_x, float *scale_y)
+{
+    if (in_w == 0 || in_h == 0 || target_w == 0 || target_h == 0) {
+        return false;
+    }
+
+    const uint32_t frag = PPA_LL_SRM_SCALING_FRAG_MAX;
+    const uint32_t k_max = PPA_LL_SRM_SCALING_INT_MAX * frag - 1;
+    uint64_t target_w_q = (uint64_t)target_w * frag;
+    uint64_t target_h_q = (uint64_t)target_h * frag;
+
+    uint32_t k_min_w = ceil_div_u64(target_w_q, in_w);
+    uint32_t k_min_h = ceil_div_u64(target_h_q, in_h);
+    uint32_t k_min = k_min_w > k_min_h ? k_min_w : k_min_h;
+    if (k_min < 1) {
+        k_min = 1;
+    }
+    if (k_min > k_max) {
+        k_min = k_max;
+    }
+
+    uint32_t k = 0;
+    uint32_t gcd_q = gcd_u32((uint32_t)target_w_q, (uint32_t)target_h_q);
+    uint32_t sqrt_gcd = (uint32_t)sqrtf((float)gcd_q);
+    for (uint32_t i = 1; i <= sqrt_gcd; ++i) {
+        if (gcd_q % i != 0) {
+            continue;
+        }
+        uint32_t d1 = i;
+        uint32_t d2 = gcd_q / i;
+        if (d1 >= k_min && (k == 0 || d1 < k)) {
+            k = d1;
+        }
+        if (d2 >= k_min && (k == 0 || d2 < k)) {
+            k = d2;
+        }
+    }
+
+    bool exact = true;
+    if (k == 0) {
+        uint32_t k_fallback = k_min;
+        if (k_fallback < 1) {
+            k_fallback = 1;
+        }
+        if (k_fallback > k_max) {
+            k_fallback = k_max;
+        }
+        k = k_fallback;
+        exact = false;
+    }
+
+    *scale_x = (float)k / (float)frag;
+    *scale_y = *scale_x;
+    *crop_w = (uint32_t)(target_w_q / k);
+    *crop_h = (uint32_t)(target_h_q / k);
+    if (*crop_w < 1) {
+        *crop_w = 1;
+        exact = false;
+    }
+    if (*crop_h < 1) {
+        *crop_h = 1;
+        exact = false;
+    }
+    if (*crop_w > in_w || *crop_h > in_h) {
+        *crop_w = in_w;
+        *crop_h = in_h;
+        exact = false;
+    }
+
+    *off_x = (in_w - *crop_w) / 2;
+    *off_y = (in_h - *crop_h) / 2;
+    return exact;
+}
+
+static esp_err_t ppa_scale_frame(app_stream_adapter_t *adapter,
+                                 const uint8_t *input_buffer,
+                                 uint32_t input_width,
+                                 uint32_t input_height,
+                                 void *output_buffer)
+{
+    if (!adapter->enable_ppa || adapter->ppa_client == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    uint32_t bytes_per_pixel = (adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2;
+    uint32_t required_out_size = adapter->target_width * adapter->target_height * bytes_per_pixel;
+    if (required_out_size > adapter->buffer_size) {
+        ESP_LOGE(TAG, "PPA output buffer too small: required=%u, available=%u", required_out_size, adapter->buffer_size);
+        return ESP_ERR_NO_MEM;
+    }
+
+    uint32_t crop_w = 0;
+    uint32_t crop_h = 0;
+    uint32_t crop_x = 0;
+    uint32_t crop_y = 0;
+    float scale_x = 1.0f;
+    float scale_y = 1.0f;
+    bool exact = ppa_calc_crop_with_legal_scale(input_width, input_height,
+                                                adapter->target_width, adapter->target_height,
+                                                &crop_w, &crop_h, &crop_x, &crop_y,
+                                                &scale_x, &scale_y);
+    if (!exact) {
+        ESP_LOGW(TAG, "Scale quantized or clamped, fullscreen may be limited (in=%ux%u out=%ux%u scale=%.4f)",
+                 input_width, input_height, adapter->target_width, adapter->target_height, scale_x);
+    }
+
+    ppa_srm_oper_config_t srm_config = {
+        .in.buffer = input_buffer,
+        .in.pic_w = input_width,
+        .in.pic_h = input_height,
+        .in.block_w = crop_w,
+        .in.block_h = crop_h,
+        .in.block_offset_x = crop_x,
+        .in.block_offset_y = crop_y,
+        .in.srm_cm = ppa_color_mode_from_jpeg_config(&adapter->jpeg_config),
+           .out.buffer = output_buffer,
+           .out.buffer_size = adapter->buffer_size,
+           .out.pic_w = adapter->target_width,
+           .out.pic_h = adapter->target_height,
+           .out.block_offset_x = 0,
+           .out.block_offset_y = 0,
+           .out.srm_cm = ppa_color_mode_from_jpeg_config(&adapter->jpeg_config),
+           .rotation_angle = PPA_SRM_ROTATION_ANGLE_0,
+           .scale_x = scale_x,
+           .scale_y = scale_y,
+           .rgb_swap = 0,
+           .byte_swap = 0,
+           .mode = PPA_TRANS_MODE_BLOCKING,
+           .user_data = NULL,
+    };
+
+    return ppa_do_scale_rotate_mirror(adapter->ppa_client, &srm_config);
+}
+
 /**
  * @brief Decode a JPEG frame using hardware decoder
  *
@@ -107,33 +356,26 @@ static esp_err_t decode_jpeg_frame(
     app_stream_adapter_t *adapter,
     const uint8_t *input_buffer,
     uint32_t input_size,
+    void *output_buffer,
+    uint32_t output_buffer_size,
+    const jpeg_decode_picture_info_t *pic_info,
     uint32_t *out_width,
     uint32_t *out_height,
     uint32_t *out_size)
 {
     esp_err_t ret;
-
-    jpeg_decode_picture_info_t pic_info;
-    ret = jpeg_decoder_get_info(input_buffer, input_size, &pic_info);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to get JPEG info: %d", ret);
-        return ret;
-    }
-
-    *out_width = pic_info.width;
-    *out_height = pic_info.height;
+    *out_width = pic_info->width;
+    *out_height = pic_info->height;
 
     uint32_t bytes_per_pixel = (adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2;
-    uint32_t required_size = pic_info.width * pic_info.height * bytes_per_pixel;
+    uint32_t required_size = pic_info->width * pic_info->height * bytes_per_pixel;
 
-    if (required_size > adapter->buffer_size) {
-        ESP_LOGE(TAG, "Buffer too small: required=%u, available=%u", required_size, adapter->buffer_size);
+    if (required_size > output_buffer_size) {
+        ESP_LOGE(TAG, "Buffer too small: required=%u, available=%u", required_size, output_buffer_size);
         return ESP_ERR_NO_MEM;
     }
 
-    // Select next buffer in round-robin fashion
-    adapter->current_buffer = (adapter->current_buffer + 1) % adapter->buffer_count;
-    void *current_decode_buffer = adapter->decode_buffers[adapter->current_buffer];
+    void *current_decode_buffer = output_buffer;
 
     jpeg_decode_cfg_t decode_cfg = {
         .conv_std = JPEG_YUV_RGB_CONV_STD_BT601,
@@ -158,7 +400,7 @@ static esp_err_t decode_jpeg_frame(
 
     ret = jpeg_decoder_process(adapter->jpeg_handle, &decode_cfg,
                                input_buffer, input_size,
-                               current_decode_buffer, adapter->buffer_size,
+                               current_decode_buffer, output_buffer_size,
                                out_size);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "JPEG decoding failed: %d", ret);
@@ -195,16 +437,60 @@ static esp_err_t extractor_frame_callback(uint8_t *buffer,
     memcpy(adapter->jpeg_buffer, buffer, buffer_size);
 
     uint32_t width = 0, height = 0, decoded_size = 0;
+    jpeg_decode_picture_info_t pic_info = {0};
 
     xSemaphoreTake(adapter->frame_mutex, portMAX_DELAY);
 
-    ret = decode_jpeg_frame(adapter, adapter->jpeg_buffer, buffer_size,
-                            &width, &height, &decoded_size);
+    ret = get_jpeg_info(adapter->jpeg_buffer, buffer_size, &pic_info);
+    if (ret != ESP_OK) {
+        xSemaphoreGive(adapter->frame_mutex);
+        return ret;
+    }
 
+    bool need_ppa = adapter->enable_ppa &&
+                    adapter->target_width > 0 && adapter->target_height > 0 &&
+                    (pic_info.width != adapter->target_width || pic_info.height != adapter->target_height);
+    void *decoded_output = NULL;
+    uint32_t decode_buffer_size = adapter->buffer_size;
+    uint32_t bytes_per_pixel = (adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2;
+    size_t required_decode_size = (size_t)pic_info.width * (size_t)pic_info.height * bytes_per_pixel;
+
+    if (need_ppa) {
+        ret = ensure_ppa_input_buffer(adapter, required_decode_size);
+        if (ret != ESP_OK) {
+            xSemaphoreGive(adapter->frame_mutex);
+            return ret;
+        }
+        decoded_output = adapter->ppa_input_buffer;
+        decode_buffer_size = (uint32_t)adapter->ppa_input_buffer_size;
+    } else {
+        adapter->current_buffer = (adapter->current_buffer + 1) % adapter->buffer_count;
+        decoded_output = adapter->decode_buffers[adapter->current_buffer];
+    }
+
+    ret = decode_jpeg_frame(adapter, adapter->jpeg_buffer, buffer_size,
+                            decoded_output, decode_buffer_size, &pic_info,
+                            &width, &height, &decoded_size);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to decode frame: %d", ret);
         xSemaphoreGive(adapter->frame_mutex);
         return ret;
+    }
+
+    if (need_ppa && (width != adapter->target_width || height != adapter->target_height)) {
+        adapter->current_buffer = (adapter->current_buffer + 1) % adapter->buffer_count;
+        void *scaled_output = adapter->decode_buffers[adapter->current_buffer];
+        ret = ppa_scale_frame(adapter, decoded_output, width, height, scaled_output);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "PPA scaling failed: %d", ret);
+            xSemaphoreGive(adapter->frame_mutex);
+            return ret;
+        }
+        decoded_output = scaled_output;
+        width = adapter->target_width;
+        height = adapter->target_height;
+        decoded_size = adapter->target_width * adapter->target_height *
+                       ((adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2);
     }
 
     // Store stream info if not available
@@ -217,7 +503,7 @@ static esp_err_t extractor_frame_callback(uint8_t *buffer,
     adapter->frame_count++;
 
     if (adapter->frame_cb) {
-        void *current_buffer = adapter->decode_buffers[adapter->current_buffer];
+        void *current_buffer = decoded_output;
         uint32_t frame_index = (adapter->frame_count > 0) ? (adapter->frame_count - 1) : 0;
         ret = adapter->frame_cb(current_buffer, decoded_size, width, height, frame_index, adapter->user_data);
     }
@@ -265,8 +551,18 @@ static void extract_task(void *arg)
                 if (ret != ESP_OK) {
                     if (ret == ESP_ERR_NOT_FOUND) {
                         ESP_LOGI(TAG, "End of stream reached");
+                        app_extractor_stop(adapter->extractor_handle);
+                        adapter->running = false;
+                        if (adapter->event_cb) {
+                            adapter->event_cb(APP_STREAM_EVENT_EOS, ESP_OK, adapter->user_data);
+                        }
                     } else {
                         ESP_LOGW(TAG, "Failed to read frame: %d", ret);
+                        app_extractor_stop(adapter->extractor_handle);
+                        adapter->running = false;
+                        if (adapter->event_cb) {
+                            adapter->event_cb(APP_STREAM_EVENT_ERROR, ret, adapter->user_data);
+                        }
                     }
                     break;
                 }
@@ -377,6 +673,7 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
     }
 
     adapter->frame_cb = config->frame_cb;
+    adapter->event_cb = config->event_cb;
     adapter->user_data = config->user_data;
     adapter->decode_buffers = config->decode_buffers;
     adapter->buffer_count = config->buffer_count;
@@ -389,6 +686,9 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
     adapter->jpeg_config = config->jpeg_config;
     adapter->audio_dev = config->audio_dev;
     adapter->extract_audio = (config->audio_dev != NULL);
+    adapter->target_width = config->target_width;
+    adapter->target_height = config->target_height;
+    adapter->enable_ppa = (config->target_width > 0 && config->target_height > 0);
 
     adapter->jpeg_buffer_size = APP_STREAM_JPEG_BUFFER_SIZE;
     adapter->jpeg_buffer = heap_caps_malloc(adapter->jpeg_buffer_size, MALLOC_CAP_SPIRAM);
@@ -426,6 +726,33 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
         return ret;
     }
 
+    if (adapter->enable_ppa) {
+        adapter->ppa_input_buffer = alloc_jpeg_output_buffer(adapter->buffer_size,
+                                                             &adapter->ppa_input_buffer_size,
+                                                             &adapter->ppa_input_is_hw);
+        if (adapter->ppa_input_buffer == NULL) {
+            ESP_LOGE(TAG, "Failed to allocate PPA input buffer");
+            jpeg_del_decoder_engine(adapter->jpeg_handle);
+            vEventGroupDelete(adapter->extract_event_group);
+            vSemaphoreDelete(adapter->frame_mutex);
+            heap_caps_free(adapter->jpeg_buffer);
+            free(adapter);
+            return ESP_ERR_NO_MEM;
+        }
+
+        ppa_client_config_t ppa_config = {
+            .oper_type = PPA_OPERATION_SRM,
+            .max_pending_trans_num = 1,
+            .data_burst_length = PPA_DATA_BURST_LENGTH_128,
+        };
+        ret = ppa_register_client(&ppa_config, &adapter->ppa_client);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to initialize PPA, scaling disabled: %d", ret);
+            free_ppa_input_buffer(adapter);
+            adapter->enable_ppa = false;
+        }
+    }
+
     g_adapter_instance = adapter;
 
     if (config->audio_dev) {
@@ -437,6 +764,10 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize extractor: %d", ret);
         g_adapter_instance = NULL;
+        if (adapter->ppa_client) {
+            ppa_unregister_client(adapter->ppa_client);
+        }
+        free_ppa_input_buffer(adapter);
         jpeg_del_decoder_engine(adapter->jpeg_handle);
         vEventGroupDelete(adapter->extract_event_group);
         vSemaphoreDelete(adapter->frame_mutex);
@@ -655,6 +986,11 @@ esp_err_t app_stream_adapter_deinit(app_stream_adapter_handle_t handle)
         adapter->jpeg_handle = NULL;
     }
 
+    if (adapter->ppa_client != NULL) {
+        ppa_unregister_client(adapter->ppa_client);
+        adapter->ppa_client = NULL;
+    }
+
     if (adapter->frame_mutex != NULL) {
         vSemaphoreDelete(adapter->frame_mutex);
     }
@@ -666,6 +1002,8 @@ esp_err_t app_stream_adapter_deinit(app_stream_adapter_handle_t handle)
     if (adapter->jpeg_buffer != NULL) {
         heap_caps_free(adapter->jpeg_buffer);
     }
+
+    free_ppa_input_buffer(adapter);
 
     if (g_adapter_instance == adapter) {
         g_adapter_instance = NULL;
@@ -696,6 +1034,17 @@ esp_err_t app_stream_adapter_resize_buffers(app_stream_adapter_handle_t handle,
     adapter->buffer_count = buffer_count;
     adapter->buffer_size = buffer_size;
     adapter->current_buffer = buffer_count - 1;
+    if (adapter->enable_ppa) {
+        free_ppa_input_buffer(adapter);
+        adapter->ppa_input_buffer = alloc_jpeg_output_buffer(buffer_size,
+                                                             &adapter->ppa_input_buffer_size,
+                                                             &adapter->ppa_input_is_hw);
+        if (adapter->ppa_input_buffer == NULL) {
+            ESP_LOGW(TAG, "Failed to resize PPA input buffer, scaling disabled");
+            adapter->enable_ppa = false;
+            adapter->ppa_input_buffer_size = 0;
+        }
+    }
 
     return ESP_OK;
 }

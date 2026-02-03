@@ -179,6 +179,10 @@
   - "components/display/tools/esp_lv_eaf_player/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_display_tools_esp_lv_lottie_player: &patterns-components_display_tools_esp_lv_lottie_player
+  - "components/display/tools/esp_lv_lottie_player/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_keyboard_button: &patterns-components_keyboard_button
   - "components/keyboard_button/**/*"
 
@@ -557,6 +561,9 @@
 .patterns-example_display_lcd_lcd_with_te: &patterns-example_display_lcd_lcd_with_te
   - "examples/display/lcd/lcd_with_te/**/*"
 
+.patterns-example_display_lcd_lcd_pattern_test: &patterns-example_display_lcd_lcd_pattern_test
+  - "examples/display/lcd/lcd_pattern_test/**/*"
+
 .patterns-example_display_lcd_mipi_dsi_avoid_tearing: &patterns-example_display_lcd_mipi_dsi_avoid_tearing
   - "examples/display/lcd/mipi_dsi_avoid_tearing/**/*"
 
@@ -590,8 +597,14 @@
 .patterns-example_display_gui_lvgl_light_sleep_demo: &patterns-example_display_gui_lvgl_light_sleep_demo
   - "examples/display/gui/lvgl_light_sleep_demo/**/*"
 
+.patterns-example_display_gui_lvgl_mono_demo: &patterns-example_display_gui_lvgl_mono_demo
+  - "examples/display/gui/lvgl_mono_demo/**/*"
+
 .patterns-example_display_gui_lvgl_eaf_player: &patterns-example_display_gui_lvgl_eaf_player
   - "examples/display/gui/lvgl_eaf_player/**/*"
+
+.patterns-example_display_gui_lvgl_lottie_player: &patterns-example_display_gui_lvgl_lottie_player
+  - "examples/display/gui/lvgl_lottie_player/**/*"
 
 .patterns-example_extended_vfs_gpio_gpio_simple: &patterns-example_extended_vfs_gpio_gpio_simple
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
@@ -1046,6 +1059,18 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_axs15231b
 
+.rules:build:example_display_lcd_lcd_pattern_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_lcd_pattern_test
+
 .rules:build:example_display_lcd_mipi_dsi_avoid_tearing:
   rules:
     - <<: *if-protected
@@ -1196,6 +1221,18 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lvgl_adapter
 
+.rules:build:example_display_gui_lvgl_mono_demo:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_mono_demo
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
+
 .rules:build:example_display_gui_lvgl_eaf_player:
   rules:
     - <<: *if-protected
@@ -1207,6 +1244,18 @@
       changes: *patterns-example_display_gui_lvgl_eaf_player
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_eaf_player
+
+.rules:build:example_display_gui_lvgl_lottie_player:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_lottie_player
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_lottie_player
 
 .rules:build:example_extended_vfs_gpio_gpio_simple:
   rules:
@@ -2475,6 +2524,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_eaf_player
+
+.rules:build:components_display_tools_esp_lv_lottie_player_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_lottie_player
 
 .rules:build:components_keyboard_button_test_apps:
   rules:

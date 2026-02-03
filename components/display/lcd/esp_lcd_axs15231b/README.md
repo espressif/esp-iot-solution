@@ -6,7 +6,7 @@ Implementation of the AXS15231B LCD & Touch controller with esp_lcd component.
 
 | LCD controller | Communication interface | Component name | Link to datasheet |
 | :------------: | :---------------------: | :------------: | :---------------: |
-| AXS15231B      | I80/SPI/QSPI                     | esp_lcd_axs15231b     | [Specification](https://dl.espressif.com/AE/esp_iot_solution/AXS15231B_Datasheet_V0.5_20230306.pdf) |
+| AXS15231B      | I80/SPI/QSPI/MIPI-DSI            | esp_lcd_axs15231b     | [Specification](https://dl.espressif.com/AE/esp_iot_solution/AXS15231B_Datasheet_V0.5_20230306.pdf) |
 
 ## Add to project
 
@@ -160,6 +160,47 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
+```
+
+### MIPI-DSI Interface
+
+```c
+    ESP_LOGI(TAG, "MIPI DSI PHY Powered on");
+    esp_ldo_channel_config_t ldo_mipi_phy_config = {
+        .chan_id = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_CHAN,
+        .voltage_mv = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV,
+    };
+    ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
+
+    ESP_LOGI(TAG, "Initialize MIPI DSI bus");
+    esp_lcd_dsi_bus_config_t bus_config = AXS15231B_PANEL_BUS_DSI_1CH_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
+
+    ESP_LOGI(TAG, "Install panel IO");
+    esp_lcd_dbi_io_config_t dbi_config = AXS15231B_PANEL_IO_DBI_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
+
+    ESP_LOGI(TAG, "Install AXS15231B panel driver");
+    esp_lcd_dpi_panel_config_t dpi_config = AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB888);
+    axs15231b_vendor_config_t vendor_config = {
+        .flags = {
+            .use_mipi_interface = 1,
+        },
+        .mipi_config = {
+            .dsi_bus = mipi_dsi_bus,
+            .dpi_config = &dpi_config,
+        },
+    };
+    const esp_lcd_panel_dev_config_t panel_config = {
+        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = 24,
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_axs15231b(mipi_dbi_io, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 ```
 
 ## Initialization of the touch component.

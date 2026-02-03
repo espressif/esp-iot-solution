@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.3.2 (2026-01-22)
+
+* Fix C++ designated initializer order in SPI-with-PSRAM display profile macros
+
+## v0.3.1 (2026-01-07)
+
+* Fix monochrome SPI default display macro to use the correct profile macro
+
 ## v0.3.0 (2026-01-07)
 
 * Added monochrome display support for LVGL v8 and v9

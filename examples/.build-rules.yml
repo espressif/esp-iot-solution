@@ -154,6 +154,10 @@ examples/display/lcd/mipi_dsi_avoid_tearing:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+examples/display/lcd/lcd_pattern_test:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 examples/display/lcd/qspi_with_ram:
   enable:
     - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3", "esp32c5", "esp32c6"]
@@ -194,7 +198,15 @@ examples/display/gui/lvgl_light_sleep_demo:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
+examples/display/gui/lvgl_mono_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/display/gui/lvgl_eaf_player:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_lottie_player:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 

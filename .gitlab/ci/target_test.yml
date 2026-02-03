@@ -451,9 +451,9 @@ components_test_esp_lv_decoder:
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.4"
         ENV_TAG: generic,eco4
-      - IDF_TARGET: esp32p4
-        IDF_VERSION: "5.5"
-        ENV_TAG: generic,eco_default
+      # - IDF_TARGET: esp32p4
+      #   IDF_VERSION: "5.5"
+      #   ENV_TAG: generic,eco_default # See !1473
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}

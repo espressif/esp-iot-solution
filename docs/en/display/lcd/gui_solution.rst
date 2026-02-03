@@ -24,6 +24,35 @@ Related Example:
 
 - https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
 
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_mono_demo
+
+.. _ESP LVGL EAF Player:
+
+ESP LVGL EAF Player
+-------------------
+
+esp_lv_eaf_player is a lightweight and efficient EAF animation player designed specifically for LVGL v8/v9. It enables seamless integration of compressed animation sequences into LVGL projects. The EAF format supports multiple compression methods including RLE, Huffman coding, and JPEG compression, providing high-quality animations with minimal memory footprint.
+
+Features:
+
+- Multiple compression support: RLE, Huffman, JPEG
+- Optimized for embedded: Minimal memory footprint and efficient decoding
+- LVGL integration: Seamless integration with LVGL widget system
+- Animation control: Play, pause, restart, and loop control
+
+Applicable Scenarios:
+
+- Users using LVGL v8/v9 who need to play high-quality animations
+- Efficient animation playback on resource-constrained platforms
+
+EAF File Conversion: Use the online conversion tool to convert GIF or other animation formats to EAF format: https://esp32-gif.espressif.com/
+
+Component Link: https://components.espressif.com/components/espressif/esp_lv_eaf_player
+
+Related Example:
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_eaf_player
+
 .. _Thorvg component:
 
 Thorvg Component
@@ -65,18 +94,22 @@ Component Link: https://components.espressif.com/components/georgik/sdl/versions
 
 Related Example: https://github.com/georgik/esp32-sdl3-test/tree/main
 
-.. _Lottie player:
+.. _esp_lv_lottie_player:
 
-Lottie Player Component
------------------------
+esp_lv_lottie_player
+--------------------
 
-lottie_player is a lightweight and efficient Lottie animation player designed specifically for LVGL v8. It can seamlessly integrate vector-based animations into LVGL projects. By leveraging ThorVG as the rendering engine, this module ensures high performance and flexibility for modern embedded GUI applications.
+esp_lv_lottie_player is a lightweight and efficient Lottie animation player designed specifically for LVGL v8/v9. It can seamlessly integrate vector-based animations into LVGL projects. By leveraging ThorVG as the rendering engine, this module ensures high performance and flexibility for modern embedded GUI applications.
 
 Applicable Scenarios:
 
-- Users using LVGL v8 who need to play Lottie animations
+- Users using LVGL v8/v9 who need to play Lottie animations
 
-Component Link: https://components.espressif.com/components/espressif2022/lottie_player
+Component Link: https://components.espressif.com/components/espressif/esp_lv_lottie_player
+
+Related Example:
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_lottie_player
 
 .. _esp_emote_gfx:
 
@@ -98,3 +131,37 @@ Applicable Scenarios:
 - Dynamic UI component display on resource-constrained platforms (ESP32-C2/C3, etc.)
 
 Component Link: https://components.espressif.com/components/espressif2022/esp_emote_gfx/
+
+.. _esp_emote_expression:
+
+esp_emote_expression
+--------------------
+
+esp_emote_expression is an expression and interface description system built on esp_emote_gfx, providing complete resource parsing, loading and lifecycle management capabilities, and supporting third-party custom widget extensions. It can be used as a foundational UI framework for AI interactive devices.
+
+The system covers common UI scenarios for AI conversations, including:
+
+- Expression and animation display
+- Text rendering (system prompts, user messages, etc.)
+- Status icons (speaking, listening, etc.)
+- QR code display
+- Popups and notification components
+
+Applicable Scenarios:
+
+- Foundational UI framework for AI interactive devices
+- Embedded devices requiring complete UI resource management and widget extensions
+
+Integrated Repositories:
+
+- xiaozhi: https://github.com/78/xiaozhi-esp32
+
+- rainmaker agent: https://github.com/espressif/esp-agents-firmware
+
+Quick Start:
+
+- gfx-gen-tool: https://gfx-gen-tool.pages.dev/
+
+- Local preset assets: https://components.espressif.com/components/espressif2022/esp_emote_assets
+
+Component Link: https://components.espressif.com/components/espressif2022/esp_emote_expression

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,8 +17,10 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_lcd_touch.h"
+#include "soc/soc_caps.h"
 
 #include "esp_lcd_axs15231b.h"
+#include "esp_lcd_axs15231b_interface.h"
 
 /*max point num*/
 #define AXS_MAX_TOUCH_NUMBER                (1)
@@ -68,7 +70,27 @@ esp_err_t esp_lcd_new_panel_axs15231b(const esp_lcd_panel_io_handle_t io, const 
 {
     esp_err_t ret = ESP_OK;
     axs15231b_panel_t *axs15231b = NULL;
+    axs15231b_vendor_config_t *vendor_config = NULL;
     ESP_GOTO_ON_FALSE(io && panel_dev_config && ret_panel, ESP_ERR_INVALID_ARG, err, TAG, "invalid argument");
+
+    if (panel_dev_config->vendor_config) {
+        vendor_config = (axs15231b_vendor_config_t *)panel_dev_config->vendor_config;
+        if (vendor_config->flags.use_mipi_interface && vendor_config->flags.use_qspi_interface) {
+            ESP_LOGE(TAG, "only one interface can be selected");
+            return ESP_ERR_NOT_SUPPORTED;
+        }
+#if SOC_MIPI_DSI_SUPPORTED
+        if (vendor_config->flags.use_mipi_interface) {
+            return esp_lcd_new_panel_axs15231b_mipi(io, panel_dev_config, ret_panel);
+        }
+#else
+        if (vendor_config->flags.use_mipi_interface) {
+            ESP_LOGE(TAG, "MIPI interface is not supported on this target");
+            return ESP_ERR_NOT_SUPPORTED;
+        }
+#endif
+    }
+
     axs15231b = calloc(1, sizeof(axs15231b_panel_t));
     ESP_GOTO_ON_FALSE(axs15231b, ESP_ERR_NO_MEM, err, TAG, "no mem for axs15231b panel");
 
@@ -112,10 +134,10 @@ esp_err_t esp_lcd_new_panel_axs15231b(const esp_lcd_panel_io_handle_t io, const 
     axs15231b->fb_bits_per_pixel = fb_bits_per_pixel;
     axs15231b->reset_gpio_num = panel_dev_config->reset_gpio_num;
     axs15231b->flags.reset_level = panel_dev_config->flags.reset_active_high;
-    if (panel_dev_config->vendor_config) {
-        axs15231b->init_cmds = ((axs15231b_vendor_config_t *)panel_dev_config->vendor_config)->init_cmds;
-        axs15231b->init_cmds_size = ((axs15231b_vendor_config_t *)panel_dev_config->vendor_config)->init_cmds_size;
-        axs15231b->flags.use_qspi_interface = ((axs15231b_vendor_config_t *)panel_dev_config->vendor_config)->flags.use_qspi_interface;
+    if (vendor_config) {
+        axs15231b->init_cmds = vendor_config->init_cmds;
+        axs15231b->init_cmds_size = vendor_config->init_cmds_size;
+        axs15231b->flags.use_qspi_interface = vendor_config->flags.use_qspi_interface;
     }
     axs15231b->base.del = panel_axs15231b_del;
     axs15231b->base.reset = panel_axs15231b_reset;

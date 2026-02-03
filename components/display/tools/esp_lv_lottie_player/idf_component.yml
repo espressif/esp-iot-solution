@@ -1,0 +1,14 @@
+version: "0.1.0"
+description: A Lottie animation player for LVGL (v8 and v9), powered by ThorVG as the rendering engine.
+url: https://github.com/espressif/esp-iot-solution
+repository: "https://github.com/espressif/esp-iot-solution.git"
+documentation: "https://docs.espressif.com/projects/esp-iot-solution/en/latest/"
+issues: "https://github.com/espressif/esp-iot-solution/issues"
+dependencies:
+  espressif/thorvg: "0.15.*"
+  idf: ">=4.4"
+  lvgl/lvgl:
+    version: ">=8,<10"
+  cmake_utilities: "0.*"
+examples:
+  - path: ../../../../examples/display/gui/lvgl_lottie_player

@@ -493,6 +493,8 @@ ESP_ERROR_CHECK(esp_lv_adapter_dummy_draw_blit(disp, 0, 0, 800, 480, framebuffer
 ESP_ERROR_CHECK(esp_lv_adapter_set_dummy_draw(disp, false));
 ```
 
+注意：进入 Dummy Draw 模式时，应用需要停止 LVGL 渲染。
+
 完整示例请参考 `examples/display/gui/lvgl_dummy_draw`。
 
 ### 立即刷新
