@@ -270,3 +270,7 @@ components/bluetooth/ble_hci/test_apps:
 components/bluetooth/ble_adv/bthome/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c3","esp32h2","esp32s3","esp32c2","esp32c6"] and IDF_VERSION_MAJOR >= 5
+
+components/touch_ic/touch_ic_bs8112a3/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

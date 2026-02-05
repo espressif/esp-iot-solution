@@ -392,6 +392,10 @@
   - "components/zero_detection/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_touch_ic_bs8112a3: &patterns-components_touch_ic_bs8112a3
+  - "components/touch_ic/touch_ic_bs8112a3/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_ntc_driver: &patterns-components_ntc_driver
   - "components/sensors/ntc_driver/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -3136,6 +3140,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_zero_detection
+
+.rules:build:components_touch_ic_bs8112a3_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_touch_ic_bs8112a3
 
 .rules:build:components_ntc_driver_test_apps:
   rules:

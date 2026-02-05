@@ -36,7 +36,8 @@ int force_link = 0;
 
 static esp_err_t _uart_at_send_cmd(const char *cmd, size_t length, void *usr_data)
 {
-    return uart_write_bytes(EX_UART_NUM, (const char *) cmd, length);
+    int w = uart_write_bytes(EX_UART_NUM, (const char *) cmd, length);
+    return (w == length) ? ESP_OK : ESP_FAIL;
 }
 
 static void uart_event_task(void *pvParameters)
