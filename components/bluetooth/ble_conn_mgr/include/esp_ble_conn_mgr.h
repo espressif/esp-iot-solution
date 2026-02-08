@@ -276,6 +276,12 @@ esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_
 #define BLE_CONN_GATT_CHR_WRITE             0x0008  /*!< Characteristic write properties */
 #define BLE_CONN_GATT_CHR_NOTIFY            0x0010  /*!< Characteristic notify properties */
 #define BLE_CONN_GATT_CHR_INDICATE          0x0020  /*!< Characteristic indicate properties */
+#define BLE_CONN_GATT_CHR_READ_ENC          0x0200  /*!< Characteristic read requires encryption */
+#define BLE_CONN_GATT_CHR_READ_AUTHEN       0x0400  /*!< Characteristic read requires authentication */
+#define BLE_CONN_GATT_CHR_READ_AUTHOR       0x0800  /*!< Characteristic read requires authorization */
+#define BLE_CONN_GATT_CHR_WRITE_ENC         0x1000  /*!< Characteristic write requires encryption */
+#define BLE_CONN_GATT_CHR_WRITE_AUTHEN      0x2000  /*!< Characteristic write requires authentication */
+#define BLE_CONN_GATT_CHR_WRITE_AUTHOR      0x4000  /*!< Characteristic write requires authorization */
 
 /**
  * @brief This is type of function that will handle the registered characteristic
@@ -373,7 +379,7 @@ typedef union {
 typedef struct {
     const char *name;                               /*!< Name of the handler */
     uint8_t type;                                   /*!< Type of the UUID */
-    uint8_t flag;                                   /*!< Flag for visiting right */
+    uint16_t flag;                                  /*!< Flag for visiting right */
     esp_ble_conn_uuid_t uuid;                       /*!< Universal UUID, to be used for any-UUID static allocation */
     esp_ble_conn_cb_t  uuid_fn;                     /*!< BLE UUID callback */
 } esp_ble_conn_character_t;
