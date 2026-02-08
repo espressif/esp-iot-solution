@@ -2188,11 +2188,11 @@ esp_err_t esp_ble_conn_start(void)
 
     /* Initialize security manager configuration in NimBLE host  */
 #ifdef CONFIG_BLE_CONN_MGR_SM
-    ble_hs_cfg.sm_io_cap = CONFIG_BLE_CONN_MGR_SM_IO_TYPE;;
-    ble_hs_cfg.sm_oob_data_flag = (CONFIG_BLE_CONN_MGR_SM_CAP & BIT(0));
-    ble_hs_cfg.sm_bonding = (CONFIG_BLE_CONN_MGR_SM_CAP & BIT(1));
-    ble_hs_cfg.sm_mitm = (CONFIG_BLE_CONN_MGR_SM_CAP & BIT(2));
-    ble_hs_cfg.sm_sc = (CONFIG_BLE_CONN_MGR_SM_CAP & BIT(3));
+    ble_hs_cfg.sm_io_cap = CONFIG_BLE_CONN_MGR_SM_IO_TYPE;
+    ble_hs_cfg.sm_oob_data_flag = !!(CONFIG_BLE_CONN_MGR_SM_CAP & BIT(0));
+    ble_hs_cfg.sm_bonding = !!(CONFIG_BLE_CONN_MGR_SM_CAP & BIT(1));
+    ble_hs_cfg.sm_mitm = !!(CONFIG_BLE_CONN_MGR_SM_CAP & BIT(2));
+    ble_hs_cfg.sm_sc = !!(CONFIG_BLE_CONN_MGR_SM_CAP & BIT(3));
     ble_hs_cfg.sm_our_key_dist = CONFIG_BLE_CONN_MGR_SM_KEY_DIST;
     ble_hs_cfg.sm_their_key_dist = CONFIG_BLE_CONN_MGR_SM_KEY_DIST;
 #else
