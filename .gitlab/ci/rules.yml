@@ -1038,6 +1038,10 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_hdmi_video_renderer
 
 .rules:build:example_display_lcd_lcd_layer_blending:
   rules:

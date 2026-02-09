@@ -294,7 +294,9 @@ static esp_err_t ppa_scale_frame(app_stream_adapter_t *adapter,
     uint32_t bytes_per_pixel = (adapter->jpeg_config.output_format == APP_STREAM_JPEG_OUTPUT_RGB888) ? 3 : 2;
     uint32_t required_out_size = adapter->target_width * adapter->target_height * bytes_per_pixel;
     if (required_out_size > adapter->buffer_size) {
-        ESP_LOGE(TAG, "PPA output buffer too small: required=%u, available=%u", required_out_size, adapter->buffer_size);
+        ESP_LOGE(TAG,
+                 "PPA output buffer too small: required=%" PRIu32 ", available=%" PRIu32,
+                 required_out_size, adapter->buffer_size);
         return ESP_ERR_NO_MEM;
     }
 
@@ -309,7 +311,9 @@ static esp_err_t ppa_scale_frame(app_stream_adapter_t *adapter,
                                                 &crop_w, &crop_h, &crop_x, &crop_y,
                                                 &scale_x, &scale_y);
     if (!exact) {
-        ESP_LOGW(TAG, "Scale quantized or clamped, fullscreen may be limited (in=%ux%u out=%ux%u scale=%.4f)",
+        ESP_LOGW(TAG,
+                 "Scale quantized or clamped, fullscreen may be limited (in=%" PRIu32 "x%" PRIu32
+                 " out=%" PRIu32 "x%" PRIu32 " scale=%.4f)",
                  input_width, input_height, adapter->target_width, adapter->target_height, scale_x);
     }
 
@@ -371,7 +375,8 @@ static esp_err_t decode_jpeg_frame(
     uint32_t required_size = pic_info->width * pic_info->height * bytes_per_pixel;
 
     if (required_size > output_buffer_size) {
-        ESP_LOGE(TAG, "Buffer too small: required=%u, available=%u", required_size, output_buffer_size);
+        ESP_LOGE(TAG, "Buffer too small: required=%" PRIu32 ", available=%" PRIu32,
+                 required_size, output_buffer_size);
         return ESP_ERR_NO_MEM;
     }
 
@@ -661,7 +666,7 @@ esp_err_t app_stream_adapter_init(const app_stream_adapter_config_t *config,
 
     for (uint32_t i = 0; i < config->buffer_count; i++) {
         if (config->decode_buffers[i] == NULL) {
-            ESP_LOGE(TAG, "decode_buffers[%d] is NULL", i);
+            ESP_LOGE(TAG, "decode_buffers[%" PRIu32 "] is NULL", i);
             return ESP_ERR_INVALID_ARG;
         }
     }
