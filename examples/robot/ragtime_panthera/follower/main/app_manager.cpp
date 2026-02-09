@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -92,6 +92,8 @@ Manager::Manager(damiao::Motor_Control* motor_control)
     lv_obj_add_event_cb(ui_SetZeroButton, lvgl_button_clicked_event_handler, LV_EVENT_CLICKED, this);
     lv_obj_add_event_cb(ui_EnableSwitch, lvgl_switch_event_handler, LV_EVENT_VALUE_CHANGED, this);
     lv_obj_add_event_cb(ui_SyncSwitch, lvgl_switch_event_handler, LV_EVENT_VALUE_CHANGED, this);
+    // Disable SYNC switch initially since motors are disabled by default
+    lv_obj_add_state(ui_SyncSwitch, LV_STATE_DISABLED);
 
     // Initialize the JPEG decoder
     memset(&jpeg_decode_cfg_, 0, sizeof(jpeg_decode_cfg_t));
@@ -159,7 +161,7 @@ Manager::Manager(damiao::Motor_Control* motor_control)
         ESP_LOGE(TAG, "Failed to create Color detector");
         return;
     }
-    color_detect_->register_color({35, 100, 100}, {85, 255, 255}, "green");
+    color_detect_->register_color({38, 52, 158}, {88, 186, 242}, "default");
 
     // Create the LCD refresh task
     if (xTaskCreatePinnedToCore(lcd_refresh_task, "lcd_refresh_task", 10 * 1024, this, 6, &lcd_refresh_task_handle_, 0) != pdPASS) {
@@ -441,6 +443,7 @@ void Manager::grasp_task(void* arg)
             self->target_gripper_pos_ = 5.0f;  // Open position
             self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
             self->grasp_state_ = GraspState::WAIT_OPEN;
+            state_start_time = xTaskGetTickCount();
             ESP_LOGI(TAG, "Grasp task: Opening gripper");
             break;
         }
@@ -449,6 +452,12 @@ void Manager::grasp_task(void* arg)
             damiao::Motor* gripper_motor = self->motor_control_->get_motor_by_master_id(0x17);
             if (gripper_motor == nullptr) {
                 ESP_LOGE(TAG, "Grasp task: Gripper motor not found");
+                self->grasp_state_ = GraspState::IDLE;
+                break;
+            }
+            // Check timeout
+            if (xTaskGetTickCount() - state_start_time > pdMS_TO_TICKS(self->GRIPPER_TIMEOUT_MS)) {
+                ESP_LOGE(TAG, "Grasp task: Timeout waiting for gripper to open");
                 self->grasp_state_ = GraspState::IDLE;
                 break;
             }
@@ -541,7 +550,7 @@ void Manager::grasp_task(void* arg)
                 self->grasp_state_ = GraspState::IDLE;
                 break;
             }
-            self->target_gripper_pos_ = 1.25f;  // Close position
+            self->target_gripper_pos_ = 1.3f;  // Close position
             self->motor_control_->pos_vel_control(*gripper_motor, self->target_gripper_pos_, 5.0f);
             self->grasp_state_ = GraspState::WAIT_CLOSE;
             ESP_LOGI(TAG, "Grasp task: Closing gripper");
@@ -940,10 +949,21 @@ void Manager::lvgl_switch_event_handler(lv_event_t *event)
                     ESP_LOGI(TAG, "Enable switch: ON");
                     self->motors_enabled_ = true;
                     self->motor_control_->enable_all_motors();
+                    // Enable SYNC switch when motors are enabled
+                    lv_obj_clear_state(ui_SyncSwitch, LV_STATE_DISABLED);
                 } else {
                     ESP_LOGI(TAG, "Enable switch: OFF");
                     self->motors_enabled_ = false;
                     self->motor_control_->disable_all_motors();
+                    // Reset grasp state to IDLE when motors are disabled
+                    self->grasp_state_ = GraspState::IDLE;
+                    ESP_LOGI(TAG, "Grasp state reset to IDLE due to motors disabled");
+                    // Disable SYNC switch and turn it off when motors are disabled
+                    lv_obj_add_state(ui_SyncSwitch, LV_STATE_DISABLED);
+                    if (lv_obj_has_state(ui_SyncSwitch, LV_STATE_CHECKED)) {
+                        lv_obj_clear_state(ui_SyncSwitch, LV_STATE_CHECKED);
+                        self->esp_now_sync_enabled_ = false;
+                    }
                 }
             }
             break;
@@ -951,6 +971,15 @@ void Manager::lvgl_switch_event_handler(lv_event_t *event)
             break;
         }
     } else if (obj == ui_SyncSwitch) {
+        // Prevent SYNC switch operation when motors are not enabled
+        if (!self->motors_enabled_) {
+            ESP_LOGW(TAG, "Sync switch disabled: motors are not enabled");
+            // Revert the switch state
+            if (lv_obj_has_state(obj, LV_STATE_CHECKED)) {
+                lv_obj_clear_state(obj, LV_STATE_CHECKED);
+            }
+            return;
+        }
         switch (code) {
         case LV_EVENT_VALUE_CHANGED:
             if (self->motor_control_ != nullptr) {
@@ -1107,4 +1136,27 @@ void Manager::esp_now_receiver_task(void* arg)
             }
         }
     }
+}
+
+void Manager::change_change_color(const std::vector<uint8_t> &hsv_min, const std::vector<uint8_t> &hsv_max)
+{
+    if (color_detect_ == nullptr) {
+        ESP_LOGE(TAG, "Color detector is not initialized");
+        return;
+    }
+
+    if (hsv_min.size() != 3 || hsv_max.size() != 3) {
+        ESP_LOGE(TAG, "HSV vectors must have 3 elements (H, S, V)");
+        return;
+    }
+
+    // Delete existing color (name is "default")
+    color_detect_->delete_color("default");
+
+    // Register new color with name "default"
+    color_detect_->register_color(hsv_min, hsv_max, "default");
+
+    ESP_LOGI(TAG, "Changed color range: HSV_min=[%d, %d, %d], HSV_max=[%d, %d, %d]",
+             hsv_min[0], hsv_min[1], hsv_min[2],
+             hsv_max[0], hsv_max[1], hsv_max[2]);
 }

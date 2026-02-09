@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,7 @@
 #include "nvs_flash.h"
 #include "sdkconfig.h"
 #include "kinematic.h"
+#include "app_manager.h"
 #include "app_console.h"
 
 #if CONFIG_CONSOLE_CONTROL
@@ -21,6 +22,8 @@ static const char* TAG = "app_console";
 // Global motor control instance
 static damiao::Motor_Control* g_motor_control = nullptr;
 
+// Global app manager instance
+static Manager* g_app_manager = nullptr;
 static struct {
     struct arg_str *enable;
     struct arg_end *end;
@@ -45,6 +48,16 @@ static struct {
     struct arg_dbl *m9;
     struct arg_end *end;
 } panthera_set_vision_matrix_args;
+
+static struct {
+    struct arg_int *h_min;
+    struct arg_int *s_min;
+    struct arg_int *v_min;
+    struct arg_int *h_max;
+    struct arg_int *s_max;
+    struct arg_int *v_max;
+    struct arg_end *end;
+} panthera_change_color_args;
 
 int panthera_enable_cmd(int argc, char **argv)
 {
@@ -332,12 +345,63 @@ int panthera_read_position_cmd(int argc, char **argv)
     return 0;
 }
 
-esp_err_t app_console_init(damiao::Motor_Control* motor_control)
+int panthera_change_change_color_cmd(int argc, char **argv)
+{
+    int nerrors = arg_parse(argc, argv, (void **) &panthera_change_color_args);
+    if (nerrors != 0) {
+        arg_print_errors(stderr, panthera_change_color_args.end, argv[0]);
+        return 1;
+    }
+
+    // Check if all HSV parameters are provided
+    if (panthera_change_color_args.h_min->count == 0 ||
+            panthera_change_color_args.s_min->count == 0 ||
+            panthera_change_color_args.v_min->count == 0 ||
+            panthera_change_color_args.h_max->count == 0 ||
+            panthera_change_color_args.s_max->count == 0 ||
+            panthera_change_color_args.v_max->count == 0) {
+        ESP_LOGI(TAG, "All HSV parameters must be provided: h_min, s_min, v_min, h_max, s_max, v_max");
+        return 1;
+    }
+
+    // Validate HSV values
+    int h_min = panthera_change_color_args.h_min->ival[0];
+    int s_min = panthera_change_color_args.s_min->ival[0];
+    int v_min = panthera_change_color_args.v_min->ival[0];
+    int h_max = panthera_change_color_args.h_max->ival[0];
+    int s_max = panthera_change_color_args.s_max->ival[0];
+    int v_max = panthera_change_color_args.v_max->ival[0];
+
+    if (h_min < 0 || h_min > 255 || s_min < 0 || s_min > 255 || v_min < 0 || v_min > 255 ||
+            h_max < 0 || h_max > 255 || s_max < 0 || s_max > 255 || v_max < 0 || v_max > 255) {
+        ESP_LOGI(TAG, "HSV values must be in range [0, 255]");
+        return 1;
+    }
+
+    std::vector<uint8_t> hsv_min = {
+        static_cast<uint8_t>(h_min),
+        static_cast<uint8_t>(s_min),
+        static_cast<uint8_t>(v_min)
+    };
+    std::vector<uint8_t> hsv_max = {
+        static_cast<uint8_t>(h_max),
+        static_cast<uint8_t>(s_max),
+        static_cast<uint8_t>(v_max)
+    };
+
+    ESP_LOGI(TAG, "Changing panthera color: HSV_min=[%d, %d, %d], HSV_max=[%d, %d, %d]",
+             h_min, s_min, v_min, h_max, s_max, v_max);
+    g_app_manager->change_change_color(hsv_min, hsv_max);
+    return 0;
+}
+
+esp_err_t app_console_init(damiao::Motor_Control* motor_control, Manager* app_manager)
 {
     ESP_RETURN_ON_FALSE(motor_control != nullptr, ESP_ERR_INVALID_ARG, TAG, "Motor control is nullptr");
 
-    // Save motor_control as global variable
+    // Save motor_control and app_manager as global variables
     g_motor_control = motor_control;
+    g_app_manager = app_manager;
 
     esp_console_repl_t *repl = NULL;
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
@@ -432,6 +496,22 @@ esp_err_t app_console_init(damiao::Motor_Control* motor_control)
         .argtable = NULL,
     };
 
+    panthera_change_color_args.h_min = arg_int1("h", "h_min", "<0-255>", "HSV H minimum value");
+    panthera_change_color_args.s_min = arg_int1("s", "s_min", "<0-255>", "HSV S minimum value");
+    panthera_change_color_args.v_min = arg_int1("v", "v_min", "<0-255>", "HSV V minimum value");
+    panthera_change_color_args.h_max = arg_int1("H", "h_max", "<0-255>", "HSV H maximum value");
+    panthera_change_color_args.s_max = arg_int1("S", "s_max", "<0-255>", "HSV S maximum value");
+    panthera_change_color_args.v_max = arg_int1("V", "v_max", "<0-255>", "HSV V maximum value");
+    panthera_change_color_args.end = arg_end(6);
+
+    const esp_console_cmd_t panthera_change_color = {
+        .command = "panthera_change_color",
+        .help = "Change color detection HSV range: --h_min <H> --s_min <S> --v_min <V> --h_max <H> --s_max <S> --v_max <V>",
+        .hint = NULL,
+        .func = panthera_change_change_color_cmd,
+        .argtable = &panthera_change_color_args,
+    };
+
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_enable));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_goto_zero));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_set_zero));
@@ -439,6 +519,7 @@ esp_err_t app_console_init(damiao::Motor_Control* motor_control)
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_set_vision_matrix));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_get_vision_matrix));
     ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_read_position));
+    ESP_ERROR_CHECK(esp_console_cmd_register(&panthera_change_color));
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 
     return ESP_OK;

@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spiffs)
 
 # project version
-set(PROJECT_VER "0.1.0")
+set(PROJECT_VER "0.2.0")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
