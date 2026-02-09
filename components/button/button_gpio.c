@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -52,12 +52,15 @@ static esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t activ
 static esp_err_t button_gpio_set_intr(int gpio_num, gpio_int_type_t intr_type, gpio_isr_t isr_handler)
 {
     static bool isr_service_installed = false;
-    gpio_set_intr_type(gpio_num, intr_type);
+    esp_err_t ret = gpio_set_intr_type(gpio_num, intr_type);
+    ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Set gpio interrupt type failed");
     if (!isr_service_installed) {
-        gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+        ret = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Install gpio interrupt service failed");
         isr_service_installed = true;
     }
-    gpio_isr_handler_add(gpio_num, isr_handler, (void *)gpio_num);
+    ret = gpio_isr_handler_add(gpio_num, isr_handler, (void *)gpio_num);
+    ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Add gpio interrupt handler failed");
     return ESP_OK;
 }
 
@@ -81,6 +84,7 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
     esp_err_t ret = ESP_OK;
     ESP_GOTO_ON_FALSE(button_config && gpio_cfg && ret_button, ESP_ERR_INVALID_ARG, err, TAG, "Invalid argument");
     ESP_GOTO_ON_FALSE(GPIO_IS_VALID_GPIO(gpio_cfg->gpio_num), ESP_ERR_INVALID_ARG, err, TAG, "GPIO number error");
+    *ret_button = NULL;
 
     gpio_btn = (button_gpio_obj *)calloc(1, sizeof(button_gpio_obj));
     ESP_GOTO_ON_FALSE(gpio_btn, ESP_ERR_NO_MEM, err, TAG, "No memory for gpio button");
@@ -101,7 +105,8 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
             gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
         }
     }
-    gpio_config(&gpio_conf);
+    ret = gpio_config(&gpio_conf);
+    ESP_GOTO_ON_FALSE(ret == ESP_OK, ret, err, TAG, "GPIO config failed");
 
     if (gpio_cfg->enable_power_save) {
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
@@ -127,9 +132,6 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
 #endif
         ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Configure gpio as wakeup source failed");
 
-        ret = button_gpio_set_intr(gpio_btn->gpio_num, gpio_cfg->active_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, button_power_save_isr_handler);
-        ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Set gpio interrupt failed");
-
         gpio_btn->base.enable_power_save = true;
         gpio_btn->base.enter_power_save = button_enter_power_save;
     }
@@ -140,10 +142,17 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
     ret = iot_button_create(button_config, &gpio_btn->base, ret_button);
     ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Create button failed");
 
+    if (gpio_cfg->enable_power_save) {
+        ret = button_gpio_set_intr(gpio_btn->gpio_num, gpio_cfg->active_level == 0 ? GPIO_INTR_LOW_LEVEL : GPIO_INTR_HIGH_LEVEL, button_power_save_isr_handler);
+        ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Set gpio interrupt failed");
+    }
     return ESP_OK;
 err:
     if (gpio_btn) {
         free(gpio_btn);
+    }
+    if (ret_button) {
+        iot_button_delete(*ret_button);
     }
     return ret;
 }

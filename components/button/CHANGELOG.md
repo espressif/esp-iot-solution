@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v4.1.6 - 2026-02-09
+
+### Fix:
+
+* Added error checking for `gpio_config` in `iot_button_new_gpio_device`
+* Fixed issue where button cannot be recognized after restart when button is held down during restart. [#654](https://github.com/espressif/esp-iot-solution/issues/654)
+
 ## v4.1.5 - 2025-12-3
 
 ### Fix:
