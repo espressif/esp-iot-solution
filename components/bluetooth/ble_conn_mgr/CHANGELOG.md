@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [Unreleased]
+
+### Bug Fixes:
+
+- Fix incorrect SM bitfield assignment that prevented security settings from taking effect. ([#661](https://github.com/espressif/esp-iot-solution/pull/661)) by [@acouvreur](https://github.com/acouvreur)
+
 ## v0.1.5 - 2026-01-27
 
 ### Enhancements:
