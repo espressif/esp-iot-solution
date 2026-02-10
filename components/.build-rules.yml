@@ -18,8 +18,9 @@ components/touch/touch_button/test_apps:
 
 components/touch/touch_button_sensor/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
+  disable:
+    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
 
 components/touch/touch_proximity_sensor/test_apps:
   enable:
@@ -27,7 +28,7 @@ components/touch/touch_proximity_sensor/test_apps:
 
 components/touch/touch_slider_sensor/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
 
 components/usb/esp_msc_ota/test_apps:
   enable:
@@ -41,17 +42,27 @@ components/usb/usb_stream/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
+components/modem_at/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
 components/usb/iot_usbh/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
 components/usb/iot_usbh_cdc/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
+  disable:
+    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
 
 components/usb/iot_usbh_modem/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
+
+components/usb/iot_usbh_ecm/test_apps:
+  enable:
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 components/i2c_bus/test_apps:
   enable:
@@ -71,23 +82,23 @@ components/sensors/power_measure/test_apps:
 
 components/led/led_indicator/test_apps:
   enable:
-    - if: INCLUDE_DEFAULT == 1
-
-components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
-  enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
-
-components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
-  enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
+    - if: SOC_RMT_SUPPORTED == 1
 
 components/led/lightbulb_driver/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/motor/esp_sensorless_bldc_control/test_apps/bldc_adc:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
+
+components/motor/esp_sensorless_bldc_control/test_apps/bldc_comparer:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
+
 components/motor/esp_sensorless_bldc_control/test_apps/bldc_test_step_by_step:
   enable:
-    - if: SOC_MCPWM_SUPPORTED == 1
+    - if: IDF_TARGET in ["esp32", "esp32s3", "esp32c6", "esp32h2"]
 
 components/motor/esp_simplefoc/test_apps:
   enable:
@@ -100,6 +111,10 @@ components/openai/test_apps:
 components/sensors/adc/mcp3201:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
+
+components/sensors/gas/bme690/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
 
 components/sensors/radar/at581x/test_apps:
   enable:
@@ -137,6 +152,10 @@ components/display/lcd/esp_lcd_gc9d01/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_er88577/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 components/display/lcd/esp_lcd_hx8399/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
@@ -160,6 +179,10 @@ components/display/lcd/esp_lcd_sh8601/test_apps:
 components/display/lcd/esp_lcd_spd2010/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
+
+components/display/lcd/esp_lcd_st7123/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
 
 components/display/lcd/esp_lcd_st7701/test_apps:
   enable:
@@ -203,7 +226,18 @@ components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
 
 components/display/tools/esp_lv_decoder/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and IDF_VERSION_MAJOR == 6
+    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >=3)
+  disable:
+    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
+
+components/display/tools/esp_lvgl_adapter/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
+
+components/display/tools/esp_lvgl_adapter/benchmark:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
 
 components/expander/io_expander/mcp23017/test_apps:
   enable:
@@ -223,12 +257,20 @@ components/usb/usb_device_uvc/test_apps:
 
 components/utilities/adc_tp_calibration/test_apps:
   enable:
-      - if: IDF_TARGET in ["esp32", "esp32s2"]
+    - if: IDF_TARGET in ["esp32", "esp32s2"]
 
 components/sensors/power_monitor/ina236/test_apps:
   enable:
-    - if:  INCLUDE_DEFAULT == 1
+    - if: INCLUDE_DEFAULT == 1
 
 components/bluetooth/ble_hci/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"]
+    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"] and IDF_VERSION_MAJOR >= 5
+
+components/bluetooth/ble_adv/bthome/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c3","esp32h2","esp32s3","esp32c2","esp32c6"] and IDF_VERSION_MAJOR >= 5
+
+components/touch_ic/touch_ic_bs8112a3/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

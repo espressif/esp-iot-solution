@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.11.1 - 2025-11-14
+
+### Refactor:
+
+* Add heap and idf version dependency so that it can be compiled since idf v6.0
+
 ## v1.11.0 - 2025-09-17
 
 ### Refactor:

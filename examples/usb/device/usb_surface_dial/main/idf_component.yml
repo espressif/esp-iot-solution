@@ -4,11 +4,11 @@ dependencies:
   idf:
     version: ">=5.0"
   espressif/button:
-    version: ">=4.1.0"
+    override_path: "../../../../../components/button"
   espressif/tinyusb:
     version: ">=0.18.0~1"
   espressif/knob:
-    version: ">=1.0.0"
+    version: ">=1.0.1"
   espressif/esp32_s3_usb_otg:
     version: ">=2.0.0"
     rules:

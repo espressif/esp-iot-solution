@@ -61,7 +61,9 @@ static BaseType_t prvAPCommand(char *pcWriteBuffer, size_t xWriteBufferLen, cons
 
 static BaseType_t prvSetWiFiModeCommand(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
 
+#if !CONFIG_IDF_TARGET_ESP32P4
 static BaseType_t prvSmartConfigCommand(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
+#endif
 #endif /* CFG_TUD_NCM || CFG_TUD_ECM_RNDIS */
 
 static BaseType_t prvRamCommand(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString);
@@ -113,6 +115,7 @@ static const CLI_Command_Definition_t xSetWiFiModeCommand = {
     1 /* one parameters are expected. */
 };
 
+#if !CONFIG_IDF_TARGET_ESP32P4
 /* Structure that defines the "smartconfig" command line command. */
 static const CLI_Command_Definition_t xSmartConfigCommand = {
     "smartconfig", /* The command string to type. */
@@ -120,6 +123,7 @@ static const CLI_Command_Definition_t xSmartConfigCommand = {
     prvSmartConfigCommand, /* The function to run. */
     1 /* No parameters are expected. */
 };
+#endif
 #endif /* CFG_TUD_NCM || CFG_TUD_ECM_RNDIS */
 
 /* Structure that defines the "ram" command line command. */
@@ -160,7 +164,9 @@ void vRegisterCLICommands(void)
     FreeRTOS_CLIRegisterCommand(&xAPCommand);
     FreeRTOS_CLIRegisterCommand(&xStationCommand);
     FreeRTOS_CLIRegisterCommand(&xSetWiFiModeCommand);
+#if !CONFIG_IDF_TARGET_ESP32P4
     FreeRTOS_CLIRegisterCommand(&xSmartConfigCommand);
+#endif
     FreeRTOS_CLIRegisterCommand(&xScanCommand);
 #endif /* CFG_TUD_NCM || CFG_TUD_ECM_RNDIS */
     FreeRTOS_CLIRegisterCommand(&xRamCommand);
@@ -470,6 +476,7 @@ static BaseType_t prvSetWiFiModeCommand(char *pcWriteBuffer, size_t xWriteBuffer
 }
 /*-----------------------------------------------------------*/
 
+#if !CONFIG_IDF_TARGET_ESP32P4
 static BaseType_t prvSmartConfigCommand(char *pcWriteBuffer, size_t xWriteBufferLen, const char *pcCommandString)
 {
     const char *pcSmartConfig;
@@ -512,6 +519,7 @@ static BaseType_t prvSmartConfigCommand(char *pcWriteBuffer, size_t xWriteBuffer
 
     return pdFALSE;
 }
+#endif
 /*-----------------------------------------------------------*/
 #endif /* CFG_TUD_NCM || CFG_TUD_ECM_RNDIS */
 

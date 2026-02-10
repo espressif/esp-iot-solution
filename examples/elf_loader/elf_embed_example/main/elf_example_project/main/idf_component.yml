@@ -1,0 +1,4 @@
+dependencies:
+  elf_loader:
+    version: "1.*"
+    override_path: "../../../../../../components/elf_loader"

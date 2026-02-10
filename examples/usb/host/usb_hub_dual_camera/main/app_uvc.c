@@ -17,8 +17,6 @@
 #include "usb/uvc_host.h"
 #include "app_uvc.h"
 
-#define UVC_CAM_NUM             MAX_CAMERAS
-
 #if CONFIG_SPIRAM
 #define NUMBER_OF_FRAME_BUFFERS 6 // Number of frames from the camera
 #else
@@ -119,11 +117,6 @@ static void uvc_task(void *arg)
     SLIST_INSERT_HEAD(&p_uvc_dev_obj.uvc_devices_list, dev, list_entry);
     p_uvc_dev_obj.uvc_dev_num++;
 
-    // first open
-    dev->require_frame_index = 0;
-    ESP_LOGI(TAG, "Open the uvc device\n");
-    ESP_ERROR_CHECK(uvc_open(dev, dev->require_frame_index));
-
     bool exit = false;
     while (!exit) {
         EventBits_t uxBits = xEventGroupWaitBits(dev->event_group, EVENT_ALL, pdTRUE, pdFALSE, portMAX_DELAY);
@@ -132,6 +125,9 @@ static void uvc_task(void *arg)
             if (dev->if_streaming) {
                 continue;
             }
+
+            ESP_LOGI(TAG, "Open the uvc device\n");
+            ESP_ERROR_CHECK(uvc_open(dev, dev->require_frame_index));
 
             uvc_host_stream_format_t vs_format = {
                 .h_res = dev->frame_info[dev->require_frame_index].h_res,
@@ -156,6 +152,8 @@ static void uvc_task(void *arg)
             while (xQueueReceive(dev->frame_queue, &frame, 0) == pdTRUE) {
                 uvc_host_frame_return(dev->stream, frame);
             }
+            uvc_host_stream_close(dev->stream);
+
             dev->if_streaming = false;
         }
 
@@ -165,11 +163,14 @@ static void uvc_task(void *arg)
     }
 
     // Clean up
+    ESP_LOGI(TAG, "uvc task delete");
     uvc_host_frame_t *frame = NULL;
     while (xQueueReceive(dev->frame_queue, &frame, 0) == pdTRUE) {
         uvc_host_frame_return(dev->stream, frame);
     }
-    uvc_host_stream_close(dev->stream);
+    if (dev->if_streaming) {
+        uvc_host_stream_close(dev->stream);
+    }
     vQueueDelete(dev->frame_queue);
     SLIST_REMOVE(&p_uvc_dev_obj.uvc_devices_list, dev, uvc_dev_s, list_entry);
     p_uvc_dev_obj.uvc_dev_num--;
@@ -187,11 +188,6 @@ void driver_event_cb(const uvc_host_driver_event_data_t *event, void *user_ctx)
     switch (event->type) {
     case UVC_HOST_DRIVER_EVENT_DEVICE_CONNECTED: {
         ESP_LOGI(TAG, "Device connected");
-
-        if (p_uvc_dev_obj.uvc_dev_num >= UVC_CAM_NUM) {
-            ESP_LOGW(TAG, "Too many devices");
-            break;
-        }
 
         dev = (uvc_dev_t *)calloc(1, sizeof(uvc_dev_t) + (event->device_connected.frame_info_num) * sizeof(uvc_host_frame_info_t));
         assert(dev != NULL);
@@ -321,6 +317,7 @@ static esp_err_t uvc_open(uvc_dev_t *dev, int frame_index)
 #if CONFIG_PRINTF_CAMERA_USB_DESC
     uvc_host_desc_print(dev->stream);
 #endif
+
     dev->active_frame_index = frame_index;
     return ESP_OK;
 }
@@ -345,8 +342,6 @@ esp_err_t app_uvc_init(void)
 
 esp_err_t app_uvc_control_dev_by_index(int index, bool if_open, int resolution_index)
 {
-    ESP_RETURN_ON_FALSE(index < UVC_CAM_NUM, ESP_ERR_INVALID_ARG, TAG, "Invalid index");
-
     uvc_dev_t *dev;
     SLIST_FOREACH(dev, &p_uvc_dev_obj.uvc_devices_list, list_entry) {
         if (dev->index == index) {
@@ -370,7 +365,6 @@ find_dev:
 
 esp_err_t app_uvc_get_dev_frame_info(int index, uvc_dev_info_t *dev_info)
 {
-    ESP_RETURN_ON_FALSE(index < UVC_CAM_NUM, ESP_ERR_INVALID_ARG, TAG, "Invalid index");
     ESP_RETURN_ON_FALSE(dev_info != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid pointer");
 
     uvc_dev_t *dev;
@@ -409,7 +403,6 @@ esp_err_t app_uvc_get_connect_dev_num(int *num)
 
 uvc_host_frame_t *app_uvc_get_frame_by_index(int index)
 {
-    ESP_RETURN_ON_FALSE(index < UVC_CAM_NUM, NULL, TAG, "Invalid index");
     uvc_host_frame_t *frame = NULL;
     uvc_dev_t *dev;
     SLIST_FOREACH(dev, &p_uvc_dev_obj.uvc_devices_list, list_entry) {
@@ -426,7 +419,6 @@ uvc_host_frame_t *app_uvc_get_frame_by_index(int index)
 
 esp_err_t app_uvc_return_frame_by_index(int index, uvc_host_frame_t *frame)
 {
-    ESP_RETURN_ON_FALSE(index < UVC_CAM_NUM, ESP_ERR_INVALID_ARG, TAG, "Invalid index");
     ESP_RETURN_ON_FALSE(frame != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid frame pointer");
 
     uvc_dev_t *dev;

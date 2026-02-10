@@ -112,7 +112,7 @@ void initialise_uart(void)
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .source_clk = UART_SCLK_APB,
+        .source_clk = UART_SCLK_DEFAULT,
     };
     //Install UART driver, and get the queue.
     uart_driver_install(UART_NUM, BUF_SIZE, BUF_SIZE * 4, 20, &uart_queue, 0);

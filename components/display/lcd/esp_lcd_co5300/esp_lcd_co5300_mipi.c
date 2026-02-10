@@ -25,6 +25,7 @@ typedef struct {
     int reset_gpio_num;
     uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
     uint8_t colmod_val; // save surrent value of LCD_CMD_COLMOD register
+    co5300_panel_context_t panel_ctx; // runtime context shared with public API
     const co5300_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
@@ -40,6 +41,7 @@ static const char *TAG = "co5300_mipi";
 static esp_err_t panel_co5300_del(esp_lcd_panel_t *panel);
 static esp_err_t panel_co5300_init(esp_lcd_panel_t *panel);
 static esp_err_t panel_co5300_reset(esp_lcd_panel_t *panel);
+static esp_err_t co5300_mipi_apply_brightness(void *driver_data, uint8_t brightness_percent);
 
 esp_err_t esp_lcd_new_panel_co5300_mipi(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config,
                                         esp_lcd_panel_handle_t *ret_panel)
@@ -63,7 +65,7 @@ esp_err_t esp_lcd_new_panel_co5300_mipi(const esp_lcd_panel_io_handle_t io, cons
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
 
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case LCD_RGB_ELEMENT_ORDER_RGB:
         co5300->madctl_val = 0;
         break;
@@ -114,7 +116,9 @@ esp_err_t esp_lcd_new_panel_co5300_mipi(const esp_lcd_panel_io_handle_t io, cons
     panel_handle->del = panel_co5300_del;
     panel_handle->init = panel_co5300_init;
     panel_handle->reset = panel_co5300_reset;
-    panel_handle->user_data = co5300;
+    co5300->panel_ctx.driver_data = co5300;
+    co5300->panel_ctx.apply_brightness = co5300_mipi_apply_brightness;
+    panel_handle->user_data = &co5300->panel_ctx;
     *ret_panel = panel_handle;
     ESP_LOGD(TAG, "new co5300 panel @%p", co5300);
 
@@ -152,13 +156,20 @@ static const co5300_lcd_init_cmd_t vendor_specific_init_code_default[] = {
 
 static esp_err_t panel_co5300_del(esp_lcd_panel_t *panel)
 {
-    co5300_panel_t *co5300 = (co5300_panel_t *)panel->user_data;
+    co5300_panel_context_t *panel_ctx = (co5300_panel_context_t *)panel->user_data;
+    ESP_RETURN_ON_FALSE(panel_ctx, ESP_ERR_INVALID_STATE, TAG, "panel context not initialized");
+    co5300_panel_t *co5300 = (co5300_panel_t *)panel_ctx->driver_data;
+    ESP_RETURN_ON_FALSE(co5300, ESP_ERR_INVALID_STATE, TAG, "invalid panel data");
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(co5300->del(panel), TAG, "del co5300 panel failed");
     if (co5300->reset_gpio_num >= 0) {
         gpio_reset_pin(co5300->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    co5300->del(panel);
+
+    if (co5300->del) {
+        ESP_RETURN_ON_ERROR(co5300->del(panel), TAG, "delete MIPI DPI panel failed");
+    }
     ESP_LOGD(TAG, "del co5300 panel @%p", co5300);
     free(co5300);
 
@@ -167,7 +178,10 @@ static esp_err_t panel_co5300_del(esp_lcd_panel_t *panel)
 
 static esp_err_t panel_co5300_init(esp_lcd_panel_t *panel)
 {
-    co5300_panel_t *co5300 = (co5300_panel_t *)panel->user_data;
+    co5300_panel_context_t *panel_ctx = (co5300_panel_context_t *)panel->user_data;
+    ESP_RETURN_ON_FALSE(panel_ctx, ESP_ERR_INVALID_STATE, TAG, "panel context not initialized");
+    co5300_panel_t *co5300 = (co5300_panel_t *)panel_ctx->driver_data;
+    ESP_RETURN_ON_FALSE(co5300, ESP_ERR_INVALID_STATE, TAG, "invalid panel data");
     esp_lcd_panel_io_handle_t io = co5300->io;
     const co5300_lcd_init_cmd_t *init_cmds = NULL;
     uint16_t init_cmds_size = 0;
@@ -225,14 +239,19 @@ static esp_err_t panel_co5300_init(esp_lcd_panel_t *panel)
 
     ESP_LOGD(TAG, "send init commands success");
 
-    ESP_RETURN_ON_ERROR(co5300->init(panel), TAG, "init MIPI DPI panel failed");
+    if (co5300->init) {
+        ESP_RETURN_ON_ERROR(co5300->init(panel), TAG, "init MIPI DPI panel failed");
+    }
 
     return ESP_OK;
 }
 
 static esp_err_t panel_co5300_reset(esp_lcd_panel_t *panel)
 {
-    co5300_panel_t *co5300 = (co5300_panel_t *)panel->user_data;
+    co5300_panel_context_t *panel_ctx = (co5300_panel_context_t *)panel->user_data;
+    ESP_RETURN_ON_FALSE(panel_ctx, ESP_ERR_INVALID_STATE, TAG, "panel context not initialized");
+    co5300_panel_t *co5300 = (co5300_panel_t *)panel_ctx->driver_data;
+    ESP_RETURN_ON_FALSE(co5300, ESP_ERR_INVALID_STATE, TAG, "invalid panel data");
     esp_lcd_panel_io_handle_t io = co5300->io;
 
     // Perform hardware reset
@@ -247,6 +266,25 @@ static esp_err_t panel_co5300_reset(esp_lcd_panel_t *panel)
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_SWRESET, NULL, 0), TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(120));
     }
+
+    return ESP_OK;
+}
+
+static esp_err_t co5300_mipi_apply_brightness(void *driver_data, uint8_t brightness_percent)
+{
+    co5300_panel_t *co5300 = (co5300_panel_t *)driver_data;
+    ESP_RETURN_ON_FALSE(co5300, ESP_ERR_INVALID_ARG, TAG, "invalid panel data");
+
+    esp_lcd_panel_io_handle_t io = co5300->io;
+    ESP_RETURN_ON_FALSE(io, ESP_ERR_INVALID_STATE, TAG, "panel IO not initialized");
+
+    uint8_t hw_brightness = (brightness_percent * 255) / 100;
+
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, 0x51, (uint8_t[]) {
+        hw_brightness
+    }, 1), TAG, "send brightness command failed");
+
+    ESP_LOGI(TAG, "set brightness to %d%% (hardware value: %d)", brightness_percent, hw_brightness);
 
     return ESP_OK;
 }

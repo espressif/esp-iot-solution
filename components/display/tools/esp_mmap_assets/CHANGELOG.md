@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.2 (2025-0930)
+* Add function png to pjpg
+* Add flag COPY_PREBUILT_BIN
+
 ## v1.3.1~2 (2025-08-13)
 
 * Support all target.

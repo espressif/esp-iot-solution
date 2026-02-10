@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "2.0.0"
 description: ESP LCD GC9107
 url: https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_gc9107
 dependencies:

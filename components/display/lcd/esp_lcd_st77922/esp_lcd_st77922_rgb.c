@@ -323,11 +323,11 @@ static esp_err_t panel_st77922_del(esp_lcd_panel_t *panel)
 {
     st77922_panel_t *st77922 = (st77922_panel_t *)panel->user_data;
 
+    // Delete RGB panel
+    ESP_RETURN_ON_ERROR(st77922->del(panel), TAG, "del st77922 panel failed");
     if (st77922->reset_gpio_num >= 0) {
         gpio_reset_pin(st77922->reset_gpio_num);
     }
-    // Delete RGB panel
-    st77922->del(panel);
     free(st77922);
     ESP_LOGD(TAG, "del st77922 panel @%p", st77922);
     return ESP_OK;

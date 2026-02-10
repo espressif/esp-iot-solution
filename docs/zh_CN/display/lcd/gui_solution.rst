@@ -3,62 +3,55 @@ GUI 优化解决方案
 
 :link_to_translation:`en:[English]`
 
-.. _lvgl-tearing-prevention-and-frame-rate-optimization:
+.. _ESP LVGL Adapter:
 
-LVGL 防撕裂与帧率优化
------------------------------------
+ESP LVGL Adapter
+-------------------------
 
-- 支持基于 full_fresh、direct_mode、partial_mode 三种模式的防撕裂机制
-- 支持针对 RGB 接口和 MIPI-DSI 接口的全屏幕旋转优化
+ESP LVGL Adapter 是专为 ESP32 全系列芯片设计的高性能 LVGL 适配层，针对屏幕撕裂与帧率进行了深度优化，并无缝集成了图片解码、FreeType 字体渲染和 Dummy Draw 等高级特性，为开发者提供真正的开箱即用体验。
 
-适用场景：
-
-- 需要兼顾防撕裂和帧率优化
-
-- 需要进行 LVGL 整屏旋转的场景
+组件链接：https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
 相关示例：
 
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/mipi_dsi_avoid_tearing
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/rgb_avoid_tearing
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
 
-.. _lvgl-decoder-component:
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
 
-LVGL 图像解码组件
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_mono_demo
+
+.. _ESP LVGL EAF Player:
+
+ESP LVGL EAF Player
 -------------------------
 
-- 支持 LVGL v8 和 v9 版本
-- 支持 PNG、JPG、QOI、PJPG、SJPG、SPNG 等格式解码，并优化了解码速率
-- 针对 ESP32-P4 支持 JPEG 硬件解码
-- 针对 ESP32-S3 支持 JPEG 解码加速
+esp_lv_eaf_player 是一款专为 LVGL v8/v9 设计的轻量级高效 EAF 动画播放器。它可以将压缩动画序列无缝集成到 LVGL 项目中。EAF 格式支持多种压缩方法，包括 RLE、Huffman 编码和 JPEG 压缩，在保持高质量动画的同时最大限度地减少内存占用。
 
-对于其中特殊格式的说明：
+特性：
 
-- PJPG 格式： 基于 PNG 格式转换，支持透明度，支持硬件 JPEG 解码
-- SJPG 格式、SPNG 格式：分段解码，适用于 ESP32-C 系列 RAM 较小且没有 PSRAM 的场景
-- QOI 格式：对比软件 JPEG，QOI 解码速度更快，但是压缩率更低
-
-组件链接：https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_decoder
-
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
-
-.. _mmap-file-system-and-script-tool:
-
-基于 MMAP 的文件系统与脚本工具
------------------------------------
-
-- 自动打包用户文件
-- 脚本自动转换格式，支持 SJPG，SPNG，QOI，PJPG 格式等
-- 通过文件系统以 mmap 的方式读取素材
+- 支持多种压缩方式：RLE、Huffman、JPEG
+- 针对嵌入式优化：内存占用小，解码效率高
+- LVGL 集成：与 LVGL 控件系统无缝集成
+- 动画控制：播放、暂停、重启和循环控制
 
 适用场景：
 
-- 不满足于 SPIFFS 等文件系统的读取速度，可使用 mmap 的方式读取素材。
-- 需要 SJPG，SPNG，QOI，PJPG 等格式的图片素材
+- 使用 LVGL v8/v9 需要播放高质量动画的用户
+- 需要在资源受限平台上实现高效动画播放
 
-组件链接：https://components.espressif.com/components/espressif/esp_mmap_assets
+EAF 文件转换：可使用在线转换工具将 GIF 或其他动画格式转换为 EAF 格式：https://esp32-gif.espressif.com/
 
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/perf_benchmark
+组件链接：https://components.espressif.com/components/espressif/esp_lv_eaf_player
+
+相关示例：
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_eaf_player
 
 .. _Thorvg component:
 
@@ -72,21 +65,6 @@ Thorvg 组件
 相关示例：
 
 - Lottie：https://components.espressif.com/components/espressif/thorvg/versions/0.13.8/examples/thorvg-example
-
-.. _freetype-label-component:
-
-freetype_label 组件
--------------------------
-
-基于 freetype 的用户组件，支持字体字号管理，渲染，着色，支持中英文，支持 swap16
-
-适用场景：
-
-- 支持图片和文件的直接渲染
-
-组件链接：https://github.com/espressif/idf-extra-components/tree/master/freetype
-
-相关示例：https://github.com/espressif/esp-iot-solution/tree/master/examples/hmi/lvgl_freetype
 
 .. _tinyGL 3D graphics library:
 
@@ -116,18 +94,22 @@ SDL 是一个跨平台的开发库，旨在通过 OpenGL/Direct3D/Metal/Vulkan �
 
 相关示例：https://github.com/georgik/esp32-sdl3-test/tree/main
 
-.. _Lottie player:
+.. _esp_lv_lottie_player:
 
-Lottie 播放组件
+esp_lv_lottie_player
 -------------------------
 
-lottie_player 是一款专为 LVGL v8 设计的轻量级高效 Lottie 动画播放器。它可以将基于矢量的动画无缝集成到 LVGL 项目中。通过利用 ThorVG 作为渲染引擎，该模块确保了现代嵌入式 GUI 应用程序的高性能和灵活性。
+esp_lv_lottie_player 是一款专为 LVGL v8/v9 设计的轻量级高效 Lottie 动画播放器。它可以将基于矢量的动画无缝集成到 LVGL 项目中。通过利用 ThorVG 作为渲染引擎，该模块确保了现代嵌入式 GUI 应用程序的高性能和灵活性。
 
 适用场景：
 
-- 使用 LVGL v8 需要播放 Lottie 动画的用户
+- 使用 LVGL v8/v9 需要播放 Lottie 动画的用户
 
-组件链接：https://components.espressif.com/components/espressif2022/lottie_player
+组件链接：https://components.espressif.com/components/espressif/esp_lv_lottie_player
+
+相关示例：
+
+- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_lottie_player
 
 .. _esp_emote_gfx:
 
@@ -149,3 +131,37 @@ esp_emote_gfx 是一款面向资源受限平台的轻量级动画渲染库，支
 - 资源受限平台（ESP32-C2/C3 等）上的动态 UI 组件展示
 
 组件链接：https://components.espressif.com/components/espressif2022/esp_emote_gfx/
+
+.. _esp_emote_expression:
+
+esp_emote_expression
+-----------------------------------
+
+esp_emote_expression 是基于 esp_emote_gfx 构建的表情与界面描述系统，提供完整的资源解析、加载与生命周期管理能力，并支持第三方自定义控件扩展。可作为 AI 交互设备的基础 UI 框架使用。
+
+系统覆盖 AI 对话常见的 UI 场景，包括：
+
+- 表情与动画显示
+- 文本渲染（系统提示、用户消息等）
+- 状态图标（说话中、聆听中等）
+- 二维码展示
+- 弹窗与提示组件
+
+适用场景：
+
+- AI 交互设备的基础 UI 框架
+- 需要完整 UI 资源管理和控件扩展的嵌入式设备
+
+已适配的仓库：
+
+- xiaozhi：https://github.com/78/xiaozhi-esp32
+
+- rainmaker agent：https://github.com/espressif/esp-agents-firmware
+
+快速开始：
+
+- gfx-gen-tool：https://gfx-gen-tool.pages.dev/
+
+- 本地预置资源：https://components.espressif.com/components/espressif2022/esp_emote_assets
+
+组件链接：https://components.espressif.com/components/espressif2022/esp_emote_expression

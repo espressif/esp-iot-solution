@@ -5,6 +5,7 @@
  */
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_check.h"
@@ -17,9 +18,12 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <inttypes.h>
+#include <stdlib.h>
 
 #include "esp_jpeg_dec.h"
 #include "esp_cache.h"
+#include "esp_heap_caps.h"
 #if ESP_LV_ENABLE_HW_JPEG
 #include "driver/jpeg_decode.h"
 #include "esp_jpeg_common.h"
@@ -38,7 +42,6 @@
 #define PJPG_HEADER_SIZE 22
 #endif
 
-/* Shared SP image container tags and offsets */
 #define SP_TAG_SPNG        "_SPNG__"
 #define SP_TAG_SJPG        "_SJPG__"
 #define SP_TAG_LEN         7
@@ -59,6 +62,7 @@ static uint8_t *s_pjpg_rx_rgb = NULL;
 static size_t s_pjpg_rx_rgb_size = 0;
 static uint8_t *s_pjpg_rx_a = NULL;
 static size_t s_pjpg_rx_a_size = 0;
+static SemaphoreHandle_t s_pjpg_mutex = NULL;  // Protect PJPG global buffers from concurrent access
 #endif
 
 typedef struct {
@@ -96,9 +100,7 @@ static const jpeg_decode_cfg_t decode_cfg_rgb565 = {
 #endif
 
 static bool s_hw_output_allocation = false;
-
 #if ESP_LV_ENABLE_HW_JPEG
-/* Registry to track buffers allocated via jpeg_alloc_decoder_mem for proper free */
 typedef struct hw_buf_node {
     void *ptr;
     struct hw_buf_node *next;
@@ -125,13 +127,11 @@ static bool hw_buf_unregister_and_free(void *p)
     hw_buf_node_t *cur = s_hw_buf_list;
     while (cur) {
         if (cur->ptr == p) {
-            /* remove */
             if (prev) {
                 prev->next = cur->next;
             } else {
                 s_hw_buf_list = cur->next;
             }
-            /* free underlying HW decoder memory and node */
             jpeg_free_align(p);
             free(cur);
             return true;
@@ -150,7 +150,12 @@ static lv_result_t decoder_get_area(lv_image_decoder_t * decoder, lv_image_decod
 static lv_draw_buf_t * jpeg_decode_jpg(lv_image_decoder_dsc_t * dsc);
 static lv_draw_buf_t * png_decode_rgba(lv_image_decoder_dsc_t * dsc);
 static lv_draw_buf_t * qoi_decode_qoi(lv_image_decoder_dsc_t * dsc);
+static bool png_dimensions_allowed(uint32_t width, uint32_t height);
+static void * decoder_malloc(size_t size);
+static void * decoder_aligned_alloc(size_t alignment, size_t size);
+static void * file_buffer_alloc(size_t size);
 static uint8_t * alloc_file(const char * filename, uint32_t * size);
+
 static lv_res_t jpeg_decode_header(
     uint32_t *w,
     uint32_t *h,
@@ -180,12 +185,54 @@ static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, 
 
 static const char *TAG = "lv_decoder_v9";
 
+static bool png_dimensions_allowed(uint32_t width, uint32_t height)
+{
+    if (width == 0 || height == 0) {
+        ESP_LOGE(TAG, "PNG invalid dimensions %ux%u", (unsigned)width, (unsigned)height);
+        return false;
+    }
+
+    const uint64_t bpp = 4ULL; /* ARGB8888 */
+    uint64_t pixel_count = (uint64_t)width * height;
+
+    if (pixel_count > SIZE_MAX / bpp) {
+        ESP_LOGE(TAG, "PNG %ux%u exceeds addressable size_t (>%zu bytes)", (unsigned)width, (unsigned)height, (size_t)SIZE_MAX);
+        return false;
+    }
+
+    return true;
+}
+
+/* Allocate buffer memory, prefer PSRAM for large buffers */
+static void * decoder_malloc(size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_malloc(size, MALLOC_CAP_DEFAULT);
+}
+
+static void * decoder_aligned_alloc(size_t alignment, size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
+}
+
+static void * file_buffer_alloc(size_t size)
+{
+    return decoder_malloc(size);
+}
+
 static lv_color_format_t get_target_rgb_format(void)
 {
-    /*
-     * Determine target color format based on the default display.
-     * For ARGB or XRGB displays we prefer RGB888 for decoded outputs.
-     */
     lv_display_t *disp = lv_display_get_default();
     if (disp) {
         lv_color_format_t cf = lv_display_get_color_format(disp);
@@ -202,17 +249,15 @@ static lv_color_format_t get_target_rgb_format(void)
     return LV_COLOR_FORMAT_RGB888;
 }
 
-/* Byte-order helpers for readability */
 static inline uint16_t read_le16(const uint8_t *p)
 {
-    /* Read a 16-bit little-endian value from memory. */
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
 esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
 {
-    /* Register this module as an LVGL image decoder and install draw buffer helpers. */
     lv_image_decoder_t * dec = lv_image_decoder_create();
+    ESP_RETURN_ON_FALSE(dec, ESP_ERR_NO_MEM, TAG, "failed to create LVGL decoder");
     lv_image_decoder_set_info_cb(dec, decoder_info);
     lv_image_decoder_set_open_cb(dec, decoder_open);
     lv_image_decoder_set_get_area_cb(dec, decoder_get_area);
@@ -222,6 +267,16 @@ esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
         .timeout_ms = 40,
     };
     ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &jpgd_handle));
+#endif
+
+#if ESP_LV_ENABLE_PJPG
+    if (!s_pjpg_mutex) {
+        s_pjpg_mutex = xSemaphoreCreateMutex();
+        if (!s_pjpg_mutex) {
+            lv_image_decoder_delete(dec);
+            return ESP_ERR_NO_MEM;
+        }
+    }
 #endif
 
     lv_draw_buf_handlers_t * handlers = image_cache_draw_buf_handlers;
@@ -238,7 +293,6 @@ esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
 
 esp_err_t esp_lv_decoder_deinit(esp_lv_decoder_handle_t handle)
 {
-    /* Unregister decoder and release hardware JPEG engine (if any). */
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid decoder handle");
     lv_image_decoder_delete(handle);
 
@@ -255,6 +309,10 @@ esp_err_t esp_lv_decoder_deinit(esp_lv_decoder_handle_t handle)
         jpeg_free_align(s_pjpg_rx_a);
         s_pjpg_rx_a = NULL;
         s_pjpg_rx_a_size = 0;
+    }
+    if (s_pjpg_mutex) {
+        vSemaphoreDelete(s_pjpg_mutex);
+        s_pjpg_mutex = NULL;
     }
 #endif
     return ESP_OK;
@@ -279,7 +337,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
 
             if (file_size >= PJPG_HEADER_SIZE) {
-                uint8_t *pjpg_header = malloc(PJPG_HEADER_SIZE);
+                uint8_t *pjpg_header = decoder_malloc(PJPG_HEADER_SIZE);
                 if (pjpg_header) {
                     lv_fs_read(&dsc->file, pjpg_header, PJPG_HEADER_SIZE, &rn);
                     lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
@@ -290,6 +348,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                             header->cf = LV_COLOR_FORMAT_RGB565A8;
                             header->w = pjpg_info.width;
                             header->h = pjpg_info.height;
+                            // RGB565A8 is planar: stride is for RGB565 plane only
                             header->stride = pjpg_info.width * 2;
                             free(pjpg_header);
                             return LV_RESULT_OK;
@@ -308,6 +367,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                     header->cf = LV_COLOR_FORMAT_RGB565A8;
                     header->w = pjpg_info.width;
                     header->h = pjpg_info.height;
+                    // RGB565A8 is planar: stride is for RGB565 plane only
                     header->stride = pjpg_info.width * 2;
                     return LV_RESULT_OK;
                 }
@@ -427,7 +487,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             }
             uint32_t w = read_be32(&hdr[16]);
             uint32_t h = read_be32(&hdr[20]);
-            if (w == 0 || h == 0) {
+            if (!png_dimensions_allowed(w, h)) {
                 return LV_RESULT_INVALID;
             }
             header->cf = LV_COLOR_FORMAT_ARGB8888;
@@ -503,9 +563,8 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                     lv_fs_tell(&dsc->file, &jpeg_size);
                     lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
 
-                    // Read first 1KB for header parsing
                     uint32_t read_size = (jpeg_size > 1024) ? 1024 : jpeg_size;
-                    jpeg_data = malloc(read_size);
+                    jpeg_data = decoder_malloc(read_size);
                     if (jpeg_data) {
                         lv_fs_read(&dsc->file, jpeg_data, read_size, &rn);
                         lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
@@ -540,6 +599,32 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             lv_color_format_t tgt = get_target_rgb_format();
             jpeg_pixel_format_t out_fmt = (tgt == LV_COLOR_FORMAT_RGB565) ? JPEG_PIXEL_FORMAT_RGB565_LE : JPEG_PIXEL_FORMAT_RGB888;
             lv_res_t res = jpeg_decode_header(&width, &height, jpeg_data, jpeg_size, out_fmt, NULL, NULL, NULL);
+
+            if (res != LV_RES_OK && src_type == LV_IMAGE_SRC_FILE && jpeg_size == 1024) {
+                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_END);
+                uint32_t file_size;
+                lv_fs_tell(&dsc->file, &file_size);
+                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
+
+                if (file_size > 1024) {
+                    free(jpeg_data);
+                    uint32_t new_read_size = (file_size > 8192) ? 8192 : file_size;
+                    jpeg_data = decoder_malloc(new_read_size);
+                    if (jpeg_data) {
+                        uint32_t rn2;
+                        lv_fs_read(&dsc->file, jpeg_data, new_read_size, &rn2);
+                        lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
+                        if (rn2 == new_read_size) {
+                            jpeg_size = new_read_size;
+                            res = jpeg_decode_header(&width, &height, jpeg_data, jpeg_size, out_fmt, NULL, NULL, NULL);
+                        } else {
+                            free(jpeg_data);
+                            jpeg_data = NULL;
+                            is_jpeg = false;
+                        }
+                    }
+                }
+            }
 
             if (src_type == LV_IMAGE_SRC_FILE) {
                 free(jpeg_data);
@@ -586,26 +671,39 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
 
     {
         bool is_sp = false;
-        uint8_t hdr8[8];
+
+        // First, try to detect by file extension (more reliable with mmap_assets)
         if (dsc->src_type == LV_IMAGE_SRC_FILE) {
-            uint32_t rn;
-            lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
-            if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
-                bool dummy = false;
-                if (sp_is_sp_tag(hdr8, &dummy)) {
-                    is_sp = true;
-                }
+            const char *ext = lv_fs_get_ext(dsc->src);
+            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
+                is_sp = true;
             }
-            lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
-        } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
-            const lv_image_dsc_t * img = dsc->src;
-            if (img->data_size >= 8) {
-                bool dummy = false;
-                if (sp_is_sp_tag(img->data, &dummy)) {
-                    is_sp = true;
+        }
+
+        // If not detected by extension, try reading header (for memory sources or validation)
+        if (!is_sp) {
+            uint8_t hdr8[8];
+            if (dsc->src_type == LV_IMAGE_SRC_FILE) {
+                uint32_t rn;
+                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
+                if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
+                    bool dummy = false;
+                    if (sp_is_sp_tag(hdr8, &dummy)) {
+                        is_sp = true;
+                    }
+                }
+                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
+            } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
+                const lv_image_dsc_t * img = dsc->src;
+                if (img->data_size >= 8) {
+                    bool dummy = false;
+                    if (sp_is_sp_tag(img->data, &dummy)) {
+                        is_sp = true;
+                    }
                 }
             }
         }
+
         if (is_sp) {
             if (sp_open_session(dsc) != LV_RESULT_OK) {
                 return LV_RESULT_INVALID;
@@ -652,6 +750,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
             }
         }
         if (try_png) {
+            dsc->args.no_cache = true;
             decoded = png_decode_rgba(dsc);
             if (!decoded) {
                 return LV_RESULT_INVALID;
@@ -774,7 +873,7 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
         }
         return LV_RESULT_INVALID;
     }
-    sp_session_t * ctx = lv_malloc(sizeof(sp_session_t));
+    sp_session_t * ctx = malloc(sizeof(sp_session_t));
     if (!ctx) {
         if (is_file) {
             lv_fs_close(&f);
@@ -836,7 +935,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
     }
     uint8_t *encoded = NULL;
     if (ctx->is_file) {
-        encoded = lv_malloc(len_i);
+        encoded = decoder_malloc(len_i);
         if (!encoded) {
             return LV_RESULT_INVALID;
         }
@@ -844,7 +943,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         uint32_t off = ctx->data_off + ctx->cursor;
         lv_fs_seek(&ctx->file, off, LV_FS_SEEK_SET);
         if (lv_fs_read(&ctx->file, encoded, len_i, &rn2) != LV_FS_RES_OK || rn2 != len_i) {
-            lv_free(encoded);
+            free(encoded);
             return LV_RESULT_INVALID;
         }
     } else {
@@ -854,14 +953,22 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         encoded = (uint8_t *)(ctx->base + ctx->data_off + ctx->cursor);
     }
     if (!ctx->slice_buf) {
+        // Allocate with padding for JPEG decoder alignment requirements
+        // JPEG decoder may need 16-byte alignment and extra space
         uint32_t max_slice_bytes = (uint32_t)ctx->w * ctx->split_h * ctx->bpp;
-        ctx->slice_buf = lv_malloc(max_slice_bytes);
+        // Add 128 bytes padding for alignment and decoder internal buffer
+        uint32_t alloc_size = max_slice_bytes + 128;
+        ctx->slice_buf = decoder_aligned_alloc(16, alloc_size);
         if (!ctx->slice_buf) {
+            ESP_LOGE(TAG, "Failed to allocate aligned slice_buf: %lu bytes (w=%u, split_h=%u, bpp=%u)",
+                     (unsigned long)alloc_size, ctx->w, ctx->split_h, ctx->bpp);
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
+        ESP_LOGD(TAG, "Allocated aligned slice_buf: %lu bytes (requested: %lu)",
+                 (unsigned long)alloc_size, (unsigned long)max_slice_bytes);
     }
     if (!ctx->is_sjpg) {
         png_image im;
@@ -869,7 +976,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         im.version = PNG_IMAGE_VERSION;
         if (!png_image_begin_read_from_memory(&im, encoded, len_i)) {
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
@@ -878,14 +985,14 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         if (need > (uint32_t)ctx->w * ctx->split_h * 4) {
             png_image_free(&im);
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
         if (!png_image_finish_read(&im, NULL, ctx->slice_buf, 0, NULL)) {
             png_image_free(&im);
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
@@ -898,11 +1005,13 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         jpeg_pixel_format_t out_fmt = (ctx->out_cf == LV_COLOR_FORMAT_RGB565) ? JPEG_PIXEL_FORMAT_RGB565_LE : JPEG_PIXEL_FORMAT_RGB888;
         if (jpeg_decode_header(&jw, &jh, encoded, len_i, out_fmt, &jdec, &jio, &hinfo) != LV_RESULT_OK) {
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
         if (jw != ctx->w || jh != cur_h) {
+            ESP_LOGE(TAG, "SJPG dimension mismatch: expected %" PRIu32 "x%" PRIu32 ", got %" PRIu32 "x%" PRIu32,
+                     (uint32_t)ctx->w, cur_h, jw, jh);
             if (jio) {
                 free(jio);
             }
@@ -913,7 +1022,27 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
                 jpeg_dec_close(jdec);
             }
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
+            }
+            return LV_RESULT_INVALID;
+        }
+        // Verify buffer size before JPEG decode
+        uint32_t required_bytes = jw * jh * ctx->bpp;
+        uint32_t max_slice_bytes = (uint32_t)ctx->w * ctx->split_h * ctx->bpp;
+        if (required_bytes > max_slice_bytes) {
+            ESP_LOGE(TAG, "SJPG buffer overflow risk: required %lu > allocated %lu",
+                     (unsigned long)required_bytes, (unsigned long)max_slice_bytes);
+            if (jio) {
+                free(jio);
+            }
+            if (hinfo) {
+                free(hinfo);
+            }
+            if (jdec) {
+                jpeg_dec_close(jdec);
+            }
+            if (ctx->is_file) {
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
@@ -929,7 +1058,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
                 jpeg_dec_close(jdec);
             }
             if (ctx->is_file) {
-                lv_free(encoded);
+                free(encoded);
             }
             return LV_RESULT_INVALID;
         }
@@ -954,7 +1083,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         }
     }
     if (ctx->is_file) {
-        lv_free(encoded);
+        free(encoded);
     }
     ctx->cursor += len_i;
     return LV_RESULT_OK;
@@ -1053,18 +1182,20 @@ static void decoder_close(lv_image_decoder_t * decoder, lv_image_decoder_dsc_t *
             ctx->tile = NULL;
         }
         if (ctx->slice_buf) {
-            lv_free(ctx->slice_buf);
+            free(ctx->slice_buf);
             ctx->slice_buf = NULL;
         }
         if (ctx->is_file) {
             lv_fs_close(&ctx->file);
         }
-        lv_free(ctx);
+        free(ctx);
         dsc->user_data = NULL;
         dsc->decoded = NULL;
         return;
     }
-    if (dsc->args.no_cache || !lv_image_cache_is_enabled()) {
+    // Only free the buffer if it's NOT in cache (cache_entry == NULL)
+    // If cache_entry is set, the cache system manages the buffer lifetime
+    if (dsc->cache_entry == NULL && dsc->decoded) {
         lv_draw_buf_destroy_user(image_cache_draw_buf_handlers, (lv_draw_buf_t *)dsc->decoded);
     }
 }
@@ -1089,8 +1220,8 @@ static uint8_t * alloc_file(const char * filename, uint32_t * size)
     ESP_GOTO_ON_ERROR(res == LV_FS_RES_OK ? ESP_OK : ESP_FAIL, failed, TAG, "lv_fs_tell failed");
     res = lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
     ESP_GOTO_ON_ERROR(res == LV_FS_RES_OK ? ESP_OK : ESP_FAIL, failed, TAG, "lv_fs_seek set failed");
-    data = malloc(data_size);
-    ESP_GOTO_ON_ERROR(data ? ESP_OK : ESP_ERR_NO_MEM, failed, TAG, "malloc %uB failed", (unsigned)data_size);
+    data = file_buffer_alloc(data_size);
+    ESP_GOTO_ON_ERROR(data ? ESP_OK : ESP_ERR_NO_MEM, failed, TAG, "alloc %uB file buffer failed", (unsigned)data_size);
     res = lv_fs_read(&f, data, data_size, &rn);
     if (res == LV_FS_RES_OK && rn == data_size) {
         *size = rn;
@@ -1295,6 +1426,9 @@ static lv_draw_buf_t * png_decode_rgba(lv_image_decoder_dsc_t * dsc)
 
     uint32_t width = image.width;
     uint32_t height = image.height;
+    if (!png_dimensions_allowed(width, height)) {
+        goto cleanup_img;
+    }
     lv_draw_buf_t * buf = lv_draw_buf_create_ex(image_cache_draw_buf_handlers, width, height, LV_COLOR_FORMAT_ARGB8888, LV_STRIDE_AUTO);
     ESP_GOTO_ON_ERROR(buf ? ESP_OK : ESP_ERR_NO_MEM, cleanup_img, TAG, "alloc png buf failed");
 
@@ -1468,7 +1602,7 @@ static esp_err_t load_source_data(lv_image_decoder_dsc_t * dsc, uint8_t **data, 
             return ESP_ERR_INVALID_SIZE;
         }
 
-        *data = malloc(file_size);
+        *data = decoder_malloc(file_size);
         if (!*data) {
             ESP_LOGE(TAG, "Failed to allocate %lu bytes", file_size);
             lv_fs_close(&temp_file);
@@ -1505,6 +1639,14 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
     lv_draw_buf_t * decoded = NULL;
     bool need_free_src = false;
     esp_err_t ret;
+
+    // Acquire mutex to protect PJPG global buffers (s_pjpg_rx_rgb/s_pjpg_rx_a) from concurrent access
+    if (s_pjpg_mutex) {
+        if (xSemaphoreTake(s_pjpg_mutex, portMAX_DELAY) != pdTRUE) {
+            ESP_LOGE(TAG, "Failed to acquire PJPG mutex");
+            return NULL;
+        }
+    }
 
     esp_err_t load_ret = load_source_data(dsc, &src_data, &src_size);
     ESP_GOTO_ON_ERROR(load_ret, cleanup, TAG, "load PJPG source data failed");
@@ -1547,7 +1689,14 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
         jpeg_decode_memory_alloc_cfg_t rx_mem_cfg = { .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER };
         size_t rx_buf_size = 0;
         if (s_pjpg_rx_rgb_size < rgb_aligned_output_size) {
+            // Free old buffer before allocating new one
+            if (s_pjpg_rx_rgb) {
+                jpeg_free_align(s_pjpg_rx_rgb);
+                s_pjpg_rx_rgb = NULL;
+                s_pjpg_rx_rgb_size = 0;
+            }
             s_pjpg_rx_rgb = jpeg_alloc_decoder_mem(rgb_aligned_output_size, &rx_mem_cfg, &rx_buf_size);
+            ESP_GOTO_ON_FALSE(s_pjpg_rx_rgb, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to alloc PJPG RGB buffer");
             s_pjpg_rx_rgb_size = rx_buf_size;
         }
         esp_err_t rgb_ret = jpeg_decoder_process(jpgd_handle, &rgb_cfg,
@@ -1585,7 +1734,14 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
             jpeg_decode_memory_alloc_cfg_t rx_mem_cfg = { .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER };
             size_t rx_a_buf_size = 0;
             if (s_pjpg_rx_a_size < alpha_aligned_output_size) {
+                // Free old buffer before allocating new one
+                if (s_pjpg_rx_a) {
+                    jpeg_free_align(s_pjpg_rx_a);
+                    s_pjpg_rx_a = NULL;
+                    s_pjpg_rx_a_size = 0;
+                }
                 s_pjpg_rx_a = jpeg_alloc_decoder_mem(alpha_aligned_output_size, &rx_mem_cfg, &rx_a_buf_size);
+                ESP_GOTO_ON_FALSE(s_pjpg_rx_a, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to alloc PJPG Alpha buffer");
                 s_pjpg_rx_a_size = rx_a_buf_size;
             }
             esp_err_t alpha_ret = jpeg_decoder_process(jpgd_handle, &alpha_cfg,
@@ -1610,6 +1766,11 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
         free(src_data);
     }
 
+    // Release mutex before returning
+    if (s_pjpg_mutex) {
+        xSemaphoreGive(s_pjpg_mutex);
+    }
+
     return decoded;
 
 cleanup:
@@ -1619,6 +1780,12 @@ cleanup:
     if (need_free_src && src_data) {
         free(src_data);
     }
+
+    // Release mutex before returning
+    if (s_pjpg_mutex) {
+        xSemaphoreGive(s_pjpg_mutex);
+    }
+
     (void)ret;
     return NULL;
 }
@@ -1631,7 +1798,6 @@ static void * buf_malloc(size_t size_bytes, lv_color_format_t color_format)
     void *buf = NULL;
 
 #if ESP_LV_ENABLE_HW_JPEG
-    /* Only prefer HW JPEG dedicated memory when allocating output for HW decode */
     if (s_hw_output_allocation) {
         jpeg_decode_memory_alloc_cfg_t mem_cfg = {
             .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER,
@@ -1647,15 +1813,14 @@ static void * buf_malloc(size_t size_bytes, lv_color_format_t color_format)
     }
 #endif
 
-    /* Default: allocate from default heap (typically internal RAM) */
-    buf = heap_caps_aligned_alloc(CACHE_LINE_SIZE, aligned_size, MALLOC_CAP_DEFAULT);
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    buf = heap_caps_aligned_alloc(CACHE_LINE_SIZE, aligned_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (buf) {
         memset(buf, 0, aligned_size);
         return buf;
     }
-
-    /* Fallback: try PSRAM if available (large frames) */
-    buf = heap_caps_aligned_alloc(CACHE_LINE_SIZE, aligned_size, MALLOC_CAP_SPIRAM);
+#endif
+    buf = heap_caps_aligned_alloc(CACHE_LINE_SIZE, aligned_size, MALLOC_CAP_DEFAULT);
     if (buf) {
         memset(buf, 0, aligned_size);
         return buf;
@@ -1700,17 +1865,13 @@ static uint32_t width_to_stride(uint32_t w, lv_color_format_t color_format)
     return LV_ROUND_UP(width_byte, LV_DRAW_BUF_STRIDE_ALIGN);
 }
 
-/* Big-endian 32-bit reader for PNG/QOI fields */
 static inline uint32_t read_be32(const uint8_t *p)
 {
-    /* Read a 32-bit big-endian value from memory (PNG/QOI headers). */
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
 
-/* SP helpers: tag check and meta reader (LE fields) */
 static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg)
 {
-    /* Return true if header starts with SPNG or SJPG, and set is_sjpg accordingly. */
     if (memcmp(hdr8, SP_TAG_SPNG, SP_TAG_LEN) == 0) {
         if (is_sjpg) {
             *is_sjpg = false;
@@ -1728,7 +1889,6 @@ static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg)
 
 static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, uint16_t *splits, uint16_t *split_h)
 {
-    /* Read width/height/splits/slice_height from SP meta block (little-endian). */
     if (w) {
         *w = (uint16_t)read_le16(meta8 + 0);
     }

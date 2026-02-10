@@ -1,0 +1,18 @@
+menu "Example Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config ESPNOW_CHANNEL
+        int "Channel"
+        default 1
+        range 0 14
+        help
+            The channel on which sending and receiving ESPNOW data.
+
+    config ESPNOW_PMK
+        string "ESPNOW primary master key"
+        default "bot12345678901234"
+        help
+            ESPNOW primary master for the example to use. The length of ESPNOW primary master must be 16 bytes.
+
+endmenu

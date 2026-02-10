@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,9 +10,18 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "hal/spi_ll.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_panel_vendor.h"
+#include "soc/soc_caps.h"
+
+#if SOC_MIPI_DSI_SUPPORTED
+#include "esp_lcd_mipi_dsi.h"
+#include "esp_idf_version.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +50,18 @@ typedef struct {
                                                  *   Please refer to `vendor_specific_init_default` in source file.
                                                  */
     uint16_t init_cmds_size;                    /*<! Number of commands in above array */
+    bool init_in_command_mode;                  /*<! Send LCD init commands in command mode, default in video mode */
+#if SOC_MIPI_DSI_SUPPORTED
+    union {
+        struct {
+            esp_lcd_dsi_bus_handle_t dsi_bus;               /*!< MIPI-DSI bus configuration */
+            const esp_lcd_dpi_panel_config_t *dpi_config;   /*!< MIPI-DPI panel configuration */
+        } mipi_config;
+    };
+#endif
     struct {
         unsigned int use_qspi_interface: 1;     /*<! Set to 1 if use QSPI interface, default is SPI interface */
+        unsigned int use_mipi_interface: 1;     /*<! Set to 1 if using MIPI interface */
     } flags;
 } axs15231b_vendor_config_t;
 
@@ -152,6 +171,96 @@ esp_err_t esp_lcd_new_panel_axs15231b(const esp_lcd_panel_io_handle_t io, const 
             .quad_mode = true,                                  \
         },                                                      \
     }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Default Configuration Macros for MIPI-DSI Interface //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if SOC_MIPI_DSI_SUPPORTED
+/**
+ * @brief MIPI-DSI bus configuration structure
+ *
+ * @param[in] lane_num Number of data lanes
+ * @param[in] lane_mbps Lane bit rate in Mbps
+ *
+ */
+#define AXS15231B_PANEL_BUS_DSI_1CH_CONFIG()         \
+    {                                                \
+        .bus_id = 0,                                 \
+        .num_data_lanes = 1,                         \
+        .phy_clk_src = 0,                            \
+        .lane_bit_rate_mbps = 720,                   \
+    }
+
+/**
+ * @brief MIPI-DBI panel IO configuration structure
+ *
+ */
+#define AXS15231B_PANEL_IO_DBI_CONFIG()  \
+    {                                    \
+        .virtual_channel = 0,            \
+        .lcd_cmd_bits = 8,               \
+        .lcd_param_bits = 8,             \
+    }
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] px_format Pixel format of the panel
+ *
+ */
+#define AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG(px_format) \
+    {                                                      \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,       \
+        .dpi_clock_freq_mhz = 25,                          \
+        .virtual_channel = 0,                              \
+        .pixel_format = px_format,                         \
+        .num_fbs = 1,                                      \
+        .video_timing = {                                  \
+            .h_size = 240,                                 \
+            .v_size = 960,                                 \
+            .hsync_back_porch = 66,                        \
+            .hsync_pulse_width = 10,                       \
+            .hsync_front_porch = 55,                       \
+            .vsync_back_porch = 62,                        \
+            .vsync_pulse_width = 10,                       \
+            .vsync_front_porch = 100,                      \
+        },                                                 \
+        .flags.use_dma2d = true,                           \
+    }
+#endif
+
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] color_format Input color format of the panel
+ *
+ */
+#define AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG_CF(color_format) \
+    {                                                            \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
+        .dpi_clock_freq_mhz = 25,                                \
+        .virtual_channel = 0,                                    \
+        .in_color_format = color_format,                         \
+        .num_fbs = 1,                                            \
+        .video_timing = {                                        \
+            .h_size = 240,                                       \
+            .v_size = 960,                                       \
+            .hsync_back_porch = 66,                              \
+            .hsync_pulse_width = 10,                             \
+            .hsync_front_porch = 55,                             \
+            .vsync_back_porch = 62,                              \
+            .vsync_pulse_width = 10,                             \
+            .vsync_front_porch = 100,                            \
+        },                                                       \
+    }
+#endif
 
 /**
  * @brief Create a new AXS15231B1B touch driver

@@ -1,16 +1,60 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
+#include <stdint.h>
+#include <stddef.h>
+
 #include "private/elf_types.h"
+#include "private/elf_symbol.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct elf_file {
+    uint8_t *payload;
+    size_t size;
+} elf_file_t;
+
+/**
+ * @brief Symbol table type
+ *
+ * A symbol table is an array of esp_elfsym structures terminated with ESP_ELFSYM_END.
+ */
+typedef const struct esp_elfsym esp_elf_symbol_table_t;
+
+/**
+ * @brief Open and load an ELF file into memory.
+ *
+ * @param file - Pointer to elf_file_t structure to store loaded file content
+ * @param name - Filename (without path) of the ELF file to open
+ *
+ * @return 0 on success, -1 on failure with errno set. Error cases include:
+ *         - Invalid parameters
+ *         - Path generation failure
+ *         - File open/read errors
+ *         - Memory allocation failures
+ *
+ * @note The actual file path will be constructed as "FS_PATH/name"
+ * @note Allocates memory for file content using esp_elf_malloc()
+ */
+int esp_elf_open(elf_file_t *file, const char *name);
+
+/**
+ * @brief Close ELF file and release associated resources.
+ *
+ * @param file - Pointer to opened elf_file_t structure
+ *
+ * @note Releases memory allocated by esp_elf_open() for payload data
+ * @note Should be called paired with esp_elf_open() to prevent memory leaks
+ * @note If file is NULL, this function does nothing (null-safe)
+ */
+void esp_elf_close(elf_file_t *file);
 
 /**
  * @brief Map symbol's address of ELF to physic space.
@@ -97,6 +141,40 @@ void esp_elf_print_shdr(const uint8_t *pbuf);
  * @return None
  */
 void esp_elf_print_sec(esp_elf_t *elf);
+
+/**
+ * @brief Register symbol table to global symbol tables array.
+ *
+ * @param symbol_table - Pointer to symbol table structure (array of esp_elfsym terminated by ESP_ELFSYM_END)
+ *
+ * @return 0 if success, -EINVAL if symbol_table is NULL, -EEXIST if already registered, -ENOMEM if no space.
+ *
+ * @note This function is not thread-safe. External synchronization must be used if calling
+ *       this function concurrently from multiple threads.
+ */
+int esp_elf_register_symbol(esp_elf_symbol_table_t *symbol_table);
+
+/**
+ * @brief Unregister symbol table from global symbol tables array.
+ *
+ * @param symbol_table - Pointer to symbol table structure to remove
+ *
+ * @return 0 if success, -EINVAL if symbol_table is NULL or symbol table not found.
+ *
+ * @note This function is not thread-safe. External synchronization must be used if calling
+ *       this function concurrently from multiple threads.
+ */
+int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table);
+
+/**
+ * @brief Find symbol address by symbol name in registered tables.
+ *
+ * @param sym_name - Symbol name string to search
+ *
+ * @return Symbol address if found, 0 if not found.
+ * @note Search order is reverse registration order (latest registered first).
+ */
+uintptr_t esp_elf_find_symbol(const char *sym_name);
 
 #ifdef __cplusplus
 }

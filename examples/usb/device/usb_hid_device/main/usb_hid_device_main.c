@@ -202,10 +202,11 @@ static void usb_phy_init(void)
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
-#if CONFIG_TINYUSB_RHPORT_HS
-        .otg_speed = USB_PHY_SPEED_HIGH,
-#endif
+        .otg_speed = USB_PHY_SPEED_FULL,
     };
+#if CONFIG_TINYUSB_RHPORT_HS
+    phy_conf.otg_speed = USB_PHY_SPEED_HIGH;
+#endif
     usb_new_phy(&phy_conf, &phy_hdl);
 }
 

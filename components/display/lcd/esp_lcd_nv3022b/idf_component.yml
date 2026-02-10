@@ -1,10 +1,10 @@
-version: "1.0.0"
+version: "2.0.1"
 description: ESP LCD NV3022B(SPI)
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_nv3022b
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4"
+  idf: ">=5.3"
   cmake_utilities: "0.*"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

@@ -106,12 +106,7 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
         ctx->battery_points_count = config->battery_points_count;
     }
 
-    // Use external ADC handle if provided
-    if (config->external.adc_handle != NULL && config->external.adc_cali_handle != NULL) {
-        ctx->adc_handle = config->external.adc_handle;
-        ctx->adc_cali_handle = config->external.adc_cali_handle;
-        ctx->is_adc_handle_owned = false;
-    } else {
+    if ((config->internal.adc_unit < SOC_ADC_PERIPH_NUM) && ((config->internal.adc_bitwidth >= SOC_ADC_RTC_MIN_BITWIDTH && config->internal.adc_bitwidth <= SOC_ADC_RTC_MAX_BITWIDTH) || config->internal.adc_bitwidth == ADC_BITWIDTH_DEFAULT)) {
         // Create new ADC unit and channel
         adc_oneshot_unit_init_cfg_t init_cfg = {
             .unit_id = config->internal.adc_unit,
@@ -141,6 +136,13 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
         ESP_RETURN_ON_FALSE(adc_cali_create_scheme_line_fitting(&cali_config, &ctx->adc_cali_handle) == ESP_OK, NULL, TAG, "Failed to create ADC calibration scheme");
 #endif
         ctx->is_adc_handle_owned = true;
+        ESP_LOGI(TAG, "Use internal ADC unit");
+    } else {
+        // Use external ADC handle if provided
+        ctx->adc_handle = config->external.adc_handle;
+        ctx->adc_cali_handle = config->external.adc_cali_handle;
+        ctx->is_adc_handle_owned = false;
+        ESP_LOGI(TAG, "Use external ADC handle");
     }
 
     // Validate voltage divider resistors

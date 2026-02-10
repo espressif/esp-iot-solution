@@ -97,12 +97,23 @@ int app_main(void)
     ret = esp_elf_init(&elf);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to initialize ELF file errno=%d", ret);
+#ifdef CONFIG_ELF_LOADER_MAIN_ARGS
+        if (argv) {
+            free(argv);
+        }
+#endif
         return ret;
     }
 
     ret = esp_elf_relocate(&elf, buffer);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
+        esp_elf_deinit(&elf);
+#ifdef CONFIG_ELF_LOADER_MAIN_ARGS
+        if (argv) {
+            free(argv);
+        }
+#endif
         return ret;
     }
 

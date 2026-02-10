@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -190,12 +190,25 @@ esp_err_t iot_button_print_event(button_handle_t btn_handle);
 uint8_t iot_button_get_repeat(button_handle_t btn_handle);
 
 /**
- * @brief Get button ticks time
+ * @brief Get button pressed time
  *
  * @param btn_handle Button handle
  *
  * @return Actual time from press down to up (ms).
  */
+uint32_t iot_button_get_pressed_time(button_handle_t btn_handle);
+
+/**
+ * @brief Get button ticks time
+ *
+ * @deprecated This function is deprecated and will be removed in a future release.
+ *             Please use iot_button_get_pressed_time() instead.
+ *
+ * @param btn_handle Button handle
+ *
+ * @return Actual time from press down to up (ms).
+ */
+__attribute__((deprecated("Use iot_button_get_pressed_time() instead")))
 uint32_t iot_button_get_ticks_time(button_handle_t btn_handle);
 
 /**

@@ -70,6 +70,8 @@ void AS5048a::init()
     ESP_RETURN_ON_FALSE(ret == ESP_OK,, TAG, "SPI bus add device fail");
 
     _is_installed = true;
+    Sensor::init();
+    ESP_LOGI(TAG, "AS5048a init success");
 }
 
 uint8_t AS5048a::calculateParity(uint16_t value)

@@ -204,6 +204,7 @@ static void ir_learn_task(void *arg)
             vEventGroupDelete(learn_param->ctx->learn_event);
             learn_param->user_cb(IR_LEARN_STATE_EXIT, 0, NULL);
             ir_learn_destroy(learn_param->ctx);
+            free(learn_param);
             vTaskDelete(NULL);
         }
 
@@ -506,12 +507,13 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
     IR_LEARN_CHECK(cfg->learn_count < IR_LEARN_STATE_READY, "learn count too larger", ESP_ERR_INVALID_ARG);
 
     ir_learn_t *ir_learn_ctx = calloc(1, sizeof(ir_learn_t));
-    IR_LEARN_CHECK(ir_learn_ctx, "no mem for ir_learn_ctx", ESP_ERR_NO_MEM);
+    IR_LEARN_CHECK((ir_learn_ctx != NULL), "no mem for ir_learn_ctx", ESP_ERR_NO_MEM);
 
-    ir_learn_common_param_t learn_param = {
-        .user_cb = cfg->callback,
-        .ctx = ir_learn_ctx,
-    };
+    ir_learn_common_param_t *learn_param = malloc(sizeof(ir_learn_common_param_t));
+    IR_LEARN_CHECK_GOTO((learn_param != NULL), "malloc learn_param failed", ESP_ERR_NO_MEM, err);
+
+    learn_param->user_cb = cfg->callback;
+    learn_param->ctx = ir_learn_ctx;
 
     rmt_rx_channel_config_t rx_channel_cfg = {
         .clk_src = cfg->clk_src,
@@ -550,9 +552,9 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
     IR_LEARN_CHECK_GOTO(ir_learn_ctx->learn_event, "create event group failed", ESP_FAIL, err);
 
     if (cfg->task_affinity < 0) {
-        res = xTaskCreate(ir_learn_task, "ir learn task", cfg->task_stack, &learn_param, cfg->task_priority, NULL);
+        res = xTaskCreate(ir_learn_task, "ir learn task", cfg->task_stack, learn_param, cfg->task_priority, NULL);
     } else {
-        res = xTaskCreatePinnedToCore(ir_learn_task, "ir learn task", cfg->task_stack, &learn_param, cfg->task_priority, NULL, cfg->task_affinity);
+        res = xTaskCreatePinnedToCore(ir_learn_task, "ir learn task", cfg->task_stack, learn_param, cfg->task_priority, NULL, cfg->task_affinity);
     }
     IR_LEARN_CHECK_GOTO(res == pdPASS, "create ir_learn task fail!", ESP_FAIL, err);
 
@@ -563,6 +565,9 @@ esp_err_t ir_learn_new(const ir_learn_cfg_t *cfg, ir_learn_handle_t *handle_out)
     *handle_out = ir_learn_ctx;
     return ret;
 err:
+    if (learn_param) {
+        free(learn_param);
+    }
     if (ir_learn_ctx) {
         ir_learn_destroy(ir_learn_ctx);
     }

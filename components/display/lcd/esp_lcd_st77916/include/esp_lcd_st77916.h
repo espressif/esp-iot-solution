@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,7 +7,13 @@
 
 #include <stdint.h>
 
+#include "hal/lcd_types.h"
 #include "esp_lcd_panel_vendor.h"
+#include "esp_idf_version.h"
+
+#if SOC_MIPI_DSI_SUPPORTED
+#include "esp_lcd_mipi_dsi.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,12 +39,22 @@ typedef struct {
  */
 typedef struct {
     const st77916_lcd_init_cmd_t *init_cmds;    /*!< Pointer to initialization commands array.
+                                                 *  Set to NULL if using default commands.
                                                  *  The array should be declared as `static const` and positioned outside the function.
                                                  *  Please refer to `vendor_specific_init_default` in source file
                                                  */
     uint16_t init_cmds_size;    /*<! Number of commands in above array */
+    union {
+#if SOC_MIPI_DSI_SUPPORTED
+        struct {
+            esp_lcd_dsi_bus_handle_t dsi_bus;               /*!< MIPI-DSI bus configuration */
+            const esp_lcd_dpi_panel_config_t *dpi_config;   /*!< MIPI-DPI panel configuration */
+        } mipi_config;
+#endif
+    };
     struct {
-        unsigned int use_qspi_interface: 1;     /*<! Set to 1 if use QSPI interface, default is SPI interface */
+        unsigned int use_mipi_interface: 1;     /*<! Set to 1 if using MIPI interface, default is SPI interface */
+        unsigned int use_qspi_interface: 1;     /*<! Set to 1 if use QSPI interface, default is SPI interface (only valid for SPI mode) */
     } flags;
 } st77916_vendor_config_t;
 
@@ -108,6 +124,96 @@ esp_err_t esp_lcd_new_panel_st77916(const esp_lcd_panel_io_handle_t io, const es
             .quad_mode = true,                                  \
         },                                                      \
     }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Default Configuration Macros for MIPI-DSI Interface //////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if SOC_MIPI_DSI_SUPPORTED
+/**
+ * @brief MIPI-DSI bus configuration structure
+ *
+ * @param[in] lane_num Number of data lanes
+ * @param[in] lane_mbps Lane bit rate in Mbps
+ *
+ */
+#define ST77916_PANEL_BUS_DSI_1CH_CONFIG()                \
+    {                                                     \
+        .bus_id = 0,                                      \
+        .num_data_lanes = 1,                              \
+        .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,      \
+        .lane_bit_rate_mbps = 480,                        \
+    }
+
+/**
+ * @brief MIPI-DBI panel IO configuration structure
+ *
+ */
+#define ST77916_PANEL_IO_DBI_CONFIG()  \
+    {                                  \
+        .virtual_channel = 0,          \
+        .lcd_cmd_bits = 8,             \
+        .lcd_param_bits = 8,           \
+    }
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] px_format Pixel format of the panel
+ *
+ */
+#define ST77916_360_360_PANEL_60HZ_DPI_CONFIG(px_format) \
+    {                                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,     \
+        .dpi_clock_freq_mhz = 11,                        \
+        .virtual_channel = 0,                            \
+        .pixel_format = px_format,                       \
+        .num_fbs = 1,                                    \
+        .video_timing = {                                \
+            .h_size = 360,                               \
+            .v_size = 360,                               \
+            .hsync_back_porch = 60,                      \
+            .hsync_pulse_width = 12,                     \
+            .hsync_front_porch = 20,                     \
+            .vsync_back_porch = 20,                      \
+            .vsync_pulse_width = 12,                     \
+            .vsync_front_porch = 20,                     \
+        },                                               \
+        .flags.use_dma2d = true,                         \
+    }
+#endif
+
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] color_format Input color format of the panel
+ *
+ */
+#define ST77916_360_360_PANEL_60HZ_DPI_CONFIG_CF(color_format) \
+    {                                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,     \
+        .dpi_clock_freq_mhz = 11,                        \
+        .virtual_channel = 0,                            \
+        .in_color_format = color_format,                 \
+        .num_fbs = 1,                                    \
+        .video_timing = {                                \
+            .h_size = 360,                               \
+            .v_size = 360,                               \
+            .hsync_back_porch = 60,                      \
+            .hsync_pulse_width = 12,                     \
+            .hsync_front_porch = 20,                     \
+            .vsync_back_porch = 20,                      \
+            .vsync_pulse_width = 12,                     \
+            .vsync_front_porch = 20,                     \
+        },                                               \
+    }
+#endif
 
 #ifdef __cplusplus
 }

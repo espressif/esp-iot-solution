@@ -19,3 +19,4 @@ USB 外设综述
     USB 信号质量测试 <usb_signal_quality>
     TinyUSB 库使用指南 <tinyusb_guide>
     基于原生 TinyUSB 开发指南 <tinyusb_development_guide>
+    USB Type-C 硬件设计指南 <usb_typec_hardware_guide>

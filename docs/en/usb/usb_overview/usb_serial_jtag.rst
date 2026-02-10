@@ -3,7 +3,7 @@ USB-Serial-JTAG Peripheral Introduction
 
 :link_to_translation:`zh_CN:[中文]`
 
-The ESP32-S3/C3/P4 chips come with a built-in USB-Serial-JTAG peripheral, which includes a USB-to-serial converter and a USB-to-JTAG converter. It supports connection to a PC via a USB cable, enabling functions such as firmware downloading, debugging, and printing system logs. The internal structure of the USB-Serial-JTAG peripheral can be referred to in the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
+ESP32 series chips with integrated USB-Serial-JTAG peripheral (such as ESP32-S3, ESP32-C3, ESP32-P4) feature both USB-to-serial and USB-to-JTAG functionality. This peripheral provides direct USB connectivity to a host PC, supporting firmware download, JTAG-based debugging, and system console output. For detailed information on the USB-Serial-JTAG peripheral architecture, please refer to the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
 
 USB-Serial-JTAG  peripheral driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12,6 +12,13 @@ USB-Serial-JTAG  peripheral driver
 * For Linux and MacOS systems, No need to manually install drivers.
 * For Windows 10 and above, drivers will be automatically installed when connected to the internet.
 * For Windows 7/8 systems, manual driver installation is necessary. The driver can be downloaded from: \ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ . Alternatively, users can use the `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ , selecting the USB-Serial-JTAG driver during installation.
+
+.. Note::
+    If the above driver installation fails, you can use the `Zadig <https://zadig.akeo.ie/>`_ tool to install the driver. When using Zadig, please select drivers as follows:
+
+    * For ``USB JTAG/serial debug unit (Interface 0)``, select ``usbser`` or ``USB Serial (CDC)`` driver
+    * For ``USB JTAG/serial debug unit (Interface 2)``, select ``WinUSB`` driver
+
 
 USB-Serial-JTAG peripheral built-in functionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -33,6 +40,9 @@ For Linux as shown in the following figure:
    :target: ../../../_static/usb/usb_serial_jtag_linux.png
    :alt: device_manager_usb_serial_jtag_cn
 
+
+.. Note::
+    If the devices are not displayed correctly, please refer to the driver installation section above.
 
 Use USB-Serial-JTAG to download firmware
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

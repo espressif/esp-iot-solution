@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,11 +8,201 @@
 
 #include <esp_err.h>
 #include <esp_event.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+/**
+ * @brief   BLE address format string for printf-style logging
+ */
+#define BLE_CONN_MGR_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+/**
+ * @brief   BLE address formatter arguments for printf-style logging
+ */
+#define BLE_CONN_MGR_ADDR_HEX(addr) ((addr)[5]), ((addr)[4]), ((addr)[3]), ((addr)[2]), ((addr)[1]), ((addr)[0])
+
+/** Common advertising data types */
+#define ESP_BLE_CONN_ADV_TYPE_FLAGS            0x01
+#define ESP_BLE_CONN_ADV_TYPE_NAME_SHORT       0x08
+#define ESP_BLE_CONN_ADV_TYPE_NAME_COMPLETE    0x09
+#define ESP_BLE_CONN_ADV_TYPE_TX_POWER         0x0A
+#define ESP_BLE_CONN_ADV_TYPE_UUID16_INCOMP    0x02
+#define ESP_BLE_CONN_ADV_TYPE_UUID16_COMPLETE  0x03
+#define ESP_BLE_CONN_ADV_TYPE_UUID32_INCOMP    0x04
+#define ESP_BLE_CONN_ADV_TYPE_UUID32_COMPLETE  0x05
+#define ESP_BLE_CONN_ADV_TYPE_UUID128_INCOMP   0x06
+#define ESP_BLE_CONN_ADV_TYPE_UUID128_COMPLETE 0x07
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA16   0x16
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA32   0x20
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA128  0x21
+#define ESP_BLE_CONN_ADV_TYPE_APPEARANCE       0x19
+#define ESP_BLE_CONN_ADV_TYPE_MANUFACTURER     0xFF
+
+#define ESP_BLE_CONN_ADV_DATA_MAX_LEN          31
+
+/**
+ * @brief   L2CAP CoC channel handle (opaque pointer)
+ *
+ * @note This is an opaque handle managed by the stack. Applications must not
+ *       dereference, cast, or persist it beyond the lifetime of the associated
+ *       connection. Use it only with the L2CAP CoC APIs provided here.
+ */
+typedef void *esp_ble_conn_l2cap_coc_chan_t;
+
+/**
+ * @brief   L2CAP CoC channel information
+ */
+typedef struct {
+    uint16_t scid;            /*!< Source Channel ID */
+    uint16_t dcid;            /*!< Destination Channel ID */
+    uint16_t our_l2cap_mtu;   /*!< Local L2CAP MTU */
+    uint16_t peer_l2cap_mtu;  /*!< Peer L2CAP MTU */
+    uint16_t psm;             /*!< Protocol/Service Multiplexer */
+    uint16_t our_coc_mtu;     /*!< Local CoC MTU */
+    uint16_t peer_coc_mtu;    /*!< Peer CoC MTU */
+} esp_ble_conn_l2cap_coc_chan_info_t;
+
+/**
+ * @brief   L2CAP CoC SDU buffer
+ */
+typedef struct {
+    uint16_t len;  /*!< SDU length in bytes */
+    uint8_t *data; /*!< SDU data buffer */
+} esp_ble_conn_l2cap_coc_sdu_t;
+
+/**
+ * @brief   BLE scan result data
+ */
+typedef struct {
+    uint8_t addr[6];                          /*!< Peer address */
+    uint8_t addr_type;                        /*!< Peer address type */
+    int8_t rssi;                              /*!< RSSI in dBm */
+    uint8_t adv_data_len;                     /*!< Advertising data length */
+    uint8_t adv_data[ESP_BLE_CONN_ADV_DATA_MAX_LEN]; /*!< Advertising data */
+} esp_ble_conn_scan_result_t;
+
+typedef bool (*esp_ble_conn_scan_cb_t)(const esp_ble_conn_scan_result_t *result, void *arg);
+
+/**
+ * @brief   L2CAP CoC event types
+ */
+typedef enum {
+    ESP_BLE_CONN_L2CAP_COC_EVENT_CONNECTED = 0,   /*!< CoC channel connected */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_DISCONNECTED,    /*!< CoC channel disconnected */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_ACCEPT,          /*!< CoC connection accepted */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_DATA_RECEIVED,   /*!< SDU received */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED,    /*!< TX unstalled */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_RECONFIG_COMPLETED, /*!< Local reconfigure completed */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_PEER_RECONFIGURED,  /*!< Peer reconfigured */
+} esp_ble_conn_l2cap_coc_event_type_t;
+
+/**
+ * @brief   L2CAP CoC event payload
+ */
+typedef struct esp_ble_conn_l2cap_coc_event {
+    esp_ble_conn_l2cap_coc_event_type_t type; /*!< Event type */
+    union {
+        struct {
+            int status;                       /*!< Connection status (0 on success) */
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } connect; /*!< Connected event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } disconnect; /*!< Disconnected event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            uint16_t peer_sdu_size;           /*!< Peer SDU size */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } accept; /*!< Accept event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+            esp_ble_conn_l2cap_coc_sdu_t sdu;  /*!< SDU payload. Note: The sdu.data buffer is managed internally
+                                                    and will be freed immediately after the callback returns.
+                                                    The callback must not save the pointer for later use. If
+                                                    asynchronous processing is needed, the callback should copy
+                                                    the data. */
+        } receive; /*!< Receive event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+            int status;                       /*!< TX status */
+        } tx_unstalled; /*!< TX unstalled event data */
+        struct {
+            int status;                       /*!< Reconfigure status */
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } reconfigured; /*!< Reconfigure event data */
+    };
+} esp_ble_conn_l2cap_coc_event_t;
+
+/**
+ * @brief   L2CAP CoC event callback
+ *
+ * @param[in] event  L2CAP CoC event payload
+ * @param[in] arg    User context
+ *
+ * @note For ESP_BLE_CONN_L2CAP_COC_EVENT_DATA_RECEIVED events, the sdu.data buffer
+ *       is managed internally and will be freed immediately after this callback returns.
+ *       The callback must not save the pointer for later use. If asynchronous processing
+ *       is needed, the callback should copy the data before returning.
+ *
+ * @return
+ *  - 0 to indicate the event was handled successfully
+ *  - Non-zero to indicate an application error (stack behavior may vary by event type)
+ */
+typedef int (*esp_ble_conn_l2cap_coc_event_cb_t)(esp_ble_conn_l2cap_coc_event_t *event, void *arg);
+
+/**
+ * @brief   Initialize L2CAP CoC SDU memory pool
+ *
+ * @note This API is thread-safe, but should be called from task context.
+ *       Repeated calls are safe and return ESP_OK.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_TIMEOUT if lock acquisition times out
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_mem_init(void);
+
+/**
+ * @brief   Release L2CAP CoC SDU memory pool
+ *
+ * @note This API is thread-safe, but should be called from task context.
+ *       It must only be called when there are no active L2CAP CoC servers or channels.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_TIMEOUT if lock acquisition times out
+ *  - ESP_ERR_INVALID_STATE if active L2CAP CoC contexts exist
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_mem_release(void);
+
+/**
+ * @brief   Provide receive buffer for L2CAP CoC channel (accept or next SDU)
+ *
+ * @param[in] conn_handle    Connection handle
+ * @param[in] peer_sdu_size  Peer SDU size from accept event
+ * @param[in] chan           L2CAP CoC channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if memory pool not initialized or allocation failed
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_size,
+                                        esp_ble_conn_l2cap_coc_chan_t chan);
 
 /**
  * Success code and error codes
@@ -129,7 +319,8 @@ typedef enum {
 
     ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< When the periodic adv report, the event comes */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST   = 8,    /*!< When the periodic sync lost, the event comes */
-    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9     /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9,    /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_CCCD_UPDATE          = 10   /*!< When CCCD (Client Characteristic Configuration Descriptor) is written, the event comes */
 } esp_ble_conn_event_t;
 
 /**
@@ -213,7 +404,11 @@ typedef struct {
     const char *extended_adv_rsp_data;              /*!< Extended advertising responses data */
 
     uint16_t    include_service_uuid: 1;            /*!< If include service UUID in advertising */
-    uint16_t    adv_uuid16;                         /*!< NOTE: Only Support one 16-bit UUID */
+    esp_ble_conn_uuid_type_t adv_uuid_type;         /*!< UUID type: BLE_CONN_UUID_TYPE_16 or BLE_CONN_UUID_TYPE_128. */
+    union {
+        uint16_t adv_uuid16;                        /*!< 16-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_16) */
+        uint8_t  adv_uuid128[BLE_UUID128_VAL_LEN];  /*!< 128-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_128) */
+    };                                              /*!< Service UUID for advertising */
 } esp_ble_conn_config_t;
 
 /**
@@ -259,6 +454,30 @@ typedef struct {
     uint16_t sync_handle;                           /*!< Periodic sync handle */
     int reason;                                     /*!< Reason for sync lost */
 } esp_ble_conn_periodic_sync_lost_t;
+
+/**
+ * @brief   This structure represents CCCD (Client Characteristic Configuration Descriptor) update event.
+ */
+typedef struct {
+    uint16_t conn_handle;                             /*!< Connection handle */
+    uint16_t char_handle;                             /*!< Characteristic handle */
+    uint8_t uuid_type;                                /*!< UUID type */
+    esp_ble_conn_uuid_t uuid;                         /*!< Characteristic UUID */
+    bool notify_enable;                                /*!< Notification enabled (bit 0) */
+    bool indicate_enable;                             /*!< Indication enabled (bit 1) */
+} esp_ble_conn_cccd_update_t;
+
+/**
+ * @brief   BLE connection parameters.
+ */
+typedef struct {
+    uint16_t itvl_min;            /*!< Connection event interval minimum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t itvl_max;            /*!< Connection event interval maximum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t latency;             /*!< Peripheral latency. This is in units of connection events to skip. Valid range: 0x0000–0x01F3 */
+    uint16_t supervision_timeout; /*!< Supervision timeout. This is in units of 10ms. (e.g. 400 = 4s). Valid range: 0x000A–0x0C80. Must be larger than the connection interval (itvl_max * 1.25ms) */
+    uint16_t min_ce_len;          /*!< Minimum connection event length. This is in units of 0.625ms. 0 if unused. */
+    uint16_t max_ce_len;          /*!< Maximum connection event length. This is in units of 0.625ms. 0 if unused. */
+} esp_ble_conn_params_t;
 
 #define BLE_UUID_CMP(type, src, dst) \
             ((type == BLE_CONN_UUID_TYPE_16) && (src.uuid16 == dst.uuid16)) ||  \
@@ -349,6 +568,224 @@ esp_err_t esp_ble_conn_connect(void);
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_disconnect(void);
+
+/**
+ * @brief   Get current connection handle (read-only).
+ *
+ * @param[out] out_conn_handle  Pointer to store current connection handle. 0 if not connected.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_conn_handle is NULL
+ */
+esp_err_t esp_ble_conn_get_conn_handle(uint16_t *out_conn_handle);
+
+/**
+ * @brief   Get current negotiated GATT MTU (read-only).
+ *
+ * @param[out] out_mtu  Pointer to store current MTU. Defaults to 23 if unknown.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_mtu is NULL
+ */
+esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu);
+
+/**
+ * @brief   Get current peer address (read-only).
+ *
+ * @param[out] out_addr  Pointer to store peer address (6 bytes).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_addr is NULL
+ *  - ESP_ERR_NOT_FOUND if not connected
+ */
+esp_err_t esp_ble_conn_get_peer_addr(uint8_t out_addr[6]);
+
+/**
+ * @brief   Get last disconnect reason (read-only).
+ *
+ * @param[out] out_reason  Pointer to store last disconnect reason.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_reason is NULL
+ *  - ESP_ERR_NOT_FOUND if no disconnect reason is available
+ */
+esp_err_t esp_ble_conn_get_disconnect_reason(uint16_t *out_reason);
+
+/**
+ * @brief   Request connection parameter update.
+ *
+ * @param[in] conn_handle  Connection handle (use esp_ble_conn_get_conn_handle to query)
+ * @param[in] params       Desired connection parameters
+ *
+ * @return
+ *  - ESP_OK on success (request accepted)
+ *  - ESP_ERR_INVALID_ARG on wrong parameters
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params);
+
+/**
+ * @brief   Create an L2CAP CoC server
+ *
+ * @param[in] psm     Protocol/Service Multiplexer to listen on (must be in range 0x0001-0x00FF for LE)
+ * @param[in] mtu     Maximum SDU size to use for the server (must be in range 23-512 bytes)
+ * @param[in] cb      L2CAP CoC event callback
+ * @param[in] cb_arg  Callback argument
+ *
+ * @note The callback context is persistent for this PSM and is reused across
+ *       incoming connections. It is not auto-freed until the L2CAP CoC memory
+ *       pool is released.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL callback, PSM out of range 0x0001-0x00FF, or MTU out of range)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_create_server(uint16_t psm, uint16_t mtu,
+                                               esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                               void *cb_arg);
+
+/**
+ * @brief   Initiate an L2CAP CoC connection
+ *
+ * @param[in] conn_handle  Connection handle (must be in range 0x0001-0x0EFF)
+ * @param[in] psm          Protocol/Service Multiplexer to connect to (must be in range 0x0001-0x00FF for LE)
+ * @param[in] mtu          Maximum SDU size to use for the connection (must be in range 23-512 bytes)
+ * @param[in] sdu_size     Receive buffer size for the first SDU (must be in range 23-65535 bytes).
+ *                         This size is used to allocate the initial RX buffer for the channel.
+ *                         Applications typically set it to the expected peer CoC MTU.
+ * @param[in] cb           L2CAP CoC event callback
+ * @param[in] cb_arg       Callback argument
+ *
+ * @note The callback context is auto-freed if the connection attempt fails
+ *       (ESP_BLE_CONN_L2CAP_COC_EVENT_CONNECTED with non-zero status) and after
+ *       ESP_BLE_CONN_L2CAP_COC_EVENT_DISCONNECTED.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL callback, conn_handle/PSM/sdu_size out of range, or MTU out of range)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_connect(uint16_t conn_handle, uint16_t psm, uint16_t mtu,
+                                         uint16_t sdu_size,
+                                         esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                         void *cb_arg);
+
+/**
+ * @brief   Send an SDU over an L2CAP CoC channel
+ *
+ * @param[in] chan  L2CAP CoC channel
+ * @param[in] sdu   SDU to send (data buffer is not owned by the stack, can be freed
+ *                  immediately after this function returns)
+ *
+ * @note Flow control: If the channel is stalled (buffer full), this function returns
+ *       ESP_ERR_NOT_FINISHED. The caller should wait for ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED
+ *       event before retrying the send operation.
+ *
+ * @note Memory pool: If mbuf allocation fails (ESP_ERR_NO_MEM), it indicates the memory
+ *       pool is exhausted. The caller should wait and retry later, or check if there
+ *       are pending operations that need to complete.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL channel, NULL sdu, invalid data pointer, or zero length)
+ *  - ESP_ERR_INVALID_STATE if memory pool not initialized or channel not connected
+ *  - ESP_ERR_NO_MEM if mbuf allocation failed (memory pool exhausted)
+ *  - ESP_ERR_NOT_FINISHED if channel is stalled or send would block (wait for TX_UNSTALLED event)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_send(esp_ble_conn_l2cap_coc_chan_t chan,
+                                      const esp_ble_conn_l2cap_coc_sdu_t *sdu);
+
+/**
+ * @brief   Provide a receive buffer for an L2CAP CoC channel
+ *
+ * @param[in] chan      L2CAP CoC channel
+ * @param[in] sdu_size  Receive buffer size for next SDU
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if memory pool not initialized or allocation failed
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_recv_ready(esp_ble_conn_l2cap_coc_chan_t chan,
+                                            uint16_t sdu_size);
+
+/**
+ * @brief   Disconnect an L2CAP CoC channel
+ *
+ * @param[in] chan  L2CAP CoC channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_disconnect(esp_ble_conn_l2cap_coc_chan_t chan);
+
+/**
+ * @brief   Get L2CAP CoC channel information
+ *
+ * @param[in]  chan      L2CAP CoC channel
+ * @param[out] chan_info Channel info output
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_get_chan_info(esp_ble_conn_l2cap_coc_chan_t chan,
+                                               esp_ble_conn_l2cap_coc_chan_info_t *chan_info);
+
+/**
+ * @brief   Register scan callback for BLE central role
+ *
+ * @param[in] cb      Scan callback (can be NULL to disable)
+ * @param[in] cb_arg  Callback argument
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ */
+esp_err_t esp_ble_conn_register_scan_callback(esp_ble_conn_scan_cb_t cb, void *cb_arg);
+
+/**
+ * @brief   Stop ongoing BLE scan (central role)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if scan is not active
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_scan_stop(void);
+
+/**
+ * @brief   Parse AD type data from raw advertising data
+ *
+ * @param[in]  adv_data   Raw advertising data
+ * @param[in]  adv_len    Raw advertising data length
+ * @param[in]  ad_type    Advertising data type
+ * @param[out] out_data   Output data pointer (points into adv_data)
+ * @param[out] out_len    Output data length
+ *
+ * @return
+ *  - ESP_OK if AD type is found
+ *  - ESP_ERR_NOT_FOUND if AD type is not present
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ */
+esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint8_t adv_len, uint8_t ad_type,
+                                      const uint8_t **out_data, uint8_t *out_len);
 
 /**
  * @brief This api is typically used to notify actively

@@ -14,6 +14,21 @@ menu "Espressif ELF Loader Configuration"
             Select this option to enable ELF Loader and show the submenu with ELF Loader configuration choices.
 
     if ELF_LOADER
+        config ELF_DYNAMIC_LOAD_SHARED_OBJECT
+            bool "Enable dynamic load shared object"
+            default n
+            help
+                Select this option to enable dynamic loading of shared objects (.so files) at runtime.
+
+        config ELF_FILE_SYSTEM_BASE_PATH
+            string "File-system base path"
+            depends on ELF_DYNAMIC_LOAD_SHARED_OBJECT
+            default "/storage"
+            help
+                Specify the base path for the file system where ELF files and shared objects are stored.
+                This path will be used as the root directory for loading ELF binaries.
+                Default is "/storage".
+
         config ELF_LOADER_CACHE_OFFSET
             bool
             default n
@@ -24,7 +39,7 @@ menu "Espressif ELF Loader Configuration"
             bool
             default n
             help
-                Select this option if D-cache and I-cache is not symmetry。
+                Select this option if D-cache and I-cache are not symmetric.
 
         config ELF_LOADER_LOAD_PSRAM
             bool "Load ELF to PSRAM"
@@ -48,6 +63,14 @@ menu "Espressif ELF Loader Configuration"
             config ELF_LOADER_CUSTOMER_SYMBOLS
                 bool "Customer Symbols Table"
                 default n
+
+            config ELF_LOADER_NUMBER_SYMBOLS
+                int "Maximum Number of registered symbol tables"
+                range 1 4096
+                default 32
+                help
+                    This configuration is the maximum number of registered symbol tables,
+                    which can be configured according to the number of embedded ELF applications
         endmenu
     endif
 endmenu

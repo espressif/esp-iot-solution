@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include "bldc_driver.h"
+#include "esp_attr.h"
 #include "bldc_control_param.h"
 
 typedef struct {

@@ -6,6 +6,7 @@
 #pragma once
 
 #include "driver/ledc.h"
+#include "esp_idf_version.h"
 #include "led_indicator.h"
 
 #ifdef __cplusplus
@@ -26,6 +27,9 @@ typedef struct {
     ledc_channel_t red_channel;       /*!< Red LED LEDC channel */
     ledc_channel_t green_channel;     /*!< Green LED LEDC channel */
     ledc_channel_t blue_channel;      /*!< Blue LED LEDC channel */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    ledc_sleep_mode_t sleep_mode;     /*!< LEDC sleep mode */
+#endif
 } led_indicator_rgb_config_t;
 
 /**

@@ -8,4 +8,5 @@ AI
     :maxdepth: 1
 
     OpenAI <openai>
+    MCP <mcp>
     TouchDigitRecognition <touch_digit_recognition>

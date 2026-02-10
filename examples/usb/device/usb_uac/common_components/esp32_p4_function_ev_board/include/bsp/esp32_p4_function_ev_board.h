@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,8 +20,17 @@
 #include "lvgl.h"
 
 #include "sdkconfig.h"
+#include "esp_idf_version.h"
 
 #include "driver/i2c_master.h"
+
+// Helper macro for DMA2D flags based on IDF version
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+#define ESP_LCD_DPI_PANEL_DMA2D_FLAGS(en_dma2d) \
+    .flags.use_dma2d = en_dma2d,
+#else
+#define ESP_LCD_DPI_PANEL_DMA2D_FLAGS(en_dma2d)
+#endif
 
 /**************************************************************************************************
  *  ESP32-P4-Function-ev-board Pinout
@@ -359,7 +368,7 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
             .vsync_pulse_width = 4,                              \
             .vsync_front_porch = 16,                             \
         },                                                       \
-        .flags.use_dma2d = en_dma2d,                             \
+        ESP_LCD_DPI_PANEL_DMA2D_FLAGS(en_dma2d)             \
     }
 
 #define BSP_TOUCH_MIRROR_X          (true)

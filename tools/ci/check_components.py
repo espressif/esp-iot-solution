@@ -32,7 +32,7 @@ def check_example_paths(component_path):
 def check_component_paths(file_path):
     with open(file_path, 'r') as f:
         data = yaml.safe_load(f)
-        directories = data['jobs']['upload_components']['steps'][1]['with']['directories'].strip().split(';')
+        directories = data['jobs']['upload_components']['steps'][2]['with']['directories'].strip().split(';')
 
         for directory in directories:
             if directory.strip():

@@ -23,3 +23,24 @@ def test_esp_lcd_axs15231b_qspi(dut: Dut)-> None:
     dut.expect_exact('Press ENTER to see the list of tests.')
     dut.write('[qspi]')
     dut.expect_unity_test_output(timeout = 1000)
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32_p4_lcd_ev_board')
+def test_esp_lcd_axs15231b_mipi_draw_pattern(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[draw_pattern]')
+    dut.expect_unity_test_output(timeout = 1000)
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32_p4_lcd_ev_board')
+def test_esp_lcd_axs15231b_mipi_draw_color_bar(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[draw_color_bar]')
+    dut.expect_unity_test_output(timeout = 1000)
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32_p4_lcd_ev_board')
+def test_esp_lcd_axs15231b_mipi_rotate(dut: Dut)-> None:
+    dut.expect_exact('Press ENTER to see the list of tests.')
+    dut.write('[mipi-rotate]')
+    dut.expect_unity_test_output(timeout = 1000)

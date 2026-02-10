@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v1.3.0 - 2026-01-08
+
+* Added support for generating a shared library
+* Added support for dynamically loading shared objects
+
+## v1.2.0 - 2026-01-05
+
+* Support compiling ELF application into main binary firmware
+
 ## v1.1.1 - 2025-06-26
 
 * Added support for ESP32-C61

@@ -6,7 +6,9 @@ Implementation of the ST77916 LCD controller with [esp_lcd](https://docs.espress
 
 | LCD controller | Communication interface | Component name |                               Link to datasheet                               |
 | :------------: | :---------------------: | :------------: | :---------------------------------------------------------------------------: |
-|     ST77916     |        SPI/QSPI         | esp_lcd_st77916 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/ST77916_SPEC_V1.0.pdf) |
+|     ST77916     |    SPI/QSPI/MIPI-DSI    | esp_lcd_st77916 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/ST77916_SPEC_V1.0.pdf) |
+
+**Note**: The MIPI-DSI interface is only supported on ESP32-P4.
 
 For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
 
@@ -119,4 +121,54 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
+```
+
+### MIPI-DSI Interface
+
+```c
+    ESP_LOGI(TAG, "Initialize MIPI DSI bus");
+    esp_lcd_dsi_bus_handle_t mipi_dsi_bus = NULL;
+    esp_lcd_dsi_bus_config_t bus_config = ST77916_PANEL_BUS_DSI_1CH_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
+
+    ESP_LOGI(TAG, "Install MIPI DBI panel IO");
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_dbi_io_config_t dbi_config = ST77916_PANEL_IO_DBI_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &io_handle));
+
+/**
+ * Uncomment these line if use custom initialization commands.
+ * The array should be declared as static const and positioned outside the function.
+ */
+// static const st77916_lcd_init_cmd_t lcd_init_cmds[] = {
+// //  {cmd, { data }, data_size, delay_ms}
+//     {0xF0, (uint8_t []){0x00, 0x28}, 2, 0},
+//     {0xF2, (uint8_t []){0x00, 0x28}, 2, 0},
+//     ...
+// };
+
+    ESP_LOGI(TAG, "Install ST77916 panel driver");
+    esp_lcd_panel_handle_t panel_handle = NULL;
+    esp_lcd_dpi_panel_config_t dpi_config = ST77916_360_360_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
+    st77916_vendor_config_t vendor_config = {
+        // .init_cmds = lcd_init_cmds,      // Uncomment these line if use custom initialization commands
+        // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77916_lcd_init_cmd_t),
+        .flags = {
+            .use_mipi_interface = 1,
+        },
+        .mipi_config = {
+            .dsi_bus = mipi_dsi_bus,
+            .dpi_config = &dpi_config,
+        },
+    };
+    const esp_lcd_panel_dev_config_t panel_config = {
+        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,      // Set to -1 if not use
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // 16 or 24
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st77916(io_handle, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 ```

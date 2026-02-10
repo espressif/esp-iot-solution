@@ -1,0 +1,9 @@
+menu "IoT USB Host RNDIS"
+
+    config RNDIS_DISABLE_CDC_NOTIFICATION
+        bool "Disable CDC notification"
+        default n
+        help
+            Disable CDC notification for save channel of USB host
+
+endmenu

@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.3.1"
 targets:
   - esp32s2
   - esp32s3
@@ -9,9 +9,9 @@ repository: https://github.com/espressif/esp-iot-solution.git
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_rndis.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4"
+  idf: ">=5.2"
   espressif/iot_usbh_cdc:
-    version: "2.*"
+    version: "^3.0"
     override_path: "../iot_usbh_cdc"
     public: true
   espressif/iot_eth:
@@ -19,3 +19,6 @@ dependencies:
     override_path: "../../iot_eth"
     public: true
   cmake_utilities: "*"
+
+examples:
+  - path: ../../../examples/usb/host/usb_rndis_4g_module

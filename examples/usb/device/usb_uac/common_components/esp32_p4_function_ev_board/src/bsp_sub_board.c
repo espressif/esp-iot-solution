@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +17,7 @@
 #include "esp_lcd_ek79007.h"
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_touch_ft5x06.h"
+#include "esp_idf_version.h"
 
 #include "sdkconfig.h"
 #include "bsp_err_check.h"
@@ -122,6 +123,11 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(mipi_dbi_io, &panel_config, &mipi_dpi_panel));
+#endif
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if BSP_LCD_DSI_USE_DMA2D
+    ESP_ERROR_CHECK(esp_lcd_dpi_panel_enable_dma2d(mipi_dpi_panel));
+#endif
 #endif
 
     gpio_set_level(27, 1);

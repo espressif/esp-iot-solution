@@ -1,13 +1,15 @@
 variables:
   # Versioned esp-idf-doc env image to use for all document building jobs
-  ESP_DOCS_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.0"
+  ESP_DOCS_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.5"
 
 push_to_github:
   stage: deploy
-  only:
-    - master
-    - /^release\/v/
-#  when: on_success
+  rules:
+    - if: '$CI_COMMIT_REF_NAME != "master" && $CI_COMMIT_REF_NAME !~ /^release\/v/'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "web" && $CI_FORCE_PUSH_TO_GITHUB == "true"'
+      when: manual
+    - when: on_success
   image: $CI_DOCKER_REGISTRY/esp32-ci-env
   tags:
     - github_sync
@@ -104,35 +106,35 @@ post_links:
 # Please modify tools/ci/launchpad/upload_project_config.yml at same time.
 pack-upload_files:
   stage: deploy
-  image: espressif/idf:release-v5.3
+  image: espressif/idf:release-v5.5
   tags: ['build']
   needs:
-    - job: "build_example_display_lcd_lcd_with_te: [espressif/idf:release-v5.1]"
-    - job: "build_example_display_lcd_qspi_with_ram: [espressif/idf:release-v5.1]"
+    - job: "build_example_display_lcd_lcd_with_te: [espressif/idf:release-v5.3]"
+    - job: "build_example_display_lcd_qspi_with_ram: [espressif/idf:release-v5.5]"
     - job: "build_example_display_lcd_qspi_without_ram: [espressif/idf:release-v5.3]"
-    - job: "build_example_display_lcd_rgb_avoid_tearing: [espressif/idf:release-v5.3]"
-    - job: "build_example_display_lcd_rgb_lcd_8bit: [espressif/idf:release-v5.3]"
+    - job: "build_example_display_lcd_rgb_avoid_tearing: [espressif/idf:release-v5.5]"
+    - job: "build_example_display_lcd_rgb_lcd_8bit: [espressif/idf:release-v5.5]"
     - job: "build_example_keyboard: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_bootloader_uf2: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dongle: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_dual_uvc_device: [espressif/idf:release-v5.3]"
     - job: "build_example_usb_device_usb_extend_screen: [espressif/idf:release-v5.4]"
-    - job: "build_example_usb_device_usb_hid_device: [espressif/idf:release-v5.0]"
-    - job: "build_example_usb_device_usb_lcd_display"
-    - job: "build_example_usb_device_usb_msc_wireless_disk: [espressif/idf:release-v5.0]"
-    - job: "build_example_usb_device_usb_surface_dial: [espressif/idf:release-v5.0]"
+    - job: "build_example_usb_device_usb_hid_device: [espressif/idf:release-v5.3]"
+    - job: "build_example_usb_device_usb_lcd_display: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_msc_wireless_disk: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_surface_dial: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_device_usb_uac: [espressif/idf:release-v5.3]"
-    - job: "build_example_usb_device_usb_uart_bridge: [espressif/idf:release-v5.0]"
-    - job: "build_example_usb_device_usb_uf2_nvs: [espressif/idf:release-v5.2]"
-    - job: "build_example_usb_device_usb_uf2_ota: [espressif/idf:release-v5.2]"
-    - job: "build_example_usb_device_usb_webcam: [espressif/idf:release-v5.3]"
-    - job: "build_example_usb_host_usb_audio_player: [espressif/idf:release-v5.0]"
-    - job: "build_example_usb_host_usb_camera_lcd_display: [espressif/idf:release-v5.1]"
-    - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.1]"
-    - job: "build_example_usb_host_usb_cdc_4g_module: [espressif/idf:release-v5.1]"
-    - job: "build_example_usb_host_usb_cdc_basic: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_device_usb_uart_bridge: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_uf2_nvs: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_uf2_ota: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_webcam: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_host_usb_audio_player: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_host_usb_camera_lcd_display: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_host_usb_camera_mic_spk: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_host_usb_cdc_4g_module: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_host_usb_cdc_basic: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_host_usb_hub_dual_camera: [espressif/idf:release-v5.4]"
-    - job: "build_example_usb_host_usb_msc_ota: [espressif/idf:release-v5.1]"
+    - job: "build_example_usb_host_usb_msc_ota: [espressif/idf:release-v5.5]"
     - job: "build_example_vision_opencv_color_tracker: [espressif/idf:release-v5.4]"
 
   artifacts:

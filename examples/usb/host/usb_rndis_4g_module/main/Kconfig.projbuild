@@ -1,0 +1,20 @@
+menu "Example Configuration"
+
+    config EXAMPLE_USB_RNDIS_DOWNLOAD_SPEED_TEST
+        bool "Enable USB RNDIS Download Speed Test"
+        default n
+        help
+            Enable USB RNDIS Download Speed Test.
+
+    config EXAMPLE_ENABLE_AT_CMD
+        bool "Enable USB RNDIS AT Command"
+        help
+            Enable USB RNDIS AT Command.
+
+    config EXAMPLE_AT_INTERFACE_NUM
+        depends on EXAMPLE_ENABLE_AT_CMD
+        int "USB RNDIS AT Interface Number"
+        default 2
+        help
+            Set the USB RNDIS AT interface number.
+endmenu

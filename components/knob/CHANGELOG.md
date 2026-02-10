@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v1.0.2 - 2025-11-26
+
+* Fixed incorrect gpio and timer deinit when deleting the knob.
+
+## v1.0.1 - 2025-10-10
+
+* Fixed requires in CMake for IDF6.
+
 ## v1.0.0 - 2024-9-26
 
 * Add ext1_wakeup mode for Knob when define CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=y

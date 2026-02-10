@@ -1,5 +1,23 @@
 # ChangeLog
 
+## v2.1.1 - 2025-12-22
+
+### Bugfix
+
+* Guard the RMT initialisation code with appropriate config option to prevent compilation failures for newer chips like esp32c61.
+
+## v2.1.0 - 2025-11-5
+
+## Improve:
+
+* LED controlled by the LEDC driver supports [sleep_mode](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32/api-reference/peripherals/ledc.html#power-management) configuration
+
+## v2.0.2 - 2025-10-08
+
+### Bugfix
+
+* Fixed requires in CMake for IDF6.
+
 ## v2.0.1 - 2025-8-12
 
 ### Bugfix

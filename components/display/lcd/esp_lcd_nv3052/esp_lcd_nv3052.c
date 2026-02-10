@@ -439,11 +439,11 @@ static esp_err_t panel_nv3052_del(esp_lcd_panel_t *panel)
 {
     nv3052_panel_t *nv3052 = (nv3052_panel_t *)panel->user_data;
 
+    // Delete RGB panel
+    ESP_RETURN_ON_ERROR(nv3052->del(panel), TAG, "del nv3052 panel failed");
     if (nv3052->reset_gpio_num >= 0) {
         gpio_reset_pin(nv3052->reset_gpio_num);
     }
-    // Delete RGB panel
-    nv3052->del(panel);
     free(nv3052);
     ESP_LOGD(TAG, "del nv3052 panel @%p", nv3052);
     return ESP_OK;

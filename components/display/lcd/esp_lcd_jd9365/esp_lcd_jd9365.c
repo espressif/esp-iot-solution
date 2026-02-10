@@ -78,7 +78,7 @@ esp_err_t esp_lcd_new_panel_jd9365(const esp_lcd_panel_io_handle_t io, const esp
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
 
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case LCD_RGB_ELEMENT_ORDER_RGB:
         jd9365->madctl_val = 0;
         break;
@@ -338,11 +338,11 @@ static esp_err_t panel_jd9365_del(esp_lcd_panel_t *panel)
 {
     jd9365_panel_t *jd9365 = (jd9365_panel_t *)panel->user_data;
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(jd9365->del(panel), TAG, "del jd9365 panel failed");
     if (jd9365->reset_gpio_num >= 0) {
         gpio_reset_pin(jd9365->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    jd9365->del(panel);
     ESP_LOGD(TAG, "del jd9365 panel @%p", jd9365);
     free(jd9365);
 

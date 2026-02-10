@@ -1,22 +1,13 @@
 .pre_check_template:
   stage: pre_check
-  image: python:3.9
-  tags: ["build", "amd64", "internet"]
+  image: python:3.12
   dependencies: []
-
-check_copyright:
-  extends:
-    - .pre_check_template
-  allow_failure: false
-  before_script:
-    - pip install git+https://github.com/espressif/check-copyright.git@v1.0.3
-  script:
-    - python -m check_copyright --verbose --dry-run --ignore tools/ci/check_copyright_ignore.txt --config tools/ci/check_copyright_config.yaml .
 
 check_example_paths:
   extends:
     - .pre_check_template
     - .rules:pre_check:components
+  tags: ["shiny"]
   script:
     - pip install --upgrade pip
     - pip install pyyaml
@@ -27,6 +18,13 @@ check_pre_commit:
     - .pre_check_template
   before_script:
     - pip install pre-commit
+  rules:
+    # Pipelines triggered via the API or web might not have a base commit SHA, so failures are allowed.
+    - if: '$CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "web"'
+      allow_failure: true
+    - when: always
+      allow_failure: false
+  tags: ["pre-commit"]
   script:
     - |
       # merged results pipelines, by default
@@ -42,13 +40,13 @@ check_pre_commit:
       # print the MODIFIED_FILES
       echo "MODIFIED_FILES: $MODIFIED_FILES"
     - pre-commit install --allow-missing-config -t pre-commit -t commit-msg
-    - export SKIP=check-copyright # copyrights has been checked in separate job
     - pre-commit run --files $MODIFIED_FILES
 
 check_readme_links:
   extends:
     - .pre_check_template
     - .rules:pre_check:readme
+  tags: ["build", "internet"]
   allow_failure: true
   script:
     - python ${CI_PROJECT_DIR}/tools/ci/check_readme_links.py

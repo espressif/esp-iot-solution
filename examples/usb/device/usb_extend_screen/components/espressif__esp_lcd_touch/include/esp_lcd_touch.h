@@ -69,14 +69,16 @@ typedef struct {
 } esp_lcd_touch_config_t;
 
 typedef struct {
+    uint8_t track_id; /*!< Track ID */
+    uint16_t x; /*!< X coordinate */
+    uint16_t y; /*!< Y coordinate */
+    uint16_t strength; /*!< Strength */
+} esp_lcd_touch_point_data_t;
+
+typedef struct {
     uint8_t points; /*!< Count of touch points saved */
 
-    struct {
-        uint8_t track_id; /*!< Track ID */
-        uint16_t x; /*!< X coordinate */
-        uint16_t y; /*!< Y coordinate */
-        uint16_t strength; /*!< Strength */
-    } coords[CONFIG_ESP_LCD_TOUCH_MAX_POINTS];
+    esp_lcd_touch_point_data_t coords[CONFIG_ESP_LCD_TOUCH_MAX_POINTS];
 
 #if (CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS > 0)
     uint8_t buttons; /*!< Count of buttons states saved */
@@ -272,6 +274,21 @@ struct esp_lcd_touch_s {
 esp_err_t esp_lcd_touch_read_data(esp_lcd_touch_handle_t tp);
 
 /**
+ * @brief Get each touch point data from touch controller
+ *
+ * @param tp: Touch handler
+ * @param data: Array of data structures to be filled out
+ * @param point_cnt: Count of touched points (equals to count of items in x and y array)
+ * @param max_point_cnt: Maximum count of touched points to return (equals with max size of x and y array)
+ *
+ * @return
+ *      - ESP_OK on success
+ *      - ESP_ERR_INVALID_ARG if parameter is invalid
+ *      - ESP_ERR_INVALID_STATE if parameter is uninitialized
+ */
+esp_err_t esp_lcd_touch_get_data(esp_lcd_touch_handle_t tp, esp_lcd_touch_point_data_t *data, uint8_t *point_cnt, uint8_t max_point_cnt);
+
+/**
  * @brief Read coordinates from touch controller
  *
  * @param tp: Touch handler
@@ -284,6 +301,7 @@ esp_err_t esp_lcd_touch_read_data(esp_lcd_touch_handle_t tp);
  * @return
  *      - Returns true, when touched and coordinates read. Otherwise returns false.
  */
+[[deprecated("This API will be removed in version 2.0.0. Use esp_lcd_touch_get_data instead!")]]
 bool esp_lcd_touch_get_coordinates(esp_lcd_touch_handle_t tp, uint16_t *x, uint16_t *y, uint16_t *strength, uint8_t *track_id, uint8_t *point_num, uint8_t max_point_num);
 
 #if (CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS > 0)

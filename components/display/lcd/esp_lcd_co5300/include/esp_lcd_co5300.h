@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@
 
 #include "hal/lcd_types.h"
 #include "esp_lcd_panel_vendor.h"
+#include "esp_idf_version.h"
 
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_mipi_dsi.h"
@@ -72,6 +73,19 @@ typedef struct {
  *      - Otherwise             on fail
  */
 esp_err_t esp_lcd_new_panel_co5300(const esp_lcd_panel_io_handle_t io, const esp_lcd_panel_dev_config_t *panel_dev_config, esp_lcd_panel_handle_t *ret_panel);
+
+/**
+ * @brief Set brightness for CO5300 LCD panel
+ *
+ * @param[in] panel LCD panel handle
+ * @param[in] brightness_percent Brightness percentage (0-100)
+ * @return
+ *      - ESP_ERR_INVALID_ARG   if parameter is invalid
+ *      - ESP_ERR_INVALID_STATE if panel IO not initialized
+ *      - ESP_OK                on success
+ *      - Otherwise             on fail
+ */
+esp_err_t esp_lcd_panel_co5300_set_brightness(esp_lcd_panel_handle_t panel, uint8_t brightness_percent);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////// Default Configuration Macros for SPI/QSPI Interface //////////////////////////////////////
@@ -155,6 +169,7 @@ esp_err_t esp_lcd_new_panel_co5300(const esp_lcd_panel_io_handle_t io, const esp
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -180,6 +195,33 @@ esp_err_t esp_lcd_new_panel_co5300(const esp_lcd_panel_io_handle_t io, const esp
             .vsync_front_porch = 18,                             \
         },                                                       \
         .flags.use_dma2d = true,                                 \
+    }
+#endif
+
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ */
+#define CO5300_466_466_PANEL_60HZ_DPI_CONFIG_CF(color_format)    \
+    {                                                            \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
+        .dpi_clock_freq_mhz = 16,                                \
+        .virtual_channel = 0,                                    \
+        .in_color_format = color_format,                         \
+        .num_fbs = 1,                                            \
+        .video_timing = {                                        \
+            .h_size = 466,                                       \
+            .v_size = 466,                                       \
+            .hsync_back_porch = 32,                              \
+            .hsync_pulse_width = 4,                              \
+            .hsync_front_porch = 32,                             \
+            .vsync_back_porch = 12,                              \
+            .vsync_pulse_width = 4,                              \
+            .vsync_front_porch = 18,                             \
+        },                                                       \
     }
 
 #ifdef __cplusplus

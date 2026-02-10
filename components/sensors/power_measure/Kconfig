@@ -1,7 +1,182 @@
 menu "power_measure"
+    choice POWER_MEASURE_CHIP_TYPE
+        prompt "Power measurement chip type"
+        default POWER_MEASURE_CHIP_BL0937
+        help
+            Select the power measurement chip type to use
+
+        config POWER_MEASURE_CHIP_BL0937
+            bool "BL0937"
+            help
+                BL0937 is a single-phase power measurement IC with high accuracy
+                Features: Voltage, Current, Power, Power Factor, Energy measurement
+                Interface: GPIO (CF, CF1, SEL pins)
+
+        config POWER_MEASURE_CHIP_INA236
+            bool "INA236"
+            help
+                INA236 is a precision digital power monitor with I2C interface
+                Features: Voltage, Current, Power measurement
+                Interface: I2C
+                Note: Does not support energy measurement or power factor
+
+        config POWER_MEASURE_CHIP_BL0942
+            bool "BL0942"
+            help
+                BL0942 is a single-phase power measurement IC with UART/SPI interface
+                Features: Voltage, Current, Power, Power Factor, Energy measurement
+                Interface: UART or SPI
+                Note: Supports both UART and SPI communication modes
+    endchoice
+
     config BL0937_IRAM_OPTIMIZED
-    bool "Enable IRAM optimization for BL0937"
-    default n
-    help
-        Enable IRAM optimization for BL0937
+        bool "Enable IRAM optimization for BL0937"
+        default n
+        depends on POWER_MEASURE_CHIP_BL0937
+        help
+            Enable IRAM optimization for BL0937
+
+    config BL0942_UART_OPTIMIZED
+        bool "Enable UART optimization for BL0942"
+        default n
+        depends on POWER_MEASURE_CHIP_BL0942
+        help
+            Enable UART optimization for BL0942 communication
+
+    menu "BL0937 Hardware Configuration"
+        config BL0937_VREF_MV
+            int "Internal voltage reference (mV)"
+            default 1218
+            help
+                Internal voltage reference value for BL0937 in millivolts (1218 = 1.218V)
+
+        config BL0937_R_CURRENT_MOHM
+            int "Current sampling resistor (mOhm)"
+            default 1
+            help
+                Value of the current sampling resistor in milliohms (1 = 1mOhm for ~30A max measurement)
+
+        config BL0937_R_VOLTAGE
+            int "Voltage divider resistor (Ohm)"
+            default 2010
+            help
+                Value of the voltage divider resistor (typically 6x 470K upstream + 1K downstream = 2010)
+
+        config BL0937_F_OSC
+            int "Internal oscillator frequency (Hz)"
+            default 2000000
+            help
+                Frequency of the BL0937 internal clock
+
+        config BL0937_PULSE_TIMEOUT_US
+            int "Pulse timeout (microseconds)"
+            default 1000000
+            help
+                Timeout for pulse detection. Higher values allow better precision but reduce sampling rate.
+                Lower values increase sampling rate but reduce precision.
+                Values below 500000 (0.5s) are not recommended.
+    endmenu
+
+    menu "BL0942 Hardware Configuration"
+        config BL0942_UART_BAUD_RATE
+            int "UART baud rate"
+            default 4800
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                UART baud rate for BL0942 communication
+
+        config BL0942_DEVICE_ADDRESS
+            int "Device address"
+            default 0
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                BL0942 device address (0-255)
+
+        config BL0942_USE_SPI
+            bool "Use SPI interface instead of UART"
+            default n
+            depends on POWER_MEASURE_CHIP_BL0942
+            help
+                Enable SPI interface for BL0942 communication
+    endmenu
+
+    menu "GPIO Pin Configuration"
+        menu "BL0937 GPIO Pins"
+            config BL0937_CF_GPIO
+                int "CF GPIO pin number"
+                default 3
+                help
+                    GPIO pin connected to BL0937 CF pin (current frequency output)
+
+            config BL0937_SEL_GPIO
+                int "SEL GPIO pin number"
+                default 4
+                help
+                    GPIO pin connected to BL0937 SEL pin (selection pin)
+
+            config BL0937_CF1_GPIO
+                int "CF1 GPIO pin number"
+                default 7
+                help
+                    GPIO pin connected to BL0937 CF1 pin (power frequency output)
+        endmenu
+
+        menu "INA236 I2C GPIO Pins"
+            config INA236_I2C_SCL_GPIO
+                int "I2C SCL GPIO pin number"
+                default 13
+                help
+                    GPIO pin for I2C clock line
+
+            config INA236_I2C_SDA_GPIO
+                int "I2C SDA GPIO pin number"
+                default 20
+                help
+                    GPIO pin for I2C data line
+        endmenu
+
+        menu "BL0942 GPIO Pins"
+            config BL0942_UART_TX_GPIO
+                int "UART TX GPIO pin number"
+                default 6
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 UART TX
+
+            config BL0942_UART_RX_GPIO
+                int "UART RX GPIO pin number"
+                default 7
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 UART RX
+
+            config BL0942_SPI_MOSI_GPIO
+                int "SPI MOSI GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI MOSI (set to -1 if not used)
+
+            config BL0942_SPI_MISO_GPIO
+                int "SPI MISO GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI MISO (set to -1 if not used)
+
+            config BL0942_SPI_SCLK_GPIO
+                int "SPI SCLK GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI SCLK (set to -1 if not used)
+
+            config BL0942_SPI_CS_GPIO
+                int "SPI CS GPIO pin number"
+                default -1
+                depends on POWER_MEASURE_CHIP_BL0942
+                help
+                    GPIO pin for BL0942 SPI CS (set to -1 if not used)
+        endmenu
+    endmenu
 endmenu

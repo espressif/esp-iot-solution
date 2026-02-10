@@ -1,4 +1,4 @@
-version: "0.3.0"
+version: "0.3.3"
 targets:
   - esp32
   - esp32s2
@@ -18,11 +18,9 @@ dependencies:
   espressif/libpng:
     version: "1.*"
   espressif/esp_new_jpeg:
-    version: 0.5.*
+    version: 0.*
   lvgl/lvgl:
     version: ">=8,<10"
-examples:
-  - path: ../../../../examples/hmi/perf_benchmark
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
   originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

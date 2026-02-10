@@ -18,7 +18,7 @@ typedef struct {
     uint32_t speed_cnt;
 } bldc_zero_cross_adc_t;
 
-bool read_adc_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data)
+bool IRAM_ATTR read_adc_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data)
 {
     bldc_zero_cross_adc_t *zero_cross = (bldc_zero_cross_adc_t *)user_data;
     if (zero_cross->control_param->status == INJECT) {

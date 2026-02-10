@@ -1,0 +1,23 @@
+menu "Hardware Configuration"
+
+choice EXAMPLE_DISPLAY_ROTATION
+    prompt "Display Rotation"
+    default EXAMPLE_DISPLAY_ROTATION_0
+    help
+        Select the SPI LCD rotation so that the LVGL coordinate system matches the physical screen orientation.
+
+config EXAMPLE_DISPLAY_ROTATION_0
+    bool "Rotate 0 degrees"
+
+config EXAMPLE_DISPLAY_ROTATION_90
+    bool "Rotate 90 degrees clockwise"
+
+config EXAMPLE_DISPLAY_ROTATION_180
+    bool "Rotate 180 degrees"
+
+config EXAMPLE_DISPLAY_ROTATION_270
+    bool "Rotate 270 degrees clockwise"
+
+endchoice
+
+endmenu

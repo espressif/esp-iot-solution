@@ -59,5 +59,9 @@ Get one X and Y coordinates with strength of touch.
     uint16_t touch_strength[1];
     uint8_t touch_cnt = 0;
 
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 1);
+    esp_lcd_touch_point_data_t points[1] = {0};
+    esp_lcd_touch_get_data(tp, points, &touch_cnt, 1);
+    if (touch_cnt > 0) {
+        ESP_LOGI(TAG, "Touch position: [%d, %d], strength %d, count %d", points[0].x, points[0].y, points[0].strength, touch_cnt);
+    }
 ```

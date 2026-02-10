@@ -1,5 +1,9 @@
 set(PRIVREQ esp_timer)
-set(REQ driver)
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
+    set(REQ esp_driver_gpio)
+else()
+    set(REQ driver)
+endif()
 set(SRC_FILES "button_gpio.c" "iot_button.c" "button_matrix.c")
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")

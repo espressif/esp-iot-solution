@@ -1,4 +1,4 @@
-version: 0.2.0
+version: 0.2.1
 description: Battery capacity estimation based on ADC
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/battery_fuel_gauge/adc_battery_estimation
 repository: https://github.com/espressif/esp-iot-solution.git

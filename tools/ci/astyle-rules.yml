@@ -34,7 +34,6 @@ not_formatted_permanent:
     - "components/bluetooth/ble_profiles/esp/ble_ota/proto-c/"
     - "components/bluetooth/ble_profiles/esp/ble_ota/python/"
     - "components/display/touch_panel/calibration/basic_painter/fonts/"
-    - "components/gui/lvgl_gui/"
     - "components/usb/usb_stream/test_apps/main/wave_1ch_16bits.c"
     - "components/utilities/xz/"
     - "docs/_static/esp32s2_adc_range_to_3300.patch"
@@ -43,13 +42,13 @@ not_formatted_permanent:
     - "docs/_static/esp32s3_adc_range_to_3300_v531.patch"
     - "docs/doxygen-known-warnings.txt"
     - "docs/sphinx-known-warnings.txt"
-    - "examples/hmi/lvgl_coffee/"
-    - "examples/hmi/lvgl_example/"
-    - "examples/hmi/lvgl_thermostat/"
-    - "examples/hmi/lvgl_wificonfig/"
     - "examples/usb/device/usb_webcam/eyes_show/"
     - "examples/usb/host/usb_camera_lcd_display/components/esp_painter/font/"
     - "examples/usb/host/usb_camera_mic_spk/main/wave_1ch_16bits.c"
+    - "examples/robot/ragtime_panther/follower/main/ui/"
+    - "components/sensors/gas/bme690/bme69x.c"
+    - "components/sensors/gas/bme690/bme69x.h"
+    - "components/sensors/gas/bme690/bme69x_defs.h"
 
 docs:
   # Docs directory contains some .inc files, which are not C include files

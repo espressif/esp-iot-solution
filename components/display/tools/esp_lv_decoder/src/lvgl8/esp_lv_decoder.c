@@ -8,23 +8,8 @@
  *      INCLUDES
  *********************/
 
-/*
- * Module overview:
- *  - This decoder integrates with LVGL v8 image decoder pipeline and supports:
- *    PNG (RGBA), QOI (RGB/RGBA), JPEG (RGB565/RGB888), and custom SP images
- *      - SP images are container files produced by the esp_mmap_assets toolchain
- *        and may contain split PNG slices ("_SPNG__") or split JPEG slices ("_SJPG__").
- *        The container header is 22 bytes: 8-byte magic, 6-byte meta (w,h,splits,split_h),
- *        followed by a 2-byte table per split (little-endian). The actual encoded data
- *        resides after this table.
- *  - Hardware JPEG acceleration is used when available and the image dimensions meet
- *    alignment requirements; software fallback is used otherwise.
- *
- * Non-functional note:
- *  - The changes in this file aim to improve readability only (naming consistency,
- *    helpers, and comments). No functional behavior is intended to change.
- */
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_check.h"
@@ -44,6 +29,7 @@
 #endif
 
 #include "esp_cache.h"
+#include "esp_heap_caps.h"
 
 #if ESP_LV_ENABLE_PJPG
 #define PJPG_MAGIC "_PJPG__"
@@ -128,6 +114,8 @@ static int is_jpg(const uint8_t *raw_data, size_t len);
 static void decoder_cleanup(image_decoder_t *img_dec);
 static void decoder_free(image_decoder_t *img_dec);
 
+static void * decoder_malloc(size_t size);
+static void * decoder_aligned_alloc(size_t alignment, size_t size);
 static lv_res_t libpng_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize);
 static lv_res_t qoi_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, size_t insize);
 static lv_res_t jpeg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize);
@@ -153,9 +141,9 @@ static uint8_t *s_pjpg_rx_rgb = NULL;
 static size_t s_pjpg_rx_rgb_size = 0;
 static uint8_t *s_pjpg_rx_a = NULL;
 static size_t s_pjpg_rx_a_size = 0;
+static SemaphoreHandle_t s_pjpg_mutex = NULL;
 #endif
 
-/* Byte-order helpers for readability */
 static inline uint16_t read_le16(const uint8_t *p)
 {
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
@@ -166,7 +154,6 @@ static inline uint32_t read_be32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
 
-/* SP helpers: tag check and meta reader (LE fields) */
 static inline int sp_is_sp_tag(const uint8_t *hdr8)
 {
     return (!strncmp((const char *)hdr8, SP_TAG_SPNG, SP_TAG_LEN) ||
@@ -190,20 +177,54 @@ static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, 
     }
 }
 
+/* Allocate buffer memory, prefer PSRAM for large buffers */
+static void * decoder_malloc(size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_malloc(size, MALLOC_CAP_DEFAULT);
+}
+
+static void * decoder_aligned_alloc(size_t alignment, size_t size)
+{
+#if defined(CONFIG_SPIRAM) && CONFIG_SPIRAM
+    void *buf = heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (buf) {
+        return buf;
+    }
+#endif
+    return heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
+}
+
 esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
 {
     ESP_RETURN_ON_FALSE(ret_handle, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
 
     lv_img_decoder_t *dec = lv_img_decoder_create();
+    ESP_RETURN_ON_FALSE(dec, ESP_ERR_NO_MEM, TAG, "failed to create LVGL decoder");
     lv_img_decoder_set_info_cb(dec, decoder_info);
     lv_img_decoder_set_open_cb(dec, decoder_open);
     lv_img_decoder_set_close_cb(dec, decoder_close);
     lv_img_decoder_set_read_line_cb(dec, decoder_read_line);
 
+#if ESP_LV_ENABLE_PJPG
+    if (!s_pjpg_mutex) {
+        s_pjpg_mutex = xSemaphoreCreateMutex();
+        if (!s_pjpg_mutex) {
+            lv_img_decoder_delete(dec);
+            return ESP_ERR_NO_MEM;
+        }
+    }
+#endif
+
     *ret_handle = dec;
 #if ESP_LV_ENABLE_HW_JPEG
     jpeg_decode_engine_cfg_t decode_eng_cfg = {
-        .timeout_ms = 200,
+        .timeout_ms = 40,
     };
     ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &jpgd_handle));
 #endif
@@ -233,6 +254,10 @@ esp_err_t esp_lv_decoder_deinit(esp_lv_decoder_handle_t handle)
         s_pjpg_rx_a = NULL;
         s_pjpg_rx_a_size = 0;
     }
+    if (s_pjpg_mutex) {
+        vSemaphoreDelete(s_pjpg_mutex);
+        s_pjpg_mutex = NULL;
+    }
 #endif
     return ESP_OK;
 
@@ -256,7 +281,7 @@ static lv_res_t libpng_decode32(uint8_t **out, uint32_t *w, uint32_t *h, const u
 
     *w = image.width;
     *h = image.height;
-    *out = malloc(PNG_IMAGE_SIZE(image));
+    *out = decoder_malloc(PNG_IMAGE_SIZE(image));
     if (*out == NULL) {
         png_image_free(&image);
         return LV_RES_INV;
@@ -316,7 +341,7 @@ static lv_res_t jpeg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
         *w = out_info->width;
         *h = out_info->height;
         if (out) {
-            *out = (uint8_t *)heap_caps_aligned_alloc(16, out_info->height * out_info->width * DEC_RGB_BPP, MALLOC_CAP_DEFAULT);
+            *out = (uint8_t *)decoder_aligned_alloc(16, out_info->height * out_info->width * DEC_RGB_BPP);
             ESP_GOTO_ON_ERROR(*out ? ESP_OK : ESP_ERR_NO_MEM, cleanup2, TAG, "alloc jpeg out buffer failed");
 
             jpeg_io->outbuf = *out;
@@ -379,7 +404,7 @@ static lv_fs_res_t load_image_file(const char *filename, uint8_t **buffer, size_
         return LV_FS_RES_FS_ERR;
     }
 
-    *buffer = malloc(len);
+    *buffer = decoder_malloc(len);
     if (!*buffer) {
         ESP_LOGE(TAG, "Failed to allocate memory for file %s", filename);
         lv_fs_close(&f);
@@ -550,6 +575,43 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
             uint32_t width, height;
             lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
 
+            if (lv_ret != LV_RES_OK && load_img_size == 1024) {
+                free(load_img_data);
+                load_img_data = NULL;
+
+                // Read up to 8KB
+                lv_fs_file_t f;
+                lv_fs_res_t res = lv_fs_open(&f, fn, LV_FS_MODE_RD);
+                if (res == LV_FS_RES_OK) {
+                    uint32_t file_len;
+                    lv_fs_seek(&f, 0, LV_FS_SEEK_END);
+                    lv_fs_tell(&f, &file_len);
+                    lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
+
+                    uint32_t read_len = (file_len > 8192) ? 8192 : file_len;
+                    load_img_data = decoder_malloc(read_len);
+                    if (load_img_data) {
+                        uint32_t rn = 0;
+                        if (lv_fs_read(&f, load_img_data, read_len, &rn) == LV_FS_RES_OK && rn == read_len) {
+                            load_img_size = read_len;
+                            lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
+                        } else {
+                            free(load_img_data);
+                            load_img_data = NULL;
+                            lv_ret = LV_RES_INV;
+                        }
+                    }
+                    lv_fs_close(&f);
+                }
+
+                if (lv_ret != LV_RES_OK) {
+                    if (load_img_data) {
+                        free(load_img_data);
+                    }
+                    return LV_RES_INV;
+                }
+            }
+
             header->cf = LV_IMG_CF_TRUE_COLOR;
             header->w = width;
             header->h = height;
@@ -684,9 +746,11 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 img_dec->frame_base_array[i] = img_dec->frame_base_array[i - 1] + offset;
             }
             img_dec->img_cache_frame_index = -1;
-            img_dec->frame_cache = (void *)malloc(img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP);
+            // Allocate frame cache with maximum possible size to prevent buffer overflow
+            size_t frame_cache_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
+            img_dec->frame_cache = (void *)decoder_malloc(frame_cache_size);
             if (! img_dec->frame_cache) {
-                ESP_LOGE(TAG, "Not enough memory for frame_cache allocation");
+                ESP_LOGE(TAG, "Not enough memory for frame_cache allocation (size: %zu)", frame_cache_size);
                 decoder_cleanup(img_dec);
                 img_dec = NULL;
                 return LV_RES_INV;
@@ -881,9 +945,11 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 }
 
                 img_dec->img_cache_frame_index = -1; //INVALID AT BEGINNING for a forced compare mismatch at first time.
-                img_dec->frame_cache = (void *)malloc(img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP);
+                // Allocate frame cache with maximum possible size to prevent buffer overflow
+                size_t frame_cache_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
+                img_dec->frame_cache = (void *)decoder_malloc(frame_cache_size);
                 if (!img_dec->frame_cache) {
-                    ESP_LOGE(TAG, "Not enough memory for frame_cache allocation");
+                    ESP_LOGE(TAG, "Not enough memory for frame_cache allocation (size: %zu)", frame_cache_size);
                     lv_fs_close(&lv_file);
                     decoder_cleanup(img_dec);
                     img_dec = NULL;
@@ -978,7 +1044,15 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
                 } else {
                     img_dec->img_depth = RGB_depth;
                 }
-                memcpy(img_dec->frame_cache, img_data, img_width * img_height * img_dec->img_depth);
+                // Boundary check to prevent buffer overflow
+                size_t copy_size = img_width * img_height * img_dec->img_depth;
+                size_t max_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
+                if (copy_size > max_size) {
+                    ESP_LOGE(TAG, "Buffer overflow prevented: copy_size=%zu > max_size=%zu", copy_size, max_size);
+                    free(img_data);
+                    return LV_RES_INV;
+                }
+                memcpy(img_dec->frame_cache, img_data, copy_size);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -1026,7 +1100,15 @@ static lv_res_t decoder_read_line(lv_img_decoder_t *decoder, lv_img_decoder_dsc_
                 } else {
                     img_dec->img_depth = RGB_depth;
                 }
-                memcpy(img_dec->frame_cache, img_data, img_dec->img_single_frame_height * img_dec->img_x_res * img_dec->img_depth);
+                // Boundary check to prevent buffer overflow
+                size_t copy_size = img_dec->img_single_frame_height * img_dec->img_x_res * img_dec->img_depth;
+                size_t max_size = img_dec->img_x_res * img_dec->img_single_frame_height * DEC_RGBA_BPP;
+                if (copy_size > max_size) {
+                    ESP_LOGE(TAG, "Buffer overflow prevented: copy_size=%zu > max_size=%zu", copy_size, max_size);
+                    free(img_data);
+                    return LV_RES_INV;
+                }
+                memcpy(img_dec->frame_cache, img_data, copy_size);
                 if (img_data != NULL) {
                     free(img_data);
                 }
@@ -1248,12 +1330,14 @@ static lv_res_t pjpg_parse_header(const uint8_t *buf, size_t len, pjpg_info_t *i
 }
 
 #if ESP_LV_ENABLE_HW_JPEG
-/*
- * Helpers to reduce duplication in PJPG decode path
- */
 static esp_err_t ensure_jpeg_output_buffer(uint8_t **buf, size_t *buf_size, size_t min_need)
 {
     if (*buf_size < min_need) {
+        if (*buf) {
+            jpeg_free_align(*buf);
+            *buf = NULL;
+            *buf_size = 0;
+        }
         size_t out_size = 0;
         uint8_t *new_buf = jpeg_alloc_decoder_mem(min_need, &(jpeg_decode_memory_alloc_cfg_t) {
             .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER
@@ -1306,21 +1390,36 @@ static esp_err_t decode_jpeg_plane_to_dst(const uint8_t *jpeg,
 
 static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize)
 {
+    lv_res_t res = LV_RES_INV;
     pjpg_info_t info;
+    bool mutex_locked = false;
+#if LV_COLOR_DEPTH == 16
+    uint8_t *dst = NULL;
+#endif
+#if ESP_LV_ENABLE_PJPG
+    if (s_pjpg_mutex) {
+        if (xSemaphoreTake(s_pjpg_mutex, portMAX_DELAY) != pdTRUE) {
+            ESP_LOGE(TAG, "Failed to acquire PJPG mutex");
+            return LV_RES_INV;
+        }
+        mutex_locked = true;
+    }
+#endif
+
     if (pjpg_parse_header(in, insize, &info) != LV_RES_OK) {
-        return LV_RES_INV;
+        goto exit;
     }
     size_t need = PJPG_HEADER_SIZE + info.rgb_jpeg_size + info.alpha_jpeg_size;
     if (insize < need) {
-        return LV_RES_INV;
+        goto exit;
     }
     *w = info.width;
     *h = info.height;
 #if LV_COLOR_DEPTH == 16
     size_t final_size = (size_t)(*w) * (*h) * 3;
-    uint8_t *dst = (uint8_t *)heap_caps_aligned_alloc(16, final_size, MALLOC_CAP_DEFAULT);
+    dst = (uint8_t *)decoder_aligned_alloc(16, final_size);
     if (!dst) {
-        return LV_RES_INV;
+        goto exit;
     }
     uint32_t aligned_w = ((*w) + 15) & ~15;
     uint32_t aligned_h = ((*h) + 15) & ~15;
@@ -1331,10 +1430,10 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
     if (!jpgd_handle) {
         ESP_LOGE(TAG, "PJPG no handle");
         free(dst);
-        return LV_RES_INV;
+        dst = NULL;
+        goto exit;
     }
 
-    /* Decode RGB565 plane */
     jpeg_decode_cfg_t rgb_cfg = { .output_format = JPEG_DECODE_OUT_FORMAT_RGB565, .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR };
     uint8_t *rgb_plane = dst;
     size_t rgb_plane_size = (size_t)(*w) * (*h) * 2;
@@ -1343,10 +1442,10 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
                                  aligned_w, aligned_h, *w, *h, 2,
                                  rgb_plane, (*w) * 2) != ESP_OK) {
         free(dst);
-        return LV_RES_INV;
+        dst = NULL;
+        goto exit;
     }
 
-    /* Decode A8 plane or fill opaque */
     uint8_t *alpha_plane = dst + rgb_plane_size;
     size_t alpha_plane_size = (size_t)(*w) * (*h);
     if (info.alpha_jpeg_size > 0) {
@@ -1357,7 +1456,8 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
                                      aligned_w, aligned_h, *w, *h, 1,
                                      alpha_plane, (*w)) != ESP_OK) {
             free(dst);
-            return LV_RES_INV;
+            dst = NULL;
+            goto exit;
         }
     } else {
         memset(alpha_plane, 0xFF, alpha_plane_size);
@@ -1366,10 +1466,29 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
     safe_cache_sync(dst, final_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
     *out = dst;
-    return LV_RES_OK;
+    res = LV_RES_OK;
 #else
-    return LV_RES_INV;
+    LV_UNUSED(out);
+    LV_UNUSED(w);
+    LV_UNUSED(h);
+    LV_UNUSED(in);
+    LV_UNUSED(insize);
+    goto exit;
 #endif
+
+exit:
+#if LV_COLOR_DEPTH == 16
+    if (res != LV_RES_OK && dst) {
+        free(dst);
+        dst = NULL;
+    }
+#endif
+#if ESP_LV_ENABLE_PJPG
+    if (mutex_locked) {
+        xSemaphoreGive(s_pjpg_mutex);
+    }
+#endif
+    return res;
 }
 #endif
 
@@ -1388,16 +1507,24 @@ static int is_pjpg(const uint8_t *raw_data, size_t len)
 #if ESP_LV_ENABLE_HW_JPEG
 static esp_err_t safe_cache_sync(void *addr, size_t size, int flags)
 {
+    /*
+     * Align the cache sync range to cache line boundaries. This wrapper keeps
+     * the call sites concise and centralizes the alignment logic.
+     */
     if (!addr || size == 0) {
         return ESP_OK;
     }
+
     const size_t CACHE_LINE_SIZE = 128;
     uintptr_t start_addr = (uintptr_t)addr;
     uintptr_t aligned_start = start_addr & ~(CACHE_LINE_SIZE - 1);
     size_t end_addr = start_addr + size;
     size_t aligned_end = (end_addr + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
     size_t aligned_size = aligned_end - aligned_start;
-    return esp_cache_msync((void*)aligned_start, aligned_size, flags);
+
+    esp_err_t ret = esp_cache_msync((void*)aligned_start, aligned_size, flags);
+    if (ret != ESP_OK) { }
+    return ESP_OK;
 }
 #endif
 

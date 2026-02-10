@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <string.h>
 #include <stdlib.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -58,44 +59,42 @@ esp_err_t esp_lcd_touch_read_data(esp_lcd_touch_handle_t tp)
     return tp->read_data(tp);
 }
 
-bool esp_lcd_touch_get_coordinates(esp_lcd_touch_handle_t tp, uint16_t *x, uint16_t *y, uint16_t *strength, uint8_t *track_id, uint8_t *point_num, uint8_t max_point_num)
+esp_err_t esp_lcd_touch_get_data(esp_lcd_touch_handle_t tp, esp_lcd_touch_point_data_t *data, uint8_t *point_cnt, uint8_t max_point_cnt)
 {
-    bool touched = false;
+    ESP_RETURN_ON_FALSE(tp != NULL, ESP_ERR_INVALID_ARG, TAG, "Touch point handler can't be NULL");
+    ESP_RETURN_ON_FALSE(data != NULL, ESP_ERR_INVALID_ARG, TAG, "Data array can't be NULL");
+    ESP_RETURN_ON_FALSE(point_cnt != NULL, ESP_ERR_INVALID_ARG, TAG, "Point count pointer can't be NULL");
+    ESP_RETURN_ON_FALSE(tp->get_xy != NULL, ESP_ERR_INVALID_STATE, TAG, "Touch driver must be initialized");
+    ESP_RETURN_ON_FALSE(max_point_cnt > 0, ESP_ERR_INVALID_ARG, TAG, "Array size must be at least 1");
 
-    assert(tp != NULL);
-    assert(x != NULL);
-    assert(y != NULL);
-    assert(tp->get_xy != NULL);
+    uint16_t x[max_point_cnt];
+    uint16_t y[max_point_cnt];
+    uint16_t strength[max_point_cnt];
+    uint8_t track_id[max_point_cnt];
 
-    touched = tp->get_xy(tp, x, y, strength, track_id, point_num, max_point_num);
+    bool touched = tp->get_xy(tp, x, y, strength, track_id, point_cnt, max_point_cnt);
     if (!touched) {
-        return false;
+        *point_cnt = 0;
+        return ESP_OK;
     }
 
-    /* Process coordinates by user */
     if (tp->config.process_coordinates != NULL) {
-        tp->config.process_coordinates(tp, x, y, strength, track_id, point_num, max_point_num);
+        tp->config.process_coordinates(tp, x, y, strength, track_id, point_cnt, max_point_cnt);
     }
 
-    /* Software coordinates adjustment needed */
     bool sw_adj_needed = ((tp->config.flags.mirror_x && (tp->set_mirror_x == NULL)) ||
                           (tp->config.flags.mirror_y && (tp->set_mirror_y == NULL)) ||
                           (tp->config.flags.swap_xy && (tp->set_swap_xy == NULL)));
 
-    /* Adjust all coordinates */
-    for (int i = 0; (sw_adj_needed && i < *point_num); i++) {
-
-        /*  Mirror X coordinates (if not supported by HW) */
+    for (int i = 0; (sw_adj_needed && i < *point_cnt); i++) {
         if (tp->config.flags.mirror_x && tp->set_mirror_x == NULL) {
             x[i] = tp->config.x_max - x[i];
         }
 
-        /*  Mirror Y coordinates (if not supported by HW) */
         if (tp->config.flags.mirror_y && tp->set_mirror_y == NULL) {
             y[i] = tp->config.y_max - y[i];
         }
 
-        /* Swap X and Y coordinates (if not supported by HW) */
         if (tp->config.flags.swap_xy && tp->set_swap_xy == NULL) {
             uint16_t tmp = x[i];
             x[i] = y[i];
@@ -103,7 +102,45 @@ bool esp_lcd_touch_get_coordinates(esp_lcd_touch_handle_t tp, uint16_t *x, uint1
         }
     }
 
-    return touched;
+    memset(data, 0, sizeof(esp_lcd_touch_point_data_t) * max_point_cnt);
+    for (int i = 0; i < *point_cnt; i++) {
+        data[i].x = x[i];
+        data[i].y = y[i];
+        data[i].strength = strength[i];
+        data[i].track_id = track_id[i];
+    }
+
+    return ESP_OK;
+}
+
+bool esp_lcd_touch_get_coordinates(esp_lcd_touch_handle_t tp, uint16_t *x, uint16_t *y, uint16_t *strength, uint8_t *track_id, uint8_t *point_num, uint8_t max_point_num)
+{
+    ESP_RETURN_ON_FALSE(tp != NULL, false, TAG, "Touch point handler can't be NULL");
+    ESP_RETURN_ON_FALSE(x != NULL, false, TAG, "X coordinates data array can't be NULL");
+    ESP_RETURN_ON_FALSE(y != NULL, false, TAG, "Y coordinates data array can't be NULL");
+    ESP_RETURN_ON_FALSE(point_num != NULL, false, TAG, "Point count pointer can't be NULL");
+    ESP_RETURN_ON_FALSE(tp->get_xy != NULL, false, TAG, "Touch driver must be initialized");
+    ESP_RETURN_ON_FALSE(max_point_num > 0, false, TAG, "Array size must be at least 1");
+
+    esp_lcd_touch_point_data_t points[max_point_num];
+    memset(points, 0, sizeof(points));
+    esp_err_t ret = esp_lcd_touch_get_data(tp, points, point_num, max_point_num);
+    if (ret != ESP_OK || *point_num == 0) {
+        return false;
+    }
+
+    for (int i = 0; i < *point_num; i++) {
+        x[i] = points[i].x;
+        y[i] = points[i].y;
+        if (strength) {
+            strength[i] = points[i].strength;
+        }
+        if (track_id) {
+            track_id[i] = points[i].track_id;
+        }
+    }
+
+    return true;
 }
 
 #if (CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS > 0)

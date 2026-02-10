@@ -16,10 +16,10 @@ MAX17048/MAX17049       Provide accurate
                         charge status information, 
                         charge/discharge rates, 
                         and configurable 
-                        alarm indicators.                    I2C        Analog Devices         `Datesheet <https://www.analog.com/media/en/technical-documentation/data-sheets/MAX17048-MAX17049.pdf>`__
+                        alarm indicators.                    I2C        Analog Devices         `Datasheet <https://www.analog.com/media/en/technical-documentation/data-sheets/MAX17048-MAX17049.pdf>`__
 
 BQ27220                 A single-cell gauge that uses 
                         the Compensated End-ofDischarge 
                         Voltage (CEDV) algorithm for 
-                        fuel gauging                         I2C        Texas Instruments      `Datesheet <https://www.ti.com/lit/gpn/bq27220>`__
+                        fuel gauging                         I2C        Texas Instruments      `Datasheet <https://www.ti.com/lit/gpn/bq27220>`__
 ====================== =================================== ========= ======================= ========================================================================================================

@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
+#include <stdio.h>
+#include <sys/stat.h>
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
@@ -12,6 +14,8 @@
 #include <esp_partition.h>
 #include "esp_ota_ops.h"
 #include "esp_image_format.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_mmap_assets.h"
 
 static const char *TAG = "mmap_assets";
@@ -43,13 +47,16 @@ typedef struct {
 } mmap_assets_item_t;
 
 typedef struct {
+    FILE *file_handle;                      /*!< File handle when using file system */
     esp_partition_mmap_handle_t *mmap_handle;
     const esp_partition_t *partition;
     mmap_assets_item_t *item;
     int max_asset;
+    SemaphoreHandle_t mutex;          /*!< Mutex for file operations thread safety */
     struct {
         unsigned int mmap_enable: 1;        /*!< Flag to indicate if memory-mapped I/O is enabled */
-        unsigned int reserved: 31;          /*!< Reserved for future use */
+        unsigned int use_fs: 1;             /*!< Flag to indicate if using file system instead of partition */
+        unsigned int reserved: 30;          /*!< Reserved for future use */
     } flags;
     int stored_files;
 } mmap_assets_t;
@@ -76,14 +83,27 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     map_asset = (mmap_assets_t *)calloc(1, sizeof(mmap_assets_t));
     ESP_GOTO_ON_FALSE(map_asset, ESP_ERR_NO_MEM, err, TAG, "no mem for map_asset handle");
 
+    // Initialize mutex for thread safety
+    map_asset->mutex = xSemaphoreCreateMutex();
+    ESP_GOTO_ON_FALSE(map_asset->mutex, ESP_ERR_NO_MEM, err, TAG, "no mem for mutex");
+
+    map_asset->flags.use_fs = config->flags.use_fs;
     map_asset->flags.mmap_enable = config->flags.mmap_enable;
 
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    ESP_GOTO_ON_FALSE(running, ESP_ERR_NOT_FOUND, err, TAG, "Can not find running partition");
+    if (config->flags.use_fs) {
 
-    const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, config->partition_label);
-    ESP_GOTO_ON_FALSE(partition, ESP_ERR_NOT_FOUND, err, TAG, "Can not find \"%s\" in partition table", config->partition_label);
-    map_asset->partition = partition;
+        FILE *fp = fopen(config->partition_label, "rb");
+        ESP_GOTO_ON_FALSE(fp, ESP_ERR_NOT_FOUND, err, TAG, "Can not open file \"%s\"", config->partition_label);
+        map_asset->file_handle = fp;
+        map_asset->flags.mmap_enable = 0;
+    } else {
+        const esp_partition_t *running = esp_ota_get_running_partition();
+        ESP_GOTO_ON_FALSE(running, ESP_ERR_NOT_FOUND, err, TAG, "Can not find running partition");
+
+        const esp_partition_t *partition = esp_partition_find_first(ESP_PARTITION_TYPE_ANY, ESP_PARTITION_SUBTYPE_ANY, config->partition_label);
+        ESP_GOTO_ON_FALSE(partition, ESP_ERR_NOT_FOUND, err, TAG, "Can not find \"%s\" in partition table", config->partition_label);
+        map_asset->partition = partition;
+    }
 
     int stored_files = 0;
     int stored_len = 0;
@@ -93,23 +113,62 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     uint32_t offset = 0;
     uint32_t size = 0;
 
-    if ((partition->address == running->address) && (partition->size == running->size)) {
+    if (map_asset->flags.use_fs) {
+        offset = 0;
 
-        const esp_partition_pos_t part = {
-            .offset = running->address,
-            .size = running->size,
-        };
-        esp_image_metadata_t metadata;
-        esp_image_get_metadata(&part, &metadata);
+        fseek(map_asset->file_handle, 0, SEEK_END);
+        size = ftell(map_asset->file_handle);
+        fseek(map_asset->file_handle, 0, SEEK_SET);
+    } else {
+        const esp_partition_t *partition = map_asset->partition;
+        const esp_partition_t *running = esp_ota_get_running_partition();
 
-        offset = metadata.image_len;
-        ESP_LOGD(TAG, "partition:%s(0x%x), offset:0x%X", partition->label, (unsigned int)partition->address, (unsigned int)offset);
-        ESP_GOTO_ON_FALSE(partition->size > offset, ESP_ERR_INVALID_SIZE, err, TAG, "Partition %s size is insufficient", partition->label);
+        if ((partition->address == running->address) && (partition->size == running->size)) {
+
+            const esp_partition_pos_t part = {
+                .offset = running->address,
+                .size = running->size,
+            };
+            esp_image_metadata_t metadata;
+            esp_image_get_metadata(&part, &metadata);
+
+            offset = metadata.image_len;
+            ESP_LOGD(TAG, "partition:%s(0x%x), offset:0x%X", partition->label, (unsigned int)partition->address, (unsigned int)offset);
+            ESP_GOTO_ON_FALSE(partition->size > offset, ESP_ERR_INVALID_SIZE, err, TAG, "Partition %s size is insufficient", partition->label);
+        }
+
+        size = partition->size - offset;
     }
 
-    size = partition->size - offset;
+    if (map_asset->flags.use_fs) {
+        fseek(map_asset->file_handle, ASSETS_FILE_NUM_OFFSET, SEEK_SET);
+        fread(&stored_files, sizeof(stored_files), 1, map_asset->file_handle);
 
-    if (map_asset->flags.mmap_enable) {
+        fseek(map_asset->file_handle, ASSETS_CHECKSUM_OFFSET, SEEK_SET);
+        fread(&stored_chksum, sizeof(stored_chksum), 1, map_asset->file_handle);
+
+        fseek(map_asset->file_handle, ASSETS_TABLE_LEN, SEEK_SET);
+        fread(&stored_len, sizeof(stored_len), 1, map_asset->file_handle);
+
+        if (config->flags.full_check) {
+            uint32_t read_offset = ASSETS_TABLE_OFFSET;
+            uint32_t bytes_left = stored_len;
+            uint8_t buffer[1024];
+
+            while (bytes_left > 0) {
+                uint32_t read_size = (bytes_left > sizeof(buffer)) ? sizeof(buffer) : bytes_left;
+                fseek(map_asset->file_handle, read_offset, SEEK_SET);
+                size_t bytes_read = fread(buffer, 1, read_size, map_asset->file_handle);
+                ESP_GOTO_ON_FALSE(bytes_read == read_size, ESP_ERR_INVALID_SIZE, err, TAG, "fread failed");
+
+                calculated_checksum += compute_checksum(buffer, read_size);
+                read_offset += read_size;
+                bytes_left -= read_size;
+            }
+            calculated_checksum &= 0xFFFF;
+        }
+    } else if (map_asset->flags.mmap_enable) {
+        const esp_partition_t *partition = map_asset->partition;
         int free_pages = spi_flash_mmap_get_free_pages(ESP_PARTITION_MMAP_DATA);
         uint32_t storage_size = free_pages * 64 * 1024;
         ESP_LOGD(TAG, "The storage free size is %ld KB", storage_size / 1024);
@@ -127,6 +186,7 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
             calculated_checksum = compute_checksum((uint8_t *)(root + ASSETS_TABLE_OFFSET), stored_len);
         }
     } else {
+        const esp_partition_t *partition = map_asset->partition;
         esp_partition_read(partition, ASSETS_FILE_NUM_OFFSET, &stored_files, sizeof(stored_files));
         esp_partition_read(partition, ASSETS_CHECKSUM_OFFSET, &stored_chksum, sizeof(stored_chksum));
         esp_partition_read(partition, ASSETS_TABLE_LEN, &stored_len, sizeof(stored_len));
@@ -166,25 +226,40 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     map_asset->stored_files = stored_files;
 
-    item = (mmap_assets_item_t *)malloc(sizeof(mmap_assets_item_t) * config->max_files);
+    item = (mmap_assets_item_t *)malloc(sizeof(mmap_assets_item_t) * stored_files);
     ESP_GOTO_ON_FALSE(item, ESP_ERR_NO_MEM, err, TAG, "no mem for asset item");
 
-    if (map_asset->flags.mmap_enable) {
-        mmap_assets_table_t *table = (mmap_assets_table_t *)(root + ASSETS_TABLE_OFFSET);
-        for (int i = 0; i < config->max_files; i++) {
+    if (map_asset->flags.use_fs) {
+        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * stored_files);
+        ESP_GOTO_ON_FALSE(table, ESP_ERR_NO_MEM, err, TAG, "no mem for asset table");
+
+        for (int i = 0; i < stored_files; i++) {
+            fseek(map_asset->file_handle, ASSETS_TABLE_OFFSET + i * sizeof(mmap_assets_table_t), SEEK_SET);
+            size_t bytes_read = fread((table + i), sizeof(mmap_assets_table_t), 1, map_asset->file_handle);
+            ESP_GOTO_ON_FALSE(bytes_read == 1, ESP_ERR_INVALID_SIZE, err, TAG, "fread table failed");
+
             (item + i)->table = (table + i);
-            (item + i)->asset_mem = (void *)(root + ASSETS_TABLE_OFFSET + config->max_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+        }
+    } else if (map_asset->flags.mmap_enable) {
+        mmap_assets_table_t *table = (mmap_assets_table_t *)(root + ASSETS_TABLE_OFFSET);
+        for (int i = 0; i < stored_files; i++) {
+            (item + i)->table = (table + i);
+            (item + i)->asset_mem = (void *)(root + ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
         }
     } else {
-        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * config->max_files);
-        for (int i = 0; i < config->max_files; i++) {
+        const esp_partition_t *partition = map_asset->partition;
+        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * stored_files);
+        ESP_GOTO_ON_FALSE(table, ESP_ERR_NO_MEM, err, TAG, "no mem for asset table");
+
+        for (int i = 0; i < stored_files; i++) {
             esp_partition_read(partition, ASSETS_TABLE_OFFSET + i * sizeof(mmap_assets_table_t), (table + i), sizeof(mmap_assets_table_t));
             (item + i)->table = (table + i);
-            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + config->max_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
         }
     }
 
-    for (int i = 0; i < config->max_files; i++) {
+    for (int i = 0; i < stored_files; i++) {
         ESP_LOGD(TAG, "[%d], offset:[%" PRIu32 "], size:[%" PRIu32 "], name:%s, %p",
                  i,
                  (item + i)->table->asset_offset,
@@ -196,6 +271,10 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
             uint16_t magic_data, *magic_ptr = NULL;
             if (map_asset->flags.mmap_enable) {
                 magic_ptr = (uint16_t *)(item + i)->asset_mem;
+            } else if (map_asset->flags.use_fs) {
+                fseek(map_asset->file_handle, (int)(item + i)->asset_mem, SEEK_SET);
+                fread(&magic_data, ASSETS_FILE_MAGIC_LEN, 1, map_asset->file_handle);
+                magic_ptr = &magic_data;
             } else {
                 esp_partition_read(map_asset->partition, (int)(item + i)->asset_mem, &magic_data, ASSETS_FILE_MAGIC_LEN);
                 magic_ptr = &magic_data;
@@ -207,7 +286,7 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     map_asset->mmap_handle = mmap_handle;
     map_asset->item = item;
-    map_asset->max_asset = config->max_files;
+    map_asset->max_asset = stored_files;
     *ret_item = (mmap_assets_handle_t)map_asset;
 
     ESP_LOGD(TAG, "new asset handle:@%p", map_asset);
@@ -219,7 +298,7 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
 err:
     if (item) {
-        if (false == map_asset->flags.mmap_enable) {
+        if (map_asset && false == map_asset->flags.mmap_enable) {
             free((void *)(item + 0)->table);
         }
         free(item);
@@ -231,6 +310,12 @@ err:
     }
 
     if (map_asset) {
+        if (map_asset->file_handle) {
+            fclose(map_asset->file_handle);
+        }
+        if (map_asset->mutex) {
+            vSemaphoreDelete(map_asset->mutex);
+        }
         free(map_asset);
     }
 
@@ -245,6 +330,14 @@ esp_err_t mmap_assets_del(mmap_assets_handle_t handle)
     if (map_asset->mmap_handle) {
         esp_partition_munmap(*(map_asset->mmap_handle));
         free(map_asset->mmap_handle);
+    }
+
+    if (map_asset->file_handle) {
+        fclose(map_asset->file_handle);
+    }
+
+    if (map_asset->mutex) {
+        vSemaphoreDelete(map_asset->mutex);
     }
 
     if (map_asset->item) {
@@ -263,7 +356,7 @@ esp_err_t mmap_assets_del(mmap_assets_handle_t handle)
 
 int mmap_assets_get_stored_files(mmap_assets_handle_t handle)
 {
-    assert(handle && "handle is invalid");
+    ESP_RETURN_ON_FALSE(handle, -1, TAG, "handle is invalid");
     mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
 
     return map_asset->stored_files;
@@ -271,82 +364,117 @@ int mmap_assets_get_stored_files(mmap_assets_handle_t handle)
 
 size_t mmap_assets_copy_mem(mmap_assets_handle_t handle, size_t offset, void *dest_buffer, size_t size)
 {
-    assert(handle && "handle is invalid");
+    esp_err_t ret = ESP_OK;
+    size_t bytes_copied = 0;
+
+    ESP_RETURN_ON_FALSE(handle, 0, TAG, "handle is invalid");
+    ESP_RETURN_ON_FALSE(dest_buffer, 0, TAG, "dest_buffer is invalid");
+    ESP_RETURN_ON_FALSE(offset, 0, TAG, "Invalid offset: %zu", offset);
+
     mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
 
-    if (true == map_asset->flags.mmap_enable) {
+    ESP_GOTO_ON_FALSE(xSemaphoreTake(map_asset->mutex, portMAX_DELAY) == pdTRUE,
+                      ESP_ERR_TIMEOUT, err, TAG, "Failed to acquire file mutex");
+
+    if (map_asset->flags.mmap_enable) {
         memcpy(dest_buffer, (void *)offset, size);
-        return size;
-    } else if (offset) {
-        esp_partition_read(map_asset->partition, offset, dest_buffer, size);
+        bytes_copied = size;
+    } else if (map_asset->flags.use_fs) {
+        fseek(map_asset->file_handle, offset, SEEK_SET);
+        bytes_copied = fread(dest_buffer, 1, size, map_asset->file_handle);
+
+    } else {
+        ret = esp_partition_read(map_asset->partition, offset, dest_buffer, size);
+        ESP_GOTO_ON_ERROR(ret, err, TAG, "esp_partition_read failed");
+        bytes_copied = size;
+    }
+
+    xSemaphoreGive(map_asset->mutex);
+    return bytes_copied;
+
+err:
+    if (map_asset->mutex) {
+        xSemaphoreGive(map_asset->mutex);
+    }
+    return 0;
+}
+
+size_t mmap_assets_copy_by_index(mmap_assets_handle_t handle, int index, void *dest_buffer, size_t size)
+{
+    ESP_RETURN_ON_FALSE(handle, 0, TAG, "handle is invalid");
+    ESP_RETURN_ON_FALSE(dest_buffer, 0, TAG, "dest_buffer is invalid");
+
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, 0, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    uint32_t asset_size = (map_asset->item + index)->table->asset_size - ASSETS_FILE_MAGIC_LEN;
+    if (size > asset_size) {
+        size = asset_size;
+    }
+
+    const char *asset_mem = (map_asset->item + index)->asset_mem;
+
+    if (map_asset->flags.mmap_enable) {
+        memcpy(dest_buffer, asset_mem + ASSETS_FILE_MAGIC_LEN, size);
         return size;
     } else {
-        ESP_LOGE(TAG, "Invalid offset: %zu.", offset);
-        return 0;
+        size_t mem_offset = (size_t)asset_mem + ASSETS_FILE_MAGIC_LEN;
+        return mmap_assets_copy_mem(handle, mem_offset, dest_buffer, size);
     }
 }
 
 const uint8_t *mmap_assets_get_mem(mmap_assets_handle_t handle, int index)
 {
-    assert(handle && "handle is invalid");
-    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(handle, NULL, TAG, "handle is invalid");
 
-    if (map_asset->max_asset > index) {
-        return (const uint8_t *)((map_asset->item + index)->asset_mem + ASSETS_FILE_MAGIC_LEN);
-    } else {
-        ESP_LOGE(TAG, "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
-        return NULL;
-    }
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, NULL, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    return (const uint8_t *)((map_asset->item + index)->asset_mem + ASSETS_FILE_MAGIC_LEN);
 }
 
 const char *mmap_assets_get_name(mmap_assets_handle_t handle, int index)
 {
-    assert(handle && "handle is invalid");
-    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(handle, NULL, TAG, "handle is invalid");
 
-    if (map_asset->max_asset > index) {
-        return (map_asset->item + index)->table->asset_name;
-    } else {
-        ESP_LOGE(TAG, "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
-        return NULL;
-    }
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, NULL, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    return (map_asset->item + index)->table->asset_name;
 }
 
 int mmap_assets_get_size(mmap_assets_handle_t handle, int index)
 {
-    assert(handle && "handle is invalid");
-    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(handle, -1, TAG, "handle is invalid");
 
-    if (map_asset->max_asset > index) {
-        return (map_asset->item + index)->table->asset_size;
-    } else {
-        ESP_LOGE(TAG, "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
-        return -1;
-    }
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    return (map_asset->item + index)->table->asset_size;
 }
 
 int mmap_assets_get_width(mmap_assets_handle_t handle, int index)
 {
-    assert(handle && "handle is invalid");
-    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(handle, -1, TAG, "handle is invalid");
 
-    if (map_asset->max_asset > index) {
-        return (map_asset->item + index)->table->asset_width;
-    } else {
-        ESP_LOGE(TAG, "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
-        return -1;
-    }
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    return (map_asset->item + index)->table->asset_width;
 }
 
 int mmap_assets_get_height(mmap_assets_handle_t handle, int index)
 {
-    assert(handle && "handle is invalid");
-    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(handle, -1, TAG, "handle is invalid");
 
-    if (map_asset->max_asset > index) {
-        return (map_asset->item + index)->table->asset_height;
-    } else {
-        ESP_LOGE(TAG, "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
-        return -1;
-    }
+    mmap_assets_t *map_asset = (mmap_assets_t *)(handle);
+    ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
+                        "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
+
+    return (map_asset->item + index)->table->asset_height;
 }

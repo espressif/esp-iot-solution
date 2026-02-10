@@ -2,4 +2,4 @@
 dependencies:
   esp_lcd_jd9365:
     version: "*"
-    path: "../../../esp_lcd_jd9365"
+    override_path: "../../../esp_lcd_jd9365"

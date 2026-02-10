@@ -58,6 +58,10 @@ static esp_err_t led_indicator_ledc_init(void *param)
     LED_LEDC_CHECK(!s_ledc->ledc_channel[ch].is_init, "LEDC channel is already initialized!", goto EXIT);
     ledc_channel_config_t ledc_ch_cfg = LEDC_CHANNEL_CONFIG(cfg->timer_num, cfg->channel, cfg->gpio_num);
     ledc_ch_cfg.flags.output_invert = cfg->is_active_level_high ? false : true;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    LED_LEDC_CHECK(cfg->sleep_mode < LEDC_SLEEP_MODE_INVALID, "invalid sleep mode", return ESP_ERR_INVALID_ARG);
+    ledc_ch_cfg.sleep_mode = cfg->sleep_mode;
+#endif
     ret = ledc_channel_config(&ledc_ch_cfg);
     LED_LEDC_CHECK(ESP_OK == ret, "ledc_channel_config fail!", goto EXIT);
     s_ledc->ledc_channel[ch].channel = ch;

@@ -1,0 +1,141 @@
+menu "Panthera Follower Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config CONSOLE_CONTROL
+        bool "Direct control robot arm via console"
+        default y
+        help
+            When set to Y, you can forcibly perform basic operations on the robot arm through the terminal, including kinematics testing, joint movement, enabling, and other actions.
+
+    menu "Hardware Configuration"
+        config CAN_TX_NUM
+            int "CAN TX Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 24
+            help
+                TX Pin of the CAN Transceiver
+
+        config CAN_RX_NUM
+            int "CAN RX Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 25
+            help
+                RX Pin of the CAN Transceiver
+    endmenu
+
+    menu "Leader and Follower Gripper Mapping"
+        config LEADER_INPUT_MIN
+            int "Leader Input Minimum (x100 radians)"
+            default -58
+            help
+                Minimum input angle from leader for gripper mapping (in radians * 100, e.g., -58 for -0.58)
+
+        config LEADER_INPUT_MAX
+            int "Leader Input Maximum (x100 radians)"
+            default 0
+            help
+                Maximum input angle from leader for gripper mapping (in radians * 100, e.g., 0 for 0.0)
+
+        config FOLLOWER_OUTPUT_MIN
+            int "Follower Output Minimum (x100 radians)"
+            default 0
+            help
+                Minimum output angle for follower gripper mapping (in radians * 100, e.g., 0 for 0.0)
+
+        config FOLLOWER_OUTPUT_MAX
+            int "Follower Output Maximum (x100 radians)"
+            default 500
+            help
+                Maximum output angle for follower gripper mapping (in radians * 100, e.g., 628 for 6.28)
+    endmenu
+
+    menu "Leader and Follower Angle Inversion"
+        config SERVO0_JOINT0_INVERT
+            int "Invert angle for Servo 0 (0x11)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 0 (multiplied by -1), 0 to disable
+
+        config SERVO1_JOINT1_INVERT
+            int "Invert angle for Servo 1 (0x12)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 1 (multiplied by -1), 0 to disable
+
+        config SERVO2_JOINT2_INVERT
+            int "Invert angle for Servo 2 (0x13)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 2 (multiplied by -1), 0 to disable
+
+        config SERVO3_JOINT3_INVERT
+            int "Invert angle for Servo 3 (0x14)"
+            range 0 1
+            default 1
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 3 (multiplied by -1), 0 to disable
+
+        config SERVO4_JOINT4_INVERT
+            int "Invert angle for Servo 4 (0x15)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 4 (multiplied by -1), 0 to disable
+
+        config SERVO5_JOINT5_INVERT
+            int "Invert angle for Servo 5 (0x16)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 5 (multiplied by -1), 0 to disable
+
+        config SERVO6_JOINT6_INVERT
+            int "Invert angle for Servo 6 (0x17 Gripper)"
+            range 0 1
+            default 0
+            help
+                Set to 1 to invert the angle received from ESP-NOW for servo 6 (gripper) (multiplied by -1), 0 to disable
+
+    endmenu
+
+    menu "Receiver Serial Flash Config"
+        config ENABLE_UPDATE_C6_FLASH
+        bool "Enable update C6 Flash"
+        default n
+        help
+            Enable this option will update the C6 firmware via serial flash every time
+
+        config SERIAL_FLASH_RX_NUM
+            int "Serial Flash RX Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 6
+            help
+                RX Pin of the Serial Flash
+
+        config SERIAL_FLASH_TX_NUM
+            int "Serial Flash Tx Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 5
+            help
+                TX Pin of the Serial Flash
+
+        config SERIAL_FLASH_RESET_NUM
+            int "Serial Flash Reset Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 54
+            help
+                Reset Pin of the Serial Flash
+
+        config SERIAL_FLASH_BOOT_NUM
+            int "Serial Flash Boot Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 53
+            help
+                Boot Pin of the Serial Flash
+    endmenu
+
+endmenu

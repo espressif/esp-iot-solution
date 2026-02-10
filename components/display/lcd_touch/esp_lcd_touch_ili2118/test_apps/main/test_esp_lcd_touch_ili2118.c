@@ -13,6 +13,7 @@
 #include "unity.h"
 #include "unity_test_runner.h"
 #include "esp_lcd_panel_io_interface.h"
+#include "esp_lcd_touch.h"
 #include "esp_lcd_touch_ili2118.h"
 
 #define TEST_I2C_MASTER_NUM        (I2C_NUM_0)
@@ -107,8 +108,7 @@ TEST_CASE("test ili2118a touch read with interrupt", "[ili2118a][intr]")
     test_i2c_init();
     test_touch_init(&tp_io_handle, &tp_handle, touch_interrupt_callback);
 
-    uint16_t tp_x = 0;
-    uint16_t tp_y = 0;
+    esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
     uint32_t timeout_ticks = TEST_READ_TOUCH_TIME_MS / portTICK_PERIOD_MS;
     uint32_t start_ticks = xTaskGetTickCount();
@@ -116,8 +116,10 @@ TEST_CASE("test ili2118a touch read with interrupt", "[ili2118a][intr]")
     while (xTaskGetTickCount() - start_ticks < timeout_ticks) {
         if (xSemaphoreTake(touch_mux, pdMS_TO_TICKS(TEST_READ_TOUCH_PERIOD_MS))) {
             TEST_ESP_OK(esp_lcd_touch_read_data(tp_handle));
-            if (esp_lcd_touch_get_coordinates(tp_handle, &tp_x, &tp_y, NULL, &tp_cnt, 1) && tp_cnt > 0) {
-                ESP_LOGI(TAG, "Touch IRQ: (%d, %d)", tp_x, tp_y);
+            tp_cnt = 0;
+            ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp_handle, tp_data, &tp_cnt, 1));
+            if (tp_cnt > 0) {
+                ESP_LOGI(TAG, "Touch IRQ: (%" PRIu16 ", %" PRIu16 ")", tp_data[0].x, tp_data[0].y);
             }
         }
     }
@@ -135,14 +137,15 @@ TEST_CASE("test ili2118a touch read with polling", "[ili2118a][poll]")
     test_i2c_init();
     test_touch_init(&tp_io_handle, &tp_handle, NULL);
 
-    uint16_t tp_x = 0;
-    uint16_t tp_y = 0;
+    esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
 
     for (int i = 0; i < TEST_READ_TOUCH_TIME_MS / TEST_READ_TOUCH_PERIOD_MS; i++) {
         TEST_ESP_OK(esp_lcd_touch_read_data(tp_handle));
-        if (esp_lcd_touch_get_coordinates(tp_handle, &tp_x, &tp_y, NULL, &tp_cnt, 1) && tp_cnt > 0) {
-            ESP_LOGI(TAG, "Touch Poll: (%d, %d)", tp_x, tp_y);
+        tp_cnt = 0;
+        ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp_handle, tp_data, &tp_cnt, 1));
+        if (tp_cnt > 0) {
+            ESP_LOGI(TAG, "Touch Poll: (%" PRIu16 ", %" PRIu16 ")", tp_data[0].x, tp_data[0].y);
         }
         vTaskDelay(pdMS_TO_TICKS(TEST_READ_TOUCH_PERIOD_MS));
     }

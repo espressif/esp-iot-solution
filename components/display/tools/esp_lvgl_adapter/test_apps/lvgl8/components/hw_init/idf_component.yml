@@ -1,0 +1,22 @@
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../.."
+
+  espressif/esp_lcd_ek79007:
+    version: "*"
+    override_path: "../../../../../../lcd/esp_lcd_ek79007"
+    rules:
+      - if: "target == esp32p4"
+
+  espressif/esp_lcd_ili9341:
+    version: "^2"
+
+  espressif/esp_lcd_gc9a01:
+    version: "^2"
+
+  espressif/esp_lcd_touch_gt911:
+    version: "^1"

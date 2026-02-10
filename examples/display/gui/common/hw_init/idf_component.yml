@@ -1,0 +1,34 @@
+version: "1.0.0"
+
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+
+  espressif/esp_lcd_ek79007:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_ek79007"
+    rules:
+      - if: "target == esp32p4"
+
+  espressif/esp_lcd_st77916:
+    version: "*"
+    override_path: "../../../../../components/display/lcd/esp_lcd_st77916"
+
+  espressif/esp_lcd_ili9341:
+    version: "^2"
+
+  espressif/esp_lcd_gc9a01:
+    version: "^2"
+
+  espressif/esp_lcd_touch_gt911:
+    version: "^1"
+
+  espressif/esp_lcd_touch_gt1151:
+    version: "^1"
+
+  espressif/esp_lcd_touch_cst816s:
+    version: "^1"

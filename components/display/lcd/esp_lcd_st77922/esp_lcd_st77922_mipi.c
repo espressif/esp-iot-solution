@@ -66,7 +66,7 @@ esp_err_t esp_lcd_new_panel_st77922_mipi(const esp_lcd_panel_io_handle_t io, con
         ESP_GOTO_ON_ERROR(gpio_config(&io_conf), err, TAG, "configure GPIO for RST line failed");
     }
 
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case LCD_RGB_ELEMENT_ORDER_RGB:
         st77922->madctl_val = 0;
         break;
@@ -204,11 +204,11 @@ static esp_err_t panel_st77922_del(esp_lcd_panel_t *panel)
 {
     st77922_panel_t *st77922 = (st77922_panel_t *)panel->user_data;
 
+    // Delete MIPI DPI panel
+    ESP_RETURN_ON_ERROR(st77922->del(panel), TAG, "del st77922 panel failed");
     if (st77922->reset_gpio_num >= 0) {
         gpio_reset_pin(st77922->reset_gpio_num);
     }
-    // Delete MIPI DPI panel
-    st77922->del(panel);
     ESP_LOGD(TAG, "del st77922 panel @%p", st77922);
     free(st77922);
 

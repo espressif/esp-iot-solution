@@ -27,6 +27,8 @@ BLE 连接管理为访问常用 BLE 功能提供了简化的 API 接口。它支
 1. BLE 周期广告示例: :example:`bluetooth/ble_conn_mgr/ble_periodic_adv`.
 2. BLE 周期同步示例: :example:`bluetooth/ble_conn_mgr/ble_periodic_sync`.
 3. BLE 串口配置文件示例: :example:`bluetooth/ble_conn_mgr/ble_spp`.
+4. BLE L2CAP CoC 中心设备示例: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_central`.
+5. BLE L2CAP CoC 外围设备示例: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_peripheral`.
 
 API 参考
 -----------------

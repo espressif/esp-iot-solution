@@ -35,6 +35,7 @@ static esp_err_t panel_co5300_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
 static esp_err_t panel_co5300_swap_xy(esp_lcd_panel_t *panel, bool swap_axes);
 static esp_err_t panel_co5300_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap);
 static esp_err_t panel_co5300_disp_on_off(esp_lcd_panel_t *panel, bool off);
+static esp_err_t co5300_spi_apply_brightness(void *driver_data, uint8_t brightness_percent);
 
 typedef struct {
     esp_lcd_panel_t base;
@@ -45,6 +46,7 @@ typedef struct {
     uint8_t fb_bits_per_pixel;
     uint8_t madctl_val; // save current value of LCD_CMD_MADCTL register
     uint8_t colmod_val; // save surrent value of LCD_CMD_COLMOD register
+    co5300_panel_context_t panel_ctx; // runtime context shared with public API
     const co5300_lcd_init_cmd_t *init_cmds;
     uint16_t init_cmds_size;
     struct {
@@ -121,6 +123,9 @@ esp_err_t esp_lcd_new_panel_co5300_spi(const esp_lcd_panel_io_handle_t io, const
     co5300->base.mirror = panel_co5300_mirror;
     co5300->base.swap_xy = panel_co5300_swap_xy;
     co5300->base.disp_on_off = panel_co5300_disp_on_off;
+    co5300->panel_ctx.driver_data = co5300;
+    co5300->panel_ctx.apply_brightness = co5300_spi_apply_brightness;
+    co5300->base.user_data = &co5300->panel_ctx;
     *ret_panel = &(co5300->base);
     ESP_LOGD(TAG, "new co5300 panel @%p", co5300);
 
@@ -284,7 +289,7 @@ static esp_err_t panel_co5300_draw_bitmap(esp_lcd_panel_t *panel, int x_start, i
     }, 4), TAG, "send command failed");
     // transfer frame buffer
     size_t len = (x_end - x_start) * (y_end - y_start) * co5300->fb_bits_per_pixel / 8;
-    tx_color(co5300, io, LCD_CMD_RAMWR, color_data, len);
+    ESP_RETURN_ON_ERROR(tx_color(co5300, io, LCD_CMD_RAMWR, color_data, len), TAG, "send color data failed");
 
     return ESP_OK;
 }
@@ -350,5 +355,24 @@ static esp_err_t panel_co5300_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
         command = LCD_CMD_DISPOFF;
     }
     ESP_RETURN_ON_ERROR(tx_param(co5300, io, command, NULL, 0), TAG, "send command failed");
+    return ESP_OK;
+}
+
+static esp_err_t co5300_spi_apply_brightness(void *driver_data, uint8_t brightness_percent)
+{
+    co5300_panel_t *co5300 = (co5300_panel_t *)driver_data;
+    ESP_RETURN_ON_FALSE(co5300, ESP_ERR_INVALID_ARG, TAG, "invalid panel data");
+
+    esp_lcd_panel_io_handle_t io = co5300->io;
+    ESP_RETURN_ON_FALSE(io, ESP_ERR_INVALID_STATE, TAG, "panel IO not initialized");
+
+    uint8_t hw_brightness = (brightness_percent * 255) / 100;
+
+    ESP_RETURN_ON_ERROR(tx_param(co5300, io, 0x51, (uint8_t[]) {
+        hw_brightness
+    }, 1), TAG, "send brightness command failed");
+
+    ESP_LOGI(TAG, "set brightness to %d%% (hardware value: %d)", brightness_percent, hw_brightness);
+
     return ESP_OK;
 }

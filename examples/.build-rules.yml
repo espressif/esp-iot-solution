@@ -5,11 +5,11 @@
 
 examples/ai/esp_dl/human_activity_recognition:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
 
 examples/ai/esp_dl/touchpad_digit_recognition:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
 
 examples/audio/wav_player:
   enable:
@@ -17,133 +17,112 @@ examples/audio/wav_player:
 
 examples/bluetooth/ble_conn_mgr/ble_periodic_adv:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_50_SUPPORTED == 1
 
 examples/bluetooth/ble_conn_mgr/ble_periodic_sync:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_50_SUPPORTED == 1
 
 examples/bluetooth/ble_conn_mgr/ble_spp/spp_client:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 examples/bluetooth/ble_conn_mgr/ble_spp/spp_server:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/bluetooth/ble_l2cap_coc/l2cap_coc_central:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/bluetooth/ble_l2cap_coc/l2cap_coc_peripheral:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_profiles/ble_anp:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_profiles/ble_hrp:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_profiles/ble_htp:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/bluetooth/ble_profiles/ble_midi:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_ans:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_bas:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_bcs:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_cts:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_dis:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_hrs:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_hts:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/bluetooth/ble_services/ble_ots:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_tps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_uds:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_services/ble_wss:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 3)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: SOC_BLE_SUPPORTED == 1
 
 examples/bluetooth/ble_ota:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3","esp32c2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32","esp32c3","esp32s3","esp32c2","esp32c6","esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    # - if: SOC_BLE_SUPPORTED == 1
+    # The ble_ota component has not yet been tested on ESP32-C5 and ESP32-C61,
+    # so the component is not currently marked as supporting these targets.
+    - if: IDF_TARGET in ["esp32", "esp32c3", "esp32h2", "esp32s3", "esp32c2", "esp32c6"]
 
 examples/bluetooth/ble_remote_control:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/bluetooth/ble_adv/bthome/dimmer:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/bluetooth/ble_adv/bthome/bulb:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+examples/mcp/mcp_server:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
 examples/camera/basic:
-  enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
-
-examples/camera/pic_server:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
@@ -161,11 +140,7 @@ examples/camera/video_recorder:
 
 examples/camera/video_stream_server:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-
-examples/check_pedestrian_flow:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
 
 examples/display/lcd/hdmi_video_renderer:
   enable:
@@ -179,13 +154,17 @@ examples/display/lcd/mipi_dsi_avoid_tearing:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+examples/display/lcd/lcd_pattern_test:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 examples/display/lcd/qspi_with_ram:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32h2","esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3", "esp32c5", "esp32c6"]
 
 examples/display/lcd/qspi_without_ram:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 3)
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
 
 examples/display/lcd/rgb_lcd_8bit:
   enable:
@@ -194,6 +173,42 @@ examples/display/lcd/rgb_lcd_8bit:
 examples/display/lcd/rgb_avoid_tearing:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
+
+examples/display/gui/lvgl_common_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_decode_image:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_dummy_draw:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_freetype_font:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_multi_screen:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_light_sleep_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_mono_demo:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_eaf_player:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
+examples/display/gui/lvgl_lottie_player:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
 examples/extended_vfs/gpio/gpio_simple:
   enable:
@@ -221,7 +236,7 @@ examples/extended_vfs/spi/spi_slave_simple:
 
 examples/get-started/blink:
   enable:
-    - if: (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4) and IDF_TARGET in ["esp32","esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
 
 examples/get-started/button_power_save:
   enable:
@@ -234,10 +249,6 @@ examples/get-started/knob_power_save:
 examples/sensors/power_measure:
   enable:
     - if: INCLUDE_DEFAULT == 1
-
-examples/hmi/perf_benchmark:
-  enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c3"]
 
 examples/indicator:
   enable:
@@ -258,14 +269,12 @@ examples/lighting/lightbulb:
 examples/motor/foc_openloop_control:
   enable:
     - if: IDF_TARGET == "esp32s3"
-
-examples/motor/foc_openloop_control:
   disable:
     - if: IDF_TARGET == "esp32c2"
 
 examples/motor/foc_velocity_control:
-  disable:
-    - if: IDF_TARGET == "esp32c2"
+  enable:
+    - if: IDF_TARGET == "esp32s3"
 
 examples/motor/foc_knob_example:
   enable:
@@ -277,12 +286,7 @@ examples/motor/servo_control:
 
 examples/ota/simple_ota_example:
   enable:
-    - if: IDF_TARGET in ["esp32c2","esp32c3","esp32"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
-    - if: IDF_TARGET in ["esp32c2","esp32c3","esp32","esp32c6"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
-
-examples/screen:
-  enable:
-    - if: IDF_TARGET == "esp32" and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32c61", "esp32", "esp32s3", "esp32h2"]
 
 examples/sensors/sensor_control_led:
   enable:
@@ -290,7 +294,7 @@ examples/sensors/sensor_control_led:
 
 examples/sensors/sensor_hub_monitor:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s2"]
 
 examples/usb/device/bootloader_uf2:
   enable:
@@ -299,10 +303,14 @@ examples/usb/device/bootloader_uf2:
     - if: IDF_TARGET in ["esp32s2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 3)
       temporary: true
       reason: ESP32-S2 may encounter toolchain errors when using IDF versions below 5.3.
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+      temporary: true
+      reason: "see AEG-2895 for more details"
 
 examples/usb/device/usb_dongle:
   enable:
-    - if: SOC_USB_OTG_SUPPORTED == 1
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
 
 examples/touch/touch_button:
   enable:
@@ -310,9 +318,8 @@ examples/touch/touch_button:
 
 examples/touch/touch_button_sensor:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 4)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
 
 examples/touch/touch_proximity:
   enable:
@@ -320,9 +327,8 @@ examples/touch/touch_proximity:
 
 examples/touch/touch_slider_sensor:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 1)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 4)
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
 
 examples/ulp/lp_cpu/lp_environment_sensor:
   enable:
@@ -368,7 +374,7 @@ examples/usb/device/usb_lcd_display:
 
 examples/usb/device/usb_msc_wireless_disk:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32s2","esp32s3"]
   disable:
     - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
       temporary: true
@@ -416,15 +422,19 @@ examples/usb/host/usb_audio_player:
 
 examples/usb/host/usb_cdc_4g_module:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 examples/usb/host/usb_cdc_basic:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 examples/usb/host/usb_host_msc_example:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
+  disable:
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+      temporary: true
+      reason: "see AEG-2895 for more details"
 
 examples/usb/host/usb_hub_dual_camera:
   enable:
@@ -432,12 +442,7 @@ examples/usb/host/usb_hub_dual_camera:
 
 examples/usb/host/usb_ecm_4g_module:
   enable:
-    - if: IDF_TARGET in ["esp32s2", "esp32s3"]
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
-  disable:
-    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
-      temporary: true
-      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 examples/usb/host/usb_msc_ota:
   enable:
@@ -449,12 +454,7 @@ examples/usb/host/usb_msc_ota:
 
 examples/usb/host/usb_rndis_4g_module:
   enable:
-    - if: IDF_TARGET in ["esp32s2", "esp32s3"]
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
-  disable:
-    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
-      temporary: true
-      reason: "/opt/esp/idf/components/esp_http_server/src/util/ctrl_sock.c:23:14: error: 'TAG' undeclared (first use in this function)"
+    - if: SOC_USB_OTG_SUPPORTED == 1
 
 examples/usb/otg/usb_host_device_mode_manual_switch:
   enable:
@@ -470,7 +470,7 @@ examples/utilities/adc_tp_calibration:
 
 examples/vision/opencv/color_tracker:
   enable:
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
 
 examples/gprof/gprof_simple:
   enable:
@@ -490,6 +490,32 @@ examples/elf_loader/build_elf_file_example:
     - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 1)
     - if: IDF_TARGET in ["esp32c61"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5 and IDF_VERSION_PATCH >= 1)
 
+examples/elf_loader/elf_embed_example:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 1)
+    - if: IDF_TARGET in ["esp32c61"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5 and IDF_VERSION_PATCH >= 1)
+
+examples/elf_loader/elf_console_example:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 1)
+    - if: IDF_TARGET in ["esp32c61"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5 and IDF_VERSION_PATCH >= 1)
+
 examples/relinker:
   enable:
     - if: IDF_TARGET in ["esp32c2","esp32c3"]
+
+examples/robot/ragtime_panthera/follower:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+
+examples/robot/ragtime_panthera/follower/receiver:
+  enable:
+    - if: IDF_TARGET in ["esp32c6"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+
+examples/robot/ragtime_panthera/leader:
+  enable:
+    - if: IDF_TARGET in ["esp32c3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)

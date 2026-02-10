@@ -1,0 +1,15 @@
+menu "Embedded ELF Example Configuration"
+
+    config ELF_LOADER_MAIN_ARGS
+        bool "Support arguments for ELF main"
+        default n
+
+    config ELF_LOADER_MAIN_ARGS_STRING
+        string "Arguments of ELF main"
+        default ""
+        depends on ELF_LOADER_MAIN_ARGS
+        help
+            Specify the arguments to pass to the main function of the loaded ELF file.
+            The arguments should be provided as a space-separated string, e.g., "arg1 arg2 arg3".
+
+endmenu

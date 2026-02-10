@@ -1,5 +1,20 @@
 # ChangeLog
 
+## v0.3.3 (2026-01-22)
+
+* Fixed missing `esp_mm` and `esp_driver_jpeg` dependency declarations in CMakeLists.txt which caused build failures when using the component from the component registry.
+
+## v0.3.2 (2025-11-17)
+
+* Fix the issue where the buffer space is insufficient when reading the image header.
+
+## v0.3.1 (2025-10-21)
+
+* Added mutex protection for the PJPG global buffer.
+* Added boundary checks to prevent buffer overflow.
+* Fixed the memory reallocation issue.
+* Prioritized detecting SP format using the file extension.
+
 ## v0.3.0 (2025-09-12)
 
 * Adapted PJPG format for parsing transparency scenarios

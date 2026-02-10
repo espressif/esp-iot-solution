@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -106,6 +106,11 @@ static void hal_fan_button_signle_click_cb(void *arg, void *data)
     }
 }
 
+static void hal_fan_button_long_press_hold_cb(void *arg, void *data)
+{
+    ESP_ERROR_CHECK(esp_rmaker_factory_reset(CONFIG_FAN_RAINMAKER_RESET_SECONDS, CONFIG_FAN_RAINMAKER_REBOOT_SECONDS));
+}
+
 static void hal_fan_oneshot_timer_cb(void *arg)
 {
     ESP_LOGI(TAG, "Count is over");
@@ -134,7 +139,7 @@ esp_err_t hal_fan_button_init(gpio_num_t start_pin, gpio_num_t mode_pin, gpio_nu
 
     button_config_t cfg = {
         .type = BUTTON_TYPE_GPIO,
-        .long_press_time = 5000,
+        .long_press_time = CONFIG_FAN_RAINMAKER_LONG_PRESS_RESET_SECONDS * 1000,
         .short_press_time = 200,
         .gpio_button_config = {
             .gpio_num = pin[0],
@@ -147,6 +152,8 @@ esp_err_t hal_fan_button_init(gpio_num_t start_pin, gpio_num_t mode_pin, gpio_nu
         hal_fan_button_handle[i] = iot_button_create(&cfg);
         iot_button_register_cb(hal_fan_button_handle[i], BUTTON_SINGLE_CLICK, hal_fan_button_signle_click_cb, NULL);
     }
+
+    iot_button_register_cb(hal_fan_button_handle[SETTING_START], BUTTON_LONG_PRESS_HOLD, hal_fan_button_long_press_hold_cb, NULL);  /*!< Support reset rainmaker */
 
     hal_fan_button.fan_timing_count = 0;
     const esp_timer_create_args_t oneshot_timer_args = {

@@ -3,8 +3,10 @@
 This example demonstrates how to use the [usb_host_uvc](https://components.espressif.com/components/espressif/usb_host_uvc) component to connect USB cameras and preview camera images via an HTTP server.
 
 * Supports previewing MJPEG format images only.
-* Supports USB Hub, allowing up to two cameras to be connected.
+* Supports USB Hub, allowing multiple cameras to be connected.
 * Web interface allows saving the current frame.
+
+> The number of cameras that can be opened simultaneously is limited by the hardware resources of the USB host.
 
 ## How to Use
 

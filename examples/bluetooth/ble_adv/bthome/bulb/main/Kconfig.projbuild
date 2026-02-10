@@ -1,0 +1,24 @@
+menu "BTHome Bulb Configuration"
+
+    config EXAMPLE_LED_STRIP_BLINK_GPIO
+        int "LED Strip GPIO Pin"
+        range 0 48
+        default 8
+        help
+            GPIO number for LED strip data line.
+
+    config EXAMPLE_LED_STRIP_LED_NUMBERS
+        int "Number of LEDs in Strip"
+        range 1 255
+        default 1
+        help
+            Number of LEDs in the LED strip.
+
+    config EXAMPLE_LED_STRIP_RMT_RES_HZ
+        int "RMT Resolution Frequency (Hz)"
+        range 1000000 10000000
+        default 10000000
+        help
+            RMT counter clock frequency. 10MHz resolution means 1 tick = 0.1us.
+
+endmenu

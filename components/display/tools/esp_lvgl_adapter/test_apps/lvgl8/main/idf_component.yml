@@ -1,0 +1,11 @@
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  lvgl/lvgl:
+    version: "^8"
+    public: true
+
+  hw_init:
+    version: "*"
+    override_path: "../components/hw_init"

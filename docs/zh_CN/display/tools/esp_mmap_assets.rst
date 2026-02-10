@@ -10,6 +10,11 @@ ESP MMAP ASSETS
 **添加导入文件类型**
    - 支持多种文件格式，如 ``.bin``、``.jpg``、``.ttf`` 等。
 
+**多种访问模式**
+   - **分区模式**: 从 ESP32 分区访问资源（默认）
+   - **内存映射模式**: 直接内存访问，性能最佳
+   - **文件系统模式**: 从文件系统访问资源，用于开发和测试
+
 **启用分片 JPG**
    - 需要使用 ``SJPG`` 来解析。参见 LVGL `SJPG <https://docs.lvgl.io/8.4/libs/sjpg.html>`__。
 
@@ -49,7 +54,9 @@ CMake 选项
    set(one_value_args
        MMAP_FILE_SUPPORT_FORMAT,
        MMAP_SPLIT_HEIGHT,
-       MMAP_RAW_FILE_FORMAT)
+       MMAP_RAW_FILE_FORMAT,
+       IMPORT_INC_PATH,
+       COPY_PREBUILT_BIN)
 
 选项说明
 ~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +69,8 @@ CMake 选项
    - ``FLASH_APPEND_APP``: 启用将二进制数据（``bin``）附加到应用程序二进制文件（``app_bin``）。
 
    - ``IMPORT_INC_PATH``: 指定生成头文件的目标路径。默认与引用组件位置相同。
+   
+   - ``COPY_PREBUILT_BIN``: 复制预生成的二进制文件到目标目录。此选项允许您使用外部生成的资产二进制文件，而不是从源文件构建。
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: 指定支持的文件格式（例如，``.png``、``.jpg``、``.ttf``）。
    
@@ -81,6 +90,18 @@ CMake 选项
       my_folder
       FLASH_IN_PROJECT
       MMAP_FILE_SUPPORT_FORMAT ".jpg,.png,.ttf"
+   )
+
+预构建二进制资源示例
+"""""""""""""""""""""""""""""""
+
+.. code:: c
+
+   spiffs_create_partition_assets(
+      my_spiffs_partition
+      "${ASSETS_DIR}"
+      FLASH_IN_PROJECT
+      COPY_PREBUILT_BIN "${ASSETS_DIR}/prebuilt.bin"
    )
 
 支持的图像格式
@@ -184,6 +205,10 @@ LVGL v8 示例
 ~~~~~~~~~~~~~~
 资源初始化配置确保与 ``mmap_generate_my_spiffs_partition.h`` 一致。它设置了 ``max_files`` 和 ``checksum``，用来验证头文件和内存映射的二进制文件是否匹配，当然你也可以跳过此检验。
 
+
+分区模式（默认）
+^^^^^^^^^^^^^^^^^^^^
+
 .. code:: c
 
    mmap_assets_handle_t asset_handle;
@@ -193,9 +218,46 @@ LVGL v8 示例
       .max_files = TOTAL_MMAP_FILES,
       .checksum = MMAP_CHECKSUM,
       .flags = {
-            .mmap_enable = true,
-            .app_bin_check = true,
-        },
+         .mmap_enable = false,  // 使用分区模式
+         .use_fs = false,       // 不使用文件系统
+         .app_bin_check = true,
+      }
+   };
+
+   ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+
+内存映射模式
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+   const mmap_assets_config_t config = {
+      .partition_label = "my_spiffs_partition",
+      .max_files = TOTAL_MMAP_FILES,
+      .checksum = MMAP_CHECKSUM,
+      .flags = {
+         .mmap_enable = true,   // 启用内存映射
+         .use_fs = false,       // 不使用文件系统
+         .app_bin_check = true,
+      }
+   };
+
+   ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+
+文件系统模式
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+   const mmap_assets_config_t config = {
+      .partition_label = "/spiffs/assets.bin",  // 文件路径而不是分区名称
+      .max_files = TOTAL_MMAP_FILES,
+      .checksum = MMAP_CHECKSUM,
+      .flags = {
+         .mmap_enable = false,  // 禁用内存映射
+         .use_fs = true,        // 使用文件系统
+         .app_bin_check = true,
+      }
    };
 
    ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));

@@ -1,0 +1,15 @@
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  lvgl/lvgl:
+    version: "^9"
+    public: true
+
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+    public: true
+
+  espressif/esp_lcd_gc9a01:
+    version: "^2"

@@ -10,6 +10,11 @@ Features
 **Adding Import File Types**
    - Support for various file formats such as ``.bin``, ``.jpg``, ``.ttf``, etc.
 
+**Multiple Access Modes**
+   - **Partition Mode**: Access assets from ESP32 partition (default)
+   - **Memory Mapping Mode**: Direct memory access for maximum performance
+   - **File System Mode**: Access assets from file system for development and testing
+
 **Enable Split JPG**
    - Need to use ``SJPG`` to parse. Refer to the LVGL `SJPG <https://docs.lvgl.io/8.4/libs/sjpg.html>`__.
 
@@ -49,7 +54,9 @@ The following options are supported. These options allow you to configure variou
    set(one_value_args
        MMAP_FILE_SUPPORT_FORMAT,
        MMAP_SPLIT_HEIGHT,
-       MMAP_RAW_FILE_FORMAT)
+       MMAP_RAW_FILE_FORMAT,
+       IMPORT_INC_PATH,
+       COPY_PREBUILT_BIN)
 
 Option Explanations
 ~~~~~~~~~~~~~~~~~~~~
@@ -62,6 +69,8 @@ General Options
    - ``FLASH_APPEND_APP``: Enables appending binary data (``bin``) to the application binary (``app_bin``).
 
    - ``IMPORT_INC_PATH``: Target path for generated include files. Defaults to referencing component location.
+   
+   - ``COPY_PREBUILT_BIN``: Copies pre-generated binary files to target directory. This option allows you to use externally generated asset binaries instead of building them from source files.
    
    - ``MMAP_FILE_SUPPORT_FORMAT``: Specifies supported file formats (e.g., ``.png``, ``.jpg``, ``.ttf``).
    
@@ -81,6 +90,18 @@ General demo
       my_folder
       FLASH_IN_PROJECT
       MMAP_FILE_SUPPORT_FORMAT ".jpg,.png,.ttf"
+   )
+
+Pre-built binary assets demo
+"""""""""""""""""""""""""""""""
+
+.. code:: c
+
+   spiffs_create_partition_assets(
+      my_spiffs_partition
+      "${ASSETS_DIR}"
+      FLASH_IN_PROJECT
+      COPY_PREBUILT_BIN "${ASSETS_DIR}/prebuilt.bin"
    )
 
 Supported Image Formats
@@ -184,6 +205,10 @@ Create Assets Handle
 ~~~~~~~~~~~~~~~~~~~~~~~
 The assets config ensures consistency with ``mmap_generate_my_spiffs_partition.h``. It sets the ``max_files`` and ``checksum``, verifying the header and memory-mapped binary file.
 
+
+Partition Mode (Default)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. code:: c
 
    mmap_assets_handle_t asset_handle;
@@ -193,7 +218,44 @@ The assets config ensures consistency with ``mmap_generate_my_spiffs_partition.h
       .max_files = MMAP_MY_FOLDER_FILES, //Get it from the compiled .h
       .checksum = MMAP_MY_FOLDER_CHECKSUM, //Get it from the compiled .h
       .flags = {
-         .mmap_enable = true,
+         .mmap_enable = false,  // Use partition mode
+         .use_fs = false,       // Not using file system
+         .app_bin_check = true,
+      }
+   };
+
+   ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+
+Memory Mapping Mode
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+   const mmap_assets_config_t config = {
+      .partition_label = "my_spiffs_partition",
+      .max_files = MMAP_MY_FOLDER_FILES,
+      .checksum = MMAP_MY_FOLDER_CHECKSUM,
+      .flags = {
+         .mmap_enable = true,   // Enable memory mapping
+         .use_fs = false,       // Not using file system
+         .app_bin_check = true,
+      }
+   };
+
+   ESP_ERROR_CHECK(mmap_assets_new(&config, &asset_handle));
+
+File System Mode
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+   const mmap_assets_config_t config = {
+      .partition_label = "/spiffs/assets.bin",  // File path instead of partition name
+      .max_files = MMAP_MY_FOLDER_FILES,
+      .checksum = MMAP_MY_FOLDER_CHECKSUM,
+      .flags = {
+         .mmap_enable = false,  // Disable memory mapping
+         .use_fs = true,        // Use file system
          .app_bin_check = true,
       }
    };

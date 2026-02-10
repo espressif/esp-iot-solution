@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -45,7 +45,7 @@ typedef union {
         uint16_t vbus: 15;
         uint16_t reserved: 1;
     } bit;
-    uint8_t all;
+    uint16_t all;
 } ina236_reg_vbus_t;
 
 typedef union {
@@ -61,7 +61,7 @@ typedef union {
         uint16_t shunt_cal: 15; //11 - 0.0564
         uint16_t reserved:   1;
     } bit;
-    uint8_t all;
+    uint16_t all;
 } ina236_reg_calibration_t;
 
 typedef union {
@@ -80,7 +80,7 @@ typedef union {
         uint16_t sul:       1; //0
         uint16_t sol:       1; //0
     } bit;
-    uint8_t all;
+    uint16_t all;
 } ina236_reg_mask_t;
 
 typedef union {

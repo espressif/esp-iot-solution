@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,6 +12,7 @@
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_mipi_dsi.h"
+#include "esp_idf_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,6 +87,7 @@ esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const es
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -111,6 +113,33 @@ esp_err_t esp_lcd_new_panel_ek79007(const esp_lcd_panel_io_handle_t io, const es
             .vsync_front_porch = 12,                             \
         },                                                       \
         .flags = { .use_dma2d = true, },                         \
+    }
+#endif
+
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ */
+#define EK79007_1024_600_PANEL_60HZ_CONFIG_CF(color_format)      \
+    {                                                            \
+        .virtual_channel = 0,                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
+        .dpi_clock_freq_mhz = 52,                                \
+        .in_color_format = color_format,                         \
+        .num_fbs = 1,                                            \
+        .video_timing = {                                        \
+            .h_size = 1024,                                      \
+            .v_size = 600,                                       \
+            .hsync_pulse_width = 10,                             \
+            .hsync_back_porch = 160,                             \
+            .hsync_front_porch = 160,                            \
+            .vsync_pulse_width = 1,                              \
+            .vsync_back_porch = 23,                              \
+            .vsync_front_porch = 12,                             \
+        },                                                       \
     }
 
 #ifdef __cplusplus

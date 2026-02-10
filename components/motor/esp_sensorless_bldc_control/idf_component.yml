@@ -1,4 +1,4 @@
-version: 1.0.0
+version: 1.0.2
 targets:
   - esp32
   - esp32s3
@@ -10,8 +10,10 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/motor/
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  espressif/pid_ctrl: "^0.2.0"
   esp_sensorless_bldc_control_lib: "^0.1.0~2"
+  espressif/pid_ctrl:
+    version: "^0.2.0"
+    public: true
   idf:
     version: '>=5.0'
 examples:

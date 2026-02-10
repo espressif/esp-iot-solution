@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "2.0.0"
 targets:
   - esp32s3
   - esp32p4
@@ -7,7 +7,7 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/displa
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=5.3"
+  idf: ">=5.4"
   cmake_utilities: "0.*"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

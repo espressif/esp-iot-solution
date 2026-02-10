@@ -1,4 +1,4 @@
-version: "2.0.1"
+version: "3.0.0"
 targets:
   - esp32s2
   - esp32s3
@@ -9,7 +9,7 @@ repository: https://github.com/espressif/esp-iot-solution/tree/master/components
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_host_iot_usbh_cdc.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=5.1"
   cmake_utilities: "*"
 examples:
   - path: ../../../examples/usb/host/usb_cdc_basic

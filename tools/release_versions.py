@@ -13,7 +13,7 @@ def get_components_versions(path):
         for file in files:
             if file == 'idf_component.yml':
                 file_path = os.path.join(root, file)
-                if 'test_apps' in file_path:
+                if 'test_apps' in file_path or 'benchmark' in file_path:
                     #print(f"Skipped {file_path} (in test_apps)")
                     continue
 
@@ -35,7 +35,7 @@ components = dict(sorted(components.items(), key=lambda item: item[0]))
 with open(os.path.join(os.path.dirname(__file__), '../.github/workflows/upload_component.yml'), 'r') as file:
     data = yaml.safe_load(file)
 # Extract the directories string
-upload_directories = data['jobs']['upload_components']['steps'][1]['with']['directories']
+upload_directories = data['jobs']['upload_components']['steps'][2]['with']['directories']
 # Split the directories string into a list of components
 upload_components = [component.split('/')[-1] for component in upload_directories.split(';') if component]
 

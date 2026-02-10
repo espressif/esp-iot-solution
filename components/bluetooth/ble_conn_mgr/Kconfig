@@ -154,4 +154,11 @@ menu "BLE Connection Management"
 
     endif # BLE_CONN_MGR_SM
 
+    config BLE_CONN_MGR_L2CAP_COC_MTU
+        int "L2CAP CoC SDU MTU"
+        range 23 512
+        default 512
+        help
+            Set the default SDU MTU used by BLE L2CAP CoC memory pool.
+
 endmenu

@@ -37,20 +37,17 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
 .. |显示设备| image:: ../_static/display.png
 .. _显示设备: display/index.html
 
+.. |图形界面| image:: ../_static/gui.png
+.. _图形界面: display/lcd/gui_solution.html
+
 .. |USB主机&设备| image:: ../_static/usb.png
 .. _USB主机&设备: usb/index.html
 
 .. |输入设备| image:: ../_static/input_device.png
 .. _输入设备: input_device/index.html
 
-.. |图形界面| image:: ../_static/gui.png
-.. _图形界面: gui/index.html
-
 .. |音频设备| image:: ../_static/audio.png
 .. _音频设备: audio/index.html
-
-.. |HMI 方案| image:: ../_static/hmi_solution.png
-.. _HMI 方案: hmi_solution/index.html
 
 .. |电工&照明 方案| image:: ../_static/electrical_lighting_solution.png
 .. _电工&照明 方案: Electrical_Lighting_solution/index.html
@@ -72,7 +69,6 @@ ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框
    USB主机&设备 <usb/index>
    音频设备 <audio/index>
    音视频编解码 <multimedia/index>
-   图形界面 <gui/index>
    人工智能 <ai/index>
    输入设备 <input_device/index>
    红外 <ir/index>

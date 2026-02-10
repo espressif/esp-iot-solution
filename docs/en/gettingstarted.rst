@@ -37,6 +37,9 @@ Different version descriptions are as follows. For details and component lists, 
      - Historical version
      - Backup, maintenance stopped
 
+.. note::
+
+    The recommended ESP-IDF version varies for different chips. For details, please refer to `Compatibility Between ESP-IDF Releases and Revisions of Espressif SoCs <https://github.com/espressif/esp-idf/blob/master/COMPATIBILITY.md>`__.
 
 Development Environment Setup
 -----------------------------

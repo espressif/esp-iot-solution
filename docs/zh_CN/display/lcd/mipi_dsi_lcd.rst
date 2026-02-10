@@ -652,6 +652,10 @@ DSI、DBI 与 DPI
         ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
         ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
+**时序参数说明：**
+
+MIPI-DSI 的时序参数定义与 RGB 接口的 `SYNC 模式` 在时序图上是一致的。两者都使用 HSYNC 和 VSYNC 同步信号，并且都需要配置消隐区域（porch）参数。关于时序参数的详细说明、参数与时序图符号的对应关系以及配置方法，请参考 :doc:`RGB LCD 详解 <rgb_lcd>` 中的"时序参数对应关系说明"部分。
+
 注意，在 ESP32P4 中要求为 MIPI DSI PHY 提供 2.5V 的稳定电源。其中时钟频率计算参考上文 pixel_clock 计算方式。色彩格式、分辨率、脉冲宽度和前后肩参数需要严格遵循面板规格书要求。
 
 然后通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。

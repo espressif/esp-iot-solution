@@ -7,6 +7,7 @@
 #pragma once
 
 #include "driver/ledc.h"
+#include "esp_idf_version.h"
 #include "led_indicator.h"
 
 #ifdef __cplusplus
@@ -19,6 +20,9 @@ typedef struct {
     ledc_timer_t timer_num;                 /*!< The timer source of channel */
     int32_t gpio_num;                       /*!< num of gpio */
     ledc_channel_t channel;                 /*!< LEDC channel */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)
+    ledc_sleep_mode_t sleep_mode;           /*!< LEDC sleep mode */
+#endif
 } led_indicator_ledc_config_t;
 
 /**

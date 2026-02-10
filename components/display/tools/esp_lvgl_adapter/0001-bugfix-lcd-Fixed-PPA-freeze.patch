@@ -1,0 +1,24 @@
+From 62beeae461bd3692c2028f96a93c84f11291e155 Mon Sep 17 00:00:00 2001
+From: lvhaiyu <lvhaiyu@espressif.com>
+Date: Thu, 4 Sep 2025 09:58:46 +0800
+Subject: [PATCH] bugfix(lcd): Fixed PPA freeze
+
+---
+ components/esp_driver_ppa/src/ppa_srm.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/components/esp_driver_ppa/src/ppa_srm.c b/components/esp_driver_ppa/src/ppa_srm.c
+index 51849c1c9a..6e4fb8f3d3 100644
+--- a/components/esp_driver_ppa/src/ppa_srm.c
++++ b/components/esp_driver_ppa/src/ppa_srm.c
+@@ -21,6 +21,8 @@ bool ppa_srm_transaction_on_picked(uint32_t num_chans, const dma2d_trans_channel
+     ppa_dma2d_trans_on_picked_config_t *trans_on_picked_desc = (ppa_dma2d_trans_on_picked_config_t *)user_config;
+     assert(trans_on_picked_desc->trigger_periph == DMA2D_TRIG_PERIPH_PPA_SRM && trans_on_picked_desc->srm_desc && trans_on_picked_desc->ppa_engine);
+ 
++    PPA.sr_byte_order.sr_macro_bk_ro_bypass = 1;
++
+     ppa_srm_oper_t *srm_trans_desc = (ppa_srm_oper_t *)trans_on_picked_desc->srm_desc;
+     ppa_srm_engine_t *srm_engine = __containerof(trans_on_picked_desc->ppa_engine, ppa_srm_engine_t, base);
+     ppa_platform_t *platform = srm_engine->base.platform;
+-- 
+2.34.1

@@ -1,4 +1,4 @@
-version: "1.2.0"
+version: "2.0.0"
 targets:
   - esp32s2
   - esp32s3
@@ -9,15 +9,18 @@ repository: https://github.com/espressif/esp-iot-solution.git
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_ppp.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=5.1"
   cmake_utilities: "0.*"
   iot_usbh_cdc:
-    version: "2.*"
+    version: "^3.0"
     override_path: "../iot_usbh_cdc"
-  espressif/esp_wifi_remote:
-    version: "0.*"
-    rules:
-      - if: "target in [esp32p4]"
+  espressif/iot_eth:
+    version: "*"
+    override_path: ../../iot_eth
+  modem_at:
+    version: "*"
+    override_path: ../../modem_at
+
 examples:
   - path: ../../../examples/usb/host/usb_cdc_4g_module
 sbom:
