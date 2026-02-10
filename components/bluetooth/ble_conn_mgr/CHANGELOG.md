@@ -4,6 +4,7 @@
 
 ### Bug Fixes:
 
+- Fix characteristic flag field truncation by widening from uint8_t to uint16_t to support extended properties. ([#662](https://github.com/espressif/esp-iot-solution/pull/662)) by [@acouvreur](https://github.com/acouvreur)
 - Fix incorrect SM bitfield assignment that prevented security settings from taking effect. ([#661](https://github.com/espressif/esp-iot-solution/pull/661)) by [@acouvreur](https://github.com/acouvreur)
 
 ## v0.1.5 - 2026-01-27
