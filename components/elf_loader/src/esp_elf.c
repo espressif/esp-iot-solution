@@ -447,7 +447,6 @@ void elf_set_symbol_resolver(symbol_resolver resolver) {
     current_resolver = resolver;
 }
 
-
 /**
  * @brief Map symbol's address of ELF to physic space.
  *
