@@ -25,12 +25,22 @@ __attribute__((weak)) void esp_ble_midi_on_bep_received(const uint8_t *data, uin
 static esp_err_t esp_midi_io_cb(const uint8_t *inbuf, uint16_t inlen,
                                 uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
 {
-    (void)outbuf;
-    (void)outlen;
     (void)priv_data;
 
     if (!att_status) {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Read: inbuf == NULL, inlen == 0 */
+    if (!inbuf && !inlen) {
+        if (!outbuf || !outlen) {
+            *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
+            return ESP_ERR_INVALID_ARG;
+        }
+        *outlen = 0;
+        *outbuf = NULL;
+        *att_status = ESP_IOT_ATT_SUCCESS;
+        return ESP_OK;
     }
 
     if (!inbuf && inlen) {
@@ -52,7 +62,13 @@ static esp_err_t esp_midi_io_cb(const uint8_t *inbuf, uint16_t inlen,
 }
 
 static const esp_ble_conn_character_t nu_lookup_table[] = {
-    {"midi_io", BLE_CONN_UUID_TYPE_128, (BLE_CONN_GATT_CHR_WRITE_NO_RSP | BLE_CONN_GATT_CHR_NOTIFY), { .uuid128 = BLE_MIDI_CHAR_UUID128 }, esp_midi_io_cb},
+    {
+        "midi_io",
+        BLE_CONN_UUID_TYPE_128,
+        (BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_WRITE_NO_RSP | BLE_CONN_GATT_CHR_NOTIFY),
+        { .uuid128 = BLE_MIDI_CHAR_UUID128 },
+        esp_midi_io_cb
+    },
 };
 
 static const esp_ble_conn_svc_t svc = {

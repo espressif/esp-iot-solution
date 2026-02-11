@@ -1,3 +1,8 @@
+## v1.2.1 - 2026.02.11
+
+Bugfix:
+- MIDI: Add missing read support for MIDI I/O characteristic
+
 ## v1.2.0 - 2026.01.15
 
 Features:
