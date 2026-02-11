@@ -1827,6 +1827,13 @@ build_example_weaver_led_light:
     - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/weaver/led_light
+build_example_weaver_imu_gesture:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_weaver_imu_gesture
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/weaver/imu_gesture
 
 build_components_utilities_adc_tp_calibration_test_apps:
   extends:

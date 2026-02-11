@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+dependencies:
+  ## Required IDF version
+  idf:
+    version: "==5.5"
+  espressif/esp_weaver:
+    override_path: "../../../../components/esp_weaver"
+  espressif/bmi270_sensor: ^0.1.1
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common

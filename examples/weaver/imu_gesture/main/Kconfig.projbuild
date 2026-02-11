@@ -1,0 +1,79 @@
+menu "Example Configuration"
+
+    config EXAMPLE_NODE_NAME
+        string "Node name"
+        default "ESP Weaver Device"
+        help
+            Name of the Weaver node, used for device identification.
+
+    config EXAMPLE_NODE_TYPE
+        string "Node type"
+        default "IMU Gesture"
+        help
+            Type of the Weaver node (e.g. Lightbulb, Sensor, Switch).
+
+    config EXAMPLE_DEVICE_NAME
+        string "Device display name"
+        default "IMU Gesture"
+        help
+            Display name advertised via mDNS TXT record for local discovery.
+
+    choice BOARD_SELECTION
+        prompt "Select Development Board"
+        default BOARD_ESP_SPOT_C5 if IDF_TARGET_ESP32C5
+        default BOARD_ESP_SPOT_S3 if IDF_TARGET_ESP32S3
+        default BOARD_CUSTOM
+        help
+            Select the development board you are using.
+
+        config BOARD_ESP_SPOT_C5
+            depends on IDF_TARGET_ESP32C5
+            bool "ESP SPOT C5"
+        config BOARD_ESP_SPOT_S3
+            depends on IDF_TARGET_ESP32S3
+            bool "ESP SPOT S3"
+        config BOARD_ESP_ASTOM_S3
+            depends on IDF_TARGET_ESP32S3
+            bool "ESP ASTOM S3"
+        config BOARD_ESP_ECHOEAR_S3
+            depends on IDF_TARGET_ESP32S3
+            bool "ESP ECHOEAR S3"
+        config BOARD_CUSTOM
+            bool "Other Boards"
+    endchoice
+
+    menu "Custom Board Configuration"
+        depends on BOARD_CUSTOM
+        help
+            Configure GPIO pins and I2C settings for custom board.
+
+        config I2C_INT_IO
+            int "Interrupt GPIO Num"
+            default 21
+            range 0 48
+            help
+                GPIO number for interrupt line.
+
+        config I2C_MASTER_SCL_IO
+            int "SCL GPIO Num"
+            default 1
+            range 0 48
+            help
+                GPIO number for I2C Master clock line.
+
+        config I2C_MASTER_SDA_IO
+            int "SDA GPIO Num"
+            default 2
+            range 0 48
+            help
+                GPIO number for I2C Master data line.
+
+        config I2C_USE_SOFTWARE
+            bool "Use Software I2C"
+            default n
+            help
+                Enable software I2C implementation instead of hardware I2C.
+
+    endmenu
+
+endmenu

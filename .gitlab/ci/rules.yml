@@ -834,6 +834,8 @@
   - "examples/weaver/led_light/**/*"
 .patterns-example_xiaozhi_chat: &patterns-example_xiaozhi_chat
   - "examples/ai/xiaozhi_chat/**/*"
+.patterns-example_weaver_imu_gesture: &patterns-example_weaver_imu_gesture
+  - "examples/weaver/imu_gesture/**/*"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -2127,6 +2129,18 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_robot_ragtime_panthera_leader
+
+.rules:build:example_weaver_imu_gesture:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_weaver
+    - <<: *if-dev-push
+      changes: *patterns-example_weaver_imu_gesture
 
 .rules:build:example_weaver_led_light:
   rules:
