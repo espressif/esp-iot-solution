@@ -487,7 +487,7 @@ esp_err_t max17048_set_sleep_enabled(max17048_handle_t sensor, bool enabled)
     buf[0] = (uint8_t)(result >> 8);
     buf[1] = (uint8_t)(result & 0xFF);
 
-    return i2c_bus_write_bytes(sens->i2c_dev, MAX17048_CONFIG_REG, 2, buf);
+    return i2c_bus_write_bytes(sens->i2c_dev, MAX17048_MODE_REG, 2, buf);
 }
 
 esp_err_t max17048_set_sleep(max17048_handle_t sensor, bool sleep)
