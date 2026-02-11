@@ -499,6 +499,16 @@ void display_manager_clear(void)
  **********************/
 
 #if LVGL_VERSION_MAJOR >= 9
+
+static void display_manager_invalidate_wake_cb(lv_event_t *e)
+{
+    (void)e;
+    esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
+    if (ctx && ctx->task && ctx->task != xTaskGetCurrentTaskHandle()) {
+        xTaskNotifyGive(ctx->task);
+    }
+}
+
 /**
  * @brief LVGL v9 flush callback
  */
@@ -671,6 +681,8 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     }
     lv_display_set_user_data(disp, node);
     lv_display_set_flush_cb(disp, display_manager_flush_cb_v9);
+    lv_display_add_event_cb(disp, display_manager_invalidate_wake_cb,
+                            LV_EVENT_INVALIDATE_AREA, NULL);
 
 #if CONFIG_SOC_PPA_SUPPORTED
     if (pub->profile.enable_ppa_accel) {

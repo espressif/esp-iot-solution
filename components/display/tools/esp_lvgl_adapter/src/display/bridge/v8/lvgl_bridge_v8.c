@@ -58,6 +58,20 @@
 #define COLOR_BYTES_RGB565         (2)     /* Bytes per pixel for RGB565 */
 #define COLOR_BYTES_RGB888         (3)     /* Bytes per pixel for RGB888 */
 
+#if SOC_DMA2D_SUPPORTED
+#if defined(ESP_COLOR_FOURCC_RGB16) && defined(ESP_COLOR_FOURCC_RGB24)
+#define DMA2D_PIXEL_FORMAT_FIELD(_color_bytes) \
+    .pixel_format_fourcc_id = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24)
+#else
+#define DMA2D_PIXEL_FORMAT_FIELD(_color_bytes) \
+    .pixel_format_unique_id = { \
+        .color_type_id = ((_color_bytes) == COLOR_BYTES_RGB565) ? \
+        COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB565) : \
+        COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB888) \
+    }
+#endif
+#endif
+
 /* PPA transformation constants */
 #define PPA_SCALE_FACTOR_NO_SCALE  (1.0f)  /* No scaling (1:1) */
 #define PPA_SWAP_DISABLED          (0)     /* RGB/byte swap disabled */
@@ -1273,11 +1287,7 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
         .dst_offset_y      = area->y1,
         .copy_size_x       = rect_w,
         .copy_size_y       = rect_h,
-        .pixel_format_unique_id = {
-            .color_type_id = (lvgl_color_format_bytes == COLOR_BYTES_RGB565) ?
-            COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB565) :
-            COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB888)
-        },
+        DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
     };
 
     ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
@@ -1882,11 +1892,7 @@ MERGE_RESTART:;
             .dst_offset_y      = r.y1,
             .copy_size_x       = copy_w_px,
             .copy_size_y       = copy_h_px,
-            .pixel_format_unique_id = {
-                .color_type_id = (color_bytes == 2) ?
-                COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB565) :
-                COLOR_TYPE_ID(COLOR_SPACE_RGB, COLOR_PIXEL_RGB888)
-            },
+            DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
         };
 
         /* submit and wait */

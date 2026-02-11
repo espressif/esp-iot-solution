@@ -131,6 +131,7 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
 #endif
 
 static const char *TAG = "lv_decoder_v8";
+static uint32_t s_jpeg_header_read_size = 1024;
 
 #if ESP_LV_ENABLE_HW_JPEG
 static jpeg_decoder_handle_t jpgd_handle;
@@ -565,51 +566,63 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
             return lv_ret;
         } else if (strcmp(lv_fs_get_ext(fn), "jpg") == 0) {
 
-            if (load_image_file(fn, &load_img_data, &load_img_size, true) != LV_FS_RES_OK) {
-                if (load_img_data) {
-                    free(load_img_data);
-                }
+            lv_fs_file_t f;
+            lv_fs_res_t res = lv_fs_open(&f, fn, LV_FS_MODE_RD);
+            if (res != LV_FS_RES_OK) {
                 return LV_RES_INV;
             }
+            uint32_t file_len;
+            lv_fs_seek(&f, 0, LV_FS_SEEK_END);
+            lv_fs_tell(&f, &file_len);
+            lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
+
+            uint32_t read_len = (file_len > s_jpeg_header_read_size) ? s_jpeg_header_read_size : file_len;
+            load_img_data = decoder_malloc(read_len);
+            if (!load_img_data) {
+                lv_fs_close(&f);
+                return LV_RES_INV;
+            }
+            uint32_t rn = 0;
+            if (lv_fs_read(&f, load_img_data, read_len, &rn) != LV_FS_RES_OK || rn != read_len) {
+                free(load_img_data);
+                lv_fs_close(&f);
+                return LV_RES_INV;
+            }
+            load_img_size = read_len;
 
             uint32_t width, height;
             lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
 
-            if (lv_ret != LV_RES_OK && load_img_size == 1024) {
+            if (lv_ret != LV_RES_OK && load_img_size < 8192 && file_len > load_img_size) {
+                ESP_LOGW(TAG, "JPEG header parse failed with %lu bytes, retrying with up to 8KB",
+                         (unsigned long)load_img_size);
                 free(load_img_data);
-                load_img_data = NULL;
 
-                // Read up to 8KB
-                lv_fs_file_t f;
-                lv_fs_res_t res = lv_fs_open(&f, fn, LV_FS_MODE_RD);
-                if (res == LV_FS_RES_OK) {
-                    uint32_t file_len;
-                    lv_fs_seek(&f, 0, LV_FS_SEEK_END);
-                    lv_fs_tell(&f, &file_len);
+                read_len = (file_len > 8192) ? 8192 : file_len;
+                load_img_data = decoder_malloc(read_len);
+                if (load_img_data) {
                     lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
-
-                    uint32_t read_len = (file_len > 8192) ? 8192 : file_len;
-                    load_img_data = decoder_malloc(read_len);
-                    if (load_img_data) {
-                        uint32_t rn = 0;
-                        if (lv_fs_read(&f, load_img_data, read_len, &rn) == LV_FS_RES_OK && rn == read_len) {
-                            load_img_size = read_len;
-                            lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
-                        } else {
-                            free(load_img_data);
-                            load_img_data = NULL;
-                            lv_ret = LV_RES_INV;
+                    rn = 0;
+                    if (lv_fs_read(&f, load_img_data, read_len, &rn) == LV_FS_RES_OK && rn == read_len) {
+                        load_img_size = read_len;
+                        lv_ret = jpeg_decode_header(&width, &height, load_img_data, load_img_size);
+                        if (lv_ret == LV_RES_OK) {
+                            s_jpeg_header_read_size = 8192;
                         }
-                    }
-                    lv_fs_close(&f);
-                }
-
-                if (lv_ret != LV_RES_OK) {
-                    if (load_img_data) {
+                    } else {
                         free(load_img_data);
+                        load_img_data = NULL;
+                        lv_ret = LV_RES_INV;
                     }
-                    return LV_RES_INV;
                 }
+            }
+            lv_fs_close(&f);
+
+            if (lv_ret != LV_RES_OK) {
+                if (load_img_data) {
+                    free(load_img_data);
+                }
+                return LV_RES_INV;
             }
 
             header->cf = LV_IMG_CF_TRUE_COLOR;
@@ -1269,8 +1282,11 @@ static lv_res_t jpeg_decode_hw_or_sw(uint8_t **out, uint32_t *w, uint32_t *h, co
     if (out_is_hw) {
         *out_is_hw = false;
     }
-    if (jpeg_decode_header(w, h, in, insize) == LV_RES_OK) {
-        if (((*w) % 16 == 0) && ((*h) % 16 == 0) && (*w >= 64) && (*h >= 64) && jpgd_handle) {
+    jpeg_decode_picture_info_t pic_info = {0};
+    if (jpgd_handle && jpeg_decoder_get_info(in, insize, &pic_info) == ESP_OK) {
+        *w = pic_info.width;
+        *h = pic_info.height;
+        if (((*w) % 16 == 0) && ((*h) % 16 == 0) && (*w >= 64) && (*h >= 64)) {
             size_t req_size = (*w) * (*h) * DEC_RGB_BPP;
             jpeg_decode_memory_alloc_cfg_t mem_cfg = { .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER };
             size_t out_size = 0;
@@ -1297,9 +1313,7 @@ static lv_res_t jpeg_decode_hw_or_sw(uint8_t **out, uint32_t *w, uint32_t *h, co
             }
             jpeg_free_align(*out);
             *out = NULL;
-        } else { }
-    } else {
-        ESP_LOGE(TAG, "HW JPG header parse fail");
+        }
     }
 #endif
     {

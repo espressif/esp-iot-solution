@@ -690,9 +690,9 @@ esp_lv_adapter_deinit();
 
 If you encounter display freeze when using `ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL` mode with screen rotation enabled on ESP32-P4, you need to apply the following patch:
 
-**Target Version**: ESP-IDF release/v5.5 (commit `62beeae461bd3692c2028f96a93c84f11291e155`)
+**Target Version**: ESP-IDF release/v5.5 (commit `3f0857fa42e58e8f87b7fab742e4582e28ddd512`)
 
-**Patch File**: `0001-bugfix-lcd-Fixed-PPA-freeze.patch`
+**Patch File**: `0001-bugfix-ppa-Temporary-fix-for-the-PPA-hang-issue.patch`
 
 **How to Apply**:
 
@@ -700,7 +700,7 @@ In your ESP-IDF repository root directory:
 
 ```bash
 cd $IDF_PATH
-git apply /path/to/esp_lvgl_adapter/0001-bugfix-lcd-Fixed-PPA-freeze.patch
+git apply /path/to/esp_lvgl_adapter/0001-bugfix-ppa-Temporary-fix-for-the-PPA-hang-issue.patch
 ```
 
 **Issue Description**:
