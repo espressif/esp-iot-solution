@@ -1,9 +1,10 @@
 # ChangeLog
 
-## [Unreleased]
+## v0.1.6 - 2026-02-11
 
 ### Bug Fixes:
 
+- Fix automatic addition of CUD (0x2901)
 - Fix characteristic flag field truncation by widening from uint8_t to uint16_t to support extended properties. ([#662](https://github.com/espressif/esp-iot-solution/pull/662)) by [@acouvreur](https://github.com/acouvreur)
 - Fix incorrect SM bitfield assignment that prevented security settings from taking effect. ([#661](https://github.com/espressif/esp-iot-solution/pull/661)) by [@acouvreur](https://github.com/acouvreur)
 

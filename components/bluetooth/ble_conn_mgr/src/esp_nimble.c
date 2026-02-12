@@ -1706,7 +1706,7 @@ static esp_err_t esp_ble_conn_gatts_init(esp_ble_conn_session_t *conn_session)
  * its serial no. and XXX 16 bit standard UUID for descriptor to be provided as
  * input parameters. Returns 0 on success and returns ESP_ERR_NO_MEM on
  * failure. */
-static int
+static int __attribute__((unused))
 ble_gatt_add_char_dsc(struct ble_gatt_chr_def *characteristics, esp_ble_conn_character_t *nu_lookup, int index, uint16_t dsc_uuid)
 {
     ble_uuid_t *uuid16 = BLE_UUID16_DECLARE(dsc_uuid);
@@ -1859,12 +1859,6 @@ esp_ble_conn_populate_gatt_db(esp_ble_conn_session_t *conn_session)
             rc = ble_gatt_add_characteristics((void *)gatt_svr_svcs[index].characteristics, svc_uuid->svc.nu_lookup, i);
             if (rc != 0) {
                 ESP_LOGE(TAG, "Error adding GATT characteristic !!!");
-                return rc;
-            }
-            /* GATT: Add user description to characteristic no. i*/
-            rc = ble_gatt_add_char_dsc((void *)gatt_svr_svcs[index].characteristics, svc_uuid->svc.nu_lookup, i, BLE_GATT_UUID_CHAR_DSC);
-            if (rc != 0) {
-                ESP_LOGE(TAG, "Error adding GATT Descriptor !!");
                 return rc;
             }
         }
