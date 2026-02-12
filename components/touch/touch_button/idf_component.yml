@@ -1,4 +1,4 @@
-version: "0.1.0"
+version: "0.1.0~1"
 targets:
   - esp32
   - esp32s2
@@ -17,7 +17,7 @@ dependencies:
     version: "^4"
     public: true
   espressif/touch_button_sensor:
-    version: "^0.2.1"
+    version: "^0.2.2"
     override_path: ../touch_button_sensor
     public: true
 sbom:

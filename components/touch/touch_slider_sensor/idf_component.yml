@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.2.0~1"
 targets:
   - esp32
   - esp32s2
@@ -14,7 +14,7 @@ dependencies:
   idf: ">=4.4"
   cmake_utilities: "0.*"
   touch_sensor_fsm:
-    version: ">=0.8.1~1,<0.9.0"
+    version: ">=0.8.1~1,<0.8.2"
   touch_sensor_lowlevel:
     version: ">=0.9.1~1,<0.10.0"
     public: true
