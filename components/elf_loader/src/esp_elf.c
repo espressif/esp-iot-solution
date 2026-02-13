@@ -21,6 +21,7 @@
 #endif
 
 #include "private/elf_platform.h"
+#include "esp_elf.h"
 
 #define stype(_s, _t)               ((_s)->type == (_t))
 #define sflags(_s, _f)              (((_s)->flags & (_f)) == (_f))
@@ -38,8 +39,22 @@
 #define FS_PATH                     "/storage"
 #endif
 
+uintptr_t elf_find_sym_default(const char *sym_name);
+
 static const char *TAG = "ELF";
 static esp_elf_symbol_table_t *g_symbol_tables[SYMBOL_TABLES_NO];
+static symbol_resolver current_resolver = elf_find_sym_default;
+
+/**
+ * @brief Find symbol address by name.
+ *
+ * @param sym_name - Symbol name
+ *
+ * @return Symbol address if success or 0 if failed.
+ */
+uintptr_t elf_find_sym(const char *sym_name) {
+    return current_resolver(sym_name);
+}
 
 /**
  * @brief Open and load an ELF file into memory.
@@ -420,6 +435,17 @@ static int esp_elf_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
     return 0;
 }
 #endif
+
+/**
+ * @brief Override the internal symbol resolver.
+ * The default resolver is based on static lists that are determined by KConfig.
+ * This override allows for an arbitrary implementation.
+ *
+ * @param resolver the resolver function
+ */
+void elf_set_symbol_resolver(symbol_resolver resolver) {
+    current_resolver = resolver;
+}
 
 /**
  * @brief Map symbol's address of ELF to physic space.
