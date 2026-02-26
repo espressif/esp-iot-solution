@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,10 +7,15 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "test_utils.h"
+#include "esp_idf_version.h"
 #include "unity.h"
 #include "bldc_control.h"
 #include "iot_button.h"
+#include "button_gpio.h"
+
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+#include "test_utils.h"
+#endif
 
 #define CLOSED_LOOP 1
 
@@ -65,15 +70,14 @@ static void button_press_down_cb(void *arg, void *data)
 
 void button_init(void *user_data)
 {
-    button_config_t cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = 0,
-            .active_level = 0,
-        },
+    button_config_t btn_cfg = {0};
+    button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = 0,
+        .active_level = 0,
     };
-    button_handle_t btn = iot_button_create(&cfg);
-    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_press_down_cb, user_data);
+    button_handle_t btn = NULL;
+    iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &btn);
+    iot_button_register_cb(btn, BUTTON_PRESS_DOWN, NULL, button_press_down_cb, user_data);
 }
 
 TEST_CASE("bldc comparer ledc test", "[bldc comparer][ledc]")

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.3 - 2026-1-30
+
+* Fix driver component requirement in CMake for newer ESP-IDF 6.0 versions
+
 ## v1.0.2 - 2025-10-24
 
 ### Bug fix:
