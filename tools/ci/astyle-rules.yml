@@ -43,6 +43,7 @@ not_formatted_permanent:
     - "docs/doxygen-known-warnings.txt"
     - "docs/sphinx-known-warnings.txt"
     - "examples/usb/device/usb_webcam/eyes_show/"
+    - "examples/ai/esp_dl/self_learning_classification/main/ui"
     - "examples/usb/host/usb_camera_lcd_display/components/esp_painter/font/"
     - "examples/usb/host/usb_camera_mic_spk/main/wave_1ch_16bits.c"
     - "examples/robot/ragtime_panther/follower/main/ui/"
