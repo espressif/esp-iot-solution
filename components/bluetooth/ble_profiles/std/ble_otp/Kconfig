@@ -1,0 +1,10 @@
+menu "BLE Profile: Object Transfer"
+    config BLE_OBJECT_TRANSFER_PROFILE
+        bool "Enable Object Transfer Profile"
+        default n
+        select BLE_OTS
+        help
+            Enable support for Object Transfer Profile (OTP). This profile
+            is based on the Object Transfer Service (OTS) and uses L2CAP CoC
+            for bulk data transfer.
+endmenu

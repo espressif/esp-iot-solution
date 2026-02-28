@@ -1,4 +1,5 @@
 bldc_control.h:line: warning: parameters of member bldc_control_config_t::@47 are not (all) documented
 bldc_control.h:line: warning: parameters of member bldc_control_config_t::@49 are not (all) documented
+esp_ble_conn_mgr.h:line: warning: parameters of member esp_ble_conn_l2cap_coc_event::@3 are not (all) documented
 sensor_type.h:line: warning: parameters of member sensor_data_t::@51 are not (all) documented
 

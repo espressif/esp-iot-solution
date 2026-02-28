@@ -1,7 +1,11 @@
+esp_otp.inc:line: WARNING: Duplicate C++ declaration, also defined at bluetooth/ble_otp:line.
+Declaration is '.. cpp:member:: esp_ble_otp_olcp_rsp_t response'.
+esp_otp.inc:line: WARNING: Duplicate C++ declaration, also defined at bluetooth/ble_otp:line.
+Declaration is '.. cpp:member:: uint16_t data_len'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: struct lightbulb_config_t::@50::@54 precise'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@64::@68 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.

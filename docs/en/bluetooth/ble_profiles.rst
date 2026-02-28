@@ -9,3 +9,4 @@ BLE Profiles
     Bluetooth Low Energy MIDI Profile <ble_midi>
     Heart Rate Profiles <ble_hrp>
     Health Thermometer Profiles <ble_htp>
+    Object Transfer Profile <ble_otp>
