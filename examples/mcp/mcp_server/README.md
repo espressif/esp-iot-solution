@@ -207,7 +207,7 @@ The example uses HTTP transport by default. The MCP server runs as an HTTP serve
 ```c
 httpd_config_t http_config = HTTPD_DEFAULT_CONFIG();
 esp_mcp_mgr_config_t mcp_mgr_config = {
-    .transport = esp_mcp_transport_http,
+    .transport = esp_mcp_transport_http_server,
     .config = &http_config,
     .instance = mcp,
 };

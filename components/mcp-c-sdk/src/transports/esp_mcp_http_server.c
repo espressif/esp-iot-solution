@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,23 +11,23 @@
 #include <esp_check.h>
 #include <esp_http_server.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/event_groups.h>
-#include <sys/queue.h>
+#include "esp_mcp_item.h"
 #include "esp_mcp_priv.h"
 #include "esp_mcp_mgr.h"
 
-static const char *TAG = "esp_mcp_http";
+static const char *TAG = "esp_mcp_http_server";
 
+#define MAX_CONTENT_LEN (1024 * 1024)  // 1MB maximum content length
+#define MAX_TIMEOUT_COUNT 10            // Maximum consecutive timeouts before giving up
 /**
  * @brief MCP HTTP item structure
  *
- * Structure containing MCP handle, HTTP server handle, message buffer, and message buffer size.
+ * Structure containing MCP handle and HTTP server handle.
  */
 typedef struct esp_mcp_http_item_s {
     esp_mcp_mgr_handle_t handle;     /*!< MCP handle */
     httpd_handle_t   httpd;      /*!< HTTP server handle */
-} esp_mcp_http_item_t;
+} esp_mcp_http_server_item_t;
 
 static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
 {
@@ -40,20 +40,43 @@ static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
     int cur_len = 0;
     int recv_len = 0;
     esp_err_t ret = ESP_OK;
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)req->user_ctx;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)req->user_ctx;
+
+    if (total_len < 0) {
+        ESP_LOGE(TAG, "Invalid content length: %d", total_len);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid content length");
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (total_len > MAX_CONTENT_LEN) {
+        ESP_LOGE(TAG, "Content length too large: %d (max: %d)", total_len, MAX_CONTENT_LEN);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Content length too large");
+        return ESP_ERR_INVALID_SIZE;
+    }
+
     char *mbuf = calloc(1, total_len + 1);
     ESP_RETURN_ON_FALSE(mbuf, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for message buffer");
 
+    int timeout_count = 0;
     while (cur_len < total_len) {
         recv_len = httpd_req_recv(req, mbuf + cur_len, total_len - cur_len);
         if (recv_len <= 0) {
             if (recv_len == HTTPD_SOCK_ERR_TIMEOUT) {
+                timeout_count++;
+                if (timeout_count >= MAX_TIMEOUT_COUNT) {
+                    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Receive timeout exceeded");
+                    free(mbuf);
+                    ESP_LOGE(TAG, "Receive timeout exceeded after %d consecutive timeouts", timeout_count);
+                    return ESP_FAIL;
+                }
                 continue;
             }
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Failed to receive data");
             free(mbuf);
-            ESP_RETURN_ON_FALSE(recv_len == HTTPD_SOCK_ERR_TIMEOUT, ESP_FAIL, TAG, "Failed to receive data, error: %d", recv_len);
+            ESP_LOGE(TAG, "Failed to receive data, error: %d", recv_len);
+            return ESP_FAIL;
         }
+        timeout_count = 0;
         cur_len += recv_len;
     }
     mbuf[total_len] = '\0';
@@ -65,6 +88,10 @@ static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
         httpd_resp_set_type(req, "application/json");
         ret = httpd_resp_send(req, (char *)outbuf, outlen);
         esp_mcp_mgr_req_destroy_response(mcp_http->handle, outbuf);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to send response: %s", esp_err_to_name(ret));
+            return ESP_FAIL;
+        }
     } else {
         httpd_resp_set_status(req, HTTPD_204);
         httpd_resp_set_type(req, "application/json");
@@ -75,9 +102,11 @@ static esp_err_t esp_mcp_http_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_init(esp_mcp_mgr_handle_t handle, esp_mcp_transport_handle_t *transport_handle)
+static esp_err_t esp_mcp_http_server_init(esp_mcp_mgr_handle_t handle, esp_mcp_transport_handle_t *transport_handle)
 {
-    esp_mcp_http_item_t *mcp_http = calloc(1, sizeof(esp_mcp_http_item_t));
+    ESP_RETURN_ON_FALSE(transport_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid transport handle pointer");
+
+    esp_mcp_http_server_item_t *mcp_http = calloc(1, sizeof(esp_mcp_http_server_item_t));
     ESP_RETURN_ON_FALSE(mcp_http, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for HTTP item");
 
     mcp_http->handle = handle;
@@ -86,9 +115,9 @@ static esp_err_t esp_mcp_http_init(esp_mcp_mgr_handle_t handle, esp_mcp_transpor
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_deinit(esp_mcp_transport_handle_t handle)
+static esp_err_t esp_mcp_http_server_deinit(esp_mcp_transport_handle_t handle)
 {
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)handle;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)handle;
     ESP_RETURN_ON_FALSE(mcp_http, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     mcp_http->handle = 0;
@@ -97,9 +126,10 @@ static esp_err_t esp_mcp_http_deinit(esp_mcp_transport_handle_t handle)
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_create_config(const void *config, void **config_out)
+static esp_err_t esp_mcp_http_server_create_config(const void *config, void **config_out)
 {
     ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
+    ESP_RETURN_ON_FALSE(config_out, ESP_ERR_INVALID_ARG, TAG, "Invalid config output pointer");
 
     httpd_config_t *http_config = (httpd_config_t *)config;
     httpd_config_t *http_new_config = calloc(1, sizeof(httpd_config_t));
@@ -111,7 +141,7 @@ static esp_err_t esp_mcp_http_create_config(const void *config, void **config_ou
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_delete_config(void *config)
+static esp_err_t esp_mcp_http_server_delete_config(void *config)
 {
     httpd_config_t *http_config = (httpd_config_t *)config;
     ESP_RETURN_ON_FALSE(http_config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
@@ -121,12 +151,12 @@ static esp_err_t esp_mcp_http_delete_config(void *config)
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_start(esp_mcp_transport_handle_t handle, void *config)
+static esp_err_t esp_mcp_http_server_start(esp_mcp_transport_handle_t handle, void *config)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
 
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)handle;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)handle;
     httpd_config_t *http_config = (httpd_config_t *)config;
 
     esp_err_t ret = httpd_start(&mcp_http->httpd, http_config);
@@ -135,11 +165,11 @@ static esp_err_t esp_mcp_http_start(esp_mcp_transport_handle_t handle, void *con
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_stop(esp_mcp_transport_handle_t handle)
+static esp_err_t esp_mcp_http_server_stop(esp_mcp_transport_handle_t handle)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)handle;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)handle;
 
     esp_err_t ret = httpd_stop(mcp_http->httpd);
     ESP_RETURN_ON_ERROR(ret, TAG, "HTTP server stop failed: %s", esp_err_to_name(ret));
@@ -147,17 +177,18 @@ static esp_err_t esp_mcp_http_stop(esp_mcp_transport_handle_t handle)
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_register_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name, void *priv_data)
+static esp_err_t esp_mcp_http_server_register_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name, void *priv_data)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     ESP_RETURN_ON_FALSE(ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid endpoint name");
 
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)handle;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)handle;
 
-    char *ep_uri = calloc(1, strlen(ep_name) + 2);
+    size_t ep_uri_len = strlen(ep_name) + 2;
+    char *ep_uri = calloc(1, ep_uri_len);
     ESP_RETURN_ON_FALSE(ep_uri, ESP_ERR_NO_MEM, TAG, "Malloc failed for ep uri");
 
-    sprintf(ep_uri, "/%s", ep_name);
+    snprintf(ep_uri, ep_uri_len, "/%s", ep_name);
 
     httpd_uri_t config_handler = {
         .uri      = ep_uri,
@@ -168,39 +199,42 @@ static esp_err_t esp_mcp_http_register_endpoint(esp_mcp_transport_handle_t handl
 
     esp_err_t ret = httpd_register_uri_handler(mcp_http->httpd, &config_handler);
     free(ep_uri);
-
     ESP_RETURN_ON_ERROR(ret, TAG, "Uri handler register failed: %s", esp_err_to_name(ret));
 
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_http_unregister_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name)
+static esp_err_t esp_mcp_http_server_unregister_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     ESP_RETURN_ON_FALSE(ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid endpoint name");
 
-    esp_mcp_http_item_t *mcp_http = (esp_mcp_http_item_t *)handle;
+    esp_mcp_http_server_item_t *mcp_http = (esp_mcp_http_server_item_t *)handle;
 
-    char *ep_uri = calloc(1, strlen(ep_name) + 2);
+    size_t ep_uri_len = strlen(ep_name) + 2;
+    char *ep_uri = calloc(1, ep_uri_len);
     ESP_RETURN_ON_FALSE(ep_uri, ESP_ERR_NO_MEM, TAG, "Malloc failed for ep uri");
 
-    sprintf(ep_uri, "/%s", ep_name);
+    snprintf(ep_uri, ep_uri_len, "/%s", ep_name);
 
     esp_err_t ret = httpd_unregister_uri(mcp_http->httpd, ep_uri);
     free(ep_uri);
-
     ESP_RETURN_ON_ERROR(ret, TAG, "Uri handler unregister failed: %s", esp_err_to_name(ret));
 
     return ESP_OK;
 }
 
-const esp_mcp_transport_t esp_mcp_transport_http = {
-    .init                = esp_mcp_http_init,
-    .deinit              = esp_mcp_http_deinit,
-    .create_config       = esp_mcp_http_create_config,
-    .delete_config       = esp_mcp_http_delete_config,
-    .start               = esp_mcp_http_start,
-    .stop                = esp_mcp_http_stop,
-    .register_endpoint   = esp_mcp_http_register_endpoint,
-    .unregister_endpoint = esp_mcp_http_unregister_endpoint,
+const esp_mcp_transport_t esp_mcp_transport_http_server = {
+    .init                = esp_mcp_http_server_init,
+    .deinit              = esp_mcp_http_server_deinit,
+    .create_config       = esp_mcp_http_server_create_config,
+    .delete_config       = esp_mcp_http_server_delete_config,
+    .start               = esp_mcp_http_server_start,
+    .stop                = esp_mcp_http_server_stop,
+    .register_endpoint   = esp_mcp_http_server_register_endpoint,
+    .unregister_endpoint = esp_mcp_http_server_unregister_endpoint,
 };
+
+// Deprecated alias for backward compatibility
+__attribute__((deprecated("Use esp_mcp_transport_http_server or esp_mcp_transport_http_client instead")))
+const esp_mcp_transport_t esp_mcp_transport_http = esp_mcp_transport_http_server;

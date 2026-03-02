@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "esp_err.h"
 #include "esp_mcp_engine.h"
 #include "esp_mcp_tool_priv.h"
+#include "esp_mcp_item.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,6 +83,62 @@ esp_err_t esp_mcp_get_mbuf(esp_mcp_t *mcp, uint8_t **outbuf, uint16_t *outlen);
  *      - ESP_ERR_NOT_FOUND: Message ID not found
  */
 esp_err_t esp_mcp_remove_mbuf(esp_mcp_t *mcp, const uint8_t *outbuf);
+
+/**
+ * @brief Build initialize request
+ *
+ * @param[in] mcp Pointer to the MCP engine instance (must not be NULL)
+ * @param[in] info Info
+ * @param[out] output Output buffer
+ * @param[out] out_id Output ID
+ * @return ESP_OK on success; ESP_ERR_INVALID_ARG on parse/field errors
+ */
+esp_err_t esp_mcp_info_init(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id);
+
+/**
+ * @brief Build tools/list request
+ *
+ * @param[in] mcp Pointer to the MCP engine instance (must not be NULL)
+ * @param[in] info Info
+ * @param[out] output Output buffer
+ * @param[out] out_id Output ID
+ * @return ESP_OK on success; ESP_ERR_INVALID_ARG on parse/field errors
+ */
+esp_err_t esp_mcp_tools_list(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id);
+
+/**
+ * @brief Build tools/call request
+ *
+ * @param[in] mcp Pointer to the MCP engine instance (must not be NULL)
+ * @param[in] info Info
+ * @param[out] output Output buffer
+ * @param[out] out_id Output ID
+ * @return ESP_OK on success; ESP_ERR_INVALID_ARG on parse/field errors
+ */
+esp_err_t esp_mcp_tools_call(esp_mcp_t *mcp, const esp_mcp_info_t *info, char **output, uint16_t *out_id);
+
+/**
+ * @brief Free response buffer
+ *
+ * @param[in] buf Response buffer
+ */
+void esp_mcp_resp_free(char *buf);
+
+/**
+ * @brief Parse MCP response, extract id and result/error JSON
+ *
+ * @param[in]  mcp        MCP engine handle (unused for now, kept for future use)
+ * @param[in]  input      Raw response JSON string
+ * @param[out] result     Parsed response result structure
+ *
+ * @return
+ *      - ESP_OK: Parse successful, result contains application-level data (success or error), should notify application layer
+ *      - ESP_ERR_INVALID_RESPONSE: Parse successful, but result contains protocol-level error (JSON-RPC error field),
+ *                                  error_code and error_message are set, should notify application layer with is_error=true
+ *      - ESP_ERR_INVALID_ARG: Parse failed (invalid JSON or missing fields)
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_resp_parse(esp_mcp_t *mcp, const char *input, esp_mcp_resp_t *result);
 
 #ifdef __cplusplus
 }

@@ -1357,6 +1357,14 @@ build_example_mcp_server:
   variables:
     EXAMPLE_DIR: examples/mcp/mcp_server
 
+build_example_mcp_client:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_mcp_client
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/mcp/mcp_client
+
 build_components_ntc_driver_test_apps:
   extends:
     - .build_examples_template
