@@ -229,7 +229,7 @@ esp_err_t esp_tinyuf2_install(tinyuf2_ota_config_t *ota_config, tinyuf2_nvs_conf
         if (ota_config->if_restart) {
             ESP_LOGW(TAG, "Enable restart, SoC will restart after update complete");
         }
-        board_flash_init(ota_config->subtype, ota_config->label, ota_config->complete_cb, ota_config->if_restart);
+        board_flash_init(ota_config->subtype, ota_config->label, ota_config->event_cb, ota_config->if_restart);
     }
 
     if (nvs_config) {
