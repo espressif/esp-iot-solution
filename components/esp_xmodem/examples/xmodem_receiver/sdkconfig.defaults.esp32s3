@@ -1,0 +1,2 @@
+# ESP32-S3 sdkconfig defaults for xmodem_receiver example
+CONFIG_SUPPORT_FILE=y
