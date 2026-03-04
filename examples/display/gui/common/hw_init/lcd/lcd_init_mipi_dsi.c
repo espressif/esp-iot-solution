@@ -12,6 +12,7 @@
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_ek79007.h"
+#include "esp_idf_version.h"
 #include "driver/gpio.h"
 
 static const char *TAG = "hw_lcd_init";
@@ -19,7 +20,11 @@ static const char *TAG = "hw_lcd_init";
 #define HW_LDO_MIPI_CHAN                        (3)
 #define HW_LDO_MIPI_VOLTAGE_MV                  (2500)
 #define HW_LCD_BIT_PER_PIXEL                    (16)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define HW_MIPI_DPI_PX_FORMAT                   (LCD_COLOR_FMT_RGB565)
+#else
 #define HW_MIPI_DPI_PX_FORMAT                   (LCD_COLOR_PIXEL_FORMAT_RGB565)
+#endif
 #define HW_PIN_NUM_LCD_RST                      (27)
 
 static esp_lcd_dsi_bus_handle_t s_mipi_dsi_bus;
@@ -49,7 +54,11 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(s_mipi_dsi_bus, &dbi_config, &s_mipi_dbi_io));
 
     ESP_LOGI(TAG, "Install LCD driver of ek79007");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(HW_MIPI_DPI_PX_FORMAT);
+#else
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(HW_MIPI_DPI_PX_FORMAT);
+#endif
     dpi_config.num_fbs = esp_lv_adapter_get_required_frame_buffer_count(tear_avoid_mode, rotation);
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {

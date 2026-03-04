@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.3.4 (2026-02-26)
+
+* Used `jpeg_decoder_get_info` from `esp_driver_jpeg` instead of the software `jpeg_decode_header` for JPEG header parsing in the hardware decode path, eliminating the mixing of software and hardware JPEG interfaces.
+
 ## v0.3.3 (2026-01-22)
 
 * Fixed missing `esp_mm` and `esp_driver_jpeg` dependency declarations in CMakeLists.txt which caused build failures when using the component from the component registry.

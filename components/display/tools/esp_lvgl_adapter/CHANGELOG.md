@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.4.0 (2026-02-11)
+
+* Add multi-touch adaptation support
+* Add ESP-IDF v6.0 compatibility updates
+
 ## v0.3.2 (2026-01-22)
 
 * Fix C++ designated initializer order in SPI-with-PSRAM display profile macros

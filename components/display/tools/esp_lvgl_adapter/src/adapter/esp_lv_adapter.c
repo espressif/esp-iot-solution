@@ -954,7 +954,7 @@ static void lvgl_worker(void *arg)
             task_delay_ms = s_ctx.config.task_min_delay_ms;
         }
 
-        vTaskDelay(pdMS_TO_TICKS(task_delay_ms));
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(task_delay_ms));
     }
 
     s_ctx.paused = false;

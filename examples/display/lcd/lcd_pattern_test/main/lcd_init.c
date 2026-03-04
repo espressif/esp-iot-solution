@@ -8,6 +8,7 @@
 
 #include "driver/gpio.h"
 #include "esp_check.h"
+#include "esp_idf_version.h"
 #include "esp_lcd_ek79007.h"
 #include "esp_ldo_regulator.h"
 #include "esp_log.h"
@@ -95,10 +96,18 @@ esp_err_t example_lcd_init(esp_lcd_panel_handle_t *panel,
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(dsi_bus, &dbi_config, io));
 
     ESP_LOGI(TAG, "Install EK79007 LCD control panel");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if EXAMPLE_LCD_BIT_PER_PIXEL == 24
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(LCD_COLOR_FMT_RGB888);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(LCD_COLOR_FMT_RGB565);
+#endif
+#else
 #if EXAMPLE_LCD_BIT_PER_PIXEL == 24
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB888);
 #else
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
+#endif
 #endif
 
     ek79007_vendor_config_t vendor_config = {

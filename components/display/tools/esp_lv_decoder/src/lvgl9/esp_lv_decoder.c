@@ -99,8 +99,8 @@ static const jpeg_decode_cfg_t decode_cfg_rgb565 = {
 };
 #endif
 
-static bool s_hw_output_allocation = false;
 #if ESP_LV_ENABLE_HW_JPEG
+static bool s_hw_output_allocation = false;
 typedef struct hw_buf_node {
     void *ptr;
     struct hw_buf_node *next;
@@ -184,6 +184,7 @@ static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg);
 static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, uint16_t *splits, uint16_t *split_h);
 
 static const char *TAG = "lv_decoder_v9";
+static uint32_t s_jpeg_header_read_size = 1024;
 
 static bool png_dimensions_allowed(uint32_t width, uint32_t height)
 {
@@ -563,7 +564,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                     lv_fs_tell(&dsc->file, &jpeg_size);
                     lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
 
-                    uint32_t read_size = (jpeg_size > 1024) ? 1024 : jpeg_size;
+                    uint32_t read_size = (jpeg_size > s_jpeg_header_read_size) ? s_jpeg_header_read_size : jpeg_size;
                     jpeg_data = decoder_malloc(read_size);
                     if (jpeg_data) {
                         lv_fs_read(&dsc->file, jpeg_data, read_size, &rn);
@@ -600,13 +601,15 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             jpeg_pixel_format_t out_fmt = (tgt == LV_COLOR_FORMAT_RGB565) ? JPEG_PIXEL_FORMAT_RGB565_LE : JPEG_PIXEL_FORMAT_RGB888;
             lv_res_t res = jpeg_decode_header(&width, &height, jpeg_data, jpeg_size, out_fmt, NULL, NULL, NULL);
 
-            if (res != LV_RES_OK && src_type == LV_IMAGE_SRC_FILE && jpeg_size == 1024) {
+            if (res != LV_RES_OK && src_type == LV_IMAGE_SRC_FILE && jpeg_size < 8192) {
+                ESP_LOGW(TAG, "JPEG header parse failed with %"PRIu32" bytes, retrying with up to 8KB",
+                         jpeg_size);
                 lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_END);
                 uint32_t file_size;
                 lv_fs_tell(&dsc->file, &file_size);
                 lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
 
-                if (file_size > 1024) {
+                if (file_size > jpeg_size) {
                     free(jpeg_data);
                     uint32_t new_read_size = (file_size > 8192) ? 8192 : file_size;
                     jpeg_data = decoder_malloc(new_read_size);
@@ -617,6 +620,9 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                         if (rn2 == new_read_size) {
                             jpeg_size = new_read_size;
                             res = jpeg_decode_header(&width, &height, jpeg_data, jpeg_size, out_fmt, NULL, NULL, NULL);
+                            if (res == LV_RES_OK) {
+                                s_jpeg_header_read_size = 8192;
+                            }
                         } else {
                             free(jpeg_data);
                             jpeg_data = NULL;
@@ -1327,25 +1333,24 @@ static lv_draw_buf_t * jpeg_decode_jpg(lv_image_decoder_dsc_t * dsc)
 
     lv_color_format_t tgt = get_target_rgb_format();
     jpeg_pixel_format_t out_fmt = (tgt == LV_COLOR_FORMAT_RGB565) ? JPEG_PIXEL_FORMAT_RGB565_LE : JPEG_PIXEL_FORMAT_RGB888;
-    ESP_GOTO_ON_ERROR((jpeg_decode_header(&width, &height, src_data, src_data_size, out_fmt, &jpeg_dec, &jpeg_io, &header_info) == LV_RESULT_OK) ? ESP_OK : ESP_FAIL,
-                      cleanup, TAG, "decode JPEG header '%s' failed", (const char*)dsc->src);
 
-    /* Decide whether we will use HW JPEG path before allocating output buffer */
 #if ESP_LV_ENABLE_HW_JPEG
-    bool use_hw = ((width % 16 == 0) && (height % 16 == 0) && (width >= 64) && (height >= 64));
-#else
     bool use_hw = false;
-#endif
-    s_hw_output_allocation = use_hw;
-    decoded = lv_draw_buf_create_ex(image_cache_draw_buf_handlers, width, height,
-                                    (tgt == LV_COLOR_FORMAT_RGB565) ? LV_COLOR_FORMAT_RGB565 : LV_COLOR_FORMAT_RGB888,
-                                    LV_STRIDE_AUTO);
-    s_hw_output_allocation = false;
-    ESP_GOTO_ON_ERROR(decoded ? ESP_OK : ESP_ERR_NO_MEM, cleanup, TAG, "alloc image buffer '%s' failed", (const char*)dsc->src);
+    jpeg_decode_picture_info_t pic_info = {0};
+    if (jpeg_decoder_get_info(src_data, src_data_size, &pic_info) == ESP_OK) {
+        width = pic_info.width;
+        height = pic_info.height;
+        use_hw = ((width % 16 == 0) && (height % 16 == 0) && (width >= 64) && (height >= 64));
+    }
 
-#if ESP_LV_ENABLE_HW_JPEG
-    /* Use HW JPEG only for sizes >= 64x64 and 16-pixel aligned. Smaller images fall back to SW */
     if (use_hw) {
+        s_hw_output_allocation = true;
+        decoded = lv_draw_buf_create_ex(image_cache_draw_buf_handlers, width, height,
+                                        (tgt == LV_COLOR_FORMAT_RGB565) ? LV_COLOR_FORMAT_RGB565 : LV_COLOR_FORMAT_RGB888,
+                                        LV_STRIDE_AUTO);
+        s_hw_output_allocation = false;
+        ESP_GOTO_ON_ERROR(decoded ? ESP_OK : ESP_ERR_NO_MEM, cleanup, TAG, "alloc image buffer '%s' failed", (const char*)dsc->src);
+
         uint32_t out_size = 0;
         const jpeg_decode_cfg_t *cfg = (tgt == LV_COLOR_FORMAT_RGB565) ? &decode_cfg_rgb565 : &decode_cfg_rgb888;
         esp_err_t hw_ret = jpeg_decoder_process(jpgd_handle, cfg, src_data, src_data_size, decoded->data, decoded->data_size, &out_size);
@@ -1357,6 +1362,14 @@ static lv_draw_buf_t * jpeg_decode_jpg(lv_image_decoder_dsc_t * dsc)
     } else
 #endif
     {
+        ESP_GOTO_ON_ERROR((jpeg_decode_header(&width, &height, src_data, src_data_size, out_fmt, &jpeg_dec, &jpeg_io, &header_info) == LV_RESULT_OK) ? ESP_OK : ESP_FAIL,
+                          cleanup, TAG, "decode JPEG header '%s' failed", (const char*)dsc->src);
+
+        decoded = lv_draw_buf_create_ex(image_cache_draw_buf_handlers, width, height,
+                                        (tgt == LV_COLOR_FORMAT_RGB565) ? LV_COLOR_FORMAT_RGB565 : LV_COLOR_FORMAT_RGB888,
+                                        LV_STRIDE_AUTO);
+        ESP_GOTO_ON_ERROR(decoded ? ESP_OK : ESP_ERR_NO_MEM, cleanup, TAG, "alloc image buffer '%s' failed", (const char*)dsc->src);
+
         jpeg_io->outbuf = decoded->data;
         if (jpeg_dec_process(jpeg_dec, jpeg_io) != JPEG_ERR_OK) {
             lv_draw_buf_destroy_user(image_cache_draw_buf_handlers, decoded);
