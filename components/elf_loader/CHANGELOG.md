@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.1 - 2026-02-10
+
+* Added support for overriding symbol resolution with `elf_set_symbol_resolver()`
+
 ## v1.3.0 - 2026-01-08
 
 * Added support for generating a shared library
