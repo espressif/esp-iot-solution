@@ -125,6 +125,10 @@ examples/bluetooth/ble_adv/bthome/bulb:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/weaver/led_light:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/mcp/mcp_server:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)

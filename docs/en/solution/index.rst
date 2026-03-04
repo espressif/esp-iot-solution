@@ -7,3 +7,4 @@ Solutions
     :maxdepth: 2
 
     4G Solutions <4g/index>
+    ESP Weaver <weaver>

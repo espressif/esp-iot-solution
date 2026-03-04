@@ -1804,6 +1804,14 @@ build_example_elf_loader_elf_console_example:
   variables:
     EXAMPLE_DIR: examples/elf_loader/elf_console_example
 
+build_example_weaver_led_light:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_weaver_led_light
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/weaver/led_light
+
 build_components_utilities_adc_tp_calibration_test_apps:
   extends:
     - .build_examples_template
@@ -1835,3 +1843,11 @@ build_components_touch_ic_bs8112a3_test_apps:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/touch_ic/touch_ic_bs8112a3/test_apps
+
+build_components_esp_weaver_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_esp_weaver_test_apps
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: components/esp_weaver/test_apps

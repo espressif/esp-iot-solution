@@ -1,5 +1,6 @@
 components/display/tools/esp_lvgl_adapter/benchmark/metrics/convert_xunit_to_metric_json.py
 components/elf_loader/tool/symbols.py
+components/esp_weaver/tools/apply_patches.py
 components/gprof/scripts/gprof.py
 components/usb/esp_tinyuf2/utils/uf2conv.py
 components/utilities/xz/xz-embedded/linux/scripts/xz_wrap.sh

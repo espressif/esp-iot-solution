@@ -1,0 +1,62 @@
+menu "ESP Weaver"
+
+    config ESP_WEAVER_LOCAL_CTRL_HTTP_PORT
+        int "Local control HTTP port"
+        default 8080
+        range 1 65535
+        help
+            HTTP port for local control service.
+
+    config ESP_WEAVER_LOCAL_CTRL_HTTP_CTRL_PORT
+        int "Local control HTTP internal control port"
+        default 12312
+        range 1 65535
+        help
+            Internal control port for the HTTP server used by esp_local_ctrl.
+            Must be different from the HTTP port above. Change if it conflicts
+            with other services on the device.
+
+    config ESP_WEAVER_LOCAL_CTRL_STACK_SIZE
+        int "Local control HTTP server task stack size"
+        default 6144
+        help
+            Stack size for the HTTP server task used by local control.
+            Increase if you encounter stack overflow, decrease to save memory.
+
+    config ESP_WEAVER_LOCAL_CTRL_SECURITY_VERSION
+        int "Local control security version"
+        default 1
+        range 0 1
+        help
+            Security version for local control.
+
+            0 = SEC0 (No security)
+                WARNING: SEC0 provides NO encryption or authentication.
+                Communication is transmitted in plaintext and can be
+                intercepted or modified by attackers on the network.
+                Do NOT use SEC0 in production environments.
+
+            1 = SEC1 (Security with Proof of Possession) [RECOMMENDED]
+                Provides encrypted communication using a shared secret (PoP).
+                This is the recommended setting for all production deployments.
+
+            The default is SEC1 (secure-by-default). Only use SEC0 for
+            debugging purposes in isolated development environments.
+
+    config ESP_WEAVER_NVS_PARTITION_NAME
+        string "NVS partition name"
+        default "nvs"
+        help
+            Name of the NVS partition used for storing PoP.
+            Change if your application uses a custom NVS partition name
+            (e.g. "fctry").
+
+    config ESP_WEAVER_LOCAL_CTRL_MAX_PROPERTIES
+        int "Maximum number of local control properties"
+        default 4
+        range 2 32
+        help
+            Maximum number of properties registered with esp_local_ctrl.
+            Default is 4 (config + params + 2 reserved for future use).
+
+endmenu
