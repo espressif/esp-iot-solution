@@ -1,0 +1,34 @@
+# Build output
+build/
+**/build/
+
+# ESP-IDF config
+sdkconfig
+sdkconfig.old
+
+# Dependencies managed by IDF component manager
+managed_components/
+dependencies.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Compiled object files
+*.o
+*.d
+*.elf
+*.bin
+*.map
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
