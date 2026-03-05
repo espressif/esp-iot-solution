@@ -1112,6 +1112,41 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
  **********************/
 
 /**
+ * @brief Remove stride alignment padding from LVGL v9 draw buffer in-place
+ *
+ * LVGL v9 draw buffers have stride aligned to LV_DRAW_BUF_STRIDE_ALIGN, which
+ * may insert padding at the end of each row. LCD panel drivers (SPI/I2C/I80)
+ * expect tightly packed pixel data. This function compacts the buffer in-place
+ * by removing the per-row padding bytes and returns the resulting row stride
+ * in bytes.
+ *
+ * In PARTIAL mode, LVGL reshapes the draw buffer per flush call, so the stride
+ * is based on the flush area width (not the full display width).
+ */
+static size_t compact_stride_to_packed(uint8_t *buf, const lv_area_t *area,
+                                       lv_display_t *disp, uint8_t color_bytes)
+{
+    size_t src_stride = disp->buf_act->header.stride;
+    int rect_w = area->x2 - area->x1 + 1;
+    int rect_h = area->y2 - area->y1 + 1;
+    size_t row_bytes = (size_t)rect_w * color_bytes;
+
+    if (src_stride <= row_bytes) {
+        return src_stride;
+    }
+
+    uint8_t *src = buf + src_stride;
+    uint8_t *dst = buf + row_bytes;
+    for (int y = 1; y < rect_h; y++) {
+        memmove(dst, src, row_bytes);
+        src += src_stride;
+        dst += row_bytes;
+    }
+
+    return row_bytes;
+}
+
+/**
  * @brief Default flush (single buffer, no tear protection)
  */
 static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *impl,
@@ -1125,7 +1160,8 @@ static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *
     const int offsety1 = area->y1;
     const int offsety2 = area->y2;
 
-    /* Just copy data from the color map to the LCD frame buffer */
+    compact_stride_to_packed(color_map, area, disp, bridge_color_bytes(impl));
+
     if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER &&
             lv_display_get_color_format(disp) == LV_COLOR_FORMAT_RGB565) {
         lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
@@ -1134,7 +1170,6 @@ static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
-        /* Callback won't be triggered on failure, must notify LVGL immediately */
         display_manager_flush_ready(disp);
     }
 }
@@ -1158,7 +1193,8 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         esp_lv_adapter_te_sync_begin_frame(impl->cfg.te_ctx);
     }
 
-    /* Prepare pixel data before waiting for TE to minimize TX latency */
+    compact_stride_to_packed(color_map, area, disp, bridge_color_bytes(impl));
+
     if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER &&
             lv_display_get_color_format(disp) == LV_COLOR_FORMAT_RGB565) {
         lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
@@ -1176,7 +1212,6 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
-        /* Don't wait for callback that will never come */
         display_manager_flush_ready(disp);
         return;
     }
@@ -1276,92 +1311,95 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
                                                 uint8_t *color_map)
 {
     esp_lcd_panel_handle_t panel = impl->panel;
-    uint8_t color_bytes = bridge_color_bytes(impl);
-    uint16_t lvgl_port_h_res = bridge_h_res(impl);
+    const uint8_t color_bytes = bridge_color_bytes(impl);
+    const uint16_t lvgl_port_h_res = bridge_h_res(impl);
+    const int bytes_per_pixel = color_bytes;
+    const int bytes_per_line = lvgl_port_h_res * bytes_per_pixel;
+    const int rect_w = area->x2 - area->x1 + 1;
+    const int rect_h = area->y2 - area->y1 + 1;
+    const int copy_bytes = rect_w * bytes_per_pixel;
+
+    /*
+     * In PARTIAL mode, LVGL reshapes the draw buffer before each flush, so
+     * the stride is based on the flush area width, not the full display width.
+     */
+    const int src_stride = (int)disp->buf_act->header.stride;
 
 #if SOC_DMA2D_SUPPORTED
     uint16_t lvgl_port_v_res = bridge_v_res(impl);
 
-    /* Detect line buffer stride dynamically */
-    size_t rect_w = area->x2 - area->x1 + 1;
-    size_t rect_h = area->y2 - area->y1 + 1;
+    if (src_stride % bytes_per_pixel == 0) {
+        size_t src_stride_px = src_stride / bytes_per_pixel;
 
-    uint8_t *row0 = (uint8_t *)color_map;
-    uint8_t *row1 = (uint8_t *)color_map + rect_w * color_bytes;
-    size_t stride_bytes = row1 - row0;
-    size_t stride_px = stride_bytes / color_bytes;
+        display_cache_msync_range(color_map, (size_t)src_stride * rect_h, hw_resource.data_cache_line_size);
 
-    /* Determine if using full-width stride or compact stride */
-    bool use_full_stride = (stride_px == lvgl_port_h_res);
-    size_t src_stride_px = use_full_stride ? lvgl_port_h_res : rect_w;
-    size_t src_offset_x = use_full_stride ? area->x1 : 0;
+        esp_async_fbcpy_trans_desc_t blit = {
+            .src_buffer        = color_map,
+            .dst_buffer        = impl->back_fb,
+            .src_buffer_size_x = src_stride_px,
+            .src_buffer_size_y = rect_h,
+            .src_offset_x      = 0,
+            .src_offset_y      = 0,
+            .dst_buffer_size_x = lvgl_port_h_res,
+            .dst_buffer_size_y = lvgl_port_v_res,
+            .dst_offset_x      = area->x1,
+            .dst_offset_y      = area->y1,
+            .copy_size_x       = rect_w,
+            .copy_size_y       = rect_h,
+            DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
+        };
 
-    /* Perform cache-aligned synchronization */
-    size_t flush_size = src_stride_px * rect_h * color_bytes;
-    display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
+        ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
+    } else {
+        uint8_t *src = (uint8_t *)color_map;
+        uint8_t *dst = (uint8_t *)impl->back_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
 
-    esp_async_fbcpy_trans_desc_t blit = {
-        .src_buffer        = color_map,
-        .dst_buffer        = impl->back_fb,
-        .src_buffer_size_x = src_stride_px,
-        .src_buffer_size_y = rect_h,
-        .src_offset_x      = src_offset_x,
-        .src_offset_y      = 0,
-        .dst_buffer_size_x = lvgl_port_h_res,
-        .dst_buffer_size_y = lvgl_port_v_res,
-        .dst_offset_x      = area->x1,
-        .dst_offset_y      = area->y1,
-        .copy_size_x       = rect_w,
-        .copy_size_y       = rect_h,
-        DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
-    };
-
-    ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
+        for (int y = 0; y < rect_h; y++) {
+            memcpy(dst, src, copy_bytes);
+            dst += bytes_per_line;
+            src += src_stride;
+        }
+    }
 
 #else /* !SOC_DMA2D_SUPPORTED */
-    const int bytes_per_pixel = color_bytes;
-    const int bytes_per_line = lvgl_port_h_res * bytes_per_pixel;
-    const int copy_bytes = (area->x2 - area->x1 + 1) * bytes_per_pixel;
     uint8_t *src = (uint8_t *)color_map;
     uint8_t *dst = (uint8_t *)impl->back_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
-
-    int num_rows = area->y2 - area->y1 + 1;
     bool is_full_width = (copy_bytes == bytes_per_line);
 
-    if (is_full_width && num_rows > 4) {
-        size_t total_bytes = (size_t)num_rows * bytes_per_line;
-        memcpy(dst, src, total_bytes);
-    } else if (num_rows > 16 && copy_bytes > 64) {
+    if (is_full_width && rect_h > 4 && src_stride == bytes_per_line) {
+        memcpy(dst, src, (size_t)rect_h * bytes_per_line);
+    } else if (rect_h > 16 && copy_bytes > 64) {
         const int batch_rows = 8;
-        int full_batches = num_rows / batch_rows;
-        int remaining_rows = num_rows % batch_rows;
+        int full_batches = rect_h / batch_rows;
+        int remaining_rows = rect_h % batch_rows;
 
         for (int batch = 0; batch < full_batches; batch++) {
             for (int r = 0; r < batch_rows; r++) {
                 memcpy(dst, src, copy_bytes);
                 dst += bytes_per_line;
-                src += copy_bytes;
+                src += src_stride;
             }
         }
 
         for (int r = 0; r < remaining_rows; r++) {
             memcpy(dst, src, copy_bytes);
             dst += bytes_per_line;
-            src += copy_bytes;
+            src += src_stride;
         }
-    } else if (copy_bytes == 2 && num_rows <= 8) {
+    } else if (copy_bytes == 2 && rect_h <= 8) {
         uint16_t *dst16 = (uint16_t *)dst;
         uint16_t *src16 = (uint16_t *)src;
-        for (int y = 0; y < num_rows; y++) {
+        const int src_stride_16 = src_stride / (int)sizeof(uint16_t);
+        for (int y = 0; y < rect_h; y++) {
             *dst16 = *src16;
             dst16 += lvgl_port_h_res;
-            src16++;
+            src16 += src_stride_16;
         }
     } else {
-        for (int y = area->y1; y <= area->y2; y++) {
+        for (int y = 0; y < rect_h; y++) {
             memcpy(dst, src, copy_bytes);
             dst += bytes_per_line;
-            src += copy_bytes;
+            src += src_stride;
         }
     }
 
@@ -1508,24 +1546,20 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
                                                    uint8_t *color_map)
 {
     esp_lcd_panel_handle_t panel = impl->panel;
-    uint8_t color_bytes = bridge_color_bytes(impl);
-    uint16_t lvgl_port_h_res = bridge_h_res(impl);
+    const uint8_t color_bytes = bridge_color_bytes(impl);
+    const int rect_w = area->x2 - area->x1 + 1;
+    const int rect_h = area->y2 - area->y1 + 1;
 
-    size_t rect_w = area->x2 - area->x1 + 1;
-
-    /* Fix stride calculation: detect actual stride from buffer layout */
-    uint8_t *row0 = (uint8_t *)color_map;
-    uint8_t *row1 = row0 + rect_w * color_bytes;
-    size_t stride_bytes = row1 - row0;
-    size_t src_stride_px = stride_bytes / color_bytes;
-
-    /* Check if this is full-width buffer or line buffer */
-    bool use_full_stride = (src_stride_px == lvgl_port_h_res);
-    if (use_full_stride) {
-        src_stride_px = lvgl_port_h_res;
-    } else {
-        src_stride_px = rect_w;
+    /*
+     * In PARTIAL mode, LVGL reshapes the draw buffer before each flush, so
+     * the stride is based on the flush area width, not the full display width.
+     */
+    size_t stride_bytes = disp->buf_act->header.stride;
+    if (stride_bytes % color_bytes != 0) {
+        stride_bytes = compact_stride_to_packed(color_map, area, disp, color_bytes);
+        display_cache_msync_range(color_map, stride_bytes * rect_h, impl->cache_line_size);
     }
+    size_t src_stride_px = stride_bytes / color_bytes;
 
     rotate_copy_strided_region(color_map,
                                impl->back_fb,
