@@ -211,7 +211,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 #endif
 #ifdef CONFIG_BLE_CTS_REF_TIME_CHAR_ENABLE
     {
-        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_WRITE
+        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ
         , { BLE_CTS_CHR_UUID16_REFERENCE_TIME }, cts_ref_time_cb
     },
 #endif
