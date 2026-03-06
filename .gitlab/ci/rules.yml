@@ -617,6 +617,9 @@
 .patterns-example_display_gui_lvgl_eaf_player: &patterns-example_display_gui_lvgl_eaf_player
   - "examples/display/gui/lvgl_eaf_player/**/*"
 
+.patterns-example_display_gui_lvgl_fs_assets: &patterns-example_display_gui_lvgl_fs_assets
+  - "examples/display/gui/lvgl_fs_assets/**/*"
+
 .patterns-example_display_gui_lvgl_lottie_player: &patterns-example_display_gui_lvgl_lottie_player
   - "examples/display/gui/lvgl_lottie_player/**/*"
 
@@ -1287,6 +1290,18 @@
       changes: *patterns-example_display_gui_lvgl_eaf_player
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_eaf_player
+
+.rules:build:example_display_gui_lvgl_fs_assets:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_fs_assets
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lvgl_adapter
 
 .rules:build:example_display_gui_lvgl_lottie_player:
   rules:

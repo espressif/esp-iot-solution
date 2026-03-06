@@ -11,6 +11,10 @@ dependencies:
     override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
     public: true
 
+  example_lvgl_init:
+    version: "*"
+    override_path: "../../common/example_lvgl_init"
+
   hw_init:
     version: "*"
     override_path: "../../common/hw_init"

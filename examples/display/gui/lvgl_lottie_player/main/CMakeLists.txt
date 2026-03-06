@@ -4,7 +4,7 @@ set(include_dirs ".")
 idf_component_register(
     SRCS ${srcs}
     INCLUDE_DIRS ${include_dirs}
-    REQUIRES hw_init esp_lv_lottie_player
+    REQUIRES example_lvgl_init esp_lv_lottie_player
 )
 
 set(LOTTIE_URL "https://dl.espressif.com/AE/esp-dev-kits/welcome.json")
