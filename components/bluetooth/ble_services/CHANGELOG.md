@@ -1,3 +1,8 @@
+## v1.2.2 - 2026.03.06
+
+Bugfix:
+- CTS: Fix incorrect ATT operation for Reference Time Information characteristic (write → read).
+
 ## v1.2.1 - 2026.02.11
 
 Bugfix:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -117,8 +117,19 @@ static esp_err_t cts_ref_time_cb(const uint8_t *inbuf, uint16_t inlen,
 {
     uint8_t len = sizeof(s_ref_time);
 
-    memcpy(&s_ref_time, inbuf, MIN(len, inlen));
-    esp_event_post(BLE_CTS_EVENTS, BLE_CTS_CHR_UUID16_REFERENCE_TIME, ((uint8_t *)(&s_ref_time)), sizeof(esp_ble_cts_ref_time_t), portMAX_DELAY);
+    if (!outbuf || !outlen) {
+        *att_status = ESP_IOT_ATT_INTERNAL_ERROR;
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    *outbuf = calloc(1, len);
+    if (!(*outbuf)) {
+        *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
+        return ESP_ERR_NO_MEM;
+    }
+
+    memcpy(*outbuf, &s_ref_time, len);
+    *outlen = len;
 
     *att_status = ESP_IOT_ATT_SUCCESS;
 
@@ -211,7 +222,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 #endif
 #ifdef CONFIG_BLE_CTS_REF_TIME_CHAR_ENABLE
     {
-        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_WRITE
+        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ
         , { BLE_CTS_CHR_UUID16_REFERENCE_TIME }, cts_ref_time_cb
     },
 #endif
