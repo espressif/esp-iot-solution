@@ -289,6 +289,7 @@ static esp_err_t display_bridge_v8_dummy_draw_blit(esp_lv_adapter_display_bridge
 /* VSync handling */
 static bool display_bridge_v8_handle_vsync(esp_lv_adapter_display_bridge_v8_t *impl);
 static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t *impl);
+static void display_bridge_v8_unregister_vsync(esp_lv_adapter_display_bridge_v8_t *impl);
 static inline void display_bridge_v8_signal_dummy_draw_event(esp_lv_adapter_display_bridge_v8_t *impl,
                                                              uint32_t event_bit,
                                                              BaseType_t *need_yield);
@@ -525,6 +526,8 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
  */
 static void display_bridge_v8_destroy(esp_lv_adapter_display_bridge_t *bridge)
 {
+    display_bridge_v8_unregister_vsync((esp_lv_adapter_display_bridge_v8_t *)bridge);
+
     /* Use unified destroy implementation for v8/v9 compatibility */
     display_bridge_common_destroy(bridge);
 }
@@ -538,6 +541,8 @@ static esp_err_t display_bridge_v8_update_panel(esp_lv_adapter_display_bridge_t 
     ESP_RETURN_ON_FALSE(bridge && cfg, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
     esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)bridge;
+
+    display_bridge_v8_unregister_vsync(impl);
 
     /* Update panel handle */
     impl->panel = cfg->base.panel;
@@ -1089,6 +1094,63 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
     }
 }
 
+static void display_bridge_v8_unregister_vsync(esp_lv_adapter_display_bridge_v8_t *impl)
+{
+    if (!impl) {
+        return;
+    }
+
+    switch (impl->cfg.base.profile.interface) {
+    case ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI:
+#if CONFIG_SOC_MIPI_DSI_SUPPORTED
+    {
+        if (!impl->panel) {
+            break;
+        }
+
+        const esp_lcd_dpi_panel_event_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear panel callbacks (%d)", ret);
+        }
+        break;
+    }
+#else
+    break;
+#endif
+    case ESP_LV_ADAPTER_PANEL_IF_RGB:
+#if CONFIG_SOC_LCD_RGB_SUPPORTED
+    {
+        if (!impl->panel) {
+            break;
+        }
+
+        const esp_lcd_rgb_panel_event_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_rgb_panel_register_event_callbacks(impl->panel, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear panel callbacks (%d)", ret);
+        }
+        break;
+    }
+#else
+        /* no RGB support, fallthrough to IO unregistration */
+#endif
+    default: {
+        esp_lcd_panel_io_handle_t panel_io = impl->cfg.base.panel_io;
+        if (!panel_io) {
+            break;
+        }
+
+        const esp_lcd_panel_io_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_panel_io_register_event_callbacks(panel_io, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear panel IO callbacks (%d)", ret);
+        }
+        break;
+    }
+    }
+}
+
 /**********************
  *   FLUSH IMPLEMENTATIONS
  **********************/
@@ -1473,7 +1535,6 @@ static void display_bridge_v8_flush_partial_rotate(esp_lv_adapter_display_bridge
                                                    uint8_t *color_map)
 {
     esp_lcd_panel_handle_t panel = impl->panel;
-    uint8_t lvgl_color_format_bytes = bridge_color_bytes(impl);
     size_t src_stride_px = area->x2 - area->x1 + 1;
 
     rotate_copy_strided_region(color_map,

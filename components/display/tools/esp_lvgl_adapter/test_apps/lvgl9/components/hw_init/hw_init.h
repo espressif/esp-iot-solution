@@ -53,12 +53,14 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle,
                       esp_lcd_panel_io_handle_t *io_handle,
                       esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode,
                       esp_lv_adapter_rotation_t rotation);
+esp_err_t hw_lcd_deinit(void);
 
 #if HW_USE_TOUCH
 #include "esp_lcd_touch.h"
 
 esp_err_t hw_touch_init(esp_lcd_touch_handle_t *touch_handle,
                         esp_lv_adapter_rotation_t rotation);
+esp_err_t hw_touch_deinit(void);
 
 #endif
 

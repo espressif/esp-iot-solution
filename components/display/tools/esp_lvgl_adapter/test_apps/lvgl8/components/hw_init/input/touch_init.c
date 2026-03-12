@@ -6,6 +6,7 @@
 
 #include "driver/i2c_master.h"
 #include <stdbool.h>
+#include "esp_check.h"
 #include "esp_log.h"
 #include "hw_init.h"
 #include "input/touch_rotation_helper.h"
@@ -68,6 +69,8 @@
 
 static const char *TAG = "hw_touch_init";
 static i2c_master_bus_handle_t s_touch_i2c_bus = NULL;
+static esp_lcd_touch_handle_t s_touch_handle = NULL;
+static esp_lcd_panel_io_handle_t s_touch_io_handle = NULL;
 
 static esp_err_t hw_touch_i2c_init(void)
 {
@@ -88,6 +91,11 @@ static esp_err_t hw_touch_i2c_init(void)
 
 esp_err_t hw_touch_init(esp_lcd_touch_handle_t *ret_touch, esp_lv_adapter_rotation_t rotation)
 {
+    if (s_touch_handle) {
+        *ret_touch = s_touch_handle;
+        return ESP_OK;
+    }
+
     ESP_LOGI(TAG, "Initializing touch controller (%s)", TOUCH_CONTROLLER_NAME);
 
     ESP_ERROR_CHECK(hw_touch_i2c_init());
@@ -114,29 +122,75 @@ esp_err_t hw_touch_init(esp_lcd_touch_handle_t *ret_touch, esp_lv_adapter_rotati
     };
 
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
+    esp_err_t ret = ESP_OK;
 
     /* Initialize touch controller based on type */
 #if defined(TOUCH_CONTROLLER_TYPE_GT1151)
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT1151_CONFIG();
     tp_io_config.scl_speed_hz = HW_I2C_CLK_SPEED_HZ;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(s_touch_i2c_bus, &tp_io_config, &tp_io_handle));
-    return esp_lcd_touch_new_i2c_gt1151(tp_io_handle, &tp_cfg, ret_touch);
+    ret = esp_lcd_touch_new_i2c_gt1151(tp_io_handle, &tp_cfg, ret_touch);
 
 #elif defined(TOUCH_CONTROLLER_TYPE_CST816S)
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_CST816S_CONFIG();
     tp_io_config.scl_speed_hz = HW_I2C_CLK_SPEED_HZ;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(s_touch_i2c_bus, &tp_io_config, &tp_io_handle));
-    return esp_lcd_touch_new_i2c_cst816s(tp_io_handle, &tp_cfg, ret_touch);
+    ret = esp_lcd_touch_new_i2c_cst816s(tp_io_handle, &tp_cfg, ret_touch);
 
 #elif defined(TOUCH_CONTROLLER_TYPE_GT911)
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
     tp_io_config.scl_speed_hz = HW_I2C_CLK_SPEED_HZ;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(s_touch_i2c_bus, &tp_io_config, &tp_io_handle));
-    return esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, ret_touch);
+    ret = esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, ret_touch);
 
 #else
 #error "No touch controller type defined"
 #endif
+
+    if (ret != ESP_OK) {
+        if (tp_io_handle) {
+            esp_lcd_panel_io_del(tp_io_handle);
+        }
+        return ret;
+    }
+
+    s_touch_handle = *ret_touch;
+    s_touch_io_handle = tp_io_handle;
+    return ESP_OK;
+}
+
+esp_err_t hw_touch_deinit(void)
+{
+    esp_err_t ret = ESP_OK;
+
+    if (s_touch_handle) {
+        esp_err_t err = esp_lcd_touch_del(s_touch_handle);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to delete touch handle (%d)", err);
+            ret = err;
+        }
+        s_touch_handle = NULL;
+    }
+
+    if (s_touch_io_handle) {
+        esp_err_t err = esp_lcd_panel_io_del(s_touch_io_handle);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to delete touch IO (%d)", err);
+            ret = err;
+        }
+        s_touch_io_handle = NULL;
+    }
+
+    if (s_touch_i2c_bus) {
+        esp_err_t err = i2c_del_master_bus(s_touch_i2c_bus);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to delete touch I2C bus (%d)", err);
+            ret = err;
+        }
+        s_touch_i2c_bus = NULL;
+    }
+
+    return ret;
 }
 
 #endif

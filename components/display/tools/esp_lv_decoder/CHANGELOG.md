@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.3.5 (2026-03-13)
+
+* Fixed PNG decoder not using LVGL image cache by removing the erroneous `no_cache` flag, making PNG consistent with JPEG and QOI cache behavior.
+
 ## v0.3.4 (2026-02-26)
 
 * Used `jpeg_decoder_get_info` from `esp_driver_jpeg` instead of the software `jpeg_decode_header` for JPEG header parsing in the hardware decode path, eliminating the mixing of software and hardware JPEG interfaces.

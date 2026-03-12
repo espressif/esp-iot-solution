@@ -292,6 +292,7 @@ static esp_err_t display_bridge_v9_dummy_draw_blit(esp_lv_adapter_display_bridge
 /* VSync handling */
 static bool display_bridge_v9_handle_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
 static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
+static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
 static inline void display_bridge_v9_signal_dummy_draw_event(esp_lv_adapter_display_bridge_v9_t *impl,
                                                              uint32_t event_bit,
                                                              BaseType_t *need_yield);
@@ -532,6 +533,8 @@ static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
 {
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
 
+    display_bridge_v9_unregister_vsync(impl);
+
     /* Remove rounder event callback if exists */
     if (impl && impl->cfg.rounder_cb && impl->cfg.lv_disp) {
         lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, rounder_event_cb, impl);
@@ -550,6 +553,8 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
     ESP_RETURN_ON_FALSE(bridge && cfg, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    display_bridge_v9_unregister_vsync(impl);
 
     /* Update panel handle */
     impl->panel = cfg->base.panel;
@@ -1107,6 +1112,63 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
     }
 }
 
+static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    if (!impl) {
+        return;
+    }
+
+    switch (impl->cfg.base.profile.interface) {
+    case ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI:
+#if CONFIG_SOC_MIPI_DSI_SUPPORTED
+    {
+        if (!impl->panel) {
+            break;
+        }
+
+        const esp_lcd_dpi_panel_event_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear MIPI DSI callbacks (%d)", ret);
+        }
+        break;
+    }
+#else
+    break;
+#endif
+    case ESP_LV_ADAPTER_PANEL_IF_RGB:
+#if CONFIG_SOC_LCD_RGB_SUPPORTED
+    {
+        if (!impl->panel) {
+            break;
+        }
+
+        const esp_lcd_rgb_panel_event_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_rgb_panel_register_event_callbacks(impl->panel, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear RGB callbacks (%d)", ret);
+        }
+        break;
+    }
+#else
+    break;
+#endif
+    default: {
+        esp_lcd_panel_io_handle_t panel_io = impl->cfg.base.panel_io;
+        if (!panel_io) {
+            break;
+        }
+
+        const esp_lcd_panel_io_callbacks_t cbs = {0};
+        esp_err_t ret = esp_lcd_panel_io_register_event_callbacks(panel_io, &cbs, NULL);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to clear panel IO callbacks (%d)", ret);
+        }
+        break;
+    }
+    }
+}
+
 /**********************
  *   FLUSH IMPLEMENTATIONS
  **********************/
@@ -1547,7 +1609,6 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
 {
     esp_lcd_panel_handle_t panel = impl->panel;
     const uint8_t color_bytes = bridge_color_bytes(impl);
-    const int rect_w = area->x2 - area->x1 + 1;
     const int rect_h = area->y2 - area->y1 + 1;
 
     /*
@@ -1557,8 +1618,8 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
     size_t stride_bytes = disp->buf_act->header.stride;
     if (stride_bytes % color_bytes != 0) {
         stride_bytes = compact_stride_to_packed(color_map, area, disp, color_bytes);
-        display_cache_msync_range(color_map, stride_bytes * rect_h, impl->cache_line_size);
     }
+    display_cache_msync_range(color_map, stride_bytes * rect_h, impl->cache_line_size);
     size_t src_stride_px = stride_bytes / color_bytes;
 
     rotate_copy_strided_region(color_map,
