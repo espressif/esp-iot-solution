@@ -1,0 +1,7 @@
+version: "0.1.0"
+description: I2C driver for AS5600 magnetic angle sensor
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/angle_sensor/as5600
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  idf: '>=5.3'
