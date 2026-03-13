@@ -80,7 +80,6 @@ esp_err_t led_indicator_new_gpio_device(const led_indicator_config_t *led_config
 
     ESP_LOGI(TAG, "LED Indicator Version: %d.%d.%d", LED_INDICATOR_VER_MAJOR, LED_INDICATOR_VER_MINOR, LED_INDICATOR_VER_PATCH);
     LED_INDICATOR_CHECK(gpio_cfg != NULL, "invalid config pointer", return ESP_ERR_INVALID_ARG);
-    LED_INDICATOR_CHECK(GPIO_IS_VALID_GPIO(gpio_cfg->gpio_num), "invalid GPIO number", return ESP_ERR_INVALID_ARG);
 
     _led_indicator_com_config_t com_cfg = {0};
     _led_indicator_t *p_led_indicator = NULL;
