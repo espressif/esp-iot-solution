@@ -977,10 +977,11 @@ build_example_vision_opencv_color_tracker:
   extends:
     - .build_examples_template
     - .rules:build:example_vision_opencv_color_tracker
-    - .build_idf_ge_than_v5_4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/vision/opencv/color_tracker
-  allow_failure: true # see esp-iot-solution!1516 for more details
 
 build_components_audio_adc_mic_test_apps:
   extends:

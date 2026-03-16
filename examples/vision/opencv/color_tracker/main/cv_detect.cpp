@@ -1,8 +1,9 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <algorithm>
 #include <opencv2/core/utility.hpp>
 #include <opencv2/imgproc.hpp>
 #include "freertos/FreeRTOS.h"
@@ -66,10 +67,19 @@ void CvDetect::draw_rectangle_rgb(uint8_t *buffer, int width, int height,
 void CvDetect::detect(cam_fb_t *fb)
 {
     long long start_time = esp_timer_get_time();
-    cv::Mat image(fb->height, fb->width, CV_8UC3, (void*)fb->buf);
-    cv::Mat hsv;
+    cv::Mat image(fb->height, fb->width, CV_8UC3, (void *)fb->buf);
+    const int detect_width = std::min((int)CONFIG_EXAMPLE_CV_DETECT_WIDTH, fb->width);
+    const int detect_height = std::min((int)CONFIG_EXAMPLE_CV_DETECT_HEIGHT, fb->height);
+    const float scale_x = (float)fb->width / detect_width;
+    const float scale_y = (float)fb->height / detect_height;
+    const double area_scale = (double)detect_width * detect_height / ((double)fb->width * fb->height);
+    const int scaled_area_threshold = std::max(1, (int)(CONFIG_EXAMPLE_CV_CONTOUR_FILTER_AREA_THRESHOLD * area_scale));
 
-    cv::cvtColor(image, hsv, cv::COLOR_BGR2HSV);
+    cv::Mat detect_image;
+    cv::resize(image, detect_image, cv::Size(detect_width, detect_height), 0, 0, cv::INTER_LINEAR);
+
+    cv::Mat hsv;
+    cv::cvtColor(detect_image, hsv, cv::COLOR_BGR2HSV);
 
     cv::Scalar primary_color_lower(CONFIG_PRIMARY_COLOR_LOWER_H, CONFIG_PRIMARY_COLOR_LOWER_S, CONFIG_PRIMARY_COLOR_LOWER_V);
     cv::Scalar primary_color_upper(CONFIG_PRIMARY_COLOR_UPPER_H, CONFIG_PRIMARY_COLOR_UPPER_S, CONFIG_PRIMARY_COLOR_UPPER_V);
@@ -95,11 +105,16 @@ void CvDetect::detect(cam_fb_t *fb)
     m_results.clear();
     for (size_t i = 0; i < contours.size(); i++) {
         double area = cv::contourArea(contours[i]);
-        if (area > CONFIG_EXAMPLE_CV_CONTOUR_FILTER_AREA_THRESHOLD) {
+        if (area > scaled_area_threshold) {
             cv::Rect boundingBox = cv::boundingRect(contours[i]);
-            result_t result = {boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height};
+            result_t result = {
+                .x = (int)(boundingBox.x * scale_x),
+                .y = (int)(boundingBox.y * scale_y),
+                .width = std::max(1, (int)(boundingBox.width * scale_x)),
+                .height = std::max(1, (int)(boundingBox.height * scale_y)),
+            };
             ESP_LOGD(TAG, "Detected at: X=%d, Y=%d, Width=%d, Height=%d",
-                     boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height);
+                     result.x, result.y, result.width, result.height);
             m_results.push_back(result);
         }
     }
