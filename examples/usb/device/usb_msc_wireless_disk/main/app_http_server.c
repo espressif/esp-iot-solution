@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -54,7 +54,8 @@ struct file_server_data;
 typedef enum {
     CHUNK_TYPE_FIRST = 0,  /* First chunk containing filepath (00) */
     CHUNK_TYPE_MIDDLE,     /* Middle chunk with no filepath  (01) */
-    CHUNK_TYPE_FINAL       /* Final chunk of the file        (10) */
+    CHUNK_TYPE_FINAL,      /* Final chunk of the file        (10) */
+    CHUNK_TYPE_FIRST_FINAL /* Single chunk containing path and final data (11) */
 } chunk_type_t;
 
 /* Bit manipulation macros for file_id */
@@ -172,7 +173,7 @@ static void file_write_task(void *pvParameters)
 
         /* Process different types of data chunks */
         chunk_type_t chunk_type = (chunk_type_t)GET_CHUNK_TYPE(header->file_id);
-        if (chunk_type == CHUNK_TYPE_FIRST) {
+        if (chunk_type == CHUNK_TYPE_FIRST || chunk_type == CHUNK_TYPE_FIRST_FINAL) {
             /* First data chunk contains file path, read from after the header */
             char *filepath_ptr = (char *)item + sizeof(item_header_t);
             data = filepath_ptr + header->path_len + 1; // +1 for null terminator
@@ -263,7 +264,7 @@ static void file_write_task(void *pvParameters)
         vRingbufferReturnItem(server_data->file_ring_buffer, item);
 
         /* If this is the final part of the file, close it */
-        if (chunk_type == CHUNK_TYPE_FINAL) {
+        if (chunk_type == CHUNK_TYPE_FINAL || chunk_type == CHUNK_TYPE_FIRST_FINAL) {
             /* Flush any remaining data in DMA buffer */
             if (dma_buffer_used > 0) {
                 ssize_t written = write(current_fd, server_data->file_dma_buffer, dma_buffer_used);
@@ -780,7 +781,18 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
         item_header_t *header = (item_header_t *)buf;
 
         /* Set header information */
-        if (is_first_chunk) {
+        if (is_first_chunk && remaining - to_read <= 0) {
+            /* Single chunk file: first and final at the same time */
+            header->file_id = ENCODE_FILE_ID(CHUNK_TYPE_FIRST_FINAL, file_id);
+            header->path_len = path_size - 1; // Not including null terminator
+
+            /* Copy file path after the header */
+            char *path_ptr = (char*)buf + header_size;
+            strcpy(path_ptr, filepath);
+
+            /* Mark that it's no longer the first chunk */
+            is_first_chunk = false;
+        } else if (is_first_chunk) {
             /* First chunk: encode type and save path length */
             header->file_id = ENCODE_FILE_ID(CHUNK_TYPE_FIRST, file_id);
             header->path_len = path_size - 1; // Not including null terminator
@@ -805,7 +817,8 @@ static esp_err_t upload_post_handler(httpd_req_t *req)
 
         /* Prepare location to receive HTTP data */
         char *data_buf;
-        if (GET_CHUNK_TYPE(header->file_id) == CHUNK_TYPE_FIRST) {
+        if (GET_CHUNK_TYPE(header->file_id) == CHUNK_TYPE_FIRST ||
+                GET_CHUNK_TYPE(header->file_id) == CHUNK_TYPE_FIRST_FINAL) {
             data_buf = (char*)buf + header_size + path_size;
         } else {
             data_buf = (char*)buf + header_size;
