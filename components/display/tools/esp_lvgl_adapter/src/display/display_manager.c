@@ -159,6 +159,13 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
         return NULL;
     }
 
+    esp_lv_adapter_rotation_t rot = cfg->profile.rotation;
+    if (rot != ESP_LV_ADAPTER_ROTATE_0 && rot != ESP_LV_ADAPTER_ROTATE_90 &&
+            rot != ESP_LV_ADAPTER_ROTATE_180 && rot != ESP_LV_ADAPTER_ROTATE_270) {
+        ESP_LOGE(TAG, "Invalid rotation value %d, must be 0/90/180/270", (int)rot);
+        return NULL;
+    }
+
     esp_lv_adapter_display_node_t *node = calloc(1, sizeof(*node));
     if (!node) {
         ESP_LOGE(TAG, "no memory for display node");

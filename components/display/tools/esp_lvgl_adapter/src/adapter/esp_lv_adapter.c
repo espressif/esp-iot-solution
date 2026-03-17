@@ -39,6 +39,8 @@ static bool s_freetype_initialized = false;
 /* Forward declarations of internal functions */
 static esp_err_t tick_init(void);
 static void lvgl_worker(void *arg);
+static esp_err_t adapter_wait_for_all_flush_done(int32_t timeout_ms);
+static esp_err_t adapter_unregister_all_inputs(void);
 
 /*****************************************************************************
  *                         Public API Implementation                         *
@@ -71,10 +73,102 @@ static void adapter_detach_display_node(esp_lv_adapter_display_node_t *node)
     }
 }
 
+static esp_err_t adapter_wait_for_all_flush_done(int32_t timeout_ms)
+{
+    esp_lv_adapter_display_node_t *node = s_ctx.display_list;
+    while (node) {
+        if (node->lv_disp) {
+            esp_err_t ret = display_manager_wait_flush_done(node->lv_disp, timeout_ms);
+            if (ret != ESP_OK) {
+                return ret;
+            }
+        }
+        node = node->next;
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t adapter_unregister_all_inputs(void)
+{
+    uint32_t input_count = 0;
+
+    /* Each esp_lv_adapter_unregister_* call removes the node from s_ctx.input_list
+     * via esp_lv_adapter_unregister_input_device(), so re-reading s_ctx.input_list
+     * at the top of every iteration is intentional and required. */
+    while (s_ctx.input_list) {
+        lv_indev_t *indev = s_ctx.input_list->indev;
+        esp_lv_adapter_input_type_t type = s_ctx.input_list->type;
+        esp_err_t ret = ESP_OK;
+
+        if (!indev) {
+            /* Node has no associated LVGL device; its user_ctx sub-resources were
+             * never initialized, so only the node itself needs to be freed. */
+            esp_lv_adapter_input_node_t *orphan = s_ctx.input_list;
+            s_ctx.input_list = orphan->next;
+            free(orphan);
+            continue;
+        }
+
+        switch (type) {
+        case ESP_LV_ADAPTER_INPUT_TYPE_TOUCH:
+            ret = esp_lv_adapter_unregister_touch(indev);
+            break;
+#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON
+        case ESP_LV_ADAPTER_INPUT_TYPE_BUTTON:
+            ret = esp_lv_adapter_unregister_navigation_buttons(indev);
+            break;
+#endif
+#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_KNOB
+        case ESP_LV_ADAPTER_INPUT_TYPE_ENCODER:
+            ret = esp_lv_adapter_unregister_encoder(indev);
+            break;
+#endif
+        default: {
+            /* Unknown type: no dedicated unregister path exists, so perform the
+             * minimum safe cleanup — remove from list, delete LVGL device.
+             * user_ctx sub-resources (if any) are the caller's responsibility;
+             * log a warning so the issue is visible during development. */
+            esp_lv_adapter_input_node_t *unknown_node = s_ctx.input_list;
+            s_ctx.input_list = unknown_node->next;
+
+            ret = esp_lv_adapter_lock((uint32_t) -1);
+            if (ret != ESP_OK) {
+                s_ctx.input_list = unknown_node;
+                return ret;
+            }
+
+            lv_indev_delete(indev);
+            esp_lv_adapter_unlock();
+
+            if (unknown_node->user_ctx) {
+                ESP_LOGW(TAG, "Unknown input type %d: user_ctx sub-resources may leak", type);
+            }
+            free(unknown_node);
+            ret = ESP_OK;
+            break;
+        }
+        }
+
+        if (ret != ESP_OK) {
+            return ret;
+        }
+
+        input_count++;
+    }
+
+    if (input_count > 0) {
+        ESP_LOGI(TAG, "%lu input device(s) cleaned up", input_count);
+    }
+
+    return ESP_OK;
+}
+
 esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
 {
     ESP_RETURN_ON_FALSE(!s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter already initialized");
     ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid adapter configuration");
+    bool lvgl_initialized = false;
 
     /* Initialize context */
     memset(&s_ctx, 0, sizeof(s_ctx));
@@ -85,6 +179,7 @@ esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
 
     /* Initialize LVGL library */
     lv_init();
+    lvgl_initialized = true;
 
     esp_err_t ret = ESP_OK;
 
@@ -114,6 +209,12 @@ esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
     return ESP_OK;
 
 cleanup:
+    if (s_ctx.tick_timer) {
+        esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
+        esp_timer_stop(timer);
+        esp_timer_delete(timer);
+        s_ctx.tick_timer = NULL;
+    }
     if (s_ctx.pause_done_sem) {
         vSemaphoreDelete(s_ctx.pause_done_sem);
         s_ctx.pause_done_sem = NULL;
@@ -132,6 +233,11 @@ cleanup:
         s_ctx.decoder_handle = NULL;
     }
 #endif
+    if (lvgl_initialized) {
+#if LVGL_VERSION_MAJOR >= 9 || LV_ENABLE_GC || !LV_MEM_CUSTOM
+        lv_deinit();
+#endif
+    }
     memset(&s_ctx, 0, sizeof(s_ctx));
     return ret;
 }
@@ -658,15 +764,38 @@ esp_err_t esp_lv_adapter_unregister_display(lv_display_t *disp)
     ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
     ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
 
+    bool pause_requested = !s_ctx.paused;
+    if (pause_requested) {
+        esp_err_t ret = esp_lv_adapter_pause(-1);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to pause adapter");
+    }
+
+    esp_err_t ret = display_manager_wait_flush_done(disp, 5000);
+    if (ret != ESP_OK) {
+        if (pause_requested) {
+            esp_lv_adapter_resume();
+        }
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to wait for flush completion");
+    }
+
     /* Acquire lock to ensure thread safety */
-    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire adapter lock");
+    ret = esp_lv_adapter_lock((uint32_t) -1);
+    if (ret != ESP_OK) {
+        if (pause_requested) {
+            esp_lv_adapter_resume();
+        }
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire adapter lock");
+    }
 
     /* Delegate to display manager */
     ret = display_manager_unregister(disp);
 
     /* Release lock */
     esp_lv_adapter_unlock();
+
+    if (pause_requested) {
+        esp_lv_adapter_resume();
+    }
 
     return ret;
 }
@@ -687,32 +816,61 @@ esp_err_t esp_lv_adapter_deinit(void)
         return ESP_OK;
     }
 
+    bool pause_requested = !s_ctx.paused;
+    if (pause_requested) {
+        esp_err_t pause_ret = esp_lv_adapter_pause(-1);
+        ESP_RETURN_ON_ERROR(pause_ret, TAG, "Failed to pause adapter during deinit");
+    }
+
+    /* Use a sticky error: record the first failure but always continue deinit.
+     * Returning early after partial cleanup (e.g. some indevs already deleted)
+     * would resume the LVGL task against a partially torn-down state, which is
+     * more dangerous than pressing on and completing the teardown. */
+    esp_err_t first_err = ESP_OK;
+
+    esp_err_t ret = adapter_wait_for_all_flush_done(5000);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to confirm flush completion during deinit (%d), continuing", ret);
+        first_err = ret;
+    }
+
+    ret = adapter_unregister_all_inputs();
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to fully unregister input devices during deinit (%d), continuing", ret);
+        if (first_err == ESP_OK) {
+            first_err = ret;
+        }
+    }
+
     /* Request LVGL task to exit gracefully */
     if (s_ctx.task) {
+        TaskHandle_t task = s_ctx.task;
         ESP_LOGI(TAG, "Requesting LVGL task to exit...");
         s_ctx.task_exit_requested = true;
         s_ctx.paused = false;
         s_ctx.pause_ack = false;
-        xTaskNotifyGive(s_ctx.task);
+        xTaskNotifyGive(task);
 
-        /* Wait for task to exit (max 1 second) */
+        /* Wait for task to suspend itself (max 1 second) */
         uint32_t wait_count = 0;
         const uint32_t max_wait_ms = 1000;
         const uint32_t poll_interval_ms = 10;
 
-        while (s_ctx.task != NULL && wait_count < (max_wait_ms / poll_interval_ms)) {
+        while (eTaskGetState(task) != eSuspended && wait_count < (max_wait_ms / poll_interval_ms)) {
             vTaskDelay(pdMS_TO_TICKS(poll_interval_ms));
             wait_count++;
         }
 
-        /* Force delete if task didn't exit */
-        if (s_ctx.task != NULL) {
-            ESP_LOGW(TAG, "LVGL task didn't exit gracefully, force deleting");
-            vTaskDelete(s_ctx.task);
-            s_ctx.task = NULL;
+        if (eTaskGetState(task) != eSuspended) {
+            ESP_LOGW(TAG, "LVGL task didn't suspend in time, force deleting");
         } else {
             ESP_LOGI(TAG, "LVGL task exited gracefully");
         }
+
+        /* Delete from outside so vTaskDeleteWithCaps properly frees the
+         * caps-allocated stack (vTaskDelete alone would leak it). */
+        vTaskDeleteWithCaps(task);
+        s_ctx.task = NULL;
     }
 
     /* Stop and delete tick timer */
@@ -724,60 +882,8 @@ esp_err_t esp_lv_adapter_deinit(void)
         ESP_LOGI(TAG, "Tick timer stopped and deleted");
     }
 
-    /* Clear all registered displays */
+    /* Clear any remaining registered displays */
     display_manager_clear();
-
-    /* Clear all registered input devices */
-    esp_lv_adapter_input_node_t *input_node = s_ctx.input_list;
-    uint32_t input_count = 0;
-    while (input_node) {
-        esp_lv_adapter_input_node_t *next = input_node->next;
-
-        /* Delete LVGL input device */
-        if (input_node->indev) {
-#if LVGL_VERSION_MAJOR >= 9
-            lv_indev_delete(input_node->indev);
-#else
-            /* In LVGL v8, input devices are automatically cleaned up with displays */
-            /* Just free the user context if it exists */
-#endif
-        }
-
-        /* Free user context based on input device type */
-        if (input_node->user_ctx) {
-            switch (input_node->type) {
-            case ESP_LV_ADAPTER_INPUT_TYPE_TOUCH:
-                ESP_LOGD(TAG, "Cleaning up touch device context");
-                free(input_node->user_ctx);
-                break;
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON
-            case ESP_LV_ADAPTER_INPUT_TYPE_BUTTON:
-                ESP_LOGD(TAG, "Cleaning up button device context");
-                free(input_node->user_ctx);
-                break;
-#endif
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_KNOB
-            case ESP_LV_ADAPTER_INPUT_TYPE_ENCODER:
-                ESP_LOGD(TAG, "Cleaning up encoder device context");
-                free(input_node->user_ctx);
-                break;
-#endif
-            default:
-                ESP_LOGW(TAG, "Unknown input device type %d, freeing context anyway", input_node->type);
-                free(input_node->user_ctx);
-                break;
-            }
-        }
-
-        free(input_node);
-        input_node = next;
-        input_count++;
-    }
-    s_ctx.input_list = NULL;
-
-    if (input_count > 0) {
-        ESP_LOGI(TAG, "%lu input device(s) cleaned up", input_count);
-    }
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS
     /* Deinitialize all mounted file systems */
@@ -857,10 +963,19 @@ esp_err_t esp_lv_adapter_deinit(void)
         s_ctx.pause_done_sem = NULL;
     }
 
+    /* Deinitialize LVGL after adapter-managed resources are released. */
+#if LVGL_VERSION_MAJOR >= 9 || LV_ENABLE_GC || !LV_MEM_CUSTOM
+    lv_deinit();
+#endif
+
     /* Clear context */
     memset(&s_ctx, 0, sizeof(s_ctx));
-    ESP_LOGI(TAG, "LVGL adapter deinitialized successfully");
-    return ESP_OK;
+    if (first_err != ESP_OK) {
+        ESP_LOGW(TAG, "LVGL adapter deinitialized with errors (first: %d)", first_err);
+    } else {
+        ESP_LOGI(TAG, "LVGL adapter deinitialized successfully");
+    }
+    return first_err;
 }
 
 esp_lv_adapter_context_t *esp_lv_adapter_get_context(void)
@@ -959,9 +1074,9 @@ static void lvgl_worker(void *arg)
 
     s_ctx.paused = false;
     s_ctx.pause_ack = false;
-    /* Task deletes itself */
-    s_ctx.task = NULL;
-    vTaskDelete(NULL);
+    /* Suspend self; deinit will call vTaskDeleteWithCaps() from outside
+     * to properly free the caps-allocated stack. */
+    vTaskSuspend(NULL);
 }
 
 /**

@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.4.1 (2026-03-12)
+
+* Fix refresh issue when LV_DRAW_BUF_STRIDE_ALIGN > 1 in LVGL v9 bridge
+* Fix resource leaks and use-after-free risks in deinit path (flush-wait, task stack, VSync callbacks, lv_deinit)
+
 ## v0.4.0 (2026-02-11)
 
 * Add multi-touch adaptation support

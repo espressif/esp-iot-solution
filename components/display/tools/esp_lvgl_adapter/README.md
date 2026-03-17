@@ -659,12 +659,17 @@ Configure via `idf.py menuconfig`:
 Recommended cleanup order when shutting down UI:
 
 ```c
-// 1. Unregister input devices
+// 1. (Optional) Explicitly unregister input devices ahead of deinit.
+//    If skipped, esp_lv_adapter_deinit() handles this automatically
+//    via each device type's dedicated unregister path.
 esp_lv_adapter_unregister_touch(touch);
 // esp_lv_adapter_unregister_encoder(encoder);
 // esp_lv_adapter_unregister_navigation_buttons(buttons);
 
-// 2. Unregister display(s)
+// 2. (Optional) Explicitly unregister display(s) ahead of deinit.
+//    esp_lv_adapter_unregister_display() internally pauses the adapter,
+//    waits for the current flush to complete, then unregisters safely.
+//    If skipped, esp_lv_adapter_deinit() clears remaining displays.
 esp_lv_adapter_unregister_display(disp);
 
 // 3. Unmount filesystem(s) (if used)
@@ -672,8 +677,11 @@ esp_lv_adapter_fs_unmount(fs_handle);
 // Release mmap assets
 mmap_assets_del(assets);
 
-// 4. Deinitialize adapter
-// Note: FreeType fonts are auto-cleaned if enabled
+// 4. Deinitialize adapter.
+//    Internally: pauses the adapter task, waits for all pending flushes
+//    to complete, unregisters any remaining input devices and displays,
+//    stops the LVGL tick timer, and calls lv_deinit() where applicable.
+//    FreeType fonts are auto-cleaned if enabled.
 esp_lv_adapter_deinit();
 ```
 

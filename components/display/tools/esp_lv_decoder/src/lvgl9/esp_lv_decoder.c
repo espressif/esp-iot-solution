@@ -756,7 +756,6 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
             }
         }
         if (try_png) {
-            dsc->args.no_cache = true;
             decoded = png_decode_rgba(dsc);
             if (!decoded) {
                 return LV_RESULT_INVALID;

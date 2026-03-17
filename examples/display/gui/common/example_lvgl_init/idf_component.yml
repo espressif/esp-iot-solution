@@ -1,0 +1,13 @@
+version: "1.0.0"
+
+dependencies:
+  idf:
+    version: ">=5.5.0"
+
+  hw_init:
+    version: "*"
+    override_path: "../hw_init"
+
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"

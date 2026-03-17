@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include "esp_check.h"
 #include "esp_system.h"
 #include "esp_lcd_gc9a01.h"
 #include "hw_init.h"
@@ -32,6 +33,7 @@ static const char *TAG = "hw_lcd_init";
 
 static esp_lcd_panel_io_handle_t s_panel_io_handle;
 static esp_lcd_panel_handle_t s_panel_handle;
+static bool s_spi_bus_initialized;
 
 esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode, esp_lv_adapter_rotation_t rotation)
 {
@@ -45,6 +47,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
         .max_transfer_sz = HW_LCD_MAX_TRANSFER_SZ,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    s_spi_bus_initialized = true;
 
     ESP_LOGD(TAG, "Install panel IO");
     esp_lcd_panel_io_spi_config_t io_config = {
@@ -85,6 +88,41 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     *panel_handle = s_panel_handle;
 
     return ESP_OK;
+}
+
+esp_err_t hw_lcd_deinit(void)
+{
+    esp_err_t ret = ESP_OK;
+
+    if (s_panel_handle) {
+        esp_lcd_panel_disp_on_off(s_panel_handle, false);
+        esp_err_t err = esp_lcd_panel_del(s_panel_handle);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to delete panel (%d)", err);
+            ret = err;
+        }
+        s_panel_handle = NULL;
+    }
+
+    if (s_panel_io_handle) {
+        esp_err_t err = esp_lcd_panel_io_del(s_panel_io_handle);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to delete panel IO (%d)", err);
+            ret = err;
+        }
+        s_panel_io_handle = NULL;
+    }
+
+    if (s_spi_bus_initialized) {
+        esp_err_t err = spi_bus_free(SPI2_HOST);
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Failed to free SPI bus (%d)", err);
+            ret = err;
+        }
+        s_spi_bus_initialized = false;
+    }
+
+    return ret;
 }
 
 #endif

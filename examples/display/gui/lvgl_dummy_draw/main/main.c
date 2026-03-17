@@ -19,16 +19,10 @@
 #include "esp_err.h"
 #include "sdkconfig.h"
 #include <string.h>
-#include "hw_init.h"
-#include "esp_lv_adapter.h"
+#include "example_lvgl_init.h"
 #include "esp_heap_caps.h"
 
 static const char *TAG = "main";
-
-/* FPS monitor task configuration */
-#define FPS_MONITOR_TASK_STACK_SIZE    4096
-#define FPS_MONITOR_TASK_PRIORITY      3
-#define FPS_MONITOR_INTERVAL_MS        1000
 
 /* Dummy draw task configuration */
 #define DUMMY_DRAW_TASK_STACK_SIZE     8192
@@ -63,34 +57,6 @@ static void dummy_draw_cycle_colors_task(void *arg);
 static void screen_touch_event_cb(lv_event_t *e);
 #if HW_USE_ENCODER
 static void toggle_button_event_cb(lv_event_t *e);
-#endif
-static esp_lv_adapter_rotation_t get_configured_rotation(void)
-{
-#if CONFIG_EXAMPLE_DISPLAY_ROTATION_0
-    return ESP_LV_ADAPTER_ROTATE_0;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_90
-    return ESP_LV_ADAPTER_ROTATE_90;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_180
-    return ESP_LV_ADAPTER_ROTATE_180;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_270
-    return ESP_LV_ADAPTER_ROTATE_270;
-#else
-    return ESP_LV_ADAPTER_ROTATE_0;
-#endif
-}
-
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
-static void fps_monitor_task(void *arg)
-{
-    lv_display_t *disp = (lv_display_t *)arg;
-    uint32_t fps;
-    while (1) {
-        if (esp_lv_adapter_get_fps(disp, &fps) == ESP_OK) {
-            ESP_LOGI(TAG, "FPS: %lu", fps);
-        }
-        vTaskDelay(pdMS_TO_TICKS(FPS_MONITOR_INTERVAL_MS));
-    }
-}
 #endif
 
 /* ========== Dummy Draw Core Functions ========== */
@@ -285,91 +251,15 @@ static void create_control_ui(lv_indev_t *encoder)
     ESP_LOGI(TAG, "UI created for %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
 }
 
-void app_main()
+void app_main(void)
 {
-    esp_lcd_panel_handle_t display_panel = NULL;
-    esp_lcd_panel_io_handle_t display_io_handle = NULL;
-    esp_lv_adapter_rotation_t rotation = get_configured_rotation();
+    example_lvgl_ctx_t ctx;
+    ESP_ERROR_CHECK(example_lvgl_init(&ctx));
 
-#if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
-    ESP_LOGI(TAG, "LCD: MIPI DSI");
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
-    ESP_LOGI(TAG, "LCD: RGB");
-#else
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
-#if CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
-    ESP_LOGI(TAG, "LCD: QSPI");
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
-    ESP_LOGI(TAG, "LCD: SPI (PSRAM)");
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
-    ESP_LOGI(TAG, "LCD: SPI");
-#endif
-#endif
-
-    ESP_LOGI(TAG, "Init LCD: %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
-    ESP_ERROR_CHECK(hw_lcd_init(&display_panel, &display_io_handle, tear_avoid_mode, rotation));
-
-    esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();
-    ESP_ERROR_CHECK(esp_lv_adapter_init(&adapter_config));
-#if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_MIPI_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#else
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#endif
-
-    lv_display_t *disp = esp_lv_adapter_register_display(&display_config);
-    if (!disp) {
-        ESP_LOGE(TAG, "Display registration failed");
-        return;
-    }
-
-    lv_indev_t *touch = NULL;
-    lv_indev_t *encoder = NULL;
-
-#if HW_USE_TOUCH
-    esp_lcd_touch_handle_t touch_handle = NULL;
-    ESP_ERROR_CHECK(hw_touch_init(&touch_handle, rotation));
-    esp_lv_adapter_touch_config_t touch_config = ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(disp, touch_handle);
-    touch = esp_lv_adapter_register_touch(&touch_config);
-    if (!touch) {
-        ESP_LOGE(TAG, "Touch registration failed");
-        return;
-    }
-#elif HW_USE_ENCODER && CONFIG_ESP_LVGL_ADAPTER_ENABLE_KNOB
-    esp_lv_adapter_encoder_config_t encoder_config = {
-        .disp = disp,
-        .encoder_a_b = hw_knob_get_config(),
-        .encoder_enter = hw_knob_get_button(),
-    };
-    encoder = esp_lv_adapter_register_encoder(&encoder_config);
-    if (!encoder) {
-        ESP_LOGE(TAG, "Encoder registration failed");
-        return;
-    }
-#endif
-
-    ESP_ERROR_CHECK(esp_lv_adapter_start());
-
-#if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
-    ESP_ERROR_CHECK(esp_lv_adapter_fps_stats_enable(disp, true));
-    xTaskCreate(fps_monitor_task, "fps_monitor", FPS_MONITOR_TASK_STACK_SIZE, disp, FPS_MONITOR_TASK_PRIORITY, NULL);
-#endif
-
-    s_disp = disp;
-    (void)touch;
+    s_disp = ctx.disp;
 
     if (esp_lv_adapter_lock(-1) == ESP_OK) {
-        create_control_ui(encoder);
+        create_control_ui(ctx.encoder);
         esp_lv_adapter_unlock();
     }
 }

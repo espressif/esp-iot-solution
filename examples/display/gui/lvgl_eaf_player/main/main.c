@@ -20,8 +20,7 @@
 #include "esp_check.h"
 #include "sdkconfig.h"
 
-#include "hw_init.h"
-#include "esp_lv_adapter.h"
+#include "example_lvgl_init.h"
 #include "lvgl.h"
 #include "lv_eaf.h"
 #include "esp_mmap_assets.h"
@@ -151,80 +150,12 @@ static void start_eaf_player(lv_display_t *disp)
     esp_lv_adapter_unlock();
 }
 
-/**
- * @brief Get configured display rotation
- */
-static esp_lv_adapter_rotation_t get_configured_rotation(void)
-{
-#if CONFIG_EXAMPLE_DISPLAY_ROTATION_0
-    return ESP_LV_ADAPTER_ROTATE_0;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_90
-    return ESP_LV_ADAPTER_ROTATE_90;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_180
-    return ESP_LV_ADAPTER_ROTATE_180;
-#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_270
-    return ESP_LV_ADAPTER_ROTATE_270;
-#else
-    return ESP_LV_ADAPTER_ROTATE_0;
-#endif
-}
-
 void app_main(void)
 {
-    esp_lcd_panel_handle_t display_panel = NULL;
-    esp_lcd_panel_io_handle_t display_io_handle = NULL;
-    esp_lv_adapter_rotation_t rotation = get_configured_rotation();
-
-    /* Select tear effect mode based on LCD interface type */
-#if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
-#else
-    esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
-#endif
-
-    /* Initialize LCD hardware */
-    ESP_LOGI(TAG, "Init LCD %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
-    ESP_ERROR_CHECK(hw_lcd_init(&display_panel, &display_io_handle, tear_avoid_mode, rotation));
-
-    /* Initialize LVGL adapter */
-    esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();
-    ESP_ERROR_CHECK(esp_lv_adapter_init(&adapter_config));
-
-    /* Register display */
-#if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_MIPI_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#else
-    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
-                                                         display_panel, display_io_handle, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
-#endif
-
-    lv_display_t *disp = esp_lv_adapter_register_display(&display_config);
-    if (disp == NULL) {
-        ESP_LOGE(TAG, "Display register failed");
-        return;
-    }
-
-    /* Initialize touch if available */
-#if HW_USE_TOUCH
-    esp_lcd_touch_handle_t touch_handle = NULL;
-    ESP_ERROR_CHECK(hw_touch_init(&touch_handle, rotation));
-    esp_lv_adapter_touch_config_t touch_config = ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(disp, touch_handle);
-    esp_lv_adapter_register_touch(&touch_config);
-#endif
-
-    /* Start LVGL adapter */
-    ESP_ERROR_CHECK(esp_lv_adapter_start());
+    example_lvgl_ctx_t ctx;
+    ESP_ERROR_CHECK(example_lvgl_init(&ctx));
 
     /* Mount EAF assets and start player */
     ESP_ERROR_CHECK(mount_eaf_assets());
-    start_eaf_player(disp);
+    start_eaf_player(ctx.disp);
 }

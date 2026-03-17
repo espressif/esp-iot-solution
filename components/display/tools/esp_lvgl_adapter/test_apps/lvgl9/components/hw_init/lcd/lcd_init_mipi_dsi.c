@@ -8,6 +8,7 @@
 
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
 
+#include "esp_check.h"
 #include "esp_ldo_regulator.h"
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_panel_ops.h"
@@ -25,15 +26,19 @@ static const char *TAG = "hw_lcd_init";
 static esp_lcd_dsi_bus_handle_t s_mipi_dsi_bus;
 static esp_lcd_panel_io_handle_t s_mipi_dbi_io;
 static esp_lcd_panel_handle_t s_panel_handle;
+static esp_ldo_channel_handle_t s_ldo_mipi_phy;
 
 static void lcd_ldo_power_on(void)
 {
-    esp_ldo_channel_handle_t ldo_mipi_phy = NULL;
+    if (s_ldo_mipi_phy) {
+        return;
+    }
+
     esp_ldo_channel_config_t ldo_mipi_phy_config = {
         .chan_id = HW_LDO_MIPI_CHAN,
         .voltage_mv = HW_LDO_MIPI_VOLTAGE_MV,
     };
-    ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
+    ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &s_ldo_mipi_phy));
 }
 
 esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode, esp_lv_adapter_rotation_t rotation)
@@ -70,6 +75,31 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     *panel_handle = s_panel_handle;
     if (io_handle) {
         *io_handle = s_mipi_dbi_io;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t hw_lcd_deinit(void)
+{
+    if (s_panel_handle) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_del(s_panel_handle), TAG, "Failed to delete panel");
+        s_panel_handle = NULL;
+    }
+
+    if (s_mipi_dbi_io) {
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_del(s_mipi_dbi_io), TAG, "Failed to delete panel IO");
+        s_mipi_dbi_io = NULL;
+    }
+
+    if (s_mipi_dsi_bus) {
+        ESP_RETURN_ON_ERROR(esp_lcd_del_dsi_bus(s_mipi_dsi_bus), TAG, "Failed to delete DSI bus");
+        s_mipi_dsi_bus = NULL;
+    }
+
+    if (s_ldo_mipi_phy) {
+        ESP_RETURN_ON_ERROR(esp_ldo_release_channel(s_ldo_mipi_phy), TAG, "Failed to release MIPI PHY LDO");
+        s_ldo_mipi_phy = NULL;
     }
 
     return ESP_OK;

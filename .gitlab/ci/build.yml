@@ -41,7 +41,6 @@
     EXAMPLE_APPEND_ARGS: ""
     BUILD_RECURSIVE: "1"
   script:
-    - pip install -U idf-component-manager # Update the component manager to the latest version, see AEG-2966
     - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv ${EXAMPLE_APPEND_ARGS}
 
@@ -489,6 +488,14 @@ build_example_display_gui_lvgl_eaf_player:
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_eaf_player
     IMAGE: espressif/idf:release-v5.5
+
+build_example_display_gui_lvgl_fs_assets:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_fs_assets
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_fs_assets
 
 build_example_display_gui_lvgl_lottie_player:
   extends:

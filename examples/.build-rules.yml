@@ -219,6 +219,10 @@ examples/display/gui/lvgl_eaf_player:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
 
+examples/display/gui/lvgl_fs_assets:
+  enable:
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+
 examples/display/gui/lvgl_lottie_player:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
