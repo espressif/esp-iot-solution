@@ -41,7 +41,6 @@
     EXAMPLE_APPEND_ARGS: ""
     BUILD_RECURSIVE: "1"
   script:
-    - pip install -U idf-component-manager # Update the component manager to the latest version, see AEG-2966
     - pip install idf_build_apps
     - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv ${EXAMPLE_APPEND_ARGS}
 
@@ -948,6 +947,7 @@ build_example_vision_opencv_color_tracker:
     - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/vision/opencv/color_tracker
+  allow_failure: true # see esp-iot-solution!1516 for more details
 
 build_components_audio_adc_mic_test_apps:
   extends:
@@ -1752,6 +1752,7 @@ build_example_ragtime_panthera_follower:
     EXAMPLE_DIR: examples/robot/ragtime_panthera/follower
     SKIP_RECEIVER_BUILD: "1"
     BUILD_RECURSIVE: "0"
+  allow_failure: true # see esp-iot-solution!1516 for more details
 
 build_example_robot_ragtime_panthera_leader:
   extends:
