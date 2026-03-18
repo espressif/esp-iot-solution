@@ -27,6 +27,16 @@ menu "BLE Connection Management"
         help
             Set the duration to wait for completed. Use a value big enough to avoid retransmissions.
 
+    config BLE_CONN_MGR_MAX_CONNECTIONS
+        int "Maximum BLE connections"
+        range 1 BT_NIMBLE_MAX_CONNECTIONS if BT_NIMBLE_ENABLED
+        range 1 6
+        default 2
+        help
+            Set the maximum number of BLE links managed by BLE connection manager.
+            This value must not exceed the underlying BLE stack's maximum
+            connection configuration.
+
     config BLE_CONN_MGR_EXTENDED_ADV
         bool
         depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
@@ -38,7 +48,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_EXTENDED_ADV_CAP
         int
-        range 0 15
+        range 0 255
         depends on BLE_CONN_MGR_EXTENDED_ADV
         default 0
         prompt "Set Extended Advertising Capability"
@@ -101,6 +111,26 @@ menu "BLE Connection Management"
 
     menuconfig BLE_CONN_MGR_SM
         bool "Enable Security Manager"
+
+    config BLE_CONN_MGR_SM_DEFAULT_CAP
+        int "Default Security Manager Capability (when SM disabled)"
+        range 0 15
+        default 10
+        help
+            Security manager capability bitmap used when BLE_CONN_MGR_SM is disabled.
+            Bits:
+            - BIT0: OOB
+            - BIT1: Bond
+            - BIT2: MITM
+            - BIT3: Secure Connections
+
+    config BLE_CONN_MGR_SM_DEFAULT_KEY_DIST
+        int "Default key distribution (when SM disabled)"
+        range 0 15
+        default 3
+        help
+            Key distribution bitmap used when BLE_CONN_MGR_SM is disabled.
+            Typical default 3 means ENC + ID.
 
     if BLE_CONN_MGR_SM
         choice BLE_CONN_MGR_SM_IO_TYPE

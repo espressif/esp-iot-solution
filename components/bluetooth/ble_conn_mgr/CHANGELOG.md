@@ -1,5 +1,39 @@
 # ChangeLog
 
+## v1.0.0 - 2026-03-05
+
+### Enhancements:
+
+- **Multi-Connections Support**: BLE connection manager now supports managing multiple concurrent BLE connections.
+  - **Kconfig**: Added `BLE_CONN_MGR_MAX_CONNECTIONS` to set the maximum number of concurrent connections (default: 2; must not exceed the underlying BLE stack limit).
+  - **Connection handle semantics**:
+    - Valid range: `0x0000`–`0x0EFF`. Use `BLE_CONN_HANDLE_INVALID` (0xFFFF) to denote no connection or invalid handle.
+    - Added macros: `BLE_CONN_HANDLE_INVALID`, `BLE_CONN_HANDLE_MAX`.
+  - **Connection & discovery APIs**:
+    - `esp_ble_conn_connect_to_addr()`: Initiate connection to a peer by address (Central role).
+    - `esp_ble_conn_disconnect_by_handle()`: Disconnect by connection handle.
+    - `esp_ble_conn_get_conn_handle()`: Get current (default) connection handle; returns `BLE_CONN_HANDLE_INVALID` when not connected.
+    - `esp_ble_conn_get_conn_handle_by_addr()`: Get connection handle by peer address.
+    - `esp_ble_conn_find_conn_handle_by_peer_addr()`: Find connection handle by peer address.
+    - `esp_ble_conn_get_mtu_by_handle()`: Query MTU by connection handle.
+    - `esp_ble_conn_get_peer_addr_by_handle()`: Get peer address by connection handle. Replaces deprecated `esp_ble_conn_find_peer_addr_by_conn_handle()` (available in v0.1.x); migrate by calling `esp_ble_conn_get_peer_addr_by_handle(conn_handle, out_addr, NULL)` instead.
+    - `esp_ble_conn_get_disconnect_reason_by_handle()`: Get disconnect reason by connection handle.
+  - **Per-connection GATT APIs** (accept valid `conn_handle` in range 0x0000–0x0EFF):
+    - `esp_ble_conn_notify_by_handle()`, `esp_ble_conn_read_by_handle()`, `esp_ble_conn_write_by_handle()`, `esp_ble_conn_subscribe_by_handle()`.
+  - **Per-connection GAP/Security** (APIs now take `conn_handle`):
+    - `esp_ble_conn_update_params()`, `esp_ble_conn_mtu_update()`, `esp_ble_conn_security_initiate()`, `esp_ble_conn_passkey_reply()`, `esp_ble_conn_numcmp_reply()`.
+  - **Advertising / scan data APIs**:
+    - `esp_ble_conn_adv_data_set()`: Set raw advertising data (legacy or extended).
+    - `esp_ble_conn_scan_rsp_data_set()`: Set raw scan response data (legacy or extended).
+    - `esp_ble_conn_periodic_adv_data_set()`: Set periodic advertising data (when periodic adv is enabled).
+  - **LE PHY APIs**:
+    - `esp_ble_conn_get_phy()`: Get current TX/RX LE PHY for a connection.
+    - `esp_ble_conn_set_preferred_phy()`: Set preferred LE PHY for a connection (tx/rx mask and coded options).
+    - Added PHY mask constants: `ESP_BLE_CONN_PHY_MASK_1M`, `_2M`, `_CODED`, `_ALL` (0x07).
+    - Added Coded PHY options: `ESP_BLE_CONN_PHY_CODED_OPT_ANY`, `_S2`, `_S8`.
+  - **Common BLE enums and types**: Added enums and types for advertising/scan/address/PHY so applications can use a unified API: `esp_ble_conn_adv_conn_mode_t`, `esp_ble_conn_adv_disc_mode_t`, `esp_ble_conn_addr_type_t`, `esp_ble_conn_phy_t`, `esp_ble_conn_scan_filt_policy_t`.
+  - **Events**: Event data structures now include `conn_handle` for multi-connection events (connected, disconnected, mtu_update, conn_param_update, enc_change, passkey_action).
+
 ## v0.1.6 - 2026-02-11
 
 ### Bug Fixes:

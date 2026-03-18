@@ -19,8 +19,11 @@
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
 #include "host/ble_uuid.h"
+#include "host/ble_att.h"
 #include "host/ble_gap.h"
+#include "host/ble_gatt.h"
 #include "host/ble_hs_adv.h"
+#include "host/ble_sm.h"
 #include "host/ble_l2cap.h"
 #include "host/util/util.h"
 #include "os/os_mempool.h"
@@ -48,10 +51,10 @@ static const char *TAG = "blecm_nimble";
  */
 #define L2CAP_COC_MTU_MIN 23
 #define L2CAP_COC_MTU_MAX L2CAP_COC_MTU
-/* BLE connection handle range: 0x0000 - 0x0EFF (0-3840)
- * Note: 0x0000 is invalid (used as sentinel value)
- */
+/* BLE connection handle valid range: 0x0000 - 0x0EFF. Invalid sentinel: BLE_CONN_HANDLE_INVALID (from esp_ble_conn_mgr.h) */
+#ifndef BLE_CONN_HANDLE_MAX
 #define BLE_CONN_HANDLE_MAX 0x0EFF
+#endif
 /* BLE L2CAP CoC PSM range for LE: 0x0001 - 0x00FF
  * Per Bluetooth Core Specification Vol 3, Part A, Section 4.2.22 (SPSM for LE Credit Based Flow Control)
  * - 0x0001 - 0x007F: Fixed Bluetooth SIG-defined services
@@ -139,6 +142,36 @@ typedef struct {
     void *handle;
 } esp_ble_conn_event_ctx_t;
 
+typedef struct esp_ble_conn_pending_t {
+    SLIST_ENTRY(esp_ble_conn_pending_t) next;
+    uint8_t peer_addr[6];
+    uint8_t peer_addr_type;
+} esp_ble_conn_pending_t;
+SLIST_HEAD(esp_ble_conn_pending_list_t, esp_ble_conn_pending_t);
+
+typedef struct esp_ble_conn_link_t {
+    SLIST_ENTRY(esp_ble_conn_link_t) next;
+    uint16_t conn_handle;
+    uint16_t gatt_mtu;
+    uint16_t disconnect_reason;
+    uint8_t peer_addr[6];
+    uint8_t peer_addr_type;
+    uint16_t refcount;
+    bool removed;
+    SemaphoreHandle_t semaphore;
+    QueueHandle_t queue;
+    esp_err_t last_read_rc;
+} esp_ble_conn_link_t;
+SLIST_HEAD(esp_ble_conn_link_list_t, esp_ble_conn_link_t);
+
+typedef struct {
+    esp_ble_conn_scan_cb_t scan_cb;
+    void *scan_cb_arg;
+    SemaphoreHandle_t list_lock;
+    struct esp_ble_conn_link_list_t link_list;
+    struct esp_ble_conn_pending_list_t pending_list;
+} esp_ble_conn_mgr_ctx_t;
+
 #if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
 typedef struct esp_ble_conn_l2cap_coc_cb_ctx_t {
     SLIST_ENTRY(esp_ble_conn_l2cap_coc_cb_ctx_t) next;
@@ -154,9 +187,8 @@ SLIST_HEAD(esp_ble_conn_l2cap_coc_cb_ctx_list, esp_ble_conn_l2cap_coc_cb_ctx_t);
  * @brief   This structure maps handler required by session which are used to BLE connection management.
  */
 typedef struct esp_ble_conn_session_t {
-    uint8_t                    *device_name;            /* Name to be displayed to devices scanning */
-
-    uint16_t                    gatt_mtu;               /* MTU set value */
+    uint8_t                    *device_name;           /* Local name for peripheral (broadcast when advertising) */
+    uint8_t                    *remote_name;           /* Remote name for central (target to connect when scan_cb is NULL) */
 
     uint16_t                    adv_data_len;           /* Advertisement data length, it is also used by extended */
     uint16_t                    adv_rsp_data_len;       /* Scan responses data length, it is also used by extended */
@@ -169,64 +201,488 @@ typedef struct esp_ble_conn_session_t {
     uint8_t                    *per_adv_data_buf;       /* Periodic advertisement data buffer */
 #endif
 
-    uint16_t                    nu_lookup_count;        /* Number of entries in the service lookup table */
-
     struct svc_uuid_list_t      uuid_list;              /* List required by UUID which are used to BLE services */
     struct attr_mbuf_list       mbuf_list;              /* List required by UUID which are used to BLE characteristics */
 
-    uint16_t                    conn_handle;            /* Handle of the relevant connection */
-    uint8_t                     own_addr_type;          /* Figure out address to use while advertising */
-    uint16_t                    disconnect_reason;      /* Last disconnect reason */
+#if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+    uint16_t                    ext_adv_handle;         /* Extended advertising instance handle (adv set ID) */
+#endif
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC)
+    uint16_t                    periodic_sync_handle;   /* Periodic sync handle; 0 when not synced */
+    uint8_t                     secondary_adv_max_skip; /* Secondary advertising maximum skip */
+#endif
+    uint8_t                     own_addr_type;         /* Figure out address to use while advertising */
+    uint8_t                     peer_addr_type;        /* Peer address type */
+    uint8_t                     peer_addr[6];          /* Peer address */
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
-    uint16_t                    chrs_handle;            /* Handle of the characteristics discovery process */
+    uint16_t                    disc_chr_cursor;        /* Discovery state: 0=done, 1=continue to chrs/dscs,
+                                                         * else=last chr val_handle for descriptor iteration */
     svc_uuid_t                 *svcs_handle;            /* Handle of the service discovery process */
 #endif
     esp_ble_conn_scan_cb_t      scan_cb;                /* Scan callback */
     void                       *scan_cb_arg;            /* Scan callback argument */
 
-    uint8_t                      gatt_db_count;         /* Number of entries in the gatt_db descriptor table */
+    uint8_t                      gatt_db_count;         /* Reserved; not used */
     struct ble_gatt_svc_def     *gatt_db;               /* Descriptor table which consists the services and characteristics */
 
-    SemaphoreHandle_t           semaphore;
     QueueHandle_t               queue;
 
     esp_ble_conn_nimble_cb_t    *connect_cb;            /* Client connect callback */
     esp_ble_conn_nimble_cb_t    *disconnect_cb;         /* Client disconnect callback */
     esp_ble_conn_nimble_cb_t    *set_mtu_cb;            /* MTU set callback */
 
+    uint32_t                     local_passkey;         /* Local passkey for SMP DISP; 0 = not set, auto-inject disabled */
+
+    /* User-configured adv/scan params; 0/NULL = use defaults */
+    esp_ble_conn_adv_params_t     adv_params_cfg;
+    esp_ble_conn_scan_params_t   scan_params_cfg;
+    bool                         adv_params_set;
+    bool                         scan_params_set;
+
 #if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
     struct esp_ble_conn_l2cap_coc_cb_ctx_list l2cap_coc_cb_list; /* L2CAP CoC callback contexts */
 #endif
-
-    bool                        ble_sm_sc;              /* BLE Secure Connection flag */
-    bool                        ble_bonding;            /* BLE bonding */
-} __attribute__((packed)) esp_ble_conn_session_t;
+    esp_ble_conn_mgr_ctx_t       mgr_ctx;                /* Manager runtime context (links, pending ops, scan callback, lock) */
+} esp_ble_conn_session_t;
 
 static esp_ble_conn_session_t *s_conn_session = NULL;
+static esp_ble_conn_mgr_ctx_t s_mgr_ctx_fallback;
+static esp_ble_conn_mgr_ctx_t *s_mgr_ctx_ptr = &s_mgr_ctx_fallback;
+#define s_mgr_ctx (*s_mgr_ctx_ptr)
+/* Keep legacy API behavior: report the most recent disconnection reason. */
+static uint16_t s_last_disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
+static uint16_t s_last_disconnect_conn_handle = BLE_CONN_HANDLE_INVALID;
+#define BLE_CONN_MGR_LIST_LOCK_TIMEOUT_MS 2000
+#define BLE_CONN_EVENT_WAIT_TIMEOUT_MS 5000
 
 #ifndef CONFIG_BLE_CONN_MGR_EXTENDED_ADV
 static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg);
 #endif
 
+/* Multi-connection helpers: always compiled for both Central and Peripheral */
+static bool esp_ble_conn_mgr_lock(void)
+{
+    if (!s_mgr_ctx.list_lock) {
+        return false;
+    }
+
+    return xSemaphoreTake(s_mgr_ctx.list_lock, pdMS_TO_TICKS(BLE_CONN_MGR_LIST_LOCK_TIMEOUT_MS)) == pdTRUE;
+}
+
+static void esp_ble_conn_mgr_unlock(void)
+{
+    if (s_mgr_ctx.list_lock) {
+        xSemaphoreGive(s_mgr_ctx.list_lock);
+    }
+}
+
+static void esp_ble_conn_link_free(esp_ble_conn_link_t *link)
+{
+    if (!link) {
+        return;
+    }
+    if (link->semaphore) {
+        vSemaphoreDelete(link->semaphore);
+    }
+    if (link->queue) {
+        vQueueDelete(link->queue);
+    }
+    free(link);
+}
+
+static void esp_ble_conn_link_unref(esp_ble_conn_link_t *link)
+{
+    bool should_free = false;
+
+    if (!link || !esp_ble_conn_mgr_lock()) {
+        return;
+    }
+
+    if (link->refcount > 0) {
+        link->refcount--;
+    }
+    if (link->removed && link->refcount == 0) {
+        should_free = true;
+    }
+    esp_ble_conn_mgr_unlock();
+
+    if (should_free) {
+        esp_ble_conn_link_free(link);
+    }
+}
+
+static esp_ble_conn_link_t *esp_ble_conn_link_find_by_handle(uint16_t conn_handle)
+{
+    esp_ble_conn_link_t *found = NULL;
+    esp_ble_conn_link_t *link = NULL;
+
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX || !esp_ble_conn_mgr_lock()) {
+        return NULL;
+    }
+
+    SLIST_FOREACH(link, &s_mgr_ctx.link_list, next) {
+        if (link->conn_handle == conn_handle) {
+            found = link;
+            found->refcount++;
+            break;
+        }
+    }
+
+    esp_ble_conn_mgr_unlock();
+    return found;
+}
+
+static esp_ble_conn_link_t *esp_ble_conn_link_find_by_peer_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type)
+{
+    esp_ble_conn_link_t *found = NULL;
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!peer_addr || !esp_ble_conn_mgr_lock()) {
+        return NULL;
+    }
+
+    SLIST_FOREACH(link, &s_mgr_ctx.link_list, next) {
+        if (link->peer_addr_type == peer_addr_type &&
+                memcmp(link->peer_addr, peer_addr, sizeof(link->peer_addr)) == 0) {
+            found = link;
+            found->refcount++;
+            break;
+        }
+    }
+
+    esp_ble_conn_mgr_unlock();
+    return found;
+}
+
+static esp_ble_conn_link_t *esp_ble_conn_link_first(void)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!esp_ble_conn_mgr_lock()) {
+        return NULL;
+    }
+    link = SLIST_FIRST(&s_mgr_ctx.link_list);
+    if (link) {
+        link->refcount++;
+    }
+    esp_ble_conn_mgr_unlock();
+    return link;
+}
+
+static esp_ble_conn_link_t *esp_ble_conn_link_add(uint16_t conn_handle, const ble_addr_t *peer_addr)
+{
+    esp_ble_conn_link_t *link = NULL;
+    esp_ble_conn_link_t *exist = NULL;
+
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX || !peer_addr) {
+        return NULL;
+    }
+
+    link = calloc(1, sizeof(esp_ble_conn_link_t));
+    if (!link) {
+        return NULL;
+    }
+
+    link->conn_handle = conn_handle;
+    link->gatt_mtu = GATT_DEF_BLE_MTU_SIZE;
+    link->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
+    link->last_read_rc = ESP_OK;
+    link->refcount = 0;
+    link->removed = false;
+    link->peer_addr_type = peer_addr->type;
+    memcpy(link->peer_addr, peer_addr->val, sizeof(link->peer_addr));
+    link->semaphore = xSemaphoreCreateBinary();
+    link->queue = xQueueCreate(1, sizeof(esp_ble_conn_event_ctx_t));
+    if (!link->semaphore || !link->queue) {
+        if (link->semaphore) {
+            vSemaphoreDelete(link->semaphore);
+        }
+        if (link->queue) {
+            vQueueDelete(link->queue);
+        }
+        free(link);
+        return NULL;
+    }
+
+    if (!esp_ble_conn_mgr_lock()) {
+        vSemaphoreDelete(link->semaphore);
+        vQueueDelete(link->queue);
+        free(link);
+        return NULL;
+    }
+    SLIST_FOREACH(exist, &s_mgr_ctx.link_list, next) {
+        if (exist->conn_handle == conn_handle) {
+            exist->refcount++;
+            esp_ble_conn_mgr_unlock();
+            esp_ble_conn_link_free(link);
+            return exist;
+        }
+    }
+    SLIST_INSERT_HEAD(&s_mgr_ctx.link_list, link, next);
+    link->refcount = 2; /* list ownership + return reference */
+    esp_ble_conn_mgr_unlock();
+    return link;
+}
+
+static void esp_ble_conn_link_remove(uint16_t conn_handle, uint16_t reason)
+{
+    esp_ble_conn_link_t *link = NULL;
+    esp_ble_conn_link_t *prev = NULL;
+    bool should_free = false;
+
+    if (!esp_ble_conn_mgr_lock()) {
+        return;
+    }
+
+    SLIST_FOREACH(link, &s_mgr_ctx.link_list, next) {
+        if (link->conn_handle == conn_handle) {
+            break;
+        }
+        prev = link;
+    }
+
+    if (!link) {
+        esp_ble_conn_mgr_unlock();
+        return;
+    }
+
+    link->disconnect_reason = reason;
+    s_last_disconnect_reason = reason;
+    s_last_disconnect_conn_handle = conn_handle;
+    if (prev == NULL) {
+        SLIST_REMOVE_HEAD(&s_mgr_ctx.link_list, next);
+    } else {
+        SLIST_REMOVE_AFTER(prev, next);
+    }
+    link->removed = true;
+    if (link->refcount > 0) {
+        link->refcount--;
+    }
+    if (link->refcount == 0) {
+        should_free = true;
+    }
+    esp_ble_conn_mgr_unlock();
+    if (should_free) {
+        esp_ble_conn_link_free(link);
+    }
+}
+
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+static esp_ble_conn_pending_t *esp_ble_conn_pending_find(const ble_addr_t *addr)
+{
+    esp_ble_conn_pending_t *found = NULL;
+    esp_ble_conn_pending_t *pending = NULL;
+
+    if (!addr || !esp_ble_conn_mgr_lock()) {
+        return NULL;
+    }
+
+    SLIST_FOREACH(pending, &s_mgr_ctx.pending_list, next) {
+        if (pending->peer_addr_type == addr->type &&
+                memcmp(pending->peer_addr, addr->val, sizeof(pending->peer_addr)) == 0) {
+            found = pending;
+            break;
+        }
+    }
+
+    esp_ble_conn_mgr_unlock();
+    return found;
+}
+
+static esp_err_t esp_ble_conn_pending_add(const ble_addr_t *addr)
+{
+    esp_ble_conn_pending_t *pending = NULL;
+
+    if (!addr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    pending = calloc(1, sizeof(esp_ble_conn_pending_t));
+    if (!pending) {
+        return ESP_ERR_NO_MEM;
+    }
+    pending->peer_addr_type = addr->type;
+    memcpy(pending->peer_addr, addr->val, sizeof(pending->peer_addr));
+    if (!esp_ble_conn_mgr_lock()) {
+        free(pending);
+        return ESP_ERR_TIMEOUT;
+    }
+    /* Only one pending connection at a time; NimBLE connect-fail event has no peer_addr. */
+    if (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
+        esp_ble_conn_mgr_unlock();
+        free(pending);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    SLIST_INSERT_HEAD(&s_mgr_ctx.pending_list, pending, next);
+    esp_ble_conn_mgr_unlock();
+    return ESP_OK;
+}
+#endif /* CONFIG_BLE_CONN_MGR_ROLE_CENTRAL || CONFIG_BLE_CONN_MGR_ROLE_BOTH */
+
+static bool esp_ble_conn_pending_remove(const ble_addr_t *addr)
+{
+    esp_ble_conn_pending_t *pending = NULL;
+    esp_ble_conn_pending_t *prev = NULL;
+
+    if (!addr || !esp_ble_conn_mgr_lock()) {
+        return false;
+    }
+
+    SLIST_FOREACH(pending, &s_mgr_ctx.pending_list, next) {
+        if (pending->peer_addr_type == addr->type &&
+                memcmp(pending->peer_addr, addr->val, sizeof(pending->peer_addr)) == 0) {
+            break;
+        }
+        prev = pending;
+    }
+
+    if (!pending) {
+        esp_ble_conn_mgr_unlock();
+        return false;
+    }
+
+    if (prev == NULL) {
+        SLIST_REMOVE_HEAD(&s_mgr_ctx.pending_list, next);
+    } else {
+        SLIST_REMOVE_AFTER(prev, next);
+    }
+    esp_ble_conn_mgr_unlock();
+    free(pending);
+    return true;
+}
+
+static uint16_t esp_ble_conn_default_conn_handle(void)
+{
+    esp_ble_conn_link_t *link = esp_ble_conn_link_first();
+    uint16_t conn_handle = BLE_CONN_HANDLE_INVALID;
+
+    if (link) {
+        conn_handle = link->conn_handle;
+        esp_ble_conn_link_unref(link);
+    }
+    return conn_handle;
+}
+
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+static size_t esp_ble_conn_link_count(void)
+{
+    size_t count = 0;
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!esp_ble_conn_mgr_lock()) {
+        return 0;
+    }
+    SLIST_FOREACH(link, &s_mgr_ctx.link_list, next) {
+        count++;
+    }
+    esp_ble_conn_mgr_unlock();
+    return count;
+}
+#endif /* CONFIG_BLE_CONN_MGR_ROLE_CENTRAL || CONFIG_BLE_CONN_MGR_ROLE_BOTH */
+
+static uint16_t esp_ble_conn_resolve_data_conn_handle(const esp_ble_conn_data_t *data)
+{
+    if (data && data->write_conn_id != BLE_CONN_HANDLE_INVALID) {
+        if (data->write_conn_id == 0) {
+            /* Backward compatibility: keep 0 as "unspecified" unless handle 0 actually exists. */
+            esp_ble_conn_link_t *link_zero = esp_ble_conn_link_find_by_handle(0);
+            if (!link_zero) {
+                return esp_ble_conn_default_conn_handle();
+            }
+            esp_ble_conn_link_unref(link_zero);
+        }
+        return data->write_conn_id;
+    }
+    return esp_ble_conn_default_conn_handle();
+}
+
+static void esp_ble_conn_cleanup_pending_and_links(void)
+{
+    esp_ble_conn_pending_t *pending = NULL;
+    esp_ble_conn_link_t *link = NULL;
+    struct esp_ble_conn_link_list_t links_to_free;
+
+    SLIST_INIT(&links_to_free);
+
+    if (!esp_ble_conn_mgr_lock()) {
+        return;
+    }
+
+    while (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
+        pending = SLIST_FIRST(&s_mgr_ctx.pending_list);
+        SLIST_REMOVE_HEAD(&s_mgr_ctx.pending_list, next);
+        free(pending);
+    }
+
+    while (!SLIST_EMPTY(&s_mgr_ctx.link_list)) {
+        link = SLIST_FIRST(&s_mgr_ctx.link_list);
+        SLIST_REMOVE_HEAD(&s_mgr_ctx.link_list, next);
+        link->removed = true;
+        if (link->refcount > 0) {
+            link->refcount--;
+        }
+        if (link->refcount == 0) {
+            SLIST_INSERT_HEAD(&links_to_free, link, next);
+        }
+    }
+
+    esp_ble_conn_mgr_unlock();
+    while (!SLIST_EMPTY(&links_to_free)) {
+        link = SLIST_FIRST(&links_to_free);
+        SLIST_REMOVE_HEAD(&links_to_free, next);
+        esp_ble_conn_link_free(link);
+    }
+}
+
+static void esp_ble_conn_set_default_adv_params(esp_ble_conn_session_t *conn_session)
+{
+    if (!conn_session) {
+        return;
+    }
+    memset(&conn_session->adv_params_cfg, 0, sizeof(conn_session->adv_params_cfg));
+    conn_session->adv_params_cfg.itvl_min = 0x100;
+    conn_session->adv_params_cfg.itvl_max = 0x100;
+    conn_session->adv_params_cfg.conn_mode = ESP_BLE_CONN_ADV_CONN_MODE_UND;
+    conn_session->adv_params_cfg.disc_mode = ESP_BLE_CONN_ADV_DISC_MODE_GEN;
+    conn_session->adv_params_cfg.own_addr_type = ESP_BLE_CONN_ADDR_RANDOM;
+#if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+    conn_session->adv_params_cfg.adv_handle = 1;
+    conn_session->adv_params_cfg.primary_phy = ESP_BLE_CONN_PHY_1M;
+    conn_session->adv_params_cfg.secondary_phy = ESP_BLE_CONN_PHY_2M;
+    conn_session->adv_params_cfg.sid = 2;
+    conn_session->adv_params_cfg.tx_power = 127;  /* 127 = use stack default */
+    conn_session->adv_params_cfg.adv_event_properties = CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP;
+    conn_session->adv_params_cfg.ext_adv_cap = conn_session->adv_params_cfg.adv_event_properties;
+#endif
+}
+
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
 static void esp_ble_conn_chr_uuid_del(chr_uuid_t *chr);
 
-static void esp_ble_conn_disc_chrs(esp_ble_conn_session_t *conn_session);
-static void esp_ble_conn_disc_dscs(esp_ble_conn_session_t *conn_session);
+typedef struct {
+    esp_ble_conn_session_t *conn_session;
+    uint16_t conn_handle;
+    uint16_t disc_chr_cursor;     /* Discovery state: 0=done, 1=continue to chrs/dscs, else=last chr val_handle */
+    svc_uuid_t *svcs_handle;      /* Handle of the service discovery process */
+} esp_ble_conn_disc_ctx_t;
+
+static void esp_ble_conn_disc_chrs(esp_ble_conn_disc_ctx_t *ctx);
+static void esp_ble_conn_disc_dscs(esp_ble_conn_disc_ctx_t *ctx);
 
 static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, const ble_uuid_t *ble_uuid, uint16_t outlen, uint8_t *outbuf);
 
-static void esp_ble_conn_disc_complete(esp_ble_conn_session_t *conn_session, int rc)
+static void esp_ble_conn_disc_complete(esp_ble_conn_disc_ctx_t *ctx, int rc)
 {
-    conn_session->chrs_handle = 0;
     if (rc != ESP_OK) {
-        ESP_LOGE(TAG, "Error: Service discovery failed; rc=%d, conn_handle=%d", rc, conn_session->conn_handle);
-        ble_gap_terminate(conn_session->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        ESP_LOGE(TAG, "Error: Service discovery failed; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
+        ble_gap_terminate(ctx->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     } else {
-        ESP_LOGI(TAG, "Service discovery complete; rc=%d, conn_handle=%d", rc, conn_session->conn_handle);
+        ESP_LOGI(TAG, "Service discovery complete; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
         esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISC_COMPLETE, NULL, 0, portMAX_DELAY);
     }
+    free(ctx);
 }
 
 static int esp_ble_conn_svc_is_empty(const svc_uuid_t *svc)
@@ -340,10 +796,11 @@ static void esp_ble_conn_svc_uuid_del(svc_uuid_t *svc)
 
 static esp_err_t esp_ble_conn_svc_disced(uint16_t conn_handle, const struct ble_gatt_error *error, const struct ble_gatt_svc *service, void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_disc_ctx_t *ctx = arg;
+    esp_ble_conn_session_t *conn_session = ctx->conn_session;
     esp_err_t rc = ESP_OK;
 
-    assert(conn_session->conn_handle == conn_handle);
+    (void)conn_handle;
 
     switch (error->status) {
     case 0:
@@ -352,8 +809,8 @@ static esp_err_t esp_ble_conn_svc_disced(uint16_t conn_handle, const struct ble_
 
     case BLE_HS_EDONE:
         /* All services discovered; start discovering characteristics */
-        if (conn_session->chrs_handle) {
-            esp_ble_conn_disc_chrs(conn_session);
+        if (ctx->disc_chr_cursor) {
+            esp_ble_conn_disc_chrs(ctx);
         }
         break;
 
@@ -364,19 +821,19 @@ static esp_err_t esp_ble_conn_svc_disced(uint16_t conn_handle, const struct ble_
 
     if (rc != ESP_OK) {
         ESP_LOGE(TAG, "Abort services discovered rc=%d", rc);
-        esp_ble_conn_disc_complete(conn_session, rc);
+        esp_ble_conn_disc_complete(ctx, rc);
     }
 
     return rc;
 }
 
-static void esp_ble_conn_disc_svcs(esp_ble_conn_session_t *conn_session)
+static void esp_ble_conn_disc_svcs(esp_ble_conn_disc_ctx_t *ctx)
 {
-    conn_session->chrs_handle = 1;
-    esp_err_t rc = ble_gattc_disc_all_svcs(conn_session->conn_handle, esp_ble_conn_svc_disced, conn_session);
+    ctx->disc_chr_cursor = 1;
+    esp_err_t rc = ble_gattc_disc_all_svcs(ctx->conn_handle, esp_ble_conn_svc_disced, ctx);
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to discover services, rc=%d", rc);
-        return;
+        esp_ble_conn_disc_complete(ctx, rc);
     }
 }
 
@@ -505,20 +962,21 @@ static esp_err_t esp_ble_conn_chr_uuid_add(esp_ble_conn_session_t *conn_session,
 
 static esp_err_t esp_ble_conn_chr_disced(uint16_t conn_handle, const struct ble_gatt_error *error, const struct ble_gatt_chr *chr, void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_disc_ctx_t *ctx = arg;
+    esp_ble_conn_session_t *conn_session = ctx->conn_session;
     esp_err_t rc = ESP_OK;
 
-    assert(conn_session->conn_handle == conn_handle);
+    (void)conn_handle;
 
     switch (error->status) {
     case 0:
-        rc = esp_ble_conn_chr_uuid_add(conn_session, conn_session->svcs_handle->gatt_svc.start_handle, chr);
+        rc = esp_ble_conn_chr_uuid_add(conn_session, ctx->svcs_handle->gatt_svc.start_handle, chr);
         break;
 
     case BLE_HS_EDONE:
         /* All characteristics in this service discovered; start discovering characteristics in the next service */
-        if (conn_session->chrs_handle) {
-            esp_ble_conn_disc_chrs(conn_session);
+        if (ctx->disc_chr_cursor) {
+            esp_ble_conn_disc_chrs(ctx);
         }
         break;
 
@@ -529,31 +987,32 @@ static esp_err_t esp_ble_conn_chr_disced(uint16_t conn_handle, const struct ble_
 
     if (rc != 0) {
         ESP_LOGE(TAG, "Abort characteristics in this service discovery rc=%d", rc);
-        esp_ble_conn_disc_complete(conn_session, rc);
+        esp_ble_conn_disc_complete(ctx, rc);
     }
 
     return rc;
 }
 
-static void esp_ble_conn_disc_chrs(esp_ble_conn_session_t *conn_session)
+static void esp_ble_conn_disc_chrs(esp_ble_conn_disc_ctx_t *ctx)
 {
+    esp_ble_conn_session_t *conn_session = ctx->conn_session;
     svc_uuid_t *svc = NULL;
     esp_err_t rc = ESP_OK;
 
     SLIST_FOREACH(svc, &conn_session->uuid_list, next) {
         if (!esp_ble_conn_svc_is_empty(svc) && SLIST_EMPTY(&svc->chrs)) {
-            conn_session->svcs_handle = svc;
-            rc = ble_gattc_disc_all_chrs(conn_session->conn_handle, svc->gatt_svc.start_handle, svc->gatt_svc.end_handle, esp_ble_conn_chr_disced, conn_session);
+            ctx->svcs_handle = svc;
+            rc = ble_gattc_disc_all_chrs(ctx->conn_handle, svc->gatt_svc.start_handle, svc->gatt_svc.end_handle, esp_ble_conn_chr_disced, ctx);
             if (rc != 0) {
                 ESP_LOGE(TAG, "Abort the discovered service that contains undiscovered characteristics rc=%d", rc);
-                esp_ble_conn_disc_complete(conn_session, rc);
+                esp_ble_conn_disc_complete(ctx, rc);
             }
             return;
         }
     }
 
     /* All characteristics discovered, start discovering descriptors */
-    esp_ble_conn_disc_dscs(conn_session);
+    esp_ble_conn_disc_dscs(ctx);
 }
 
 static dsc_uuid_t *esp_ble_conn_dsc_find_uuid(esp_ble_conn_session_t *conn_session, const ble_uuid_t *svc_uuid,
@@ -658,10 +1117,11 @@ static esp_err_t esp_ble_conn_dsc_uuid_add(esp_ble_conn_session_t *conn_session,
 
 static esp_err_t esp_ble_conn_dsc_disced(uint16_t conn_handle, const struct ble_gatt_error *error, uint16_t chr_val_handle, const struct ble_gatt_dsc *dsc, void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_disc_ctx_t *ctx = arg;
+    esp_ble_conn_session_t *conn_session = ctx->conn_session;
     esp_err_t rc = ESP_OK;
 
-    assert(conn_session->conn_handle == conn_handle);
+    (void)conn_handle;
 
     switch (error->status) {
     case 0:
@@ -672,8 +1132,8 @@ static esp_err_t esp_ble_conn_dsc_disced(uint16_t conn_handle, const struct ble_
         /* All descriptors in this characteristic discovered; start discovering
         * descriptors in the next characteristic.
         */
-        if (conn_session->chrs_handle > 0) {
-            esp_ble_conn_disc_dscs(conn_session);
+        if (ctx->disc_chr_cursor > 0) {
+            esp_ble_conn_disc_dscs(ctx);
         }
         break;
 
@@ -684,14 +1144,15 @@ static esp_err_t esp_ble_conn_dsc_disced(uint16_t conn_handle, const struct ble_
 
     if (rc != ESP_OK) {
         ESP_LOGE(TAG, "Abort descriptors in this characteristic discovery rc=%d", rc);
-        esp_ble_conn_disc_complete(conn_session, rc);
+        esp_ble_conn_disc_complete(ctx, rc);
     }
 
     return rc;
 }
 
-static void esp_ble_conn_disc_dscs(esp_ble_conn_session_t *conn_session)
+static void esp_ble_conn_disc_dscs(esp_ble_conn_disc_ctx_t *ctx)
 {
+    esp_ble_conn_session_t *conn_session = ctx->conn_session;
     chr_uuid_t *chr = NULL;
     svc_uuid_t *svc = NULL;
     esp_err_t rc = ESP_OK;
@@ -700,56 +1161,82 @@ static void esp_ble_conn_disc_dscs(esp_ble_conn_session_t *conn_session)
         SLIST_FOREACH(chr, &svc->chrs, next) {
             if (!esp_ble_conn_chr_is_empty(svc, chr) &&
                     SLIST_EMPTY(&chr->dscs) &&
-                    conn_session->chrs_handle <= chr->chr.def_handle) {
+                    ctx->disc_chr_cursor <= chr->chr.def_handle) {
 
-                rc = ble_gattc_disc_all_dscs(conn_session->conn_handle, chr->chr.val_handle, esp_ble_conn_chr_end_handle(svc, chr), esp_ble_conn_dsc_disced, conn_session);
+                rc = ble_gattc_disc_all_dscs(ctx->conn_handle, chr->chr.val_handle, esp_ble_conn_chr_end_handle(svc, chr), esp_ble_conn_dsc_disced, ctx);
                 if (rc != ESP_OK) {
                     ESP_LOGE(TAG, "Abort discovered characteristics that contains undiscovered descriptors rc=%d", rc);
-                    esp_ble_conn_disc_complete(conn_session, rc);
+                    esp_ble_conn_disc_complete(ctx, rc);
+                    return;
                 }
 
-                conn_session->chrs_handle = chr->chr.val_handle;
+                ctx->disc_chr_cursor = chr->chr.val_handle;
                 return;
             }
         }
     }
 
     /* All descriptors discovered. */
-    esp_ble_conn_disc_complete(conn_session, ESP_OK);
+    esp_ble_conn_disc_complete(ctx, ESP_OK);
 }
 
-static void esp_ble_conn_scan(esp_ble_conn_session_t *conn_session)
+static esp_err_t esp_ble_conn_scan(esp_ble_conn_session_t *conn_session)
 {
     esp_err_t rc = ESP_OK;
+    uint8_t own_addr_type;
+    struct ble_gap_disc_params disc_params = {0};
+    ble_addr_t addr;
 
-    struct ble_gap_disc_params disc_params;
+    if (conn_session->scan_params_set) {
+        /* Reserved for future extended scan support. */
+        (void)conn_session->scan_params_cfg.scan_phys;
+        disc_params.itvl = conn_session->scan_params_cfg.itvl;
+        disc_params.window = conn_session->scan_params_cfg.window;
+        disc_params.filter_policy = conn_session->scan_params_cfg.filter_policy;
+        disc_params.passive = conn_session->scan_params_cfg.passive ? 1 : 0;
+        disc_params.filter_duplicates = conn_session->scan_params_cfg.filter_duplicates ? 1 : 0;
+        disc_params.limited = conn_session->scan_params_cfg.limited ? 1 : 0;
+        own_addr_type = conn_session->scan_params_cfg.own_addr_type;
+    } else {
+        disc_params.itvl = 0;
+        disc_params.window = 0;
+        disc_params.filter_policy = 0;
+        disc_params.passive = 1;
+        disc_params.filter_duplicates = 1;
+        disc_params.limited = 0;
+        own_addr_type = conn_session->own_addr_type;
+    }
 
-    /* Tell the controller to filter duplicates; we don't want to process
-     * repeated advertisements from the same device.
-     */
-    disc_params.filter_duplicates = 1;
+    /* When scanning with random address, ensure a random address is set for the controller */
+    if (own_addr_type == ESP_BLE_CONN_ADDR_RANDOM) {
+        rc = ble_hs_id_gen_rnd(1, &addr);
+        if (rc != 0) {
+            ESP_LOGE(TAG, "Generate random address for scan error; rc=%d", rc);
+            return ESP_FAIL;
+        }
+        rc = ble_hs_id_set_rnd(addr.val);
+        if (rc != 0) {
+            ESP_LOGE(TAG, "Set random address for scan error; rc=%d", rc);
+            return ESP_FAIL;
+        }
+    }
 
-    /**
-     * Perform a passive scan.  I.e., don't send follow-up scan requests to
-     * each advertiser.
-     */
-    disc_params.passive = 1;
-
-    /* Use defaults for the rest of the parameters. */
-    disc_params.itvl = 0;
-    disc_params.window = 0;
-    disc_params.filter_policy = 0;
-    disc_params.limited = 0;
-
-    rc = ble_gap_disc(conn_session->own_addr_type, BLE_HS_FOREVER, &disc_params, esp_ble_conn_gap_event, conn_session);
+    rc = ble_gap_disc(own_addr_type, BLE_HS_FOREVER, &disc_params, esp_ble_conn_gap_event, conn_session);
+    if (rc == 0) {
+        return ESP_OK;
+    }
+    if (rc == BLE_HS_EALREADY) {
+        return ESP_ERR_INVALID_STATE;
+    }
     if (rc != 0) {
         ESP_LOGE(TAG, "Error initiating GAP discovery procedure; rc=%d", rc);
     }
+    return ESP_FAIL;
 }
 
-static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
+static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
 {
-    ble_addr_t *addr = NULL;
+    esp_ble_conn_link_t *exist_link = NULL;
     esp_err_t rc = ESP_OK;
     struct ble_gap_conn_params conn_params = {
         .scan_itvl = 0x12,
@@ -757,15 +1244,37 @@ static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
         .itvl_min = 25,
         .itvl_max = 26,
         .latency = 1,
-        .supervision_timeout = 20,
-        .min_ce_len = 3,
-        .max_ce_len = 4
+        .supervision_timeout = 20
     };
 
-    if (disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_ADV_IND &&
-            disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_DIR_IND) {
-        ESP_LOGE(TAG, "The device has to be advertising connectability");
-        return;
+    if (!addr || !s_conn_session) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (esp_ble_conn_link_count() >= CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS) {
+        ESP_LOGW(TAG, "Reach max connections=%d, skip connect", CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    exist_link = esp_ble_conn_link_find_by_peer_addr(addr->val, addr->type);
+    if (exist_link) {
+        esp_ble_conn_link_unref(exist_link);
+        ESP_LOGD(TAG, "Peer already connected, skip connect");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (esp_ble_conn_pending_find(addr)) {
+        ESP_LOGD(TAG, "Peer already pending, skip connect");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (esp_ble_conn_mgr_lock()) {
+        if (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
+            esp_ble_conn_mgr_unlock();
+            ESP_LOGW(TAG, "Connection attempt already in progress, skip (only one pending allowed)");
+            return ESP_ERR_INVALID_STATE;
+        }
+        esp_ble_conn_mgr_unlock();
     }
 
     /* Scanning must be stopped before a connection can be initiated. */
@@ -774,14 +1283,31 @@ static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
         ESP_LOGW(TAG, "Failed to cancel scan; rc=%d", rc);
     }
 
-    /* Try to connect the the advertiser.  Allow 30 seconds (30000 ms) for timeout */
-    addr = &disc->addr;
+    rc = esp_ble_conn_pending_add(addr);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to add pending connect context");
+        return rc;
+    }
 
     rc = ble_gap_connect(s_conn_session->own_addr_type, addr, 30000, &conn_params, esp_ble_conn_gap_event, s_conn_session);
     if (rc) {
+        esp_ble_conn_pending_remove(addr);
         ESP_LOGE(TAG, "Error: Failed to connect to device; addr_type=%d, addr="MACSTR", rc=%d", addr->type, MAC2STR(addr->val), rc);
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+static void esp_ble_conn_should_connect(struct ble_gap_disc_desc *disc)
+{
+    if (disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_ADV_IND &&
+            disc->event_type != BLE_HCI_ADV_RPT_EVTYPE_DIR_IND) {
+        ESP_LOGE(TAG, "The device has to be advertising connectability");
         return;
     }
+
+    (void)esp_ble_conn_do_connect(&disc->addr);
 }
 
 static esp_err_t esp_ble_conn_on_complete(esp_ble_conn_session_t *conn_session, uint16_t conn_handle, uint16_t attr_handle, struct os_mbuf *om)
@@ -829,12 +1355,18 @@ static esp_err_t esp_ble_conn_on_write(uint16_t conn_handle,
                  struct ble_gatt_attr *attr,
                  void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_link_t *link = esp_ble_conn_link_find_by_handle(conn_handle);
+    (void)arg;
 
     ESP_LOGD(TAG, "Write complete; status=%d conn_handle=%d attr_handle=%d\n",
                 error->status, conn_handle, attr->handle);
     if (!error->status) {
-        xSemaphoreGive(conn_session->semaphore);
+        if (link && link->semaphore) {
+            xSemaphoreGive(link->semaphore);
+        }
+    }
+    if (link) {
+        esp_ble_conn_link_unref(link);
     }
 
     return ESP_OK;
@@ -845,7 +1377,10 @@ static esp_err_t esp_ble_conn_on_read(uint16_t conn_handle,
                  struct ble_gatt_attr *attr,
                  void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_link_t *link = esp_ble_conn_link_find_by_handle(conn_handle);
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+    esp_err_t on_complete_rc = ESP_OK;
+    (void)arg;
 
     switch (error->status) {
         case ESP_OK:
@@ -853,20 +1388,62 @@ static esp_err_t esp_ble_conn_on_read(uint16_t conn_handle,
                         "attr_handle=%d len=%d value=", conn_handle,
                         attr->handle, OS_MBUF_PKTLEN(attr->om));
 
-            if (!esp_ble_conn_on_complete(conn_session, conn_handle, attr->handle, attr->om)) {
-                xSemaphoreGive(conn_session->semaphore);
+            on_complete_rc = esp_ble_conn_on_complete(conn_session, conn_handle, attr->handle, attr->om);
+            if (link) {
+                link->last_read_rc = on_complete_rc;
+            }
+            if (on_complete_rc != ESP_OK) {
+                ESP_LOGE(TAG, "read completion failed; conn_handle=%d attr_handle=%d rc=%d",
+                         conn_handle, attr->handle, on_complete_rc);
+            }
+            if (link && link->semaphore) {
+                xSemaphoreGive(link->semaphore);
             }
             break;
 
         case BLE_HS_EDONE:
             ESP_LOGI(TAG, "characteristic read complete\n");
+            if (link) {
+                link->last_read_rc = ESP_OK;
+            }
+            if (link && link->semaphore) {
+                xSemaphoreGive(link->semaphore);
+            }
             break;
 
         default:
+            ESP_LOGE(TAG, "Error reading characteristic; status=%d conn_handle=%d", error->status, conn_handle);
+            if (link) {
+                link->last_read_rc = ESP_FAIL;
+            }
+            if (link && link->semaphore) {
+                xSemaphoreGive(link->semaphore);
+            }
             break;
+    }
+    if (link) {
+        esp_ble_conn_link_unref(link);
     }
 
     return ESP_OK;
+}
+
+/* Remove the only pending entry (used when connect fails; NimBLE event has no peer_addr) */
+static void esp_ble_conn_pending_remove_first(void)
+{
+    esp_ble_conn_pending_t *pending = NULL;
+
+    if (!esp_ble_conn_mgr_lock()) {
+        return;
+    }
+    if (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
+        pending = SLIST_FIRST(&s_mgr_ctx.pending_list);
+        SLIST_REMOVE_HEAD(&s_mgr_ctx.pending_list, next);
+    }
+    esp_ble_conn_mgr_unlock();
+    if (pending) {
+        free(pending);
+    }
 }
 #endif
 
@@ -1024,7 +1601,7 @@ static void esp_ble_conn_periodic_advertise(esp_ble_conn_session_t *conn_session
     adv_params.itvl_min = 160;
     adv_params.itvl_max = 240;
 
-    rc = ble_gap_periodic_adv_configure(conn_session->conn_handle, &adv_params);
+    rc = ble_gap_periodic_adv_configure(conn_session->ext_adv_handle, &adv_params);
     if (rc) {
         ESP_LOGE(TAG, "Configure periodic advertising error; rc=%d", rc);
         return;
@@ -1040,27 +1617,28 @@ static void esp_ble_conn_periodic_advertise(esp_ble_conn_session_t *conn_session
         rc = os_mbuf_append(data, conn_session->per_adv_data_buf, conn_session->per_adv_data_len);
         if (rc){
             ESP_LOGE(TAG, "Append periodic adv data onto a mbuf error; rc=%d", rc);
+            os_mbuf_free_chain(data);
             return;
         }
 
-        rc = ble_gap_periodic_adv_set_data(conn_session->conn_handle, data);
+        rc = ble_gap_periodic_adv_set_data(conn_session->ext_adv_handle, data);
         if (rc != 0) {
             ESP_LOGE(TAG, "Setting periodic adv data error; rc = %d", rc);
             return;
         }
     }
 
-    rc = ble_gap_periodic_adv_start(conn_session->conn_handle);
+    rc = ble_gap_periodic_adv_start(conn_session->ext_adv_handle);
     if (rc) {
         ESP_LOGE(TAG, "Start periodic advertising error; rc=%d", rc);
         return;
     }
 
-    ESP_LOGI(TAG, "Instance %u started (periodic)", conn_session->conn_handle);
+    ESP_LOGI(TAG, "Instance %u started (periodic)", conn_session->ext_adv_handle);
 }
 #endif
 
-static void esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session)
+static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session)
 {
     esp_err_t rc = ESP_OK;
 
@@ -1069,43 +1647,62 @@ static void esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session)
     ble_addr_t addr;
     struct os_mbuf *data = NULL;
 
-    /* For periodic we use instance with non-connectable advertising */
-    memset (&adv_params, 0, sizeof(adv_params));
+    /* Use advertising parameters from conn_session (defaults set in esp_ble_conn_init, overridable via esp_ble_conn_adv_params_set) */
+    memset(&adv_params, 0, sizeof(adv_params));
+    {
+        uint16_t ev_props = conn_session->adv_params_cfg.adv_event_properties;
+        uint8_t cap = ev_props ? (uint8_t)ev_props : conn_session->adv_params_cfg.ext_adv_cap;
+        adv_params.connectable = !!(cap & BIT(0));
+        adv_params.scannable = !!(cap & BIT(1));
+        adv_params.directed = !!(cap & BIT(2));
+        adv_params.high_duty_directed = !!(cap & BIT(3));
+        adv_params.legacy_pdu = !!(cap & BIT(4));
+        adv_params.anonymous = !!(cap & BIT(5));
+        adv_params.include_tx_power = !!(cap & BIT(6));
+        adv_params.scan_req_notif = conn_session->adv_params_cfg.scan_req_notif ? 1 :
+                                    (cap & BIT(7)) ? 1 : 0;
+    }
+    adv_params.own_addr_type = conn_session->adv_params_cfg.own_addr_type;
+    adv_params.primary_phy = conn_session->adv_params_cfg.primary_phy;
+    adv_params.secondary_phy = conn_session->adv_params_cfg.secondary_phy;
+    adv_params.sid = conn_session->adv_params_cfg.sid;
+    if (conn_session->adv_params_cfg.itvl_min) {
+        adv_params.itvl_min = conn_session->adv_params_cfg.itvl_min;
+    }
+    if (conn_session->adv_params_cfg.itvl_max) {
+        adv_params.itvl_max = conn_session->adv_params_cfg.itvl_max;
+    }
+    adv_params.channel_map = conn_session->adv_params_cfg.channel_map;
+    adv_params.filter_policy = conn_session->adv_params_cfg.filter_policy;
+    if (conn_session->adv_params_cfg.tx_power != 127) {
+        adv_params.tx_power = conn_session->adv_params_cfg.tx_power;
+    }
+    /* Set peer address when doing directed advertising (peer_addr_type may be BLE_ADDR_PUBLIC=0) */
+    if (adv_params.directed) {
+        adv_params.peer.type = conn_session->adv_params_cfg.peer_addr_type;
+        memcpy(adv_params.peer.val, conn_session->adv_params_cfg.peer_addr, 6);
+    }
 
-    /* advertise using random addr */
-    adv_params.own_addr_type = BLE_OWN_ADDR_RANDOM;
-    adv_params.primary_phy = BLE_HCI_LE_PHY_1M;
-    adv_params.secondary_phy = BLE_HCI_LE_PHY_2M;
-    adv_params.sid = 2;
-
-    /* extended advertising capability */
-    adv_params.connectable = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(0));
-    adv_params.scannable = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(1));
-    adv_params.directed = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(2));
-    adv_params.high_duty_directed = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(3));
-    adv_params.legacy_pdu = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(4));
-    adv_params.anonymous = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(5));
-    adv_params.include_tx_power = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(6));
-    adv_params.scan_req_notif = (CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP & BIT(7));
-
-    /* configure instance 1 */
-    rc = ble_gap_ext_adv_configure(conn_session->conn_handle, &adv_params, NULL, NULL, NULL);
+    /* configure instance */
+    rc = ble_gap_ext_adv_configure(conn_session->ext_adv_handle, &adv_params, NULL, NULL, NULL);
     if (rc) {
         ESP_LOGE(TAG, "Configure extended advertising instance error; rc=%d", rc);
-        return;
+        return ESP_FAIL;
     }
 
-    /* set random (NRPA) address for instance */
-    rc = ble_hs_id_gen_rnd(1, &addr);
-    if (rc) {
-        ESP_LOGE(TAG, "Generates a new random address error; rc=%d", rc);
-        return;
-    }
-
-    rc = ble_gap_ext_adv_set_addr(conn_session->conn_handle, &addr);
-    if (rc) {
-        ESP_LOGE(TAG, "Set random address for configured advertising instance error; rc=%d", rc);
-        return;
+    /* set address for instance according to own_addr_type */
+    if (conn_session->adv_params_cfg.own_addr_type == ESP_BLE_CONN_ADDR_RANDOM) {
+        /* generate and set random (NRPA) address */
+        rc = ble_hs_id_gen_rnd(1, &addr);
+        if (rc) {
+            ESP_LOGE(TAG, "Generate random address error; rc=%d", rc);
+            return ESP_FAIL;
+        }
+        rc = ble_gap_ext_adv_set_addr(conn_session->ext_adv_handle, &addr);
+        if (rc) {
+            ESP_LOGE(TAG, "Set address for advertising instance error; rc=%d", rc);
+            return ESP_FAIL;
+        }
     }
 
     memset(&fields, 0, sizeof(fields));
@@ -1118,51 +1715,54 @@ static void esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session)
         data = os_msys_get_pkthdr(conn_session->adv_data_len, 0);
         if (!data) {
             ESP_LOGE(TAG, "Allocate memory for ext adv data error!");
-            return;
+            return ESP_ERR_NO_MEM;
         }
 
         rc = os_mbuf_append(data, conn_session->adv_data_buf, conn_session->adv_data_len);
         if (rc){
             ESP_LOGE(TAG, "Append ext adv data onto a mbuf error; rc=%d", rc);
-            return;
+            os_mbuf_free_chain(data);
+            return ESP_FAIL;
         }
     } else {
         data = os_msys_get_pkthdr(BLE_HCI_MAX_ADV_DATA_LEN, 0);
         if (!data) {
             ESP_LOGE(TAG, "Allocate memory for ext adv data error!");
-            return;
+            return ESP_ERR_NO_MEM;
         }
 
         rc = ble_hs_adv_set_fields_mbuf(&fields, data);
         if (rc != 0) {
             ESP_LOGE(TAG, "Setting ext adv data error; rc = %d", rc);
-            return;
+            os_mbuf_free_chain(data);
+            return ESP_FAIL;
         }
     }
 
-    rc = ble_gap_ext_adv_set_data(conn_session->conn_handle, data);
+    rc = ble_gap_ext_adv_set_data(conn_session->ext_adv_handle, data);
     if (rc != 0) {
         ESP_LOGE(TAG, "Error in setting ext adv data; rc = %d", rc);
-        return;
+        return ESP_FAIL;
     }
 
     if (adv_params.scannable && conn_session->adv_rsp_data_buf) {
         data = os_msys_get_pkthdr(conn_session->adv_rsp_data_len, 0);
         if (!data) {
             ESP_LOGE(TAG, "Allocate memory for ext adv rsp data error!");
-            return;
+            return ESP_ERR_NO_MEM;
         }
 
         rc = os_mbuf_append(data, conn_session->adv_rsp_data_buf, conn_session->adv_rsp_data_len);
         if (rc){
             ESP_LOGE(TAG, "Append ext adv rsp data onto a mbuf error; rc=%d", rc);
-            return;
+            os_mbuf_free_chain(data);
+            return ESP_FAIL;
         }
 
-        rc = ble_gap_ext_adv_rsp_set_data(conn_session->conn_handle, data);
+        rc = ble_gap_ext_adv_rsp_set_data(conn_session->ext_adv_handle, data);
         if (rc != 0) {
             ESP_LOGE(TAG, "Error in setting ext adv rsp data; rc = %d", rc);
-            return;
+            return ESP_FAIL;
         }
     }
 
@@ -1170,21 +1770,25 @@ static void esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session)
     esp_ble_conn_periodic_advertise(conn_session);
 #endif
 
-    rc = ble_gap_ext_adv_start(conn_session->conn_handle, 0, 0);
+    rc = ble_gap_ext_adv_start(conn_session->ext_adv_handle, 0, 0);
     if (rc) {
         ESP_LOGE(TAG, "Start ext advertising instance, rc=%d", rc);
-        return;
+        if (rc == BLE_HS_EALREADY) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Instance %u started (extended)", conn_session->conn_handle);
+    ESP_LOGI(TAG, "Instance %u started (extended)", conn_session->ext_adv_handle);
+    return ESP_OK;
 }
 #endif
 
-static void esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
+static esp_err_t esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
 {
 #if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
-    conn_session->conn_handle = 1;
-    esp_ble_conn_ext_advertise(conn_session);
+    conn_session->ext_adv_handle = conn_session->adv_params_cfg.adv_handle ? conn_session->adv_params_cfg.adv_handle : 1;
+    return esp_ble_conn_ext_advertise(conn_session);
 #else
     esp_err_t rc = ESP_OK;
 
@@ -1225,14 +1829,14 @@ static void esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
     rc = ble_gap_adv_set_fields(&fields);
     if (rc != 0) {
         ESP_LOGE(TAG, "error setting advertisement data; rc=%d", rc);
-        return;
+        return ESP_FAIL;
     }
 
     if (conn_session->adv_data_buf) {
         rc = ble_gap_adv_set_data(conn_session->adv_data_buf, conn_session->adv_data_len);
         if (rc != 0) {
             ESP_LOGE(TAG, "Error in setting name; rc = %d", rc);
-            return;
+            return ESP_FAIL;
         }
     }
 
@@ -1240,16 +1844,23 @@ static void esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
         rc = ble_gap_adv_rsp_set_data(conn_session->adv_rsp_data_buf, conn_session->adv_rsp_data_len);
         if (rc != 0) {
             ESP_LOGE(TAG, "Error in setting manufacturer; rc = %d", rc);
-            return;
+            return ESP_FAIL;
         }
     }
 
     /* Begin advertising. */
     memset(&adv_params, 0, sizeof adv_params);
-    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-    adv_params.itvl_min = 0x100;
-    adv_params.itvl_max = 0x100;
+    if (conn_session->adv_params_set) {
+        adv_params.conn_mode = conn_session->adv_params_cfg.conn_mode;
+        adv_params.disc_mode = conn_session->adv_params_cfg.disc_mode;
+        adv_params.itvl_min = conn_session->adv_params_cfg.itvl_min ? conn_session->adv_params_cfg.itvl_min : 0x100;
+        adv_params.itvl_max = conn_session->adv_params_cfg.itvl_max ? conn_session->adv_params_cfg.itvl_max : 0x100;
+    } else {
+        adv_params.conn_mode = ESP_BLE_CONN_ADV_CONN_MODE_UND;
+        adv_params.disc_mode = ESP_BLE_CONN_ADV_DISC_MODE_GEN;
+        adv_params.itvl_min = 0x100;
+        adv_params.itvl_max = 0x100;
+    }
 
     rc = ble_gap_adv_start(conn_session->own_addr_type, NULL, BLE_HS_FOREVER, &adv_params, esp_ble_conn_gap_event, conn_session);
     if (rc != 0) {
@@ -1260,8 +1871,12 @@ static void esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
         } else {
             ESP_LOGE(TAG, "Error enabling advertisement; rc = %d", rc);
         }
-        return;
+        if (rc == BLE_HS_EALREADY) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        return ESP_FAIL;
     }
+    return ESP_OK;
 #endif
 }
 
@@ -1270,33 +1885,40 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 {
     esp_err_t rc = ESP_OK;
     esp_ble_conn_session_t *conn_session = arg;
+    struct ble_gap_conn_desc desc = {0};
 
     switch (event->type) {
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
         case BLE_GAP_EVENT_DISC:
             ESP_LOGD(TAG, "BLE_GAP_EVENT_DISC");
-            if (conn_session->scan_cb) {
-                esp_ble_conn_scan_result_t result = {0};
-                result.addr_type = event->disc.addr.type;
-                memcpy(result.addr, event->disc.addr.val, sizeof(result.addr));
-                result.rssi = event->disc.rssi;
-                result.adv_data_len = MIN(event->disc.length_data, ESP_BLE_CONN_ADV_DATA_MAX_LEN);
-                if (result.adv_data_len) {
-                    memcpy(result.adv_data, event->disc.data, result.adv_data_len);
-                }
-                if (conn_session->scan_cb(&result, conn_session->scan_cb_arg)) {
+            esp_ble_conn_scan_result_t result = {0};
+            result.addr_type = event->disc.addr.type;
+            memcpy(result.addr, event->disc.addr.val, sizeof(result.addr));
+            result.rssi = event->disc.rssi;
+            result.adv_data_len = MIN(event->disc.length_data, ESP_BLE_CONN_ADV_DATA_MAX_LEN);
+            if (result.adv_data_len) {
+                memcpy(result.adv_data, event->disc.data, result.adv_data_len);
+            }
+            if (s_mgr_ctx.scan_cb) {
+                if (s_mgr_ctx.scan_cb(&result, s_mgr_ctx.scan_cb_arg)) {
                     esp_ble_conn_should_connect(&event->disc);
                 }
-            } else {
+            } else if (conn_session->remote_name) {
                 struct ble_hs_adv_fields fields;
                 rc = ble_hs_adv_parse_fields(&fields, event->disc.data, event->disc.length_data);
                 if (rc != ESP_OK) {
                     return 0;
                 }
                 /* Try to connect to the advertiser if it looks interesting. */
-                if (fields.name != NULL && !memcmp(fields.name, conn_session->device_name, fields.name_len)) {
+                if (fields.name != NULL && conn_session->remote_name != NULL &&
+                    fields.name_len == strlen((const char *)conn_session->remote_name) &&
+                    !memcmp(fields.name, conn_session->remote_name, fields.name_len)) {
                     esp_ble_conn_should_connect(&event->disc);
                 }
+            } else {
+                esp_ble_conn_event_data_t evt = {0};
+                evt.scan_result = result;
+                esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_SCAN_RESULT, &evt, sizeof(evt.scan_result), portMAX_DELAY);
             }
             break;
         case BLE_GAP_EVENT_DISC_COMPLETE:
@@ -1353,8 +1975,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             /* An advertisement report was received during GAP discovery. */
             ESP_LOGD(TAG, "BLE_GAP_EVENT_EXT_DISC");
             struct ble_gap_ext_disc_desc *disc = ((struct ble_gap_ext_disc_desc *)(&event->disc));
-            if (disc->sid == 2 && !conn_session->ble_bonding) {
-                conn_session->ble_bonding = true;
+            if (disc->sid == 2) {
                 const ble_addr_t addr;
                 uint8_t adv_sid;
                 struct ble_gap_periodic_sync_params params;
@@ -1380,7 +2001,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 .adv_clk_accuracy = event->periodic_sync.adv_clk_accuracy
             };
             memcpy(periodic_sync.adv_addr, event->periodic_sync.adv_addr.val, 6);
-            conn_session->conn_handle = event->periodic_sync.sync_handle;
+            conn_session->periodic_sync_handle = event->periodic_sync.sync_handle;
             esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_PERIODIC_SYNC, &periodic_sync, sizeof(periodic_sync), portMAX_DELAY);
             break;
         case BLE_GAP_EVENT_PERIODIC_REPORT:
@@ -1399,8 +2020,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             ESP_LOGD(TAG, "BLE_GAP_EVENT_PERIODIC_SYNC_LOST");
             esp_ble_conn_periodic_sync_lost_t periodic_sync_lost;
             memcpy(&periodic_sync_lost, &event->periodic_sync_lost, sizeof(esp_ble_conn_periodic_sync_lost_t));
-            conn_session->ble_bonding = false;
-            conn_session->conn_handle = 0;
+            conn_session->periodic_sync_handle = 0;
             rc = ble_gap_periodic_adv_sync_terminate(event->periodic_sync_lost.sync_handle);
             if (rc) {
                 ESP_LOGE(TAG, "Terminate synchronization procedure error; rc=%d", rc);
@@ -1410,20 +2030,25 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 #endif
 #endif
         case BLE_GAP_EVENT_NOTIFY_TX:
-            if (event->notify_tx.indication) {
-                if ((event->notify_tx.status == BLE_HS_EDONE) || (event->notify_tx.status == BLE_HS_ETIMEOUT)) {
-                    xSemaphoreGive(conn_session->semaphore);
+            esp_ble_conn_link_t *notify_link = esp_ble_conn_link_find_by_handle(event->notify_tx.conn_handle);
+            if (notify_link && notify_link->semaphore) {
+                if (event->notify_tx.indication) {
+                    if ((event->notify_tx.status == BLE_HS_EDONE) || (event->notify_tx.status == BLE_HS_ETIMEOUT)) {
+                        xSemaphoreGive(notify_link->semaphore);
+                    }
+                } else {
+                    if (event->notify_tx.status == 0) {
+                        xSemaphoreGive(notify_link->semaphore);
+                    }
                 }
-            } else {
-                if (event->notify_tx.status == 0) {
-                    xSemaphoreGive(conn_session->semaphore);
-                }
+            }
+            if (notify_link) {
+                esp_ble_conn_link_unref(notify_link);
             }
             break;
         case BLE_GAP_EVENT_CONNECT:
             /* A new connection was established or a connection attempt failed. */
             if (event->connect.status == 0) {
-                struct ble_gap_conn_desc desc;
                 rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
                 if (rc != ESP_OK) {
                     ESP_LOGE(TAG, "No open connection with the specified handle");
@@ -1431,6 +2056,10 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                     conn_session->connect_cb(event, arg);
                 }
             } else {
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+                /* Remove pending for failed connection (NimBLE connect event has no peer_addr) */
+                esp_ble_conn_pending_remove_first();
+#endif
                 /* Connection failed; resume advertising. */
                 esp_ble_conn_advertise(conn_session);
             }
@@ -1444,6 +2073,19 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             esp_ble_conn_advertise(conn_session);
             break;
 
+        case BLE_GAP_EVENT_CONN_UPDATE:
+            rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
+            if (rc == 0) {
+                esp_ble_conn_event_data_t evt = {0};
+                evt.conn_param_update.conn_handle = event->conn_update.conn_handle;
+                evt.conn_param_update.status = event->conn_update.status;
+                evt.conn_param_update.params.itvl_min = desc.conn_itvl;
+                evt.conn_param_update.params.itvl_max = desc.conn_itvl;
+                evt.conn_param_update.params.latency = desc.conn_latency;
+                evt.conn_param_update.params.supervision_timeout = desc.supervision_timeout;
+                esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE, &evt, sizeof(evt.conn_param_update), portMAX_DELAY);
+            }
+            break;
         case BLE_GAP_EVENT_ADV_COMPLETE:
             esp_ble_conn_advertise(conn_session);
             break;
@@ -1500,6 +2142,60 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                     event->mtu.channel_id,
                     event->mtu.value);
             conn_session->set_mtu_cb(event, arg);
+            break;
+        case BLE_GAP_EVENT_REPEAT_PAIRING:
+            /* Delete old bond and retry pairing */
+            rc = ble_gap_conn_find(event->repeat_pairing.conn_handle, &desc);
+            if (rc == 0) {
+                ble_store_util_delete_peer(&desc.peer_id_addr);
+            }
+            return BLE_GAP_REPEAT_PAIRING_RETRY;
+        case BLE_GAP_EVENT_ENC_CHANGE:
+            rc = ble_gap_conn_find(event->enc_change.conn_handle, &desc);
+            if (rc == 0) {
+                esp_ble_conn_event_data_t evt = {0};
+                evt.enc_change.conn_handle = event->enc_change.conn_handle;
+                evt.enc_change.status = event->enc_change.status;
+                evt.enc_change.encrypted = desc.sec_state.encrypted;
+                evt.enc_change.authenticated = desc.sec_state.authenticated;
+                evt.enc_change.peer_addr_type = desc.peer_ota_addr.type;
+                memcpy(evt.enc_change.peer_addr, desc.peer_ota_addr.val, sizeof(evt.enc_change.peer_addr));
+                esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_ENC_CHANGE, &evt, sizeof(evt.enc_change), portMAX_DELAY);
+            }
+            break;
+        case BLE_GAP_EVENT_PASSKEY_ACTION:
+            esp_ble_conn_event_data_t evt = {0};
+            evt.passkey_action.conn_handle = event->passkey.conn_handle;
+            evt.passkey_action.action = event->passkey.params.action;
+            switch (event->passkey.params.action) {
+                case BLE_SM_IOACT_DISP:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_DISP;
+                    evt.passkey_action.passkey = conn_session->local_passkey;
+                    if (conn_session->local_passkey != 0) {
+                        struct ble_sm_io pkey = {
+                            .action = BLE_SM_IOACT_DISP,
+                            .passkey = conn_session->local_passkey,
+                        };
+                        int inject_rc = ble_sm_inject_io(event->passkey.conn_handle, &pkey);
+                        if (inject_rc != 0) {
+                            ESP_LOGE(TAG, "ble_sm_inject_io failed for DISP, conn_handle=%u, rc=%d",
+                                    (unsigned)event->passkey.conn_handle, inject_rc);
+                            evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_NONE;
+                        }
+                    }
+                    break;
+                case BLE_SM_IOACT_NUMCMP:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_NUMCMP;
+                    evt.passkey_action.passkey = event->passkey.params.numcmp;
+                    break;
+                case BLE_SM_IOACT_INPUT:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_INPUT;
+                    break;
+                default:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_NONE;
+                    break;
+            }
+            esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_PASSKEY_ACTION, &evt, sizeof(evt.passkey_action), portMAX_DELAY);
             break;
         default:
             break;
@@ -1673,7 +2369,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
 
 static void esp_ble_conn_host_task(void *param)
 {
-    /* This function will return only when nimble_port_stop() is executed */
+    /* This function will return only when the BLE host is stopped */
     ESP_LOGI(TAG, "BLE Host Task Started");
     nimble_port_run();
 
@@ -1803,16 +2499,21 @@ static int
 esp_ble_conn_populate_gatt_db(esp_ble_conn_session_t *conn_session)
 {
     struct ble_gatt_svc_def *gatt_svr_svcs = NULL;
+    svc_uuid_t *svc_uuid = NULL;
 
-    /* Allocate (number of services + 1) memory for services, the additional services
-     * consist of all 0s indicating end of services */
-    gatt_svr_svcs = (struct ble_gatt_svc_def *) calloc(conn_session->nu_lookup_count + 1, sizeof(struct ble_gatt_svc_def));
+    /* Allocate (number of services + 1) memory for services, the additional entry
+     * consists of all 0s indicating end of services */
+    {
+        size_t svc_count = 0;
+        SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
+            svc_count++;
+        }
+        gatt_svr_svcs = (struct ble_gatt_svc_def *) calloc(svc_count + 1, sizeof(struct ble_gatt_svc_def));
+    }
     if (gatt_svr_svcs == NULL) {
         ESP_LOGE(TAG, "Error allocating memory for GATT services");
         return ESP_ERR_NO_MEM;
     }
-
-    svc_uuid_t *svc_uuid = NULL;
     uint8_t         index = 0;
     SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
         /* Allocate space for 1st service UUID as well*/
@@ -1903,37 +2604,106 @@ static void ble_gatt_svc_free(struct ble_gatt_svc_def *gatt_db_svcs, uint8_t nu_
 static void esp_ble_conn_connect_cb(struct ble_gap_event *event, void *arg)
 {
     esp_ble_conn_session_t *conn_session = arg;
+    struct ble_gap_conn_desc desc = {0};
+    esp_ble_conn_link_t *link = NULL;
+    bool desc_found = false;
 
-    conn_session->conn_handle = event->connect.conn_handle;
-    conn_session->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
+    if (ble_gap_conn_find(event->connect.conn_handle, &desc) == 0) {
+        desc_found = true;
+        if (!esp_ble_conn_pending_remove(&desc.peer_ota_addr)) {
+            ESP_LOGD(TAG, "Connected peer not in pending list, may be incoming connect");
+        }
+        link = esp_ble_conn_link_add(event->connect.conn_handle, &desc.peer_ota_addr);
+        if (!link) {
+            ESP_LOGW(TAG, "Failed to create link context for conn_handle=%d", event->connect.conn_handle);
+            ble_gap_terminate(event->connect.conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+            return;
+        }
+    } else {
+        ESP_LOGW(TAG, "Unable to find connection descriptor for conn_handle=%d", event->connect.conn_handle);
+        ble_gap_terminate(event->connect.conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        return;
+    }
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
-    /* Perform service discovery. */
-    esp_ble_conn_disc_svcs(conn_session);
+    /* Perform service discovery with per-connection context. */
+    esp_ble_conn_disc_ctx_t *disc_ctx = calloc(1, sizeof(esp_ble_conn_disc_ctx_t));
+    if (disc_ctx) {
+        disc_ctx->conn_session = conn_session;
+        disc_ctx->conn_handle = event->connect.conn_handle;
+        esp_ble_conn_disc_svcs(disc_ctx);
+    } else {
+        ESP_LOGE(TAG, "Failed to allocate discovery context for conn_handle=%d", event->connect.conn_handle);
+    }
 #endif
 
     esp_ble_conn_event_send(conn_session, ESP_BLE_CONN_EVENT_CONNECTED, NULL, 0, NULL);
-    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONNECTED, NULL, 0, portMAX_DELAY);
+    if (link && link->queue) {
+        esp_ble_conn_event_ctx_t event_ctx = {
+            .event = ESP_BLE_CONN_EVENT_CONNECTED,
+            .data_len = 0,
+            .data = NULL,
+            .handle = NULL,
+        };
+        xQueueSend(link->queue, &event_ctx, 0);
+    }
+    if (link) {
+        esp_ble_conn_link_unref(link);
+    }
+    if (desc_found) {
+        esp_ble_conn_event_data_t evt = {0};
+        evt.connected.conn_handle = event->connect.conn_handle;
+        evt.connected.peer_addr_type = desc.peer_ota_addr.type;
+        memcpy(evt.connected.peer_addr, desc.peer_ota_addr.val, sizeof(evt.connected.peer_addr));
+        esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONNECTED, &evt, sizeof(evt.connected), portMAX_DELAY);
+    }
 }
 
 static void esp_ble_conn_disconnect_cb(struct ble_gap_event *event, void *arg)
 {
     esp_ble_conn_session_t *conn_session = arg;
+    uint16_t disc_handle = event->disconnect.conn.conn_handle;
+    esp_ble_conn_link_t *link = esp_ble_conn_link_find_by_handle(disc_handle);
 
-    conn_session->disconnect_reason = event->disconnect.reason;
-
-    /* Clear conn_handle value */
-    conn_session->conn_handle = 0;
+    s_last_disconnect_reason = event->disconnect.reason;
+    s_last_disconnect_conn_handle = disc_handle;
+    if (link && link->queue) {
+        esp_ble_conn_event_ctx_t event_ctx = {
+            .event = ESP_BLE_CONN_EVENT_DISCONNECTED,
+            .data_len = 0,
+            .data = NULL,
+            .handle = NULL,
+        };
+        xQueueSend(link->queue, &event_ctx, 0);
+    }
+    if (link) {
+        esp_ble_conn_link_unref(link);
+    }
+    esp_ble_conn_link_remove(disc_handle, event->disconnect.reason);
 
     esp_ble_conn_event_send(conn_session, ESP_BLE_CONN_EVENT_DISCONNECTED, NULL, 0, NULL);
-    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISCONNECTED, NULL, 0, portMAX_DELAY);
+    esp_ble_conn_event_data_t evt = {0};
+    evt.disconnected.conn_handle = disc_handle;
+    evt.disconnected.reason = event->disconnect.reason;
+    evt.disconnected.peer_addr_type = event->disconnect.conn.peer_ota_addr.type;
+    memcpy(evt.disconnected.peer_addr, event->disconnect.conn.peer_ota_addr.val, sizeof(evt.disconnected.peer_addr));
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISCONNECTED, &evt, sizeof(evt.disconnected), portMAX_DELAY);
 }
 
 static void esp_ble_conn_set_mtu_cb(struct ble_gap_event *event, void *arg)
 {
-    esp_ble_conn_session_t *conn_session = arg;
+    esp_ble_conn_link_t *link = esp_ble_conn_link_find_by_handle(event->mtu.conn_handle);
 
-    conn_session->gatt_mtu = event->mtu.value;
+    if (link) {
+        link->gatt_mtu = event->mtu.value;
+        esp_ble_conn_link_unref(link);
+    }
+    esp_ble_conn_event_data_t evt = {0};
+    evt.mtu_update.conn_handle = event->mtu.conn_handle;
+    evt.mtu_update.channel_id = event->mtu.channel_id;
+    evt.mtu_update.mtu = event->mtu.value;
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_MTU, &evt, sizeof(evt.mtu_update), portMAX_DELAY);
+    (void)arg;
 }
 
 static void esp_ble_conn_del_svc(esp_ble_conn_svc_t *svc)
@@ -1961,12 +2731,21 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
     if (!conn_session) {
         return ESP_ERR_NO_MEM;
     }
+    s_mgr_ctx_ptr = &conn_session->mgr_ctx;
 
-    conn_session->semaphore = xSemaphoreCreateBinary();
-    if (!conn_session->semaphore) {
-        ESP_LOGE(TAG, "Allocate memory for BLE semaphore error!");
+    s_mgr_ctx.scan_cb = NULL;
+    s_mgr_ctx.scan_cb_arg = NULL;
+    s_mgr_ctx.list_lock = xSemaphoreCreateMutex();
+    if (!s_mgr_ctx.list_lock) {
+        s_mgr_ctx_ptr = &s_mgr_ctx_fallback;
+        free(conn_session);
         goto ble_init_error;
     }
+    s_conn_session = conn_session;
+    s_last_disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
+    s_last_disconnect_conn_handle = BLE_CONN_HANDLE_INVALID;
+    SLIST_INIT(&s_mgr_ctx.link_list);
+    SLIST_INIT(&s_mgr_ctx.pending_list);
 
     conn_session->queue = xQueueCreate(1, sizeof(esp_ble_conn_event_ctx_t));
     if (!conn_session->queue) {
@@ -1974,14 +2753,31 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
         goto ble_init_error;
     }
 
-    /* Store BLE device name internally */
-    conn_session->device_name = (uint8_t *)strndup((const char *)config->device_name, strlen((const char *)config->device_name));
-    if (!conn_session->device_name) {
-        ESP_LOGE(TAG, "Allocate memory for BLE device name error!");
-        goto ble_init_error;
+    /* Store BLE device name (peripheral) and remote name (central) internally */
+    const char *local_src = config->device_name[0] != '\0' ? (const char *)config->device_name : NULL;
+    const char *remote_src = config->remote_name[0] != '\0' ? (const char *)config->remote_name : NULL;
+    if (local_src) {
+        conn_session->device_name = (uint8_t *)strndup(local_src, strlen(local_src));
+        if (!conn_session->device_name) {
+            ESP_LOGE(TAG, "Allocate memory for BLE local name error!");
+            goto ble_init_error;
+        }
+    } else {
+        conn_session->device_name = NULL;
+    }
+    if (remote_src) {
+        conn_session->remote_name = (uint8_t *)strndup(remote_src, strlen(remote_src));
+        if (!conn_session->remote_name) {
+            ESP_LOGE(TAG, "Allocate memory for BLE remote name error!");
+            goto ble_init_error;
+        }
+    } else {
+        conn_session->remote_name = NULL;
     }
 
-    conn_session->gatt_mtu = GATT_DEF_BLE_MTU_SIZE;
+    /* Set default advertising parameters (can be overridden via esp_ble_conn_adv_params_set) */
+    esp_ble_conn_set_default_adv_params(conn_session);
+    conn_session->adv_params_set = false;
 
 #if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
     if (config->extended_adv_data) {
@@ -2018,20 +2814,20 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
 
 #else
     uint8_t offset = 0;
-    esp_nimble_maps_t uuid_data;
+    esp_nimble_maps_t uuid_data = { 0 };
     /* Store BLE announce data internally */
     esp_nimble_maps_t announce_data[] = {
         {
             .type = BLE_CONN_DATA_NAME_COMPLETE,
-            .length = strlen((const char *)conn_session->device_name),
-            .value = (uint8_t *)conn_session->device_name,
+            .length = conn_session->device_name ? strlen((const char *)conn_session->device_name) : 0,
+            .value = conn_session->device_name,
         }
     };
 
     for (uint8_t i = 0; i < (sizeof(announce_data)/sizeof(announce_data[0])); i++) {
-        /* Add extra bytes required per entry, i.e.
-         * length (1 byte) + type (1 byte) = 2 bytes */
-        conn_session->adv_data_len += announce_data[i].length + 2;
+        if (announce_data[i].length > 0 && announce_data[i].value != NULL) {
+            conn_session->adv_data_len += announce_data[i].length + 2;
+        }
     }
 
     if (config->include_service_uuid) {
@@ -2056,27 +2852,31 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
         goto ble_init_error;
     }
 
-    /* Allocate memory for the raw advertisement data */
-    conn_session->adv_data_buf = calloc(1, conn_session->adv_data_len);
-    if (conn_session->adv_data_buf == NULL) {
-        ESP_LOGE(TAG, "Allocate memory for raw advertisement data error!");
-        goto ble_init_error;
-    }
+    /* Allocate memory for the raw advertisement data (skip when Central-only, adv_data_len is 0) */
+    if (conn_session->adv_data_len > 0) {
+        conn_session->adv_data_buf = calloc(1, conn_session->adv_data_len);
+        if (conn_session->adv_data_buf == NULL) {
+            ESP_LOGE(TAG, "Allocate memory for raw advertisement data error!");
+            goto ble_init_error;
+        }
 
-    /* Form the raw advertisement data using above entries */
-    for (uint8_t i = 0, len = 0; i < (sizeof(announce_data)/sizeof(announce_data[0])); i++) {
-        conn_session->adv_data_buf[len++] = announce_data[i].length + 1; // + 1 byte for type
-        conn_session->adv_data_buf[len++] = announce_data[i].type;
-        memcpy(&conn_session->adv_data_buf[len], announce_data[i].value, announce_data[i].length);
-        len += announce_data[i].length;
-        offset = len;
-    }
+        /* Form the raw advertisement data using above entries */
+        for (uint8_t i = 0, len = 0; i < (sizeof(announce_data)/sizeof(announce_data[0])); i++) {
+            if (announce_data[i].length > 0 && announce_data[i].value != NULL) {
+                conn_session->adv_data_buf[len++] = announce_data[i].length + 1; // + 1 byte for type
+                conn_session->adv_data_buf[len++] = announce_data[i].type;
+                memcpy(&conn_session->adv_data_buf[len], announce_data[i].value, announce_data[i].length);
+                len += announce_data[i].length;
+                offset = len;
+            }
+        }
 
-    if (config->include_service_uuid) {
-        conn_session->adv_data_buf[offset++] = uuid_data.length + 1;
-        conn_session->adv_data_buf[offset++] = uuid_data.type;
-        memcpy(&conn_session->adv_data_buf[offset], uuid_data.value, uuid_data.length);
-        offset += uuid_data.length;
+        if (config->include_service_uuid) {
+            conn_session->adv_data_buf[offset++] = uuid_data.length + 1;
+            conn_session->adv_data_buf[offset++] = uuid_data.type;
+            memcpy(&conn_session->adv_data_buf[offset], uuid_data.value, uuid_data.length);
+            offset += uuid_data.length;
+        }
     }
 
     /* Store BLE scan response data internally */
@@ -2126,8 +2926,6 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
     conn_session->disconnect_cb = esp_ble_conn_disconnect_cb;
     conn_session->set_mtu_cb = esp_ble_conn_set_mtu_cb;
 
-    s_conn_session = conn_session;
-
     ESP_LOGI(TAG, "BLE Connection Management: v%d.%d.%d\n", BLE_CONN_MGR_VER_MAJOR, BLE_CONN_MGR_VER_MINOR, BLE_CONN_MGR_VER_PATCH);
 
     return ESP_OK;
@@ -2144,12 +2942,21 @@ esp_err_t esp_ble_conn_deinit(void)
     esp_ble_conn_session_t *conn_session = s_conn_session;
 
     if (!conn_session) {
+        esp_ble_conn_cleanup_pending_and_links();
+        if (s_mgr_ctx.list_lock) {
+            vSemaphoreDelete(s_mgr_ctx.list_lock);
+            s_mgr_ctx.list_lock = NULL;
+        }
         return ESP_ERR_INVALID_ARG;
     }
 
     if (conn_session->device_name) {
         free(conn_session->device_name);
         conn_session->device_name = NULL;
+    }
+    if (conn_session->remote_name) {
+        free(conn_session->remote_name);
+        conn_session->remote_name = NULL;
     }
 
     if (conn_session->adv_data_buf) {
@@ -2162,10 +2969,12 @@ esp_err_t esp_ble_conn_deinit(void)
         conn_session->adv_rsp_data_buf = NULL;
     }
 
-    if (conn_session->semaphore) {
-        vSemaphoreDelete(conn_session->semaphore);
-        conn_session->semaphore = NULL;
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV)
+    if (conn_session->per_adv_data_buf) {
+        free(conn_session->per_adv_data_buf);
+        conn_session->per_adv_data_buf = NULL;
     }
+#endif
 
     if (conn_session->queue) {
         vQueueDelete(conn_session->queue);
@@ -2174,32 +2983,13 @@ esp_err_t esp_ble_conn_deinit(void)
 
     if (conn_session->gatt_db) {
         struct ble_gatt_svc_def *gatt_svr_svcs = conn_session->gatt_db;
-        for (int i = 0; i < conn_session->nu_lookup_count; i ++ ) {
-            SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
-                ble_uuid_t *ble_uuid = NULL;
-                ble_uuid_any_t uuid_any;
-                switch (svc_uuid->svc.type) {
-                    case BLE_CONN_UUID_TYPE_16:
-                        ble_uuid_init_from_buf(&uuid_any, &svc_uuid->svc.uuid.uuid16, 2);
-                        ble_uuid = (ble_uuid_t *)&uuid_any.u16;
-                        break;
-                    case BLE_CONN_UUID_TYPE_32:
-                        ble_uuid_init_from_buf(&uuid_any, &svc_uuid->svc.uuid.uuid32, 4);
-                        ble_uuid = (ble_uuid_t *)&uuid_any.u32;
-                        break;
-                    case BLE_CONN_UUID_TYPE_128:
-                        ble_uuid_init_from_buf(&uuid_any, svc_uuid->svc.uuid.uuid128, BLE_UUID128_VAL_LEN);
-                        ble_uuid = (ble_uuid_t *)&uuid_any.u128;
-                        break;
-                    default:
-                        break;
-                }
-
-                if (!ble_uuid_cmp(gatt_svr_svcs[i].uuid, ble_uuid)) {
-                    ble_gatt_svc_free(&gatt_svr_svcs[i], svc_uuid->svc.nu_lookup_count);
-                    break;
-                }
+        size_t idx = 0;
+        SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
+            if (gatt_svr_svcs[idx].type == 0) {
+                break;
             }
+            ble_gatt_svc_free(&gatt_svr_svcs[idx], svc_uuid->svc.nu_lookup_count);
+            idx++;
         }
         free(conn_session->gatt_db);
         conn_session->gatt_db = NULL;
@@ -2235,10 +3025,20 @@ esp_err_t esp_ble_conn_deinit(void)
     }
 #endif
 
-    free(conn_session);
-    conn_session = NULL;
+    s_mgr_ctx.scan_cb = NULL;
+    s_mgr_ctx.scan_cb_arg = NULL;
+    s_last_disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
+    s_last_disconnect_conn_handle = BLE_CONN_HANDLE_INVALID;
+    esp_ble_conn_cleanup_pending_and_links();
+    if (s_mgr_ctx.list_lock) {
+        vSemaphoreDelete(s_mgr_ctx.list_lock);
+        s_mgr_ctx.list_lock = NULL;
+    }
 
-    s_conn_session = conn_session;
+    free(conn_session);
+    s_conn_session = NULL;
+    s_mgr_ctx_ptr = &s_mgr_ctx_fallback;
+    memset(&s_mgr_ctx_fallback, 0, sizeof(s_mgr_ctx_fallback));
 
     return ESP_OK;
 }
@@ -2278,14 +3078,14 @@ esp_err_t esp_ble_conn_start(void)
     ble_hs_cfg.sm_our_key_dist = CONFIG_BLE_CONN_MGR_SM_KEY_DIST;
     ble_hs_cfg.sm_their_key_dist = CONFIG_BLE_CONN_MGR_SM_KEY_DIST;
 #else
+    /* Keep SM behavior configurable even when BLE_CONN_MGR_SM is disabled. */
     ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO; /* Just Works */
-    ble_hs_cfg.sm_bonding = conn_session->ble_bonding;
-    ble_hs_cfg.sm_mitm = 1;
-    ble_hs_cfg.sm_sc = conn_session->ble_sm_sc;
-
-    /* Distribute LTK and IRK */
-    ble_hs_cfg.sm_our_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
-    ble_hs_cfg.sm_their_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
+    ble_hs_cfg.sm_oob_data_flag = !!(CONFIG_BLE_CONN_MGR_SM_DEFAULT_CAP & BIT(0));
+    ble_hs_cfg.sm_bonding = !!(CONFIG_BLE_CONN_MGR_SM_DEFAULT_CAP & BIT(1));
+    ble_hs_cfg.sm_mitm = !!(CONFIG_BLE_CONN_MGR_SM_DEFAULT_CAP & BIT(2));
+    ble_hs_cfg.sm_sc = !!(CONFIG_BLE_CONN_MGR_SM_DEFAULT_CAP & BIT(3));
+    ble_hs_cfg.sm_our_key_dist = CONFIG_BLE_CONN_MGR_SM_DEFAULT_KEY_DIST;
+    ble_hs_cfg.sm_their_key_dist = CONFIG_BLE_CONN_MGR_SM_DEFAULT_KEY_DIST;
 #endif
 
     rc = esp_ble_conn_gatts_init(conn_session);
@@ -2295,7 +3095,7 @@ esp_err_t esp_ble_conn_start(void)
     }
 
     /* Set device name, configure response data to be sent while advertising */
-    rc = ble_svc_gap_device_name_set((const char *)conn_session->device_name);
+    rc = ble_svc_gap_device_name_set(conn_session->device_name ? (const char *)conn_session->device_name : "ESP");
     if (rc != 0) {
         ESP_LOGE(TAG, "Error setting device name");
         return rc;
@@ -2317,22 +3117,22 @@ esp_err_t esp_ble_conn_stop(void)
 #if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC)
 #if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV)
-        ret = ble_gap_periodic_adv_stop(conn_session->conn_handle);
+        ret = ble_gap_periodic_adv_stop(conn_session->ext_adv_handle);
         if (ret) {
             ESP_LOGD(TAG, "Error in stopping periodic advertisement with err code = %d", ret);
         }
 #endif
 
-        ret = ble_gap_ext_adv_stop(conn_session->conn_handle);
+        ret = ble_gap_ext_adv_stop(conn_session->ext_adv_handle);
         if (ret) {
             ESP_LOGD(TAG, "Error in stopping ext advertisement with err code = %d", ret);
         }
-        ret = ble_gap_ext_adv_remove(conn_session->conn_handle);
+        ret = ble_gap_ext_adv_remove(conn_session->ext_adv_handle);
         if (ret) {
             ESP_LOGD(TAG, "Error in remove ext advertisement with err code = %d", ret);
         }
 #else
-        ret = ble_gap_periodic_adv_sync_terminate(conn_session->conn_handle);
+        ret = ble_gap_periodic_adv_sync_terminate(conn_session->periodic_sync_handle);
         if (ret) {
             ESP_LOGD(TAG, "Error in terminate synchronization procedure with err code = %d", ret);
         }
@@ -2360,29 +3160,226 @@ esp_err_t esp_ble_conn_stop(void)
 
 esp_err_t esp_ble_conn_set_mtu(uint16_t mtu)
 {
-    esp_ble_conn_session_t  *conn_session = s_conn_session;
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    (void)mtu; /* MTU is negotiated per connection; stored in esp_ble_conn_link_t */
+    ESP_LOGW(TAG, "esp_ble_conn_set_mtu is legacy no-op; use esp_ble_conn_mtu_update(conn_handle, mtu)");
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (params) {
+        s_conn_session->adv_params_cfg = *params;
+        s_conn_session->adv_params_set = true;
+    } else {
+        esp_ble_conn_set_default_adv_params(s_conn_session);
+        s_conn_session->adv_params_set = false;
+    }
+    return ESP_OK;
+}
+
+static uint16_t esp_ble_conn_adv_data_max_len(void)
+{
+#if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+    return CONFIG_BT_NIMBLE_EXT_ADV_MAX_SIZE;
+#else
+    return ESP_BLE_CONN_ADV_DATA_MAX_LEN;
+#endif
+}
+
+esp_err_t esp_ble_conn_adv_data_set(const uint8_t *data, uint16_t len)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+
     if (!conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (len > 0 && !data) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len > esp_ble_conn_adv_data_max_len()) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    conn_session->gatt_mtu = mtu;
-
+    if (conn_session->adv_data_buf) {
+        free(conn_session->adv_data_buf);
+        conn_session->adv_data_buf = NULL;
+        conn_session->adv_data_len = 0;
+    }
+    if (len > 0) {
+        conn_session->adv_data_buf = (uint8_t *)calloc(1, len);
+        if (!conn_session->adv_data_buf) {
+            return ESP_ERR_NO_MEM;
+        }
+        memcpy(conn_session->adv_data_buf, data, len);
+        conn_session->adv_data_len = len;
+    }
     return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_scan_rsp_data_set(const uint8_t *data, uint16_t len)
+{
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+
+    if (!conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (len > 0 && !data) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len > esp_ble_conn_adv_data_max_len()) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (conn_session->adv_rsp_data_buf) {
+        free(conn_session->adv_rsp_data_buf);
+        conn_session->adv_rsp_data_buf = NULL;
+        conn_session->adv_rsp_data_len = 0;
+    }
+    if (len > 0) {
+        conn_session->adv_rsp_data_buf = (uint8_t *)calloc(1, len);
+        if (!conn_session->adv_rsp_data_buf) {
+            return ESP_ERR_NO_MEM;
+        }
+        memcpy(conn_session->adv_rsp_data_buf, data, len);
+        conn_session->adv_rsp_data_len = len;
+    }
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_periodic_adv_data_set(const uint8_t *data, uint16_t len)
+{
+#if !defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV)
+    (void)data;
+    (void)len;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+
+    if (!conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (len > 0 && !data) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len > CONFIG_BT_NIMBLE_EXT_ADV_MAX_SIZE) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (conn_session->per_adv_data_buf) {
+        free(conn_session->per_adv_data_buf);
+        conn_session->per_adv_data_buf = NULL;
+        conn_session->per_adv_data_len = 0;
+    }
+    if (len > 0) {
+        conn_session->per_adv_data_buf = (uint8_t *)calloc(1, len);
+        if (!conn_session->per_adv_data_buf) {
+            return ESP_ERR_NO_MEM;
+        }
+        memcpy(conn_session->per_adv_data_buf, data, len);
+        conn_session->per_adv_data_len = len;
+    }
+    return ESP_OK;
+#endif
+}
+
+esp_err_t esp_ble_conn_adv_start(void)
+{
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return esp_ble_conn_advertise(s_conn_session);
+#else
+    return ESP_ERR_INVALID_STATE;
+#endif
+}
+
+esp_err_t esp_ble_conn_adv_stop(void)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#if defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+    int rc = ble_gap_ext_adv_stop(s_conn_session->ext_adv_handle);
+#else
+    int rc = ble_gap_adv_stop();
+#endif
+    if (rc == 0 || rc == BLE_HS_EALREADY) {
+        return ESP_OK;
+    }
+    ESP_LOGW(TAG, "Failed to stop advertising; rc=%d", rc);
+    return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_scan_params_set(const esp_ble_conn_scan_params_t *params)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (params) {
+        s_conn_session->scan_params_cfg = *params;
+        s_conn_session->scan_params_set = true;
+    } else {
+        s_conn_session->scan_params_set = false;
+    }
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_scan_start(void)
+{
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return esp_ble_conn_scan(s_conn_session);
+#else
+    return ESP_ERR_INVALID_STATE;
+#endif
 }
 
 esp_err_t esp_ble_conn_scan_stop(void)
 {
     if (!s_conn_session) {
-        return ESP_ERR_INVALID_ARG;
+        return ESP_ERR_INVALID_STATE;
     }
 
     int rc = ble_gap_disc_cancel();
-    if (rc == 0 || rc == BLE_HS_EALREADY) {
+    if (rc == 0) {
         return ESP_OK;
+    }
+    if (rc == BLE_HS_EALREADY) {
+        return ESP_ERR_INVALID_STATE;
     }
 
     ESP_LOGW(TAG, "Failed to cancel scan; rc=%d", rc);
     return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_mtu_update(uint16_t conn_handle, uint16_t mtu)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX ||
+            mtu < BLE_ATT_MTU_DFLT || mtu > BLE_ATT_MTU_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    int rc = ble_att_set_preferred_mtu(mtu);
+    if (rc != 0) {
+        ESP_LOGW(TAG, "ble_att_set_preferred_mtu failed; rc=%d", rc);
+        return ESP_FAIL;
+    }
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+    rc = ble_gattc_exchange_mtu(conn_handle, NULL, NULL);
+    if (rc != 0) {
+        ESP_LOGW(TAG, "ble_gattc_exchange_mtu failed; rc=%d", rc);
+        return ESP_FAIL;
+    }
+#endif
+    return ESP_OK;
 }
 
 esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint8_t adv_len, uint8_t ad_type,
@@ -2417,49 +3414,118 @@ esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint8_t adv_len, 
 
 esp_err_t esp_ble_conn_register_scan_callback(esp_ble_conn_scan_cb_t cb, void *cb_arg)
 {
-    esp_ble_conn_session_t *conn_session = s_conn_session;
-    if (!conn_session) {
+    if (!s_conn_session) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    conn_session->scan_cb = cb;
-    conn_session->scan_cb_arg = cb_arg;
+    s_mgr_ctx.scan_cb = cb;
+    s_mgr_ctx.scan_cb_arg = cb_arg;
     return ESP_OK;
 }
 
 esp_err_t esp_ble_conn_connect(void)
 {
     esp_ble_conn_session_t  *conn_session = s_conn_session;
-    esp_ble_conn_event_ctx_t event_ctx = {
-        .event = ESP_BLE_CONN_EVENT_UNKNOWN
-    };
+    esp_ble_conn_event_ctx_t event_ctx = {.event = ESP_BLE_CONN_EVENT_UNKNOWN};
+    TickType_t start = xTaskGetTickCount();
+    const TickType_t timeout = pdMS_TO_TICKS(BLE_CONN_EVENT_WAIT_TIMEOUT_MS);
 
     if (!conn_session) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    xQueueReceive(conn_session->queue, &event_ctx, pdMS_TO_TICKS(100));
-    if (event_ctx.event != ESP_BLE_CONN_EVENT_CONNECTED) {
-        return ESP_ERR_TIMEOUT;
+    while (1) {
+        TickType_t now = xTaskGetTickCount();
+        TickType_t elapsed = now - start;
+        if (elapsed >= timeout) {
+            break;
+        }
+        TickType_t remain = timeout - elapsed;
+        esp_ble_conn_link_t *link = esp_ble_conn_link_first();
+
+        if (link) {
+            if (link->queue && xQueueReceive(link->queue, &event_ctx, remain) == pdTRUE &&
+                    event_ctx.event == ESP_BLE_CONN_EVENT_CONNECTED) {
+                esp_ble_conn_link_unref(link);
+                return ESP_OK;
+            }
+            esp_ble_conn_link_unref(link);
+        } else {
+            vTaskDelay(pdMS_TO_TICKS(10));
+        }
     }
 
-    return ESP_OK;
+    return ESP_ERR_TIMEOUT;
 }
 
 esp_err_t esp_ble_conn_disconnect(void)
 {
     esp_ble_conn_session_t  *conn_session = s_conn_session;
-    esp_ble_conn_event_ctx_t event_ctx = {
-        .event = ESP_BLE_CONN_EVENT_UNKNOWN
-    };
+    esp_ble_conn_link_t *link = NULL;
+    esp_ble_conn_event_ctx_t event_ctx = {.event = ESP_BLE_CONN_EVENT_UNKNOWN};
+    int rc = 0;
 
     if (!conn_session) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    xQueueReceive(conn_session->queue, &event_ctx, pdMS_TO_TICKS(100));
-    if (event_ctx.event != ESP_BLE_CONN_EVENT_DISCONNECTED) {
-        return ESP_ERR_TIMEOUT;
+    link = esp_ble_conn_link_first();
+    if (!link) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    rc = ble_gap_terminate(link->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    if (rc != 0) {
+        esp_ble_conn_link_unref(link);
+        ESP_LOGE(TAG, "Failed to terminate connection; conn_handle=%u, rc=%d",
+                 (unsigned)link->conn_handle, rc);
+        return ESP_FAIL;
+    }
+
+    if (link->queue && xQueueReceive(link->queue, &event_ctx, pdMS_TO_TICKS(BLE_CONN_EVENT_WAIT_TIMEOUT_MS)) == pdTRUE &&
+            event_ctx.event == ESP_BLE_CONN_EVENT_DISCONNECTED) {
+        esp_ble_conn_link_unref(link);
+        return ESP_OK;
+    }
+
+    esp_ble_conn_link_unref(link);
+    return ESP_ERR_TIMEOUT;
+}
+
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type)
+{
+    ble_addr_t addr = {0};
+
+    if (!peer_addr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    addr.type = peer_addr_type;
+    memcpy(addr.val, peer_addr, sizeof(addr.val));
+    return esp_ble_conn_do_connect(&addr);
+}
+#else
+esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type)
+{
+    (void)peer_addr;
+    (void)peer_addr_type;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+#endif /* CONFIG_BLE_CONN_MGR_ROLE_CENTRAL || CONFIG_BLE_CONN_MGR_ROLE_BOTH */
+
+esp_err_t esp_ble_conn_disconnect_by_handle(uint16_t conn_handle)
+{
+    int rc = 0;
+
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    rc = ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Failed to terminate connection; conn_handle=%u, rc=%d", (unsigned)conn_handle, rc);
+        return ESP_FAIL;
     }
 
     return ESP_OK;
@@ -2470,58 +3536,162 @@ esp_err_t esp_ble_conn_get_conn_handle(uint16_t *out_conn_handle)
     if (!out_conn_handle) {
         return ESP_ERR_INVALID_ARG;
     }
-    *out_conn_handle = (s_conn_session ? s_conn_session->conn_handle : 0);
+    *out_conn_handle = esp_ble_conn_default_conn_handle();
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_get_conn_handle_by_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                               uint16_t *out_conn_handle)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!peer_addr || !out_conn_handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_peer_addr(peer_addr, peer_addr_type);
+    if (!link) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    *out_conn_handle = link->conn_handle;
+    esp_ble_conn_link_unref(link);
     return ESP_OK;
 }
 
 esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu)
 {
+    uint16_t conn_handle = 0;
+
     if (!out_mtu) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (s_conn_session && s_conn_session->gatt_mtu > 23) {
-        *out_mtu = s_conn_session->gatt_mtu;
-    } else {
-        *out_mtu = 23;   /* Default minimum BLE ATT MTU */
+    conn_handle = esp_ble_conn_default_conn_handle();
+    if (conn_handle == BLE_CONN_HANDLE_INVALID) {
+        *out_mtu = 23;   /* Backward-compatible default when no active link */
+        return ESP_OK;
     }
+    return esp_ble_conn_get_mtu_by_handle(conn_handle, out_mtu);
+}
+
+esp_err_t esp_ble_conn_get_mtu_by_handle(uint16_t conn_handle, uint16_t *out_mtu)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!out_mtu || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    *out_mtu = (link->gatt_mtu > 23) ? link->gatt_mtu : 23;
+    esp_ble_conn_link_unref(link);
     return ESP_OK;
 }
 
 esp_err_t esp_ble_conn_get_peer_addr(uint8_t out_addr[6])
 {
-    esp_ble_conn_session_t *conn_session = s_conn_session;
-    struct ble_gap_conn_desc desc;
+    uint16_t conn_handle = 0;
 
     if (!out_addr) {
         return ESP_ERR_INVALID_ARG;
     }
+    conn_handle = esp_ble_conn_default_conn_handle();
+    if (conn_handle == BLE_CONN_HANDLE_INVALID) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    return esp_ble_conn_get_peer_addr_by_handle(conn_handle, out_addr, NULL);
+}
 
-    if (!conn_session || conn_session->conn_handle == 0) {
+esp_err_t esp_ble_conn_get_peer_addr_by_handle(uint16_t conn_handle, uint8_t out_peer_addr[6],
+                                               uint8_t *out_peer_addr_type)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX || !out_peer_addr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
         return ESP_ERR_NOT_FOUND;
     }
 
-    if (ble_gap_conn_find(conn_session->conn_handle, &desc) != 0) {
-        return ESP_ERR_NOT_FOUND;
+    memcpy(out_peer_addr, link->peer_addr, sizeof(link->peer_addr));
+    if (out_peer_addr_type) {
+        *out_peer_addr_type = link->peer_addr_type;
     }
-
-    memcpy(out_addr, desc.peer_ota_addr.val, sizeof(desc.peer_ota_addr.val));
+    esp_ble_conn_link_unref(link);
     return ESP_OK;
 }
 
 esp_err_t esp_ble_conn_get_disconnect_reason(uint16_t *out_reason)
 {
-    esp_ble_conn_session_t *conn_session = s_conn_session;
-
     if (!out_reason) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (!conn_session || conn_session->disconnect_reason == BLE_CONN_DISCONNECT_REASON_INVALID) {
+    if (s_last_disconnect_reason == BLE_CONN_DISCONNECT_REASON_INVALID) {
         return ESP_ERR_NOT_FOUND;
     }
 
-    *out_reason = conn_session->disconnect_reason;
+    *out_reason = s_last_disconnect_reason;
     return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_get_disconnect_reason_by_handle(uint16_t conn_handle, uint16_t *out_reason)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!out_reason || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (link && link->disconnect_reason != BLE_CONN_DISCONNECT_REASON_INVALID) {
+        *out_reason = link->disconnect_reason;
+        esp_ble_conn_link_unref(link);
+        return ESP_OK;
+    }
+    if (link) {
+        esp_ble_conn_link_unref(link);
+    }
+
+    if (conn_handle == s_last_disconnect_conn_handle &&
+        s_last_disconnect_reason != BLE_CONN_DISCONNECT_REASON_INVALID) {
+        *out_reason = s_last_disconnect_reason;
+        return ESP_OK;
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
+esp_err_t esp_ble_conn_find_conn_handle_by_peer_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                                     uint16_t *out_conn_handle)
+{
+    esp_ble_conn_link_t *link = NULL;
+
+    if (!peer_addr || !out_conn_handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_peer_addr(peer_addr, peer_addr_type);
+    if (!link) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    *out_conn_handle = link->conn_handle;
+    esp_ble_conn_link_unref(link);
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_find_peer_addr_by_conn_handle(uint16_t conn_handle, uint8_t out_peer_addr[6],
+                                                     uint8_t *out_peer_addr_type)
+{
+    return esp_ble_conn_get_peer_addr_by_handle(conn_handle, out_peer_addr, out_peer_addr_type);
 }
 
 #if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
@@ -2628,7 +3798,7 @@ esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_
     struct os_mbuf *sdu_rx = NULL;
     struct ble_l2cap_chan *nimble_chan = (struct ble_l2cap_chan *)chan;
 
-    if (!nimble_chan || conn_handle == 0 || conn_handle > BLE_CONN_HANDLE_MAX ||
+    if (!nimble_chan || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX ||
         peer_sdu_size < L2CAP_COC_SDU_SIZE_MIN) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -2823,14 +3993,17 @@ static int esp_ble_conn_l2cap_coc_event_shim(struct ble_l2cap_event *event, void
 
 esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params)
 {
+#ifndef CONFIG_BLE_CONN_MGR_EXTENDED_ADV
+    esp_ble_conn_link_t *link = NULL;
+
     if (!params) {
         return ESP_ERR_INVALID_ARG;
     }
-#ifndef CONFIG_BLE_CONN_MGR_EXTENDED_ADV
-    esp_ble_conn_session_t *conn_session = s_conn_session;
-    if (!conn_session || conn_session->conn_handle != conn_handle) {
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
         return ESP_ERR_INVALID_ARG;
     }
+    esp_ble_conn_link_unref(link);
     struct ble_gap_upd_params nim_params = {
         .itvl_min = params->itvl_min,
         .itvl_max = params->itvl_max,
@@ -2846,6 +4019,148 @@ esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_pa
     (void)params;
     return ESP_ERR_NOT_SUPPORTED;
 #endif
+}
+
+esp_err_t esp_ble_conn_get_phy(uint16_t conn_handle, uint8_t *out_tx_phy, uint8_t *out_rx_phy)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!out_tx_phy && !out_rx_phy) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_gap_read_le_phy(conn_handle, out_tx_phy, out_rx_phy);
+    if (rc == 0) {
+        return ESP_OK;
+    }
+    if (rc == BLE_HS_ENOTCONN) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (rc == BLE_HS_EINVAL || rc == BLE_ERR_INV_HCI_CMD_PARMS) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (rc == BLE_HS_EDISABLED) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_set_preferred_phy(uint16_t conn_handle, uint8_t tx_phys_mask, uint8_t rx_phys_mask, uint16_t phy_opts)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_gap_set_prefered_le_phy(conn_handle, tx_phys_mask, rx_phys_mask, phy_opts);
+    if (rc == 0) {
+        return ESP_OK;
+    }
+    if (rc == BLE_HS_ENOTCONN) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (rc == BLE_HS_EINVAL || rc == BLE_ERR_INV_HCI_CMD_PARMS) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (rc == BLE_HS_EDISABLED) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_set_data_len(uint16_t conn_handle, uint16_t tx_octets, uint16_t tx_time)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (tx_octets < BLE_HCI_SET_DATALEN_TX_OCTETS_MIN || tx_octets > BLE_HCI_SET_DATALEN_TX_OCTETS_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (tx_time < BLE_HCI_SET_DATALEN_TX_TIME_MIN || tx_time > BLE_HCI_SET_DATALEN_TX_TIME_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    int rc = ble_gap_set_data_len(conn_handle, tx_octets, tx_time);
+    if (rc == 0) {
+        return ESP_OK;
+    }
+    if (rc == BLE_HS_ENOTCONN) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (rc == BLE_HS_EINVAL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_set_local_passkey(uint32_t passkey)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (passkey > 999999) {
+        ESP_LOGE(TAG, "Passkey is too large");
+        return ESP_ERR_INVALID_ARG;
+    } else {
+        s_conn_session->local_passkey = passkey;
+        return ESP_OK;
+    }
+}
+
+esp_err_t esp_ble_conn_security_initiate(uint16_t conn_handle)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    int rc = ble_gap_security_initiate(conn_handle);
+    if (rc == BLE_HS_ENOTCONN) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_passkey_reply(uint16_t conn_handle, uint32_t passkey)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX || passkey > 999999) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    struct ble_sm_io pkey = {
+        .action = BLE_SM_IOACT_INPUT,
+        .passkey = passkey,
+    };
+    int rc = ble_sm_inject_io(conn_handle, &pkey);
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_numcmp_reply(uint16_t conn_handle, bool accept)
+{
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    struct ble_sm_io pkey = {
+        .action = BLE_SM_IOACT_NUMCMP,
+        .numcmp_accept = accept ? 1 : 0,
+    };
+    int rc = ble_sm_inject_io(conn_handle, &pkey);
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
 }
 
 esp_err_t esp_ble_conn_l2cap_coc_create_server(uint16_t psm, uint16_t mtu,
@@ -2895,14 +4210,21 @@ esp_err_t esp_ble_conn_l2cap_coc_connect(uint16_t conn_handle, uint16_t psm, uin
 #if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
     struct os_mbuf *sdu_rx = NULL;
     esp_ble_conn_l2cap_coc_cb_ctx_t *ctx = NULL;
+    esp_ble_conn_link_t *link = NULL;
 
     if (!s_conn_session || !cb ||
-        conn_handle == 0 || conn_handle > BLE_CONN_HANDLE_MAX ||
+        conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX ||
         psm < L2CAP_COC_PSM_MIN || psm > L2CAP_COC_PSM_MAX ||
         mtu < L2CAP_COC_MTU_MIN || mtu > L2CAP_COC_MTU_MAX ||
         sdu_size < L2CAP_COC_SDU_SIZE_MIN) {
         return ESP_ERR_INVALID_ARG;
     }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_ble_conn_link_unref(link);
 
     if (!s_l2cap_coc_mem_inited) {
         return ESP_ERR_NO_MEM;
@@ -3099,33 +4421,69 @@ esp_err_t esp_ble_conn_l2cap_coc_get_chan_info(esp_ble_conn_l2cap_coc_chan_t cha
 
 esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff)
 {
+    if (!inbuff) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return esp_ble_conn_notify_by_handle(esp_ble_conn_resolve_data_conn_handle(inbuff), inbuff);
+}
+
+esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff)
+{
     esp_err_t rc = ESP_OK;
     attr_mbuf_t *attr_mbuf = NULL;
     struct os_mbuf *om = NULL;
+    esp_ble_conn_link_t *link = NULL;
     esp_ble_conn_session_t *conn_session = s_conn_session;
 
-    if (!conn_session) {
+    if (!conn_session || !inbuff || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (inbuff->write_conn_id != BLE_CONN_HANDLE_INVALID &&
+        !(inbuff->write_conn_id == 0 && conn_handle != 0) &&
+        inbuff->write_conn_id != conn_handle) {
+        ESP_LOGD(TAG, "conn_handle (%u) overrides inbuff->write_conn_id (%u)", (unsigned)conn_handle, (unsigned)inbuff->write_conn_id);
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
         return ESP_ERR_INVALID_ARG;
     }
 
     attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
 
     om = ble_hs_mbuf_from_flat(inbuff->data, inbuff->data_len);
-    rc = ble_gattc_notify_custom(conn_session->conn_handle, attr_mbuf->attr_handle, om);
+    if (!om) {
+        ESP_LOGE(TAG, "Failed to allocate mbuf for notify");
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_NO_MEM;
+    }
+
+    rc = ble_gattc_notify_custom(conn_handle, attr_mbuf->attr_handle, om);
     if (!rc) {
         ESP_LOGD(TAG, "Notify sent, attr_handle = %d", attr_mbuf->attr_handle);
-        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in sending notify, rc = %d", rc);
     }
 
+    esp_ble_conn_link_unref(link);
     return rc;
 }
 
 esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
+{
+    if (!inbuff) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return esp_ble_conn_read_by_handle(esp_ble_conn_resolve_data_conn_handle(inbuff), inbuff);
+}
+
+esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t *inbuff)
 {
     esp_err_t rc = ESP_OK;
 
@@ -3134,11 +4492,20 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
     char buf[BLE_UUID_STR_LEN];
 
     attr_mbuf_t *attr_mbuf = NULL;
+    esp_ble_conn_link_t *link = NULL;
     esp_ble_conn_session_t  *conn_session = s_conn_session;
 
-    if (!conn_session || !inbuff) {
+    if (!conn_session || !inbuff || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
         return ESP_ERR_INVALID_ARG;
     }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    /* Drain any stale signal and reset per-request status before issuing a new read. */
+    while (xSemaphoreTake(link->semaphore, 0) == pdPASS) {}
+    link->last_read_rc = ESP_OK;
 
     switch (inbuff->type) {
         case BLE_CONN_UUID_TYPE_16:
@@ -3154,7 +4521,9 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
             ble_uuid = (ble_uuid_t *)&uuid_any.u128;
             break;
         default:
-            break;
+            ESP_LOGE(TAG, "Unsupported UUID type %d in read", inbuff->type);
+            esp_ble_conn_link_unref(link);
+            return ESP_ERR_INVALID_ARG;
     }
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL)
@@ -3170,22 +4539,31 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
 
     if (!chr) {
         ESP_LOGE(TAG, "Incorrect uuid %s in read", ble_uuid_to_str(ble_uuid, buf));
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
 
-    rc = ble_gattc_read(conn_session->conn_handle, chr->chr.val_handle, esp_ble_conn_on_read, conn_session);
+    rc = ble_gattc_read(conn_handle, chr->chr.val_handle, esp_ble_conn_on_read, conn_session);
     if (rc) {
         ESP_LOGE(TAG, "Error in reading data, rc = %d", rc);
+        esp_ble_conn_link_unref(link);
         return rc;
     }
 
-    if (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
+    if (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_TIMEOUT;
+    }
+    if (link->last_read_rc != ESP_OK) {
+        esp_err_t read_rc = link->last_read_rc;
+        esp_ble_conn_link_unref(link);
+        return read_rc;
     }
 #endif
     attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in read", ble_uuid_to_str(ble_uuid, buf));
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -3197,10 +4575,19 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
         memcpy(inbuff->data, attr_mbuf->outbuf, inbuff->data_len);
     }
 
+    esp_ble_conn_link_unref(link);
     return rc;
 }
 
 esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff)
+{
+    if (!inbuff) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return esp_ble_conn_write_by_handle(esp_ble_conn_resolve_data_conn_handle(inbuff), inbuff);
+}
+
+esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff)
 {
     esp_err_t rc = ESP_OK;
 
@@ -3209,9 +4596,15 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff)
     char buf[BLE_UUID_STR_LEN];
     uint16_t chr_val_handle = 0;
     struct os_mbuf *om = NULL;
+    esp_ble_conn_link_t *link = NULL;
     esp_ble_conn_session_t *conn_session = s_conn_session;
 
-    if (!conn_session || !inbuff) {
+    if (!conn_session || !inbuff || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -3229,10 +4622,17 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff)
             ble_uuid = (ble_uuid_t *)&uuid_any.u128;
             break;
         default:
-            break;
+            ESP_LOGE(TAG, "Unsupported UUID type %d in write", inbuff->type);
+            esp_ble_conn_link_unref(link);
+            return ESP_ERR_INVALID_ARG;
     }
 
     om = ble_hs_mbuf_from_flat(inbuff->data, inbuff->data_len);
+    if (!om) {
+        ESP_LOGE(TAG, "Failed to allocate mbuf for write");
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_NO_MEM;
+    }
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL)
     svc_uuid_t *svc = NULL;
@@ -3247,31 +4647,48 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff)
 
     if (!chr) {
         ESP_LOGE(TAG, "Incorrect uuid %s in sending", ble_uuid_to_str(ble_uuid, buf));
+        if (om) {
+            os_mbuf_free_chain(om);
+        }
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     chr_val_handle = chr->chr.val_handle;
-    rc = ble_gattc_write(conn_session->conn_handle, chr_val_handle, om, esp_ble_conn_on_write, conn_session);
+    rc = ble_gattc_write(conn_handle, chr_val_handle, om, esp_ble_conn_on_write, conn_session);
 #else
     attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in sending", ble_uuid_to_str(ble_uuid, buf));
+        if (om) {
+            os_mbuf_free_chain(om);
+        }
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     chr_val_handle = attr_mbuf->attr_handle;
-    rc = ble_gattc_indicate_custom(conn_session->conn_handle, chr_val_handle, om);
+    rc = ble_gattc_indicate_custom(conn_handle, chr_val_handle, om);
 #endif
 
     if (!rc) {
         ESP_LOGD(TAG, "Sent data, attr_handle = %d", chr_val_handle);
-        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in sending data, rc = %d", rc);
     }
 
+    esp_ble_conn_link_unref(link);
     return rc;
 }
 
 esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_data_t *inbuff)
+{
+    if (!inbuff) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return esp_ble_conn_subscribe_by_handle(esp_ble_conn_resolve_data_conn_handle(inbuff), desc, inbuff);
+}
+
+esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_desc_t desc, const esp_ble_conn_data_t *inbuff)
 {
     esp_err_t rc = ESP_OK;
 
@@ -3280,9 +4697,15 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
     char buf[BLE_UUID_STR_LEN];
     uint16_t handle = 0;
     struct os_mbuf *om = NULL;
+    esp_ble_conn_link_t *link = NULL;
     esp_ble_conn_session_t *conn_session = s_conn_session;
 
-    if (!conn_session || !inbuff) {
+    if (!conn_session || !inbuff || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -3300,10 +4723,17 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
             ble_uuid = (ble_uuid_t *)&uuid_any.u128;
             break;
         default:
-            break;
+            ESP_LOGE(TAG, "Unsupported UUID type %d in subscribe", inbuff->type);
+            esp_ble_conn_link_unref(link);
+            return ESP_ERR_INVALID_ARG;
     }
 
     om = ble_hs_mbuf_from_flat(inbuff->data, inbuff->data_len);
+    if (!om) {
+        ESP_LOGE(TAG, "Failed to allocate mbuf for subscribe");
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_NO_MEM;
+    }
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL)
     svc_uuid_t *svc = NULL;
@@ -3318,28 +4748,37 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
 
     if (!dsc) {
         ESP_LOGE(TAG, "Incorrect uuid %s in descriptors", ble_uuid_to_str(ble_uuid, buf));
+        if (om) {
+            os_mbuf_free_chain(om);
+        }
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
 
     handle = dsc->dsc.handle;
-    rc = ble_gattc_write(conn_session->conn_handle, dsc->dsc.handle, om, esp_ble_conn_on_write, conn_session);
+    rc = ble_gattc_write(conn_handle, dsc->dsc.handle, om, esp_ble_conn_on_write, conn_session);
 #else
     attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in descriptors", ble_uuid_to_str(ble_uuid, buf));
+        if (om) {
+            os_mbuf_free_chain(om);
+        }
+        esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     handle = attr_mbuf->attr_handle;
-    rc = ble_gattc_indicate_custom(conn_session->conn_handle, handle, om);
+    rc = ble_gattc_indicate_custom(conn_handle, handle, om);
 #endif
 
     if (!rc) {
         ESP_LOGD(TAG, "Descriptors data, attr_handle = %d", handle);
-        return (xSemaphoreTake(conn_session->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
     } else {
         ESP_LOGE(TAG, "Error in descriptors data, rc = %d", rc);
     }
 
+    esp_ble_conn_link_unref(link);
     return rc;
 }
 
@@ -3381,8 +4820,6 @@ esp_err_t esp_ble_conn_add_svc(const esp_ble_conn_svc_t *svc)
     }
     SLIST_INSERT_HEAD(&conn_session->uuid_list, svc_uuid, next);
 
-    conn_session->nu_lookup_count ++;
-
     return ESP_OK;
 }
 
@@ -3401,14 +4838,12 @@ esp_err_t esp_ble_conn_remove_svc(const esp_ble_conn_svc_t *svc)
         }
     }
 
-    while (!SLIST_EMPTY(&conn_session->uuid_list)) {
-        svc_uuid = SLIST_FIRST(&conn_session->uuid_list);
+    svc_uuid_t *svc_uuid_tmp = NULL;
+    SLIST_FOREACH_SAFE(svc_uuid, &conn_session->uuid_list, next, svc_uuid_tmp) {
         if (BLE_UUID_CMP(svc->type, svc_uuid->svc.uuid, svc->uuid)) {
-            SLIST_REMOVE_HEAD(&conn_session->uuid_list, next);
+            SLIST_REMOVE(&conn_session->uuid_list, svc_uuid, svc_uuid_t, next);
             esp_ble_conn_del_svc(&svc_uuid->svc);
             free(svc_uuid);
-
-            conn_session->nu_lookup_count --;
             break;
         }
     }
