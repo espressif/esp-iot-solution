@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.1 - 2026-3-18
+
+### Bug Fix:
+
+- Fix the default clock source selection in `i2c_bus_v2` for LP I2C ports to use `LP_I2C_SCLK_DEFAULT`.
+
 ## v1.4.3 - 2025-9-26
 
 ### Bug Fix:
