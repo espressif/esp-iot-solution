@@ -1,0 +1,35 @@
+menu "models: imagenet_cls"
+    config FLASH_IMAGENET_CLS_MOBILENETV2_S8_V1
+        bool "flash imagenet_cls_mobilenetv2_s8_v1"
+        default y
+
+    choice
+        prompt "default model"
+        default IMAGENET_CLS_MOBILENETV2_S8_V1
+        help
+            default imagenet_cls model
+        config IMAGENET_CLS_MOBILENETV2_S8_V1
+            bool "imagenet_cls_mobilenetv2_s8_v1"
+            depends on IMAGENET_CLS_MODEL_IN_SDCARD || FLASH_IMAGENET_CLS_MOBILENETV2_S8_V1
+    endchoice
+
+    config DEFAULT_IMAGENET_CLS_MODEL
+        int
+        default 0 if IMAGENET_CLS_MOBILENETV2_S8_V1
+
+    choice
+        prompt "model location"
+        default IMAGENET_CLS_MODEL_IN_FLASH_RODATA
+        help
+            imagenet_cls model location
+        config IMAGENET_CLS_MODEL_IN_FLASH_RODATA
+            bool "flash_rodata"
+        config IMAGENET_CLS_MODEL_IN_FLASH_PARTITION
+            bool "flash_partition"
+    endchoice
+
+    config IMAGENET_CLS_MODEL_LOCATION
+        int
+        default 0 if IMAGENET_CLS_MODEL_IN_FLASH_RODATA
+        default 1 if IMAGENET_CLS_MODEL_IN_FLASH_PARTITION
+endmenu

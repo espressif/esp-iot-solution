@@ -1,0 +1,10 @@
+version: 0.1.0
+targets:
+  - esp32p4
+dependencies:
+  idf: '>=5.5'
+  imagenet_cls:
+    override_path: ../components/imagenet_cls
+  espressif/esp32_p4_function_ev_board: "5.0.3"
+  lvgl/lvgl: "9.4.0"
+  espressif/esp_video: "1.4.1"

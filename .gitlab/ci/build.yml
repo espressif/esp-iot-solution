@@ -96,6 +96,14 @@ build_example_ai_esp_dl_human_activity_recognition:
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
 
+build_example_ai_esp_dl_self_learning_classification:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ai_esp_dl_self_learning_classification
+  variables:
+    EXAMPLE_DIR: examples/ai/esp_dl/self_learning_classification
+    IMAGE: espressif/idf:release-v5.5
+
 build_example_ai_esp_dl_touchpad_digit_recognition:
   extends:
     - .build_examples_template
