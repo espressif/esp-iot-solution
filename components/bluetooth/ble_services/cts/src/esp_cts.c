@@ -26,6 +26,15 @@ static esp_ble_cts_local_time_t s_local_time;
 /* CTS Reference Time Characteristic Value */
 static esp_ble_cts_ref_time_t s_ref_time;
 
+/* CTS Current Time Characteristic read callback */
+static esp_ble_cts_read_cb_t s_cur_time_read_cb = NULL;
+
+/* CTS Local Time Characteristic read callback */
+static esp_ble_cts_read_cb_t s_local_time_read_cb = NULL;
+
+/* CTS Reference Time Characteristic read callback */
+static esp_ble_cts_read_cb_t s_ref_time_read_cb = NULL;
+
 esp_err_t esp_ble_cts_get_current_time(esp_ble_cts_cur_time_t *out_val)
 {
     if (!out_val) {
@@ -111,6 +120,21 @@ esp_err_t esp_ble_cts_set_reference_time(esp_ble_cts_ref_time_t *in_val)
     return ESP_OK;
 }
 
+void esp_ble_cts_set_current_time_read_cb(esp_ble_cts_read_cb_t cb)
+{
+    s_cur_time_read_cb = cb;
+}
+
+void esp_ble_cts_set_local_time_read_cb(esp_ble_cts_read_cb_t cb)
+{
+    s_local_time_read_cb = cb;
+}
+
+void esp_ble_cts_set_reference_time_read_cb(esp_ble_cts_read_cb_t cb)
+{
+    s_ref_time_read_cb = cb;
+}
+
 #ifdef CONFIG_BLE_CTS_REF_TIME_CHAR_ENABLE
 static esp_err_t cts_ref_time_cb(const uint8_t *inbuf, uint16_t inlen,
                                  uint8_t **outbuf, uint16_t *outlen, void *priv_data, uint8_t *att_status)
@@ -126,6 +150,10 @@ static esp_err_t cts_ref_time_cb(const uint8_t *inbuf, uint16_t inlen,
     if (!(*outbuf)) {
         *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
+    }
+
+    if (s_ref_time_read_cb) {
+        s_ref_time_read_cb(&s_ref_time);
     }
 
     memcpy(*outbuf, &s_ref_time, len);
@@ -162,6 +190,10 @@ static esp_err_t cts_local_time_cb(const uint8_t *inbuf, uint16_t inlen,
         return ESP_ERR_NO_MEM;
     }
 
+    if (s_local_time_read_cb) {
+        s_local_time_read_cb(&s_local_time);
+    }
+
     memcpy(*outbuf, &s_local_time, len);
     *outlen = len;
 
@@ -193,6 +225,10 @@ static esp_err_t cts_cur_time_cb(const uint8_t *inbuf, uint16_t inlen,
     if (!(*outbuf)) {
         *att_status = ESP_IOT_ATT_INSUF_RESOURCE;
         return ESP_ERR_NO_MEM;
+    }
+
+    if (s_cur_time_read_cb) {
+        s_cur_time_read_cb(&s_cur_time);
     }
 
     memcpy(*outbuf, &s_cur_time, len);
