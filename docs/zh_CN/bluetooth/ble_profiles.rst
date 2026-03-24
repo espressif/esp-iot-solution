@@ -10,3 +10,4 @@ BLE 配置文件
     健康温度计配置文件 <ble_htp>
     BLE MIDI 配置文件 <ble_midi>
     配置传输文件 <ble_otp>
+    BLE OTA 配置文件 <ble_ota>

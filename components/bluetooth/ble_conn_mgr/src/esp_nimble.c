@@ -679,7 +679,7 @@ static void esp_ble_conn_disc_complete(esp_ble_conn_disc_ctx_t *ctx, int rc)
         ESP_LOGE(TAG, "Error: Service discovery failed; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
         ble_gap_terminate(ctx->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     } else {
-        ESP_LOGI(TAG, "Service discovery complete; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
+        ESP_LOGD(TAG, "Service discovery complete; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
         esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISC_COMPLETE, NULL, 0, portMAX_DELAY);
     }
     free(ctx);
@@ -1384,7 +1384,7 @@ static esp_err_t esp_ble_conn_on_read(uint16_t conn_handle,
 
     switch (error->status) {
         case ESP_OK:
-            ESP_LOGI(TAG, "characteristic read; conn_handle=%d "
+            ESP_LOGD(TAG, "characteristic read; conn_handle=%d "
                         "attr_handle=%d len=%d value=", conn_handle,
                         attr->handle, OS_MBUF_PKTLEN(attr->om));
 
@@ -1402,7 +1402,7 @@ static esp_err_t esp_ble_conn_on_read(uint16_t conn_handle,
             break;
 
         case BLE_HS_EDONE:
-            ESP_LOGI(TAG, "characteristic read complete\n");
+            ESP_LOGD(TAG, "characteristic read complete\n");
             if (link) {
                 link->last_read_rc = ESP_OK;
             }
@@ -1634,7 +1634,7 @@ static void esp_ble_conn_periodic_advertise(esp_ble_conn_session_t *conn_session
         return;
     }
 
-    ESP_LOGI(TAG, "Instance %u started (periodic)", conn_session->ext_adv_handle);
+    ESP_LOGD(TAG, "Instance %u started (periodic)", conn_session->ext_adv_handle);
 }
 #endif
 
@@ -1779,7 +1779,7 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Instance %u started (extended)", conn_session->ext_adv_handle);
+    ESP_LOGD(TAG, "Instance %u started (extended)", conn_session->ext_adv_handle);
     return ESP_OK;
 }
 #endif
@@ -1924,7 +1924,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
         case BLE_GAP_EVENT_DISC_COMPLETE:
             break;
         case BLE_GAP_EVENT_NOTIFY_RX:
-            ESP_LOGI(TAG, "received %s; conn_handle=%d attr_handle=%d "
+            ESP_LOGD(TAG, "received %s; conn_handle=%d attr_handle=%d "
                     "attr_len=%d\n",
                     event->notify_rx.indication ?
                     "indication" :
@@ -1991,7 +1991,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             }
             break;
         case BLE_GAP_EVENT_PERIODIC_SYNC:
-            ESP_LOGI(TAG, "BLE_GAP_EVENT_PERIODIC_SYNC");
+            ESP_LOGD(TAG, "BLE_GAP_EVENT_PERIODIC_SYNC");
             esp_ble_conn_periodic_sync_t periodic_sync = {
                 .status = event->periodic_sync.status,
                 .sync_handle = event->periodic_sync.sync_handle,
@@ -2127,7 +2127,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                     };
                     esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CCCD_UPDATE,
                                 &cccd_update, sizeof(cccd_update), portMAX_DELAY);
-                    ESP_LOGI(TAG, "CCCD updated: notify=%d, indicate=%d for char handle=%d UUID type=%d",
+                    ESP_LOGD(TAG, "CCCD updated: notify=%d, indicate=%d for char handle=%d UUID type=%d",
                             notify_enable, indicate_enable, char_handle, chr->type);
                 } else {
                     ESP_LOGW(TAG, "Characteristic not found for handle=%d", char_handle);
@@ -2137,7 +2137,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             }
             break;
         case BLE_GAP_EVENT_MTU:
-            ESP_LOGI(TAG, "mtu update event; conn_handle=%d cid=%d mtu=%d",
+            ESP_LOGD(TAG, "mtu update event; conn_handle=%d cid=%d mtu=%d",
                     event->mtu.conn_handle,
                     event->mtu.channel_id,
                     event->mtu.value);
@@ -2221,7 +2221,7 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
 
     switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_READ_CHR:
-            ESP_LOGI(TAG, "Read attempted for characteristic UUID = %s, attr_handle = %d",
+            ESP_LOGD(TAG, "Read attempted for characteristic UUID = %s, attr_handle = %d",
                             ble_uuid_to_str(ctxt->chr->uuid, buf), attr_handle);
             if (chr && chr->uuid_fn && !chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status)) {
                 esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf);
@@ -2247,7 +2247,7 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
 
             /* Save the length of entire data */
             data_len = OS_MBUF_PKTLEN(ctxt->om);
-            ESP_LOGI(TAG, "Write attempt for uuid = %s, attr_handle = %d, data_len = %d",
+            ESP_LOGD(TAG, "Write attempt for uuid = %s, attr_handle = %d, data_len = %d",
                             ble_uuid_to_str(ctxt->chr->uuid, buf), attr_handle, data_len);
 
             data_buf = calloc(1, data_len);
@@ -2350,7 +2350,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
                 chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status);
             }
         } else {
-            ESP_LOGI(TAG, "No characteristic(%s) found", ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf));
+            ESP_LOGD(TAG, "No characteristic(%s) found", ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf));
         }
         esp_ble_conn_on_gatts_attr_value_set(ctxt->chr.val_handle, ctxt->chr.chr_def->uuid, outlen, outbuf);
         break;
@@ -2370,7 +2370,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
 static void esp_ble_conn_host_task(void *param)
 {
     /* This function will return only when the BLE host is stopped */
-    ESP_LOGI(TAG, "BLE Host Task Started");
+    ESP_LOGD(TAG, "BLE Host Task Started");
     nimble_port_run();
 
     nimble_port_freertos_deinit();
@@ -2926,7 +2926,7 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
     conn_session->disconnect_cb = esp_ble_conn_disconnect_cb;
     conn_session->set_mtu_cb = esp_ble_conn_set_mtu_cb;
 
-    ESP_LOGI(TAG, "BLE Connection Management: v%d.%d.%d\n", BLE_CONN_MGR_VER_MAJOR, BLE_CONN_MGR_VER_MINOR, BLE_CONN_MGR_VER_PATCH);
+    ESP_LOGD(TAG, "BLE Connection Management: v%d.%d.%d\n", BLE_CONN_MGR_VER_MAJOR, BLE_CONN_MGR_VER_MINOR, BLE_CONN_MGR_VER_PATCH);
 
     return ESP_OK;
 

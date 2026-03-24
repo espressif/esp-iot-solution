@@ -64,6 +64,11 @@ list(APPEND srcs            "ots/src/esp_ots.c")
 list(APPEND include         "ots/include")
 endif()
 
+if(CONFIG_BLE_OTA_SVC)
+list(APPEND srcs            "ota/src/esp_ble_ota_svc.c")
+list(APPEND include         "ota/include")
+endif()
+
 list(APPEND req "ble_conn_mgr")
 
 idf_component_register(SRCS "${srcs}"

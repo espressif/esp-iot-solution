@@ -52,6 +52,10 @@
   - "components/bluetooth/ble_profiles/esp/ble_ota/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_profiles_esp_ble_ota_raw: &patterns-components_bluetooth_ble_profiles_esp_ble_ota_raw
+  - "components/bluetooth/ble_profiles/esp/ble_ota_raw/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bluetooth_ble_services: &patterns-components_bluetooth_ble_services
   - "components/bluetooth/ble_services/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -550,6 +554,9 @@
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"
 
+.patterns-example_bluetooth_ble_ota_raw: &patterns-example_bluetooth_ble_ota_raw
+  - "examples/bluetooth/ble_profiles/ble_ota/**/*"
+
 .patterns-example_bluetooth_ble_services: &patterns-example_bluetooth_ble_services
   - "examples/bluetooth/ble_services/**/*"
 
@@ -1015,6 +1022,18 @@
       changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_ota
+
+.rules:build:example_bluetooth_ble_ota_raw:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_esp_ble_ota_raw
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_ota_raw
 
 .rules:build:example_bluetooth_ble_remote_control:
   rules:
