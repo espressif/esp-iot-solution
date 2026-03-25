@@ -426,6 +426,8 @@
 
 .patterns-components_esp_weaver: &patterns-components_esp_weaver
   - "components/esp_weaver/**/*"
+.patterns-components_esp_xiaozhi: &patterns-components_esp_xiaozhi
+  - "components/esp_xiaozhi/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
 # examples folder, in the alphabetic order
@@ -506,6 +508,7 @@
   - "components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h"
   - "components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h"
   - "components/zero_detection/include/zero_detection.h"
+  - "components/esp_xiaozhi/include/esp_xiaozhi_chat.h"
 
 # examples folder, in the alphabetic order
 .patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
@@ -829,6 +832,8 @@
 
 .patterns-example_weaver_led_light: &patterns-example_weaver_led_light
   - "examples/weaver/led_light/**/*"
+.patterns-example_xiaozhi_chat: &patterns-example_xiaozhi_chat
+  - "examples/ai/xiaozhi_chat/**/*"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -850,7 +855,7 @@
 # Auto Generated #
 ##################
 .if-trigger-job: &if-trigger-job
-  if: '$BOT_DYNAMIC_TEST_JOBS && $BOT_DYNAMIC_TEST_JOBS =~ $CI_JOB_NAME'
+  if: "$BOT_DYNAMIC_TEST_JOBS && $BOT_DYNAMIC_TEST_JOBS =~ $CI_JOB_NAME"
 
 .if-label-build: &if-label-build
   if: '$BOT_LABEL_BUILD || $CI_MERGE_REQUEST_LABELS =~ /^(?:[^,\n\r]+,)*build(?:,[^,\n\r]+)*$/i'
@@ -1443,13 +1448,13 @@
       changes: *patterns-example_get_started_knob_power_save
 
 .rules:build:example_sensors_power_measure:
- rules:
-   - <<: *if-protected
-   - <<: *if-label-build
-   - <<: *if-dev-push
-     changes: *patterns-components_sensors_power_measure
-   - <<: *if-dev-push
-     changes: *patterns-example_sensors_power_measure
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-components_sensors_power_measure
+    - <<: *if-dev-push
+      changes: *patterns-example_sensors_power_measure
 
 .rules:build:example_gprof_gprof_simple:
   rules:
@@ -3311,6 +3316,30 @@
       changes: *patterns-components_tools_cmake_utilities_test_component1
     - <<: *if-dev-push
       changes: *patterns-components_tools_cmake_utilities_test_component2
+
+.rules:build:components_esp_xiaozhi_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_xiaozhi
+
+.rules:build:example_xiaozhi_chat:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_xiaozhi
+    - <<: *if-dev-push
+      changes: *patterns-example_xiaozhi_chat
 
 # For benchmark
 .rules:target_test:components_display_tools_esp_lvgl_adapter_benchmark:

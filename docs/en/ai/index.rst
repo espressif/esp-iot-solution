@@ -9,4 +9,5 @@ AI
 
     OpenAI <openai>
     MCP <mcp>
+    Xiaozhi <xiaozhi>
     TouchDigitRecognition <touch_digit_recognition>

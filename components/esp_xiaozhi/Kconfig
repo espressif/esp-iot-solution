@@ -1,0 +1,121 @@
+menu "Xiaozhi Assistant"
+    config XIAOZHI_OTA_URL
+        string "Default OTA URL"
+        default "https://api.tenclass.net/xiaozhi/ota/"
+        help
+            The application will access this URL to check for new firmwares and server address.
+
+    config XIAOZHI_INFO_TIMEOUT_MS
+        int "Default information timeout (ms)"
+        range 1000 30000
+        default 30000
+        help
+            Timeout for the OTA/info HTTP request.
+            The default keeps the historical 30-second behavior while allowing
+            projects to tune it from Kconfig.
+
+    config XIAOZHI_INFO_BUFFER_SIZE
+        int "OTA/info request buffer size (bytes)"
+        range 512 8192
+        default 4096
+        help
+            Heap buffer size for building the board information body sent in the OTA/info HTTP POST.
+            Increase if partition list or other fields grow beyond the default.
+
+    config XIAOZHI_INFO_MAX_RESPONSE_SIZE
+        int "OTA/info maximum response size (bytes)"
+        range 1024 16384
+        default 8192
+        help
+            Maximum allowed OTA/info response size.
+            If response grows beyond this value, the request is aborted to prevent
+            unbounded heap growth.
+
+    config XIAOZHI_SYNC_SYSTEM_TIME_FROM_SERVER
+        bool "Sync system time from server"
+        default y
+        help
+            When enabled, the device will call settimeofday() with the server_time
+            returned by the OTA/info API so that the system clock matches the server.
+            Disable if you manage system time elsewhere (e.g. NTP or RTC) or do not
+            want the component to change the system time.
+
+    menu "Xiaozhi Chat Audio"
+
+        config XIAOZHI_UDP_RECEIVE_BUFFER_SIZE
+            int "UDP receive buffer size (bytes)"
+            range 256 8192
+            default 2048
+            help
+                Maximum size in bytes for the UDP audio receive buffer.
+
+        config XIAOZHI_MAX_CONSECUTIVE_UDP_ERRORS
+            int "Max consecutive UDP errors before giving up"
+            range 1 100
+            default 10
+            help
+                Number of consecutive UDP receive errors before the channel is considered failed.
+
+        config XIAOZHI_HELLO_MESSAGE_SIZE
+            int "Hello message size (bytes)"
+            range 256 2048
+            default 1024
+            help
+                Size of the hello message when opening the audio channel.
+
+        config XIAOZHI_AUDIO_TASK_CORE
+            int "Audio task core ID"
+            range -1 1
+            default -1
+            help
+                CPU core to pin the chat audio task to.
+                -1: no affinity (task can run on any core)
+                0: APP_CPU
+                1: PRO_CPU
+
+        config XIAOZHI_AUDIO_TASK_PRIORITY
+            int "Audio task priority"
+            range 0 25
+            default 5
+            help
+                FreeRTOS priority for the chat audio task.
+
+        config XIAOZHI_AUDIO_TASK_STACK_SIZE
+            int "Audio task stack size (bytes)"
+            range 2048 65536
+            default 8192
+            help
+                Stack size in bytes for the chat audio task.
+
+        choice XIAOZHI_AUDIO_TASK_ALLOCATION_MODE
+            prompt "Audio task allocation mode"
+            default XIAOZHI_AUDIO_TASK_ALLOC_STATIC
+            help
+                Select how the chat audio task stack/TCB are allocated.
+
+            config XIAOZHI_AUDIO_TASK_ALLOC_STATIC
+                bool "Static resident allocation"
+                help
+                    Use a file-scope static stack and TCB for the audio task.
+                    This avoids heap fragmentation during frequent init/start/stop/deinit
+                    cycles and is recommended for stress or churn-heavy lifecycles.
+
+            config XIAOZHI_AUDIO_TASK_ALLOC_DYNAMIC
+                bool "Dynamic allocation"
+                help
+                    Allocate the audio task stack from heap when the task is created.
+                    This is more flexible for long-lived connections that are created
+                    infrequently and destroyed only occasionally.
+        endchoice
+
+        config XIAOZHI_STACK_IN_PSRAM
+            bool "Allocate audio task stack in PSRAM"
+            default n
+            depends on SPIRAM && XIAOZHI_AUDIO_TASK_ALLOC_DYNAMIC
+            help
+                When enabled, the audio task stack is allocated from PSRAM
+                instead of internal RAM, saving internal memory.
+                Only effective for the dynamic allocation mode when PSRAM
+                is enabled in the project.
+    endmenu
+endmenu

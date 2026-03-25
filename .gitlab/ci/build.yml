@@ -39,10 +39,18 @@
     # For example, using "sdkconf.etc=default" specifies the default sdkconfig file.
     EXAMPLE_CONFIG: "="
     EXAMPLE_APPEND_ARGS: ""
+    EXAMPLE_BOARD: "default"
     BUILD_RECURSIVE: "1"
   script:
     - pip install idf_build_apps
-    - python tools/build_apps.py ${EXAMPLE_DIR} --config ${EXAMPLE_CONFIG} -t all -r ${BUILD_RECURSIVE} -vv ${EXAMPLE_APPEND_ARGS}
+    - |
+      python tools/build_apps.py ${EXAMPLE_DIR} \
+              --config ${EXAMPLE_CONFIG} \
+              -t all \
+              -r ${BUILD_RECURSIVE} \
+              -vv \
+              --board ${EXAMPLE_BOARD} \
+              ${EXAMPLE_APPEND_ARGS}
 
 # ESP-IDF v5.1 has reached EOL in Dec 2025.
 #
@@ -1859,3 +1867,21 @@ build_components_esp_weaver_test_apps:
     - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: components/esp_weaver/test_apps
+
+build_components_esp_xiaozhi_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_esp_xiaozhi_test_apps
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: components/esp_xiaozhi/test_apps
+
+build_example_xiaozhi_chat:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_xiaozhi_chat
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/ai/xiaozhi_chat
+    EXAMPLE_BOARD: esp_box_3
+    IDF_TARGET: esp32s3

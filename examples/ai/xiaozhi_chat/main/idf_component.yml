@@ -1,0 +1,12 @@
+## IDF Component Manager Manifest File
+dependencies:
+  jason-mao/av_processor: ^0.5.5
+  78/xiaozhi-fonts: ~1.3.2
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common
+  espressif/esp_xiaozhi:
+    override_path: ../../../../components/esp_xiaozhi
+
+  ## Required IDF version
+  idf:
+    version: '>=5.4.0'
