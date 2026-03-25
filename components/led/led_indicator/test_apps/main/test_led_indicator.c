@@ -1064,6 +1064,7 @@ TEST_CASE("TEST LED RGB MI DEFAULT", "[LED RGB][RGB]")
 }
 #endif
 
+#ifdef CONFIG_USE_IO_EXPANDER
 static void led_indicator_io_expander(void)
 {
     ESP_LOGI(TAG, "Initialize I2C bus");
@@ -1107,6 +1108,7 @@ TEST_CASE("test IO Expander GPIO", "[LED][indicator]")
 {
     led_indicator_io_expander();
 }
+#endif
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;

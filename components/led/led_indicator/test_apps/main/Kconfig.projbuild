@@ -1,0 +1,7 @@
+menu "LED Indicator Test Configuration"
+
+    config USE_IO_EXPANDER
+        bool "Use IO Expander"
+        default n
+
+endmenu
