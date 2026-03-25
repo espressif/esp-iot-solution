@@ -111,10 +111,8 @@ typedef void (*esp_ble_cts_read_cb_t)(void *arg);
  *
  * @param[in]  cb  The callback function. Pass NULL to unregister.
  *
- * @return
- *  - ESP_OK on successful
  */
-esp_err_t esp_ble_cts_set_current_time_read_cb(esp_ble_cts_read_cb_t cb);
+void esp_ble_cts_set_current_time_read_cb(esp_ble_cts_read_cb_t cb);
 
 /**
  * @brief Register a callback that is invoked before the Local Time
@@ -122,21 +120,17 @@ esp_err_t esp_ble_cts_set_current_time_read_cb(esp_ble_cts_read_cb_t cb);
  *
  * @param[in]  cb  The callback function. Pass NULL to unregister.
  *
- * @return
- *  - ESP_OK on successful
  */
-esp_err_t esp_ble_cts_set_local_time_read_cb(esp_ble_cts_read_cb_t cb);
+void esp_ble_cts_set_local_time_read_cb(esp_ble_cts_read_cb_t cb);
 
 /**
  * @brief Register a callback that is invoked before the Reference Time
  *        characteristic value is read and sent to the remote client.
  *
  * @param[in]  cb  The callback function. Pass NULL to unregister.
- *
- * @return
- *  - ESP_OK on successful
+ * 
  */
-esp_err_t esp_ble_cts_set_reference_time_read_cb(esp_ble_cts_read_cb_t cb);
+void esp_ble_cts_set_reference_time_read_cb(esp_ble_cts_read_cb_t cb);
 
 /**
  * @brief Read the value of Current Time characteristic.
