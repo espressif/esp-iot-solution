@@ -424,6 +424,10 @@
   - "components/utilities/log_router/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_esp_weaver: &patterns-components_esp_weaver
+  - "components/esp_weaver/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -476,6 +480,7 @@
   - "components/mcp-c-sdk/include/esp_mcp_tool.h"
   - "components/mcp-c-sdk/include/esp_mcp_data.h"
   - "components/mcp-c-sdk/include/esp_mcp_property.h"
+  - "components/esp_weaver/include/esp_weaver.h"
   - "components/openai/include/OpenAI.h"
 
 .patterns-docs_inc_2: &patterns-docs_inc_2
@@ -821,6 +826,9 @@
 
 .patterns-example_robot_ragtime_panthera_leader: &patterns-example_robot_ragtime_panthera_leader
   - "examples/robot/ragtime_panthera/leader/**/*"
+
+.patterns-example_weaver_led_light: &patterns-example_weaver_led_light
+  - "examples/weaver/led_light/**/*"
 
 # tools folder, in the alphabetic order
 .patterns-tools_cmake_utilities: &patterns-tools_cmake_utilities
@@ -2115,6 +2123,18 @@
     - <<: *if-dev-push
       changes: *patterns-example_robot_ragtime_panthera_leader
 
+.rules:build:example_weaver_led_light:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_weaver
+    - <<: *if-dev-push
+      changes: *patterns-example_weaver_led_light
+
 # rules for ut
 .rules:build:component_audio_adc_mic_test_apps:
   rules:
@@ -3265,6 +3285,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_i2c_bus
+
+.rules:build:components_esp_weaver_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_esp_weaver
 
 .rules:build:tools_cmake_utilities_test_apps:
   rules:

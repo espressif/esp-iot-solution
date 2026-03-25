@@ -72,6 +72,7 @@ INPUT = \
     $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_tool.h \
     $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_data.h \
     $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_property.h \
+    $(PROJECT_PATH)/components/esp_weaver/include/esp_weaver.h \
     $(PROJECT_PATH)/components/openai/include/OpenAI.h \
     $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
     $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \

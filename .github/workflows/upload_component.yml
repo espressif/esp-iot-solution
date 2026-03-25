@@ -82,6 +82,7 @@ jobs:
             components/display/tools/esp_lvgl_adapter;
             components/display/tools/esp_mmap_assets;
             components/elf_loader;
+            components/esp_weaver;
             components/expander/io_expander/mcp23017;
             components/extended_vfs;
             components/gprof;
