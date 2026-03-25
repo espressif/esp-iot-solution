@@ -254,7 +254,7 @@ components_test_led_indicator:
       artifacts: true
   parallel:
     matrix:
-      - IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
+      - IDF_VERSION: ["5.3", "5.4", "5.5"]
         IDF_TARGET: esp32s3
         ENV_TAG: "led_indicator"
   tags:

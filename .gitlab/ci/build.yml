@@ -1329,7 +1329,7 @@ build_components_led_led_indicator_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_led_led_indicator_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: components/led/led_indicator/test_apps
 

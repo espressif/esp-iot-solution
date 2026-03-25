@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,6 +18,9 @@
 #include "led_indicator_gpio.h"
 #include "led_indicator_ledc.h"
 #include "led_indicator_rgb.h"
+#include "driver/i2c_master.h"
+#include "esp_io_expander_tca9554.h"
+#include "esp_io_expander_gpio_wrapper.h"
 
 // Some resources are lazy allocated in pulse_cnt driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-200)
@@ -27,6 +30,11 @@
 #define LED_STRIP_BLINK_GPIO 48
 #define LED_STRIP_RMT_RES_HZ  (10 * 1000 * 1000)
 #define MAX_LED_NUM 16
+
+/* Pins are compatible with board esp32_s3_korvo_2 */
+#define I2C_HOST  0
+#define IO_EXPANDER_PIN_NUM_SDA           17
+#define IO_EXPANDER_PIN_NUM_SCL           18
 
 #define TAG "LED indicator Test"
 
@@ -44,11 +52,11 @@ void led_indicator_deinit()
 static led_indicator_handle_t led_handle_1 = NULL;
 static led_indicator_handle_t led_handle_2 = NULL;
 
-void led_indicator_init()
+void led_indicator_init(int gpio_num)
 {
     led_indicator_gpio_config_t led_indicator_gpio_config = {
         .is_active_level_high = 1,
-        .gpio_num = LED_IO_NUM_0,              /**< num of GPIO */
+        .gpio_num = gpio_num,              /**< num of GPIO */
     };
 
     led_indicator_config_t config = {
@@ -124,7 +132,7 @@ void led_indicator_gpio_mode_test_all()
 
 TEST_CASE("blink test all in order", "[LED][indicator]")
 {
-    led_indicator_init();
+    led_indicator_init(LED_IO_NUM_0);
     led_indicator_gpio_mode_test_all();
     led_indicator_deinit();
 }
@@ -154,7 +162,7 @@ void led_indicator_gpio_mode_preempt()
 
 TEST_CASE("blink test with preempt", "[LED][indicator]")
 {
-    led_indicator_init();
+    led_indicator_init(LED_IO_NUM_0);
     led_indicator_gpio_mode_preempt();
     led_indicator_deinit();
 }
@@ -1053,6 +1061,52 @@ TEST_CASE("TEST LED RGB MI DEFAULT", "[LED RGB][RGB]")
     TEST_ASSERT(ret == ESP_OK);
 
     led_indicator_deinit();
+}
+#endif
+
+#ifdef CONFIG_USE_IO_EXPANDER
+static void led_indicator_io_expander(void)
+{
+    ESP_LOGI(TAG, "Initialize I2C bus");
+    i2c_master_bus_handle_t i2c_bus = NULL;
+    i2c_master_bus_config_t bus_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .i2c_port = I2C_HOST,
+        .sda_io_num = IO_EXPANDER_PIN_NUM_SDA,
+        .scl_io_num = IO_EXPANDER_PIN_NUM_SCL,
+        .flags.enable_internal_pullup = true,
+    };
+    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &i2c_bus));
+
+    ESP_LOGI(TAG, "Initialize IO Expander TCA9554");
+    esp_io_expander_handle_t io_expander_handle = NULL; // IO expander tca9554 handle
+    if (esp_io_expander_new_i2c_tca9554(i2c_bus, ESP_IO_EXPANDER_I2C_TCA9554A_ADDRESS_000, &io_expander_handle) == ESP_OK
+            && io_expander_handle) {
+        if (esp_io_expander_gpio_wrapper_append_handler(io_expander_handle, GPIO_NUM_MAX) == ESP_OK) {
+            ESP_LOGI(TAG, "Registered IO Expander to GPIOs. IOs from %d", GPIO_NUM_MAX);
+        } else {
+            ESP_LOGE(TAG, "Failed to register IO Expander to GPIOs.");
+        }
+    } else {
+        ESP_LOGE(TAG, "Failed to initialize TCA9554 IO Expander");
+        return;
+    }
+
+    const uint8_t io_led1 = GPIO_NUM_MAX + 7; // IO Expander pin 7 (BLUE)
+
+    led_indicator_init(io_led1);
+    led_indicator_gpio_mode_test_all();
+    led_indicator_deinit();
+
+    esp_io_expander_gpio_wrapper_remove_handler(io_expander_handle);
+    esp_io_expander_del(io_expander_handle);
+    i2c_del_master_bus(i2c_bus);
+}
+
+TEST_CASE("test IO Expander GPIO", "[LED][indicator]")
+{
+    led_indicator_io_expander();
 }
 #endif
 

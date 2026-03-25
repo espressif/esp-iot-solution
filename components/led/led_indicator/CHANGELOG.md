@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.1.2 - 2026-03-17
+
+### Improve:
+
+* Removed condition for GPIO number to allow using it with IO Expander GPIOs
+
 ## v2.1.1 - 2025-12-22
 
 ### Bugfix
