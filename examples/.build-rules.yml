@@ -15,6 +15,10 @@ examples/ai/esp_dl/touchpad_digit_recognition:
   enable:
     - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
 
+examples/ai/xiaozhi_chat:
+  enable:
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
+
 examples/audio/wav_player:
   enable:
     - if: INCLUDE_DEFAULT == 1
@@ -137,7 +141,6 @@ examples/mcp/mcp_server:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
-
 examples/mcp/mcp_client:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)

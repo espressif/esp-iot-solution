@@ -278,3 +278,7 @@ components/touch_ic/touch_ic_bs8112a3/test_apps:
 components/mcp-c-sdk/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and IDF_VERSION_MAJOR >= 5
+
+components/esp_xiaozhi/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

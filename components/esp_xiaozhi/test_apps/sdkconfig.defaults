@@ -1,0 +1,20 @@
+# ESP Xiaozhi Component Test Configuration
+
+# Enable NVS for settings storage
+CONFIG_NVS_ENABLED=y
+
+# Enable logging
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# Enable Unity test framework
+CONFIG_UNITY_ENABLE_FLOAT=y
+CONFIG_UNITY_ENABLE_DOUBLE=y
+
+# Disable task WDT check for IDLE task(s) so that unity_run_menu() waiting for UART
+# does not trigger watchdog (main task busy-waits for keypress and IDLE cannot run).
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=n
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=n
+
+# Use USB Serial/JTAG as console (ESP32-S2/S3/C2/C6 etc.) so that idf.py monitor
+# on the same USB port works for the interactive test menu (avoids "Writing to serial is timing out").
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y

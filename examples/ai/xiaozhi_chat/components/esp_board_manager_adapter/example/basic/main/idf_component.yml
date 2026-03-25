@@ -1,0 +1,4 @@
+## IDF Component Manager Manifest File
+dependencies:
+  esp_board_manager_adapter:
+    path: ../../../../esp_board_manager_adapter

@@ -1,0 +1,16 @@
+menu "Xiaozhi Chat Application"
+    choice XIAOZHI_CHAT_APP_TRANSPORT
+        prompt "Preferred transport when both MQTT and WebSocket are supported"
+        default XIAOZHI_CHAT_APP_TRANSPORT_AUTO
+        help
+            When the server provides both MQTT and WebSocket, this option selects which to use.
+            If "Auto (prefer MQTT)" is selected, MQTT is used when both are available.
+
+        config XIAOZHI_CHAT_APP_TRANSPORT_AUTO
+            bool "Auto (prefer MQTT)"
+        config XIAOZHI_CHAT_APP_TRANSPORT_MQTT
+            bool "MQTT"
+        config XIAOZHI_CHAT_APP_TRANSPORT_WEBSOCKET
+            bool "WebSocket"
+    endchoice
+endmenu
