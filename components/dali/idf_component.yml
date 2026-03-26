@@ -1,0 +1,21 @@
+version: "1.0.0"
+targets:
+  - esp32s2
+  - esp32s3
+  - esp32c3
+  - esp32c6
+  - esp32p4
+
+description: DALI (IEC 62386) bus master driver based on the ESP32 RMT peripheral
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/dali
+repository: https://github.com/espressif/esp-iot-solution.git
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/lighting/dali.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+examples:
+  - path: ../../examples/lighting/dali
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

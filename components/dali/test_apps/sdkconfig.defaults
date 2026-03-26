@@ -1,0 +1,12 @@
+# This file was generated using idf.py save-defconfig. It can be edited manually.
+# Espressif IoT Development Framework (ESP-IDF) 5.5.2 Project Minimal Configuration
+
+
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_PARTITION_TABLE_TWO_OTA=y
+CONFIG_RMT_RECV_FUNC_IN_IRAM=y
+CONFIG_RMT_TX_ISR_CACHE_SAFE=y
+CONFIG_RMT_RX_ISR_CACHE_SAFE=y
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=y
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_FREERTOS_HZ=1000

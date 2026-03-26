@@ -1,0 +1,48 @@
+menu "DALI Driver"
+
+    config DALI_RX_GPIO
+        int "DALI RX GPIO number"
+        range 0 48
+        default 5
+        help
+            GPIO number connected to the DALI bus receive line.
+
+    config DALI_TX_GPIO
+        int "DALI TX GPIO number"
+        range 0 48
+        default 6
+        help
+            GPIO number connected to the DALI bus transmit line.
+
+    config DALI_TX_INVERT
+        bool "Invert TX signal polarity"
+        default n
+        help
+            Enable this option when the hardware circuit between the MCU TX GPIO
+            and the DALI bus performs an odd number of signal inversions.
+
+            When enabled the RMT symbol levels are flipped so that the DALI bus
+            still sees the correct Manchester-encoded waveform.
+
+            NOTE: do NOT use flags.invert_out for this purpose -- that flag also
+            inverts the RMT idle level between frames, which would pull the DALI
+            bus low during inter-frame gaps and corrupt the protocol timing.
+
+            Leave disabled (default) when the circuit is non-inverting or performs
+            an even number of inversions (e.g. two back-to-back transistor stages).
+
+    config DALI_RX_INVERT
+        bool "Invert RX signal polarity"
+        default n
+        help
+            Enable this option when the hardware circuit between the DALI bus and
+            the MCU RX GPIO performs an odd number of signal inversions.
+
+            When enabled the RMT RX channel's input-inversion flag is set so that
+            the driver sees the correct Manchester-encoded levels regardless of the
+            hardware polarity.
+
+            Leave disabled (default) when the circuit is non-inverting or performs
+            an even number of inversions.
+
+endmenu
