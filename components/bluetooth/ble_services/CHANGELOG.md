@@ -1,3 +1,8 @@
+## v1.2.3 - 2026.03.26
+
+Features:
+- CTS: Add callback for CTS characteristics.
+
 ## v1.2.2 - 2026.03.06
 
 Bugfix:
