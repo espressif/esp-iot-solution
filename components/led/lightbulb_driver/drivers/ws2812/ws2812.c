@@ -132,7 +132,7 @@ esp_err_t ws2812_init(driver_ws2812_t *config, void(*hook_func)(void *))
     err = spi_bus_add_device(SPI2_HOST, &devcfg, &s_ws2812->spi_handle);
     DRIVER_CHECK(err == ESP_OK, "spi_bus_add_device error", goto EXIT);
 
-    err = _write(s_ws2812->buf, s_ws2812->buf_size);
+    err = _write(s_ws2812->buf, s_ws2812->buf_size * 8);
     DRIVER_CHECK(err == ESP_OK, "set init data fail", return err);
 
     return ESP_OK;
