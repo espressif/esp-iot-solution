@@ -1,5 +1,9 @@
 [![Component Registry](https://components.espressif.com/components/espressif/adc_mic/badge.svg)](https://components.espressif.com/components/espressif/adc_mic)
 
+> ![NOTE]
+>
+> [`esp_codec_dev`](https://components.espressif.com/components/espressif/esp_codec_dev) has supported ADC Mic since v1.5.6 (enable it in menuconfig); you generally no longer need this component.
+
 # Component: ADC Mic
 
 The **ADC MIC** can collect analog microphone data through the ADC.

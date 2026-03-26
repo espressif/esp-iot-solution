@@ -164,7 +164,7 @@ examples/camera/video_recorder:
 
 examples/camera/video_stream_server:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3"]
+    - if: IDF_TARGET in ["esp32s3"]
 
 examples/display/lcd/hdmi_video_renderer:
   enable:
