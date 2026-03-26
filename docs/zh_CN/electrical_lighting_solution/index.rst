@@ -7,3 +7,4 @@
     :maxdepth: 2
 
     球泡灯驱动 <lightbulb_driver>
+    DALI 总线驱动 <dali>

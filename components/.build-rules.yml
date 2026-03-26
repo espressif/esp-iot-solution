@@ -12,6 +12,13 @@ components/avi_player/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3", "esp32p4"]
 
+components/dali/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3", "esp32c3","esp32c6","esp32p4","esp32h2"]
+  disable:
+    - if: IDF_VERSION < "5.5"
+      reason: "DALI component requires rmt_simple_encoder introduced in IDF v5.5"
+
 components/touch/touch_button/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"]

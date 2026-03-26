@@ -646,6 +646,14 @@ build_example_lighting_lightbulb:
   variables:
     EXAMPLE_DIR: examples/lighting/lightbulb
 
+build_example_lighting_dali:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_lighting_dali
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/lighting/dali
+
 build_example_motor_bldc_fan_rainmaker:
   extends:
     - .build_examples_template
@@ -1030,6 +1038,14 @@ build_components_button_test_apps:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: components/button/test_apps
+
+build_components_dali_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_dali_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/dali/test_apps
 
 build_components_display_lcd_esp_lcd_axs15231b_test_apps:
   extends:

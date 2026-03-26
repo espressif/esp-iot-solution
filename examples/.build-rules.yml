@@ -302,6 +302,13 @@ examples/lighting/lightbulb:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+examples/lighting/dali_basic:
+  enable:
+    - if: IDF_TARGET in ["esp32","esp32s2","esp32s3", "esp32c3","esp32c6","esp32p4","esp32h2"]
+  disable:
+    - if: IDF_VERSION < "5.5"
+      reason: "DALI examples requires IDF v5.5+"
+
 examples/motor/foc_openloop_control:
   enable:
     - if: IDF_TARGET == "esp32s3"
