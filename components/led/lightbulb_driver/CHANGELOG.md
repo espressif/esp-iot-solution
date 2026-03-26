@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.11.2 - 2026-03-26
+
+### Bug Fix:
+
+- Fixed some compatibility issues
+
 ## v1.11.1 - 2025-11-14
 
 ### Refactor:
