@@ -54,6 +54,24 @@ typedef struct {
     int              *result_ptr;      /* Where to store operation result (ESP_CODEC_DEV_OK/ERR) */
 } adc_mic_msg_t;
 
+/* `adc_continuous_config_t.format` is deprecated in some IDF versions. */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+static inline void adc_continuous_config_set_format(adc_continuous_config_t *cfg, adc_digi_output_format_t format)
+{
+    cfg->format = format;
+}
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
 static void adc_mic_worker_task(void *arg)
 {
     adc_data_t *adc_data = (adc_data_t *)arg;
@@ -135,9 +153,9 @@ static esp_err_t adc_channel_config(adc_data_t *adc_data, uint8_t *channel, uint
      *
      */
 #if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
-    dig_cfg.format = ADC_DIGI_OUTPUT_FORMAT_TYPE1;
+    adc_continuous_config_set_format(&dig_cfg, ADC_DIGI_OUTPUT_FORMAT_TYPE1);
 #else
-    dig_cfg.format = ADC_DIGI_OUTPUT_FORMAT_TYPE2;
+    adc_continuous_config_set_format(&dig_cfg, ADC_DIGI_OUTPUT_FORMAT_TYPE2);
 #endif
 
     adc_digi_pattern_config_t *adc_pattern = calloc(channel_num, sizeof(adc_digi_pattern_config_t));

@@ -1,4 +1,4 @@
-version: "0.2.2"
+version: "0.2.3"
 description: ADC mic input driver for ESP32 Series socs
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/audio/adc_mic
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -8,7 +8,7 @@ dependencies:
   idf: ">=5.0"
   espressif/cmake_utilities: "*"
   espressif/esp_codec_dev:
-    version: "^1.3.*"
+    version: ">=1.3.0,<1.5.5" # From v1.5.5, esp_codec_dev has built-in ADC Mic support
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
   originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
