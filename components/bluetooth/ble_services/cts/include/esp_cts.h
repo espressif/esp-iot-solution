@@ -100,6 +100,39 @@ typedef struct {
 } __attribute__((packed)) esp_ble_cts_ref_time_t;
 
 /**
+ * @brief Callback invoked before a characteristic read response is sent.
+ *        The user can update the value pointed to by the argument.
+ */
+typedef void (*esp_ble_cts_read_cb_t)(void *arg);
+
+/**
+ * @brief Register a callback that is invoked before the Current Time
+ *        characteristic value is read and sent to the remote client.
+ *
+ * @param[in]  cb  The callback function. Pass NULL to unregister.
+ *
+ */
+void esp_ble_cts_set_current_time_read_cb(esp_ble_cts_read_cb_t cb);
+
+/**
+ * @brief Register a callback that is invoked before the Local Time
+ *        characteristic value is read and sent to the remote client.
+ *
+ * @param[in]  cb  The callback function. Pass NULL to unregister.
+ *
+ */
+void esp_ble_cts_set_local_time_read_cb(esp_ble_cts_read_cb_t cb);
+
+/**
+ * @brief Register a callback that is invoked before the Reference Time
+ *        characteristic value is read and sent to the remote client.
+ *
+ * @param[in]  cb  The callback function. Pass NULL to unregister.
+ *
+ */
+void esp_ble_cts_set_reference_time_read_cb(esp_ble_cts_read_cb_t cb);
+
+/**
  * @brief Read the value of Current Time characteristic.
  *
  * @param[in]  out_val The pointer to store the Current Time Increment.
