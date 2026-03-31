@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -11,12 +11,18 @@
  *********************/
 #include "display_bridge_common.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/portmacro.h"
+#include "freertos/task.h"
 
 static const char *TAG = "esp_lvgl:bridge";
 
@@ -104,19 +110,19 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
  *
  * Uses block-based copying for better cache locality
  */
-void display_rotate_copy_region(const void *src,
-                                void *dst_fb,
-                                uint16_t lv_x_start,
-                                uint16_t lv_y_start,
-                                uint16_t lv_x_end,
-                                uint16_t lv_y_end,
-                                uint16_t src_stride_px,
-                                uint16_t hor_res,
-                                uint16_t ver_res,
-                                esp_lv_adapter_rotation_t rotation,
-                                uint8_t color_bytes,
-                                int block_size_small,
-                                int block_size_large)
+void IRAM_ATTR display_rotate_copy_region(const void *src,
+                                          void *dst_fb,
+                                          uint16_t lv_x_start,
+                                          uint16_t lv_y_start,
+                                          uint16_t lv_x_end,
+                                          uint16_t lv_y_end,
+                                          uint16_t src_stride_px,
+                                          uint16_t hor_res,
+                                          uint16_t ver_res,
+                                          esp_lv_adapter_rotation_t rotation,
+                                          uint8_t color_bytes,
+                                          int block_size_small,
+                                          int block_size_large)
 {
     const int rect_w = lv_x_end - lv_x_start + 1;
     const int rect_h = lv_y_end - lv_y_start + 1;
@@ -223,14 +229,14 @@ void display_rotate_copy_region(const void *src,
  *
  * Uses block-based rotation for better cache locality
  */
-void display_rotate_image(const void *src,
-                          void *dst,
-                          int width,
-                          int height,
-                          int rotation,
-                          uint8_t color_bytes,
-                          int block_size_small,
-                          int block_size_large)
+void IRAM_ATTR display_rotate_image(const void *src,
+                                    void *dst,
+                                    int width,
+                                    int height,
+                                    int rotation,
+                                    uint8_t color_bytes,
+                                    int block_size_small,
+                                    int block_size_large)
 {
     /* Select block size based on rotation */
     int block_w = (rotation == 90 || rotation == 270) ? block_size_small : block_size_large;
@@ -504,49 +510,6 @@ void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *run
     }
 }
 
-/**
- * @brief Initialize frame buffer pointers
- *
- * This function is 100% identical in both v8 and v9 implementations
- */
-void display_bridge_init_frame_buffer_pointers(
-    void **front_fb,
-    void **back_fb,
-    void **spare_fb,
-    void **rgb_last_buf,
-    void **rgb_next_buf,
-    void **rgb_flush_next_buf,
-    const esp_lv_adapter_display_runtime_info_t *runtime)
-{
-    if (!runtime) {
-        return;
-    }
-
-    uint8_t fb_count = runtime->frame_buffer_count;
-    void * const *frame_buffers = runtime->frame_buffers;
-
-    if (front_fb) {
-        *front_fb = (fb_count > 0) ? frame_buffers[0] : NULL;
-    }
-    if (back_fb) {
-        *back_fb = (fb_count > 1) ? frame_buffers[1] : NULL;
-    }
-    if (spare_fb) {
-        *spare_fb = (fb_count > 2) ? frame_buffers[2] : NULL;
-    }
-
-    void *rgb_last = (fb_count > 0) ? frame_buffers[0] : NULL;
-    if (rgb_last_buf) {
-        *rgb_last_buf = rgb_last;
-    }
-    if (rgb_next_buf) {
-        *rgb_next_buf = rgb_last;
-    }
-    if (rgb_flush_next_buf) {
-        *rgb_flush_next_buf = (fb_count > 2) ? frame_buffers[2] : NULL;
-    }
-}
-
 #if SOC_DMA2D_SUPPORTED
 
 /* Global hardware resource - shared between v8 and v9 */
@@ -696,9 +659,9 @@ esp_err_t display_bridge_release_hw_resource(void)
  *
  * IRAM: Executed in ISR context for fast response
  */
-bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
-                                        esp_async_fbcpy_event_data_t *event_data,
-                                        void *cb_args)
+bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
+                                                  esp_async_fbcpy_event_data_t *event_data,
+                                                  void *cb_args)
 {
     BaseType_t high_task_woken = pdFALSE;
     (void)mcp;
@@ -773,52 +736,218 @@ void display_bridge_common_destroy(esp_lv_adapter_display_bridge_t *bridge)
     free(bridge);
 }
 
-/**
- * @brief Probe flush type to determine copy strategy (thread-safe)
- *
- * Thread-safe: prev_status is now per-display instead of global static
- * IRAM: Called every frame during rendering for performance
- */
-esp_lv_adapter_display_flush_probe_t display_bridge_flush_copy_probe(
-    const lv_area_t *inv_areas,
-    const uint8_t *inv_area_joined,
-    uint16_t inv_p,
-    uint16_t hor_res,
-    uint16_t ver_res,
-    uint8_t *prev_status)
+/**********************
+ *   PIPELINE HELPERS
+ **********************/
+
+int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pipeline,
+                                          esp_lv_adapter_display_runtime_config_t *cfg,
+                                          void **out_disp_fb, void **out_draw_fb)
 {
-    esp_lv_adapter_display_flush_status_t cur_status;
-    esp_lv_adapter_display_flush_probe_t probe_result;
+    int ret = 1;
 
-    if (!prev_status) {
-        return ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
+    if (!pipeline || !cfg || !out_disp_fb || !out_draw_fb) {
+        return 0;
+    }
+    *out_disp_fb = NULL;
+    *out_draw_fb = NULL;
+
+    const esp_lv_adapter_tear_avoid_mode_t mode = cfg->base.tear_avoid_mode;
+    const bool rotated = (cfg->base.profile.rotation != ESP_LV_ADAPTER_ROTATE_0);
+    const bool use_pipeline = (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL ||
+                               mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL ||
+                               mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+                               mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL ||
+                               (rotated && mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT));
+    if (!use_pipeline || cfg->frame_buffer_count == 0) {
+        return 0;
     }
 
-    uint32_t flush_ver = 0;
-    uint32_t flush_hor = 0;
+    void **fb = cfg->frame_buffers;
+    uint8_t fb_count = cfg->frame_buffer_count;
 
-    for (int i = 0; i < inv_p; i++) {
-        if (inv_area_joined[i] == 0) {
-            flush_ver = (inv_areas[i].y2 + 1 - inv_areas[i].y1);
-            flush_hor = (inv_areas[i].x2 + 1 - inv_areas[i].x1);
-            break;
+    pipeline->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    STAILQ_INIT(&pipeline->busy_list);
+    STAILQ_INIT(&pipeline->empty_list);
+    pipeline->elem_count = fb_count;
+    pipeline->elems = calloc(fb_count, sizeof(struct display_pipeline_buf));
+    if (!pipeline->elems) {
+        ESP_LOGE(TAG, "Failed to alloc pipeline elements");
+        return -1;
+    }
+    for (int i = 0; i < fb_count; i++) {
+        pipeline->elems[i].buffer = fb[i];
+    }
+
+    if (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL ||
+            mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL) {
+        /* partial: independent buffers used for draw; fb[0],fb[1], fb[2..] in empty_list */
+        uint8_t required = (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL) ? 3 : 2;
+        if (fb_count < required) {
+            ESP_LOGE(TAG, "PARTIAL mode %d requires %d frame buffers, got %d", mode, required, fb_count);
+            ret = -1;
+            goto err;
+        }
+        *out_disp_fb = fb[0];
+        *out_draw_fb = fb[1];
+        for (int i = 2; i < fb_count; i++) {
+            STAILQ_INSERT_TAIL(&pipeline->empty_list, &pipeline->elems[i], entry);
+        }
+    } else if (rotated) {
+        /*
+         * rotated non-partial:
+         *   fb[0]=render, fb[1]=disp, fb[2]=draw
+         *
+         * model:
+         *   render path: fb[0] -> fb[2]
+         *   panel ring : fb[1] <-> fb[2]
+         */
+        if (fb_count < 3) {
+            ESP_LOGE(TAG, "Rotated mode %d requires 3 frame buffers, got %d", mode, fb_count);
+            ret = -1;
+            goto err;
+        }
+        *out_disp_fb = fb[1];
+        *out_draw_fb = fb[2];
+    } else if (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+               mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL) {
+        /* non-rotated full: fb[0]=disp, fb[1]=draw, fb[2..]=free */
+        uint8_t required = (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL) ? 3 : 2;
+        if (fb_count < required) {
+            ESP_LOGE(TAG, "FULL mode %d requires %d frame buffers, got %d", mode, required, fb_count);
+            ret = -1;
+            goto err;
+        }
+
+        *out_disp_fb = fb[0];
+        *out_draw_fb = fb[1];
+        for (int i = 1; i < fb_count; i++) {
+            STAILQ_INSERT_TAIL(&pipeline->empty_list, &pipeline->elems[i], entry);
         }
     }
 
-    /* Check if the current full screen refreshes */
-    cur_status = ((flush_ver == ver_res) && (flush_hor == hor_res)) ?
-                 ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL : ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_PART;
+    return 1;
 
-    if (*prev_status == ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL) {
-        if (cur_status == ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_PART) {
-            probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY;
-        } else {
-            probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_SKIP_COPY;
-        }
-    } else {
-        probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
+err:
+    free(pipeline->elems);
+    pipeline->elems = NULL;
+    pipeline->elem_count = 0;
+    return ret;
+}
+
+void display_bridge_pipeline_mark_buf_busy(esp_lv_adapter_display_pipeline_t *p, void *buf)
+{
+    if (!p) {
+        return;
     }
-    *prev_status = cur_status;
+    for (int i = 0; i < p->elem_count; i++) {
+        if (p->elems[i].buffer == buf) {
+            portENTER_CRITICAL(&p->lock);
+            STAILQ_INSERT_TAIL(&p->busy_list, &p->elems[i], entry);
+            portEXIT_CRITICAL(&p->lock);
+            return;
+        }
+    }
+}
 
-    return probe_result;
+void IRAM_ATTR display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p)
+{
+    if (!p || !p->elems) {
+        return;
+    }
+    portENTER_CRITICAL_ISR(&p->lock);
+    struct display_pipeline_buf *elem = STAILQ_FIRST(&p->busy_list);
+    if (elem) {
+        STAILQ_REMOVE_HEAD(&p->busy_list, entry);
+        STAILQ_INSERT_TAIL(&p->empty_list, elem, entry);
+    }
+    portEXIT_CRITICAL_ISR(&p->lock);
+}
+
+struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapter_display_pipeline_t *p)
+{
+    struct display_pipeline_buf *next = NULL;
+    if (!p) {
+        return NULL;
+    }
+    portENTER_CRITICAL(&p->lock);
+    next = STAILQ_FIRST(&p->empty_list);
+    if (next) {
+        STAILQ_REMOVE_HEAD(&p->empty_list, entry);
+    }
+    portEXIT_CRITICAL(&p->lock);
+    return next;
+}
+
+struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p)
+{
+    if (!p) {
+        return NULL;
+    }
+
+    /* Clear any stale notification BEFORE checking the list,
+     * so that an ISR firing after this point will not be lost. */
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
+    struct display_pipeline_buf *next = display_bridge_pipeline_take_free_buf(p);
+    while (!next) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        next = display_bridge_pipeline_take_free_buf(p);
+        if (!next) {
+            ESP_LOGW(TAG, "without free buffer");
+        }
+    }
+    return next;
+}
+
+/**********************
+ *   VSYNC HELPERS
+ **********************/
+
+void display_bridge_vsync_record_flush_post(esp_lv_adapter_vsync_timing_t *t)
+{
+    if (t) {
+        t->flush_post_ts_us = esp_timer_get_time();
+    }
+}
+
+bool IRAM_ATTR display_bridge_vsync_on_isr(esp_lv_adapter_vsync_timing_t *t)
+{
+    if (!t) {
+        return false;
+    }
+    const int64_t now_us = esp_timer_get_time();
+
+    /* Update measured refresh period */
+    if (t->vsync_prev_ts_us != 0) {
+        const int64_t interval_us = now_us - t->vsync_prev_ts_us;
+        if (interval_us > 0) {
+            t->refresh_period_us = (uint32_t)interval_us;
+        }
+    }
+    t->vsync_prev_ts_us = now_us;
+
+    /* Jitter Shield Logic */
+    if (t->shield_enabled && t->refresh_period_us != 0 && t->flush_post_ts_us != 0) {
+        const int64_t dt = now_us - t->flush_post_ts_us;
+        if (dt > 0 && (uint64_t)dt < (uint64_t)t->shield_threshold_us) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void display_bridge_vsync_config_jitter_shield(esp_lv_adapter_vsync_timing_t *t, uint32_t threshold_us)
+{
+    if (t) {
+        t->shield_threshold_us = threshold_us;
+        t->shield_enabled = (threshold_us > 0);
+    }
+}
+
+uint32_t display_bridge_vsync_get_refresh_rate_hz(esp_lv_adapter_vsync_timing_t *t)
+{
+    if (!t || t->refresh_period_us == 0) {
+        return 0;
+    }
+    return 1000000U / t->refresh_period_us;
 }

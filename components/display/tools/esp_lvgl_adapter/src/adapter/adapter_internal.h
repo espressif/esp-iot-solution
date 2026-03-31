@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +16,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <sys/queue.h>
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
@@ -40,6 +41,25 @@ struct esp_lv_adapter_te_sync_context;
 #define ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS     8
 #define ESP_LV_ADAPTER_MAX_SLEEP_DISPLAYS     8
 #define ESP_LV_ADAPTER_MAX_SLEEP_INPUTS       32
+
+/**
+ * @brief Pipeline buffer element node for tear-avoidance buffer management
+ */
+struct display_pipeline_buf {
+    STAILQ_ENTRY(display_pipeline_buf) entry;
+    void *buffer;
+};
+
+/**
+ * @brief Pipeline buffer management state for tear-avoidance modes
+ */
+typedef struct {
+    STAILQ_HEAD(, display_pipeline_buf) busy_list;   /*!< DMA in-flight, FIFO */
+    STAILQ_HEAD(, display_pipeline_buf) empty_list;  /*!< Free buffer pool, FIFO */
+    struct display_pipeline_buf *elems;               /*!< Pre-allocated element array */
+    uint8_t elem_count;                               /*!< Number of elements */
+    portMUX_TYPE lock;                                /*!< ISR/task shared spinlock */
+} esp_lv_adapter_display_pipeline_t;
 
 /*****************************************************************************
  *                         Internal Data Structures                          *
@@ -70,6 +90,7 @@ typedef struct {
     struct esp_lv_adapter_te_sync_context *te_ctx; /*!< TE sync runtime context */
     gpio_int_type_t te_intr_type;           /*!< Computed TE interrupt type */
     bool te_prefer_refresh_end;             /*!< Prefer TE falling edge (end of VBlank) */
+
 } esp_lv_adapter_display_runtime_config_t;
 
 /**
@@ -81,7 +102,6 @@ typedef struct esp_lv_adapter_display_node {
     esp_lv_adapter_display_runtime_config_t cfg;  /*!< Display runtime configuration */
     lv_display_t *lv_disp;                  /*!< LVGL display object */
     struct esp_lv_adapter_display_bridge *bridge; /*!< Display bridge for hardware interface */
-    uint8_t prev_flush_status;              /*!< Previous flush status (thread-safe per display) */
 #if LVGL_VERSION_MAJOR < 9
     lv_disp_draw_buf_t draw_buf;            /*!< LVGL v8 draw buffer */
     lv_disp_drv_t disp_drv;                 /*!< LVGL v8 display driver */

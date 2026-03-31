@@ -23,6 +23,7 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
 #include "display_bridge.h"
 #include "display_manager.h"
 #include "lvgl_port_ppa.h"
@@ -97,13 +98,8 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     esp_lcd_panel_handle_t panel;
     esp_lv_adapter_display_runtime_info_t runtime;
     esp_lv_adapter_display_dirty_region_t dirty;
-    void *front_fb;
-    void *back_fb;
-    void *spare_fb;
-    void *rgb_last_buf;
-    void *rgb_next_buf;
-    void *rgb_flush_next_buf;
-    void *toggle_fb;
+    void *disp_fb;                                /**< Currently displayed buffer (front buffer) */
+    void *draw_fb;                                /**< Currently drawing buffer (back buffer) */
     TaskHandle_t notify_task;
     TaskHandle_t dummy_draw_wait_task;
     uint32_t dummy_draw_wait_mask;
@@ -111,6 +107,10 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     int block_size_small;
     int block_size_large;
     size_t cache_line_size;
+    esp_lv_adapter_vsync_timing_t vsync_timing;   /*!< Standardized VSYNC timing context */
+
+    /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
+    esp_lv_adapter_display_pipeline_t pipeline;
 } esp_lv_adapter_display_bridge_v9_t;
 
 #if CONFIG_SOC_PPA_SUPPORTED || CONFIG_SOC_DMA2D_SUPPORTED
@@ -391,8 +391,6 @@ static void copy_unrendered_area_from_front_to_back(lv_display_t *disp_refr,
 
 static void flush_dirty_save(esp_lv_adapter_display_dirty_region_t *dirty_area);
 
-static esp_lv_adapter_display_flush_probe_t flush_copy_probe(lv_display_t *disp);
-
 static void flush_dirty_copy(esp_lv_adapter_display_bridge_v9_t *impl,
                              void *dst,
                              void *src,
@@ -465,7 +463,6 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
     impl->notify_task = NULL;
-    impl->toggle_fb = NULL;
     impl->dummy_draw_wait_task = NULL;
     impl->dummy_draw_wait_mask = 0;
     impl->cache_line_size = display_bridge_get_cache_line_size();
@@ -483,19 +480,24 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     /* Use common function for runtime info initialization */
     display_bridge_init_runtime_info(&impl->runtime, cfg);
 
-    /* Use common function for frame buffer pointer initialization */
-    display_bridge_init_frame_buffer_pointers(
-        &impl->front_fb,
-        &impl->back_fb,
-        &impl->spare_fb,
-        &impl->rgb_last_buf,
-        &impl->rgb_next_buf,
-        &impl->rgb_flush_next_buf,
-        &impl->runtime
-    );
+    /* Configure VSYNC jitter shield: Specifically for MIPI DSI panels
+       in double-buffered modes to prevent visual artifacts due to race conditions. */
+    const bool is_mipi = (cfg->base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
+    const bool is_double_flush = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+                                  cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT ||
+                                  cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL);
+    if (is_mipi && is_double_flush) {
+        display_bridge_vsync_config_jitter_shield(&impl->vsync_timing, 1000);
+    }
 
-    /* Initialize toggle_fb to front_fb for proper double-buffer synchronization */
-    impl->toggle_fb = impl->front_fb;
+    /* Create and init pipeline in bridge (disp_fb/draw_fb written via out params) */
+    int pipeline_ret = display_bridge_pipeline_init_from_cfg(&impl->pipeline, &impl->cfg,
+                                                             &impl->disp_fb, &impl->draw_fb);
+    if (pipeline_ret == -1) {
+        ESP_LOGE(TAG, "pipeline init failed");
+        free(impl);
+        return NULL;
+    }
 
     display_dirty_region_reset(&impl->dirty);
 
@@ -509,6 +511,9 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
 
     if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER && !impl->cfg.base.panel_io) {
         ESP_LOGE(TAG, "panel_io handle required for interface OTHER");
+        if (impl->pipeline.elems) {
+            free(impl->pipeline.elems);
+        }
         free(impl);
         return NULL;
     }
@@ -533,11 +538,19 @@ static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
 {
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
 
-    display_bridge_v9_unregister_vsync(impl);
-
     /* Remove rounder event callback if exists */
     if (impl && impl->cfg.rounder_cb && impl->cfg.lv_disp) {
         lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, rounder_event_cb, impl);
+    }
+
+    /* Clear VSync callbacks and free pipeline (owned by bridge) */
+    if (impl) {
+        display_bridge_v9_unregister_vsync(impl);
+        if (impl->pipeline.elems) {
+            free(impl->pipeline.elems);
+            impl->pipeline.elems = NULL;
+            impl->pipeline.elem_count = 0;
+        }
     }
 
     /* Use unified destroy implementation for v8/v9 compatibility */
@@ -554,7 +567,17 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
 
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
 
+    /* Unregister old VSYNC callbacks before updating panel */
     display_bridge_v9_unregister_vsync(impl);
+
+    /* Free old pipeline (owned by bridge) */
+    if (impl->pipeline.elems) {
+        free(impl->pipeline.elems);
+        impl->pipeline.elems = NULL;
+        impl->pipeline.elem_count = 0;
+    }
+    STAILQ_INIT(&impl->pipeline.busy_list);
+    STAILQ_INIT(&impl->pipeline.empty_list);
 
     /* Update panel handle */
     impl->panel = cfg->base.panel;
@@ -562,19 +585,27 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
     /* Update configuration */
     impl->cfg = *cfg;
 
-    /* Reinitialize runtime info with new configuration */
     display_bridge_init_runtime_info(&impl->runtime, cfg);
 
-    /* Reinitialize frame buffer pointers */
-    display_bridge_init_frame_buffer_pointers(
-        &impl->front_fb,
-        &impl->back_fb,
-        &impl->spare_fb,
-        &impl->rgb_last_buf,
-        &impl->rgb_next_buf,
-        &impl->rgb_flush_next_buf,
-        &impl->runtime
-    );
+    /* Configure VSYNC jitter shield: Specifically for MIPI DSI panels
+       in double-buffered modes to prevent visual artifacts due to race conditions. */
+    const bool is_mipi = (cfg->base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
+    const bool is_double_flush = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+                                  cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT ||
+                                  cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL);
+    if (is_mipi && is_double_flush) {
+        display_bridge_vsync_config_jitter_shield(&impl->vsync_timing, 1000);
+    } else {
+        display_bridge_vsync_config_jitter_shield(&impl->vsync_timing, 0);
+    }
+
+    /* Re-init pipeline (same as create path, disp_fb/draw_fb via out params) */
+    int pipeline_ret = display_bridge_pipeline_init_from_cfg(&impl->pipeline, &impl->cfg,
+                                                             &impl->disp_fb, &impl->draw_fb);
+    if (pipeline_ret == -1) {
+        ESP_LOGE(TAG, "pipeline re-init failed (update_panel)");
+        return ESP_ERR_NO_MEM;
+    }
 
     /* Reset dirty region tracking */
     display_dirty_region_reset(&impl->dirty);
@@ -680,6 +711,7 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
     if (need_rotate) {
         switch (tear_avoid_mode) {
         case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
+        case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL:
             display_bridge_v9_flush_partial_rotate(impl, disp, flush_area, color_map);
             break;
         case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
@@ -708,6 +740,7 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
         display_bridge_v9_flush_double_direct(impl, disp, flush_area, color_map);
         break;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL:
         display_bridge_v9_flush_triple_diff(impl, disp, flush_area, color_map);
         break;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
@@ -897,12 +930,6 @@ static bool IRAM_ATTR display_bridge_v9_handle_vsync(esp_lv_adapter_display_brid
         impl->cfg.dummy_draw_cbs.on_vsync(disp, true, impl->cfg.dummy_draw_user_ctx);
     }
 
-    if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL &&
-            bridge_rotation(impl) == ESP_LV_ADAPTER_ROTATE_0 && impl->rgb_next_buf != impl->rgb_last_buf) {
-        impl->rgb_flush_next_buf = impl->rgb_last_buf;
-        impl->rgb_last_buf = impl->rgb_next_buf;
-    }
-
     if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
         lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
         if (disp) {
@@ -910,9 +937,22 @@ static bool IRAM_ATTR display_bridge_v9_handle_vsync(esp_lv_adapter_display_brid
         }
 
         return (need_yield == pdTRUE);
-    } else if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC ||
-               impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
-               impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT) {
+    } else if (
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC ||
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL ||
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL ||
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT ||
+        impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL) {
+
+        if (display_bridge_vsync_on_isr(&impl->vsync_timing)) {
+            return pdFALSE;
+        }
+
+        /* Move oldest queued buffer to empty_list (free pool) */
+        display_bridge_pipeline_release_buf_isr(&impl->pipeline);
+
+        /* Wake adapter task (unblocks display_bridge_pipeline_wait_free_buf and vsync wait) */
         TaskHandle_t notify_task = impl->notify_task;
         if (!notify_task) {
             esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
@@ -1297,9 +1337,12 @@ static void display_bridge_v9_flush_double_full(esp_lv_adapter_display_bridge_v9
     esp_lcd_panel_handle_t panel_handle = impl->panel;
 
     /* Switch the current LCD frame buffer to `color_map` */
+    display_bridge_vsync_record_flush_post(&impl->vsync_timing);
     esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        display_manager_flush_ready(disp);
+        return;
     }
 
     /* Waiting for the last frame buffer to complete transmission */
@@ -1320,20 +1363,24 @@ static void display_bridge_v9_flush_triple_full(esp_lv_adapter_display_bridge_v9
     (void)area;
     esp_lcd_panel_handle_t panel_handle = impl->panel;
 
-    if (disp->buf_act == disp->buf_1) {
-        disp->buf_2->data = impl->rgb_flush_next_buf;
-    } else {
-        disp->buf_1->data = impl->rgb_flush_next_buf;
-    }
-    impl->rgb_flush_next_buf = color_map;
-
     /* Switch the current LCD frame buffer to `color_map` */
     esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
-    }
+    } else {
+        display_bridge_pipeline_mark_buf_busy(&impl->pipeline, color_map);
 
-    impl->rgb_next_buf = color_map;
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        if (!next) {
+            display_manager_flush_ready(disp);
+            return;
+        }
+        if (disp->buf_act == disp->buf_1) {
+            disp->buf_2->data = next->buffer;
+        } else {
+            disp->buf_1->data = next->buffer;
+        }
+    }
 
     display_manager_flush_ready(disp);
 }
@@ -1351,9 +1398,12 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
 
     /* Action after last area refresh */
     if (lv_display_flush_is_last(disp)) {
+        display_bridge_vsync_record_flush_post(&impl->vsync_timing);
         esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+            display_manager_flush_ready(disp);
+            return;
         }
 
         /* Waiting for the last frame buffer to complete transmission */
@@ -1397,7 +1447,7 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
 
         esp_async_fbcpy_trans_desc_t blit = {
             .src_buffer        = color_map,
-            .dst_buffer        = impl->back_fb,
+            .dst_buffer        = impl->draw_fb,
             .src_buffer_size_x = src_stride_px,
             .src_buffer_size_y = rect_h,
             .src_offset_x      = 0,
@@ -1414,7 +1464,7 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
         ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
     } else {
         uint8_t *src = (uint8_t *)color_map;
-        uint8_t *dst = (uint8_t *)impl->back_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
+        uint8_t *dst = (uint8_t *)impl->draw_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
 
         for (int y = 0; y < rect_h; y++) {
             memcpy(dst, src, copy_bytes);
@@ -1425,7 +1475,7 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
 
 #else /* !SOC_DMA2D_SUPPORTED */
     uint8_t *src = (uint8_t *)color_map;
-    uint8_t *dst = (uint8_t *)impl->back_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
+    uint8_t *dst = (uint8_t *)impl->draw_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
     bool is_full_width = (copy_bytes == bytes_per_line);
 
     if (is_full_width && rect_h > 4 && src_stride == bytes_per_line) {
@@ -1471,17 +1521,24 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
         lv_display_t *disp_refr = lv_refr_get_disp_refreshing();
         copy_unrendered_area_from_front_to_back(disp_refr, impl);
 
-        /* Display back buffer and wait for VSYNC */
-        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
+        /* Display draw buffer and wait for VSYNC */
+        display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->draw_fb);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
-            /* Rotate buffers: front→back, back→spare, spare→front */
-            void *tmp = impl->front_fb;
-            impl->front_fb = impl->back_fb;
-            impl->back_fb  = impl->spare_fb;
-            impl->spare_fb = tmp;
+            display_bridge_pipeline_mark_buf_busy(&impl->pipeline, impl->disp_fb);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            if (!next) {
+                display_manager_flush_ready(disp);
+                return;
+            }
+            impl->disp_fb = impl->draw_fb;
+            impl->draw_fb = next->buffer;
         }
+#if CONFIG_ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
+        lv_image_cache_drop(NULL);
+#endif
     }
 
     /* Notify LVGL that flush is complete */
@@ -1497,73 +1554,33 @@ static void display_bridge_v9_flush_direct_rotate(esp_lv_adapter_display_bridge_
                                                   uint8_t *color_map)
 {
     esp_lcd_panel_handle_t panel = impl->panel;
-    void *next_fb = NULL;
-    void *sync_fb = NULL;
-    esp_err_t ret;
-
     if (!lv_display_flush_is_last(disp)) {
         display_manager_flush_ready(disp);
         return;
     }
 
-    if (disp->render_mode == LV_DISPLAY_RENDER_MODE_FULL) {
-        /* Full refresh: rotate entire screen content to frame buffer */
-        disp->render_mode = LV_DISPLAY_RENDER_MODE_DIRECT;
+    /* Copy dirty regions to next buffer */
+    flush_dirty_save(&impl->dirty);
+    flush_dirty_copy(impl, impl->draw_fb, color_map, &impl->dirty);
 
-        next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-        rotate_copy_region(impl, color_map, next_fb,
-                           0, 0, LV_HOR_RES - 1, LV_VER_RES - 1,
-                           LV_HOR_RES, LV_VER_RES,
-                           bridge_rotation(impl), bridge_color_bytes(impl));
-
-        ret = display_lcd_blit_full(panel, &impl->runtime, next_fb);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
-        }
-
-        ulTaskNotifyValueClear(NULL, ULONG_MAX);
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-        /* Sync entire buffer to prevent flickering on buffer switch */
-        sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-        if (sync_fb && next_fb && sync_fb != next_fb) {
-            memcpy(sync_fb, next_fb, impl->runtime.frame_buffer_size);
-            display_cache_msync_framebuffer(sync_fb, impl->runtime.frame_buffer_size);
-        }
-        display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-
-    } else {
-        /* Direct mode: check if full refresh is needed */
-        esp_lv_adapter_display_flush_probe_t probe = flush_copy_probe(disp);
-        if (probe == ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY) {
-            flush_dirty_save(&impl->dirty);
-            disp->render_mode = LV_DISPLAY_RENDER_MODE_FULL;
-            disp->rendering_in_progress = false;
-            display_manager_flush_ready(disp);
-            lv_refr_now(lv_refr_get_disp_refreshing());
-            return;
-        }
-
-        /* Copy dirty regions to next buffer */
-        next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-        flush_dirty_save(&impl->dirty);
-        flush_dirty_copy(impl, next_fb, color_map, &impl->dirty);
-
-        ret = display_lcd_blit_full(panel, &impl->runtime, next_fb);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
-        }
-
-        ulTaskNotifyValueClear(NULL, ULONG_MAX);
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-        /* Sync dirty regions to another buffer */
-        flush_dirty_save(&impl->dirty);
-        sync_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-        flush_dirty_copy(impl, sync_fb, color_map, &impl->dirty);
-        display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
-
+    esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->draw_fb);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        display_manager_flush_ready(disp);
+        return;
     }
+
+    display_bridge_pipeline_mark_buf_busy(&impl->pipeline, impl->disp_fb);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    if (!next) {
+        display_manager_flush_ready(disp);
+        return;
+    }
+    impl->disp_fb = impl->draw_fb;
+    impl->draw_fb = next->buffer;
+
+    /* Sync dirty regions to another buffer */
+    flush_dirty_copy(impl, impl->draw_fb, color_map, &impl->dirty);
 
     display_manager_flush_ready(disp);
 }
@@ -1582,18 +1599,24 @@ static void display_bridge_v9_flush_full_rotate(esp_lv_adapter_display_bridge_v9
     const int offsetx2 = area->x2;
     const int offsety1 = area->y1;
     const int offsety2 = area->y2;
-    void *next_fb = display_runtime_acquire_next_buffer(&impl->runtime, &impl->toggle_fb);
+
     uint8_t color_bytes = bridge_color_bytes(impl);
 
-    /* Rotate and copy dirty area from the current LVGL's buffer to the next LCD frame buffer */
-    rotate_copy_region(impl, color_map, next_fb,
+    rotate_copy_region(impl, color_map, impl->draw_fb,
                        offsetx1, offsety1, offsetx2, offsety2,
                        LV_HOR_RES, LV_VER_RES, bridge_rotation(impl), color_bytes);
 
-    /* Switch the current LCD frame buffer to `next_fb` */
-    esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, next_fb);
+    esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, impl->draw_fb);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+    } else {
+        display_bridge_pipeline_mark_buf_busy(&impl->pipeline, impl->disp_fb);
+
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        if (next) {
+            impl->disp_fb = impl->draw_fb;
+            impl->draw_fb = next->buffer;
+        }
     }
 
     display_manager_flush_ready(disp);
@@ -1623,7 +1646,7 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
     size_t src_stride_px = stride_bytes / color_bytes;
 
     rotate_copy_strided_region(color_map,
-                               impl->back_fb,
+                               impl->draw_fb,
                                area->x1, area->y1,
                                area->x2, area->y2,
                                src_stride_px,
@@ -1631,29 +1654,36 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
 
     if (lv_display_flush_is_last(disp)) {
 
-        /* Only sync cache when using CPU rotation (not PPA) */
-#if CONFIG_SOC_PPA_SUPPORTED
-        if (!hw_resource.ppa_handle) {
-            display_cache_msync_framebuffer(impl->back_fb, impl->runtime.frame_buffer_size);
-        }
-#else
-        display_cache_msync_framebuffer(impl->back_fb, impl->runtime.frame_buffer_size);
-#endif
-
         lv_display_t *disp_refr = lv_refr_get_disp_refreshing();
         copy_unrendered_area_from_front_to_back(disp_refr, impl);
 
-        /* Display back buffer and wait for VSYNC */
-        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->back_fb);
+        /* Only sync cache when using CPU rotation (not PPA) */
+#if CONFIG_SOC_PPA_SUPPORTED
+        if (!hw_resource.ppa_handle) {
+            display_cache_msync_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
+        }
+#else
+        display_cache_msync_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
+#endif
+
+        /* Display draw buffer and wait for VSYNC */
+        display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+        esp_err_t ret = display_lcd_blit_full(panel, &impl->runtime, impl->draw_fb);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
-            /* Rotate buffers: front→back, back→spare, spare→front */
-            void *tmp = impl->front_fb;
-            impl->front_fb = impl->back_fb;
-            impl->back_fb  = impl->spare_fb;
-            impl->spare_fb = tmp;
+            display_bridge_pipeline_mark_buf_busy(&impl->pipeline, impl->disp_fb);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            if (!next) {
+                display_manager_flush_ready(disp);
+                return;
+            }
+            impl->disp_fb = impl->draw_fb;
+            impl->draw_fb = next->buffer;
         }
+#if CONFIG_ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
+        lv_image_cache_drop(NULL);
+#endif
     }
 
     /* Notify LVGL that flush is complete */
@@ -2008,7 +2038,7 @@ MERGE_RESTART:;
 #if SOC_DMA2D_SUPPORTED
 
     if (unsync_cnt > 0) {
-        display_cache_msync_framebuffer(impl->front_fb, impl->runtime.frame_buffer_size);
+        display_cache_msync_framebuffer(impl->disp_fb, impl->runtime.frame_buffer_size);
     }
 
     for (int idx = 0; idx < unsync_cnt; idx++) {
@@ -2019,8 +2049,8 @@ MERGE_RESTART:;
         int offset_x = r.x1;
 
         esp_async_fbcpy_trans_desc_t tr = {
-            .src_buffer        = impl->front_fb,
-            .dst_buffer        = impl->back_fb,
+            .src_buffer        = impl->disp_fb,
+            .dst_buffer        = impl->draw_fb,
             .src_buffer_size_x = hor_res,
             .src_buffer_size_y = ver_res,
             .dst_buffer_size_x = hor_res,
@@ -2044,8 +2074,8 @@ MERGE_RESTART:;
         rect_t r = unsync_rects[idx];
         int width_px        = r.x2 - r.x1 + 1;
         int bytes_per_line  = width_px * bytes_per_pixel;
-        uint8_t *src_line = (uint8_t *)impl->front_fb + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
-        uint8_t *dst_line = (uint8_t *)impl->back_fb  + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
+        uint8_t *src_line = (uint8_t *)impl->disp_fb + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
+        uint8_t *dst_line = (uint8_t *)impl->draw_fb  + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
 
         for (int y = r.y1; y <= r.y2; y++) {
             memcpy(dst_line, src_line, bytes_per_line);
@@ -2072,50 +2102,6 @@ static void flush_dirty_save(esp_lv_adapter_display_dirty_region_t *dirty_area)
                                  disp->inv_areas,
                                  disp->inv_area_joined,
                                  disp->inv_p);
-}
-
-/**
- * @brief Probe flush type to determine copy strategy (thread-safe)
- *
- * Thread-safe: Uses per-display prev_flush_status instead of global static
- */
-static esp_lv_adapter_display_flush_probe_t flush_copy_probe(lv_display_t *disp)
-{
-    esp_lv_adapter_display_flush_status_t cur_status;
-    esp_lv_adapter_display_flush_probe_t probe_result;
-    lv_display_t *disp_refr = lv_refr_get_disp_refreshing();
-
-    /* Get display node for per-display state */
-    esp_lv_adapter_display_node_t *node = lv_display_get_user_data(disp);
-    if (!node) {
-        return ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
-    }
-
-    uint32_t flush_ver = 0;
-    uint32_t flush_hor = 0;
-    for (int i = 0; i < disp_refr->inv_p; i++) {
-        if (disp_refr->inv_area_joined[i] == 0) {
-            flush_ver = (disp_refr->inv_areas[i].y2 + 1 - disp_refr->inv_areas[i].y1);
-            flush_hor = (disp_refr->inv_areas[i].x2 + 1 - disp_refr->inv_areas[i].x1);
-            break;
-        }
-    }
-    /* Check if the current full screen refreshes */
-    cur_status = ((flush_ver == disp->ver_res) && (flush_hor == disp->hor_res)) ?
-                 ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL : ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_PART;
-
-    if (node->prev_flush_status == ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL) {
-        if ((cur_status == ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_PART)) {
-            probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY;
-        } else {
-            probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_SKIP_COPY;
-        }
-    } else {
-        probe_result = ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY;
-    }
-    node->prev_flush_status = cur_status;
-
-    return probe_result;
 }
 
 /**

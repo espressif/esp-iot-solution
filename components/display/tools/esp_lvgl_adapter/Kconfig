@@ -8,6 +8,14 @@ config ESP_LVGL_ADAPTER_ENABLE_DECODER
     bool "Enable esp_lv_decoder integration"
     default n
 
+config ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
+    bool "Set LVGL image cache to max (partial tear-avoid modes)"
+    default n
+    help
+        When enabled, set LVGL image cache to maximum for partial tear-avoid modes
+        (v8: LV_IMG_CACHE_DEF_SIZE; v9: LV_CACHE_DEF_SIZE, LV_IMAGE_HEADER_CACHE_DEF_CNT).
+        When disabled, LVGL cache is not overridden.
+
 config ESP_LVGL_ADAPTER_ENABLE_FREETYPE
     bool "Enable FreeType font support"
     default n
