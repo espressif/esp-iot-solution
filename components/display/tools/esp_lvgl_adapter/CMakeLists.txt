@@ -141,6 +141,15 @@ if("${lvgl_name}" IN_LIST build_components)
         target_compile_definitions(${lvgl_comp_lib} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
         target_compile_options(${lvgl_comp_lib} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
         target_compile_options(${lvgl_comp_lib} PRIVATE -Wno-unused-function)
+
+        if(CONFIG_ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE)
+            if(lvgl_ver VERSION_LESS "9.0.0")
+                target_compile_definitions(${lvgl_comp_lib} PUBLIC LV_IMG_CACHE_DEF_SIZE=32)
+            else()
+                target_compile_definitions(${lvgl_comp_lib} PUBLIC LV_CACHE_DEF_SIZE=1048576 LV_IMAGE_HEADER_CACHE_DEF_CNT=32)
+            endif()
+        endif()
+
     endif()
 endif()
 

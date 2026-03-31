@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -56,6 +56,17 @@ typedef struct {
 } esp_lv_adapter_display_runtime_info_t;
 
 /**
+ * @brief VSYNC timing measurement and jitter detection
+ */
+typedef struct {
+    int64_t vsync_prev_ts_us;       /*!< Previous vsync interrupt timestamp (us) */
+    uint32_t refresh_period_us;     /*!< Measured refresh period (us) */
+    int64_t flush_post_ts_us;       /*!< Timestamp after last blit/flush (us) */
+    uint32_t shield_threshold_us;   /*!< Jitter shield threshold (0 to disable) */
+    bool shield_enabled;            /*!< Jitter shield enabled flag */
+} esp_lv_adapter_vsync_timing_t;
+
+/**
  * @brief Dirty region tracking for partial updates
  */
 typedef struct {
@@ -63,23 +74,6 @@ typedef struct {
     uint8_t inv_area_joined[LV_INV_BUF_SIZE];  /*!< Join flags for areas */
     lv_area_t inv_areas[LV_INV_BUF_SIZE];  /*!< Invalid area coordinates */
 } esp_lv_adapter_display_dirty_region_t;
-
-/**
- * @brief Flush status enumeration
- */
-typedef enum {
-    ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_PART,      /*!< Partial screen refresh */
-    ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL       /*!< Full screen refresh */
-} esp_lv_adapter_display_flush_status_t;
-
-/**
- * @brief Flush probe result for copy strategy determination
- */
-typedef enum {
-    ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_PART_COPY,  /*!< Copy partial dirty region */
-    ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_SKIP_COPY,  /*!< Skip copying (full refresh) */
-    ESP_LV_ADAPTER_DISPLAY_FLUSH_PROBE_FULL_COPY   /*!< Force full copy */
-} esp_lv_adapter_display_flush_probe_t;
 
 /**********************
  *   INLINE HELPERS
@@ -200,19 +194,19 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
  * @param block_size_small Small block size for cache optimization
  * @param block_size_large Large block size for cache optimization
  */
-IRAM_ATTR void display_rotate_copy_region(const void *src,
-                                          void *dst_fb,
-                                          uint16_t lv_x_start,
-                                          uint16_t lv_y_start,
-                                          uint16_t lv_x_end,
-                                          uint16_t lv_y_end,
-                                          uint16_t src_stride_px,
-                                          uint16_t hor_res,
-                                          uint16_t ver_res,
-                                          esp_lv_adapter_rotation_t rotation,
-                                          uint8_t color_bytes,
-                                          int block_size_small,
-                                          int block_size_large);
+void display_rotate_copy_region(const void *src,
+                                void *dst_fb,
+                                uint16_t lv_x_start,
+                                uint16_t lv_y_start,
+                                uint16_t lv_x_end,
+                                uint16_t lv_y_end,
+                                uint16_t src_stride_px,
+                                uint16_t hor_res,
+                                uint16_t ver_res,
+                                esp_lv_adapter_rotation_t rotation,
+                                uint8_t color_bytes,
+                                int block_size_small,
+                                int block_size_large);
 
 /**
  * @brief Rotate an entire image (IRAM optimized)
@@ -226,14 +220,14 @@ IRAM_ATTR void display_rotate_copy_region(const void *src,
  * @param block_size_small Small block size for cache optimization
  * @param block_size_large Large block size for cache optimization
  */
-IRAM_ATTR void display_rotate_image(const void *src,
-                                    void *dst,
-                                    int width,
-                                    int height,
-                                    int rotation,
-                                    uint8_t color_bytes,
-                                    int block_size_small,
-                                    int block_size_large);
+void display_rotate_image(const void *src,
+                          void *dst,
+                          int width,
+                          int height,
+                          int rotation,
+                          uint8_t color_bytes,
+                          int block_size_small,
+                          int block_size_large);
 
 /* Cache management */
 
@@ -303,6 +297,55 @@ void display_bridge_get_block_sizes(int *block_small, int *block_large);
 
 size_t display_bridge_get_cache_line_size(void);
 
+/* Pipeline management */
+
+/**
+ * @brief Initialize pipeline from runtime config (call from bridge create with impl's pipeline and cfg)
+ *
+ * Decides whether pipeline is used from cfg->base.tear_avoid_mode and rotation.
+ * If used, inits the pipeline (lock, lists, elems) and sets *out_disp_fb and *out_draw_fb.
+ * Caller must free pipeline->elems in bridge destroy.
+ *
+ * @param pipeline Pipeline to init (e.g. &impl->pipeline)
+ * @param cfg Runtime config (base, frame_buffers, frame_buffer_count must be set)
+ * @param out_disp_fb Output display (front) buffer pointer (e.g. &impl->disp_fb)
+ * @param out_draw_fb Output draw (back) buffer pointer (e.g. &impl->draw_fb)
+ * @return 1 if pipeline in use and inited, 0 if pipeline not used, -1 on alloc failure
+ */
+int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pipeline,
+                                          esp_lv_adapter_display_runtime_config_t *cfg,
+                                          void **out_disp_fb, void **out_draw_fb);
+
+/**
+ * @brief Mark an element in the pipeline as busy
+ */
+void display_bridge_pipeline_mark_buf_busy(esp_lv_adapter_display_pipeline_t *p, void *buf);
+
+/**
+ * @brief Release a buffer from the busy list to the empty list (ISR context)
+ *
+ * Caller contract: when this is called from an ISR, the caller MUST subsequently
+ * call vTaskNotifyGiveFromISR() on the task that may be blocked in
+ * display_bridge_pipeline_wait_free_buf() (typically the LVGL adapter task).
+ * Otherwise the waiter will never be woken. See v8/v9 VSync handlers for the
+ * pattern: release_buf_isr(pipeline) then vTaskNotifyGiveFromISR(notify_task, &need_yield).
+ */
+void display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p);
+
+/**
+ * @brief Take a free buffer from the pipeline (no wait)
+ */
+struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapter_display_pipeline_t *p);
+
+/**
+ * @brief Wait for a free buffer from the pipeline (uses ulTaskNotifyTake)
+ *
+ * Blocks the current task until a buffer is moved to the empty list. The task is
+ * woken by the same notification sent after display_bridge_pipeline_release_buf_isr()
+ * in the VSync (or equivalent) ISR via vTaskNotifyGiveFromISR(adapter_task).
+ */
+struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p);
+
 /**
  * @brief Initialize runtime information from configuration
  *
@@ -315,26 +358,33 @@ void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *run
                                       const esp_lv_adapter_display_runtime_config_t *cfg);
 
 /**
- * @brief Initialize frame buffer pointers
- *
- * @note This function is 100% identical in v8 and v9
- *
- * @param front_fb Pointer to front buffer pointer
- * @param back_fb Pointer to back buffer pointer
- * @param spare_fb Pointer to spare buffer pointer
- * @param rgb_last_buf Pointer to RGB last buffer pointer
- * @param rgb_next_buf Pointer to RGB next buffer pointer
- * @param rgb_flush_next_buf Pointer to RGB flush next buffer pointer
- * @param runtime Runtime display information
+ * @brief Record timestamp after a successful flush/blit operation
  */
-void display_bridge_init_frame_buffer_pointers(
-    void **front_fb,
-    void **back_fb,
-    void **spare_fb,
-    void **rgb_last_buf,
-    void **rgb_next_buf,
-    void **rgb_flush_next_buf,
-    const esp_lv_adapter_display_runtime_info_t *runtime);
+void display_bridge_vsync_record_flush_post(esp_lv_adapter_vsync_timing_t *t);
+
+/**
+ * @brief Update VSYNC timing and check for jitter (ISR context)
+ *
+ * @param t VSYNC timing context
+ * @return true if jitter detected (should skip/delay), false otherwise
+ */
+bool display_bridge_vsync_on_isr(esp_lv_adapter_vsync_timing_t *t);
+
+/**
+ * @brief Configure VSYNC jitter shield
+ *
+ * @param t VSYNC timing context
+ * @param threshold_us Threshold in microseconds (e.g. 1000), 0 to disable
+ */
+void display_bridge_vsync_config_jitter_shield(esp_lv_adapter_vsync_timing_t *t, uint32_t threshold_us);
+
+/**
+ * @brief Get the measured refresh rate for the interface in Hz
+ *
+ * @param t VSYNC timing context
+ * @return Refresh rate in Hz, or 0 if not measured yet
+ */
+uint32_t display_bridge_vsync_get_refresh_rate_hz(esp_lv_adapter_vsync_timing_t *t);
 
 #if SOC_DMA2D_SUPPORTED
 /**
@@ -382,9 +432,9 @@ esp_err_t display_bridge_release_hw_resource(void);
  *
  * @note This function is 100% identical in v8 and v9
  */
-bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
-                                                  esp_async_fbcpy_event_data_t *event_data,
-                                                  void *cb_args);
+bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
+                                        esp_async_fbcpy_event_data_t *event_data,
+                                        void *cb_args);
 
 /**
  * @brief Synchronous DMA2D copy operation
@@ -397,25 +447,6 @@ bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
  */
 esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms);
 #endif /* SOC_DMA2D_SUPPORTED */
-
-/**
- * @brief Probe flush type to determine copy strategy (thread-safe, IRAM optimized)
- *
- * @param inv_areas Invalid area array
- * @param inv_area_joined Area join flags
- * @param inv_p Number of invalid areas
- * @param hor_res Horizontal resolution
- * @param ver_res Vertical resolution
- * @param prev_status Pointer to previous flush status (per-display state)
- * @return esp_lv_adapter_display_flush_probe_t Probe result
- */
-IRAM_ATTR esp_lv_adapter_display_flush_probe_t display_bridge_flush_copy_probe(
-    const lv_area_t *inv_areas,
-    const uint8_t *inv_area_joined,
-    uint16_t inv_p,
-    uint16_t hor_res,
-    uint16_t ver_res,
-    uint8_t *prev_status);
 
 /**
  * @brief Destroy display bridge and release resources

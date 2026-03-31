@@ -66,6 +66,7 @@ typedef enum {
     ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT  = 3,    /*!< Double buffering with direct mode */
     ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL = 4,    /*!< Triple buffering with partial refresh */
     ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC        = 5,    /*!< TE GPIO based tear avoidance for SPI/I80/QSPI */
+    ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL = 6,    /*!< Double buffering with partial refresh */
 } esp_lv_adapter_tear_avoid_mode_t;
 
 #define ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI     ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL

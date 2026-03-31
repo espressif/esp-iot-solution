@@ -596,6 +596,7 @@ Configure via `idf.py menuconfig`:
 | `ESP_LV_ADAPTER_ENABLE_FPS_STATS` | Enable FPS monitoring APIs |
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
+| `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB

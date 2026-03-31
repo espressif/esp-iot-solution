@@ -174,9 +174,6 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
 
     node->cfg.base = *cfg;
 
-    /* Initialize for proper initial buffer sync in direct-rotation path */
-    node->prev_flush_status = ESP_LV_ADAPTER_DISPLAY_FLUSH_STATUS_FULL;
-
     if (!display_manager_init_node(node)) {
         display_manager_destroy_node(node);
         return NULL;
@@ -380,6 +377,7 @@ static void display_manager_free_draw_buffers(esp_lv_adapter_display_node_t *nod
         free(cfg->draw_buf_secondary);
         cfg->draw_buf_secondary = NULL;
     }
+
 }
 
 /**
@@ -927,10 +925,10 @@ static bool display_manager_use_panel_buffers(esp_lv_adapter_display_node_t *nod
     cfg->draw_buf_pixels = full_pixels;
 
     if (cfg->base.profile.rotation != ESP_LV_ADAPTER_ROTATE_0) {
-        if (cfg->frame_buffer_count <= 2 || !cfg->frame_buffers[2]) {
+        if (cfg->frame_buffer_count <= 2 || !cfg->frame_buffers[0]) {
             return false;
         }
-        cfg->draw_buf_primary = cfg->frame_buffers[2];
+        cfg->draw_buf_primary = cfg->frame_buffers[0];
         cfg->draw_buf_secondary = NULL;
         return true;
     }
@@ -956,10 +954,8 @@ static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_nod
     switch (cfg->base.tear_avoid_mode) {
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
-        rebound = display_manager_use_panel_buffers(node, full_pixels, 0, 1);
-        break;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
-        rebound = display_manager_use_panel_buffers(node, full_pixels, 1, 2);
+        rebound = display_manager_use_panel_buffers(node, full_pixels, 0, 1);
         break;
     default:
         rebound = true; /* Modes that do not rely on panel buffers keep existing draw buffers */
@@ -967,6 +963,62 @@ static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_nod
     }
 
     return rebound;
+}
+
+/**
+ * @brief Set up draw buffers and pipeline for tear-avoidance modes
+ *
+ * Handles the complete setup for all tear-avoidance modes in one place:
+ * - DOUBLE_DIRECT/DOUBLE_FULL/TRIPLE_FULL: use panel frame buffers as draw buffers
+ * - DOUBLE_PARTIAL/TRIPLE_PARTIAL: allocate a separate partial draw buffer
+ * - All modes: allocate pipeline elements, populate empty_list, set disp_fb/draw_fb
+ *
+ * @param node     Display node (must have frame_buffers populated)
+ * @param color_size Bytes per pixel
+ * @return true on success, false on failure
+ */
+static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *node, size_t color_size)
+{
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    esp_lv_adapter_display_config_t *pub = &cfg->base;
+    esp_lv_adapter_display_profile_t *profile = &pub->profile;
+    esp_lv_adapter_tear_avoid_mode_t mode = pub->tear_avoid_mode;
+
+    switch (mode) {
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL: {
+        size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
+        if (!display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+            ESP_LOGW(TAG, "tear mode %d: panel buffers unavailable", mode);
+            return false;
+        }
+        break;
+    }
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL: {
+        int needed = (mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL) ? 3 : 2;
+        if (cfg->frame_buffer_count < needed) {
+            ESP_LOGW(TAG, "%d frames needed, but only %d available", needed, cfg->frame_buffer_count);
+            return false;
+        }
+        cfg->draw_buf_pixels = (size_t)profile->hor_res * profile->buffer_height;
+        void *buf = display_manager_alloc_draw_buffer(cfg->draw_buf_pixels * color_size, false);
+        if (!buf) {
+            ESP_LOGE(TAG, "alloc partial draw buffer %zu bytes failed", cfg->draw_buf_pixels * color_size);
+            return false;
+        }
+        cfg->draw_buf_primary = buf;
+        cfg->draw_buf_secondary = NULL;
+        break;
+    }
+    default:
+        return false;
+    }
+
+    ESP_LOGD(TAG, "tear buffers ready: fb_count=%d", cfg->frame_buffer_count);
+    /* Pipeline and disp_fb/draw_fb are initialized in bridge create (v8/v9) */
+    return true;
 }
 
 #if LVGL_VERSION_MAJOR >= 9
@@ -1018,45 +1070,17 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         have_panel_fb = display_manager_fetch_panel_frame_buffers(node, required_frames, color_size);
     }
 
-    size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
-
-    /* Try to use panel frame buffers for tearing modes */
-    switch (pub->tear_avoid_mode) {
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+    /* Tear-avoidance modes: unified buffer + pipeline setup */
+    if (have_panel_fb && pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
+            pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        if (display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        ESP_LOGW(TAG, "double direct mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
-            return true;
-        }
-        ESP_LOGW(TAG, "double full mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 1, 2)) {
-            return true;
-        }
-        ESP_LOGW(TAG, "triple full mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
-        if (!have_panel_fb || node->cfg.frame_buffer_count < 3) {
-            ESP_LOGW(TAG, "triple partial mode without panel frame buffers, behaviour degraded");
-        }
-        cfg->draw_buf_pixels = (size_t)profile->hor_res * profile->buffer_height;
-        size_t partial_bytes = display_manager_calc_draw_buf_bytes(profile, cfg->draw_buf_pixels, color_format);
-        void *buf = display_manager_alloc_draw_buffer(partial_bytes, false);
-        if (!buf) {
-            ESP_LOGE(TAG, "alloc primary buffer %zu bytes failed", partial_bytes);
-            return false;
-        }
-        cfg->draw_buf_primary = buf;
+        /* Reset any state setup_tear_buffers might have partially set */
+        cfg->draw_buf_pixels = 0;
+        cfg->draw_buf_primary = NULL;
         cfg->draw_buf_secondary = NULL;
-
-        return true;
-    default:
-        break;
+        ESP_LOGW(TAG, "tear mode %d setup failed, falling back to allocated buffers", pub->tear_avoid_mode);
     }
 
     /* Allocate buffers manually */
@@ -1108,6 +1132,7 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
     return true;
 }
 #else
+
 static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
                                             esp_lv_adapter_display_render_mode_t mode,
                                             size_t color_size)
@@ -1132,44 +1157,18 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         have_panel_fb = display_manager_fetch_panel_frame_buffers(node, required_frames, color_size);
     }
 
-    size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
-
-    /* Try to use panel frame buffers for tearing modes */
-    switch (pub->tear_avoid_mode) {
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+    /* Tear-avoidance modes: unified buffer + pipeline setup */
+    if (have_panel_fb && pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
+            pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        if (display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        ESP_LOGW(TAG, "double direct mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
-            return true;
-        }
-        ESP_LOGW(TAG, "double full mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
-        if (have_panel_fb && display_manager_use_panel_buffers(node, full_pixels, 1, 2)) {
-            return true;
-        }
-        ESP_LOGW(TAG, "triple full mode falling back to allocated buffers");
-        break;
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
-        if (!have_panel_fb || node->cfg.frame_buffer_count < 3) {
-            ESP_LOGW(TAG, "triple partial mode without panel frame buffers, behaviour degraded");
-        }
-        cfg->draw_buf_pixels = (size_t)profile->hor_res * profile->buffer_height;
-        void *buf = display_manager_alloc_draw_buffer(cfg->draw_buf_pixels * color_size, false);
-        if (!buf) {
-            ESP_LOGE(TAG, "alloc primary buffer %zu bytes failed", cfg->draw_buf_pixels * color_size);
-            return false;
-        }
-        cfg->draw_buf_primary = buf;
+        /* Reset any state setup_tear_buffers might have partially set */
+        cfg->draw_buf_pixels = 0;
+        cfg->draw_buf_primary = NULL;
         cfg->draw_buf_secondary = NULL;
+        ESP_LOGW(TAG, "tear mode %d setup failed, falling back to allocated buffers", pub->tear_avoid_mode);
 
-        return true;
-    default:
-        break;
     }
 
     /* Allocate buffers manually */
@@ -1302,6 +1301,7 @@ static uint8_t display_manager_required_buffer_count(const esp_lv_adapter_displa
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
         return 2;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL:
         return 1;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
@@ -1328,8 +1328,11 @@ static uint8_t display_manager_required_buffer_count(const esp_lv_adapter_displa
 uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode,
                                                     esp_lv_adapter_rotation_t rotation)
 {
-    /* Rotation 90° or 270° always requires 3 buffers for rotation processing */
-    if (rotation == ESP_LV_ADAPTER_ROTATE_90 || rotation == ESP_LV_ADAPTER_ROTATE_270) {
+    /* Rotation 90° or 270° always requires 3 buffers for rotation processing.
+     * DOUBLE_PARTIAL has its own drawing buffers and is out of scope here.
+     */
+    if ((rotation == ESP_LV_ADAPTER_ROTATE_90 || rotation == ESP_LV_ADAPTER_ROTATE_270)
+            && tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL) {
         return 3;
     }
 
@@ -1340,6 +1343,7 @@ uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mo
         return 3;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL:
         return 2;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC:
@@ -1500,7 +1504,8 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
                 mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
                 mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL ||
                 mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT ||
-                mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL) {
+                mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL ||
+                mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL) {
             return true;
         }
         ESP_LOGE(TAG, "tear mode %d unsupported on panel interface %d", mode, cfg->profile.interface);
