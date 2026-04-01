@@ -7,6 +7,7 @@ BLE Services
 
     Alert Notification Service <ble_ans>
     Battery Service <ble_bas>
+    BLE OTA Service <ble_ota_svc>
     Body Composition Service <ble_bcs>
     Current Time Service <ble_cts>
     Device Information Service <ble_dis>

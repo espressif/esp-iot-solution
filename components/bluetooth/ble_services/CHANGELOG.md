@@ -1,3 +1,9 @@
+## v1.3.0 - 2026.03.25
+
+Features:
+- OTA: Support BLE OTA Service
+- DIS: Add deinit API for DIS Service
+
 ## v1.2.3 - 2026.03.26
 
 Features:

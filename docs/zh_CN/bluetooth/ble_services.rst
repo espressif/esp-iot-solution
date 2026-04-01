@@ -16,3 +16,4 @@ BLE 服务
     TX 电源服务 <ble_tps>
     用户数据服务 <ble_uds>
     体重秤服务 <ble_wss>
+    BLE OTA 服务 <ble_ota_svc>

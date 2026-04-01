@@ -32,6 +32,7 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h \
     $(PROJECT_PATH)/components/bluetooth/ble_hci/include/ble_hci.h \
     $(PROJECT_PATH)/components/bluetooth/ble_adv/bthome/include/bthome_v2.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/esp/ble_ota_raw/include/esp_ble_ota_raw.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_hrp/include/esp_hrp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h \
@@ -44,6 +45,7 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_services/dis/include/esp_dis.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hrs/include/esp_hrs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/ota/include/esp_ble_ota_svc.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/ots/include/esp_ots.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/tps/include/esp_tps.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/uds/include/esp_uds.h \

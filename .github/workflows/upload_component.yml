@@ -41,6 +41,7 @@ jobs:
             components/bluetooth/ble_conn_mgr;
             components/bluetooth/ble_hci;
             components/bluetooth/ble_profiles/esp/ble_ota;
+            components/bluetooth/ble_profiles/esp/ble_ota_raw;
             components/bluetooth/ble_profiles/std/ble_anp;
             components/bluetooth/ble_profiles/std/ble_hrp;
             components/bluetooth/ble_profiles/std/ble_htp;
