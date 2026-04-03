@@ -582,6 +582,15 @@ esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // Rebinds panel, resumes 
 
 **⚠️ Advanced:** Use `esp_lv_adapter_pause()`/`resume()` for custom flows, but do NOT mix with `sleep_prepare()`
 
+### Using `pause()` / `resume()` with Tickless Auto Light Sleep
+
+If tickless auto Light Sleep is enabled, `esp_lv_adapter_pause()` / `resume()` can be used without calling `esp_light_sleep_start()` manually.
+
+**Notes:**
+- Use `pause()` / `resume()` for pause-only auto sleep flows; use `sleep_prepare()` / `sleep_recover()` when LCD hardware must be deleted and recreated
+- While paused, the internal `LVGL tick` timer is stopped; in `esp_timer_dump(stdout)` it may remain visible but should be disarmed (`Period = 0`, `Alarm = 0`)
+- Do not mix manual `pause()` with `sleep_prepare()`
+
 ---
 
 ## Configuration (Kconfig)

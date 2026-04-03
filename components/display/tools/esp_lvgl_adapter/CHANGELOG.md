@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v0.4.3 (2026-04-03)
+
+* Fix `pause()` / `resume()` handling so the internal `LVGL tick` timer is stopped during pause and restarted during resume
+* Update sleep management documentation for tickless auto Light Sleep usage
+
+## v0.4.2 (2026-03-31)
+
+* Add `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL` for double-buffer partial refresh
+* Add `ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE` to increase LVGL image cache in partial tear-avoid modes
+
 ## v0.4.1 (2026-03-12)
 
 * Fix refresh issue when LV_DRAW_BUF_STRIDE_ALIGN > 1 in LVGL v9 bridge

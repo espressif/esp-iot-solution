@@ -160,6 +160,8 @@ esp_err_t esp_lv_adapter_refresh_now(lv_display_t *disp);
  *
  * Stops the LVGL worker task and waits for acknowledgement. This API is intended
  * for advanced use cases requiring custom control over the LVGL rendering loop.
+ * The internal LVGL tick timer is also stopped while paused so that tickless
+ * light sleep can enter naturally.
  *
  * @note You MUST pair this call with esp_lv_adapter_resume()
  * @note Do NOT call esp_lv_adapter_sleep_prepare() while manually paused
@@ -176,8 +178,9 @@ esp_err_t esp_lv_adapter_pause(int32_t timeout_ms);
 /**
  * @brief Resume LVGL worker
  *
- * Resumes the LVGL worker task that was previously paused. Do not call this
- * if the adapter was paused by esp_lv_adapter_sleep_prepare().
+ * Resumes the LVGL worker task that was previously paused and restarts the
+ * internal LVGL tick timer. Do not call this if the adapter was paused by
+ * esp_lv_adapter_sleep_prepare().
  *
  * @return
  *      - ESP_OK: Success
