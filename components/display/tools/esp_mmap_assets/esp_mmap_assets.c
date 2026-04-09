@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,30 +20,70 @@
 
 static const char *TAG = "mmap_assets";
 
-#define ASSETS_FILE_NUM_OFFSET  0
-#define ASSETS_CHECKSUM_OFFSET  4
-#define ASSETS_TABLE_LEN        8
-#define ASSETS_TABLE_OFFSET     12
+/**
+ * @brief Memory Mapped Assets (MMAP) Binary Data Structure
+ *
+ * +-------------------------------------------------------------------------+
+ * |                      MMAP Assets Binary Header (32 Bytes)               |
+ * +-------------------------------------------------------------------------+
+ * | Offset | Length | Description                                           |
+ * |--------|--------|-------------------------------------------------------|
+ * | 0x00   |  4 B   | Magic Number ("MMAP")                                 |
+ * | 0x04   |  4 B   | Version Number (e.g., 0x00010000 for v1.0.0)          |
+ * | 0x08   |  4 B   | name_len: Fixed allocation for each asset name        |
+ * | 0x0C   |  4 B   | files: Total number of bundled assets                 |
+ * | 0x10   |  4 B   | checksum: CRC of the asset table                      |
+ * | 0x14   |  4 B   | payload_len: Total length of combined Table and Data  |
+ * | 0x18   |  8 B   | reserved: Reserved bytes for future expansion         |
+ * +-------------------------------------------------------------------------+
+ * |                      Asset Table Entries (table_len Bytes)              |
+ * +-------------------------------------------------------------------------+
+ * | For each asset (Iterates `files` times, stride = name_len + 12):        |
+ * | Offset | Length     | Description                                       |
+ * |--------|------------|---------------------------------------------------|
+ * | +0     | name_len   | Null-terminated asset name string                 |
+ * | +name  |  4 B       | Size of the asset payload                         |
+ * | +name+4|  4 B       | Offset of payload relative to Data Payload block  |
+ * | +name+8|  2 B       | Width (for graphic assets, 0 otherwise)           |
+ * | +name+10| 2 B       | Height (for graphic assets, 0 otherwise)          |
+ * +-------------------------------------------------------------------------+
+ * |                             Data Payload                                |
+ * +-------------------------------------------------------------------------+
+ * | Contiguous blob containing all raw asset files, addressed via:          |
+ * | Data Payload Start Offset = 32 (Header) + table_len                     |
+ * | Asset Memory Pointer = Data Payload Start Offset + Asset Offset         |
+ * |                                                                         |
+ * | Sub-Asset Payload Structure (at Asset Memory Pointer):                  |
+ * | Offset | Length     | Description                                       |
+ * |--------|------------|---------------------------------------------------|
+ * | +0     |  2 B       | ASSETS_FILE_MAGIC_HEAD (0x5A5A)                   |
+ * | +2     | (size-2) B | Actual raw file / image data bytes                |
+ * +-------------------------------------------------------------------------+
+ */
+const uint8_t MMAP_MAGIC_BYTES[4] = {'M', 'M', 'A', 'P'};
 
 #define ASSETS_FILE_MAGIC_HEAD  0x5A5A
 #define ASSETS_FILE_MAGIC_LEN   2
 
-/**
- * @brief Asset table structure, contains detailed information for each asset.
- */
 #pragma pack(1)
 typedef struct {
-    char asset_name[CONFIG_MMAP_FILE_NAME_LENGTH];  /*!< Name of the asset */
-    uint32_t asset_size;          /*!< Size of the asset */
-    uint32_t asset_offset;        /*!< Offset of the asset */
-    uint16_t asset_width;         /*!< Width of the asset */
-    uint16_t asset_height;        /*!< Height of the asset */
-} mmap_assets_table_t;
+    uint8_t magic[4];       /*!< Magic number: "MMAP" */
+    uint32_t version;       /*!< Version number */
+    uint32_t name_len;      /*!< Length of the asset name in table (including \0) */
+    uint32_t files;         /*!< Total number of assets */
+    uint32_t checksum;      /*!< Checksum of the table data */
+    uint32_t payload_len;   /*!< Total length of combined Asset Table + Payload Data */
+    uint32_t reserved[2];
+} mmap_assets_header_t;
 #pragma pack()
 
 typedef struct {
+    const char *asset_name;
     const char *asset_mem;
-    const mmap_assets_table_t *table;
+    uint32_t asset_size;
+    uint32_t asset_offset;
+    uint16_t asset_width;
+    uint16_t asset_height;
 } mmap_assets_item_t;
 
 typedef struct {
@@ -59,6 +99,7 @@ typedef struct {
         unsigned int reserved: 30;          /*!< Reserved for future use */
     } flags;
     int stored_files;
+    void *ram_table;                        /*!< Dynamically allocated table for non-mmap fetching */
 } mmap_assets_t;
 
 static uint32_t compute_checksum(const uint8_t *data, uint32_t length)
@@ -77,16 +118,19 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     mmap_assets_item_t *item = NULL;
     mmap_assets_t *map_asset = NULL;
     esp_partition_mmap_handle_t *mmap_handle = NULL;
+    uint8_t *checksum_buffer = NULL;
 
     ESP_GOTO_ON_FALSE(config && ret_item, ESP_ERR_INVALID_ARG, err, TAG, "invalid argument");
 
+    /* Allocate and initialize the main asset handle */
     map_asset = (mmap_assets_t *)calloc(1, sizeof(mmap_assets_t));
     ESP_GOTO_ON_FALSE(map_asset, ESP_ERR_NO_MEM, err, TAG, "no mem for map_asset handle");
 
-    // Initialize mutex for thread safety
+    /* Initialize synchronization mutex for thread-safe access */
     map_asset->mutex = xSemaphoreCreateMutex();
     ESP_GOTO_ON_FALSE(map_asset->mutex, ESP_ERR_NO_MEM, err, TAG, "no mem for mutex");
 
+    /* Configure storage backend configuration flag (File System vs. Raw Partition) */
     map_asset->flags.use_fs = config->flags.use_fs;
     map_asset->flags.mmap_enable = config->flags.mmap_enable;
 
@@ -140,33 +184,13 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
         size = partition->size - offset;
     }
 
+    /* Read and validate the MMAP binary format header */
+    mmap_assets_header_t header = {0};
+
     if (map_asset->flags.use_fs) {
-        fseek(map_asset->file_handle, ASSETS_FILE_NUM_OFFSET, SEEK_SET);
-        fread(&stored_files, sizeof(stored_files), 1, map_asset->file_handle);
-
-        fseek(map_asset->file_handle, ASSETS_CHECKSUM_OFFSET, SEEK_SET);
-        fread(&stored_chksum, sizeof(stored_chksum), 1, map_asset->file_handle);
-
-        fseek(map_asset->file_handle, ASSETS_TABLE_LEN, SEEK_SET);
-        fread(&stored_len, sizeof(stored_len), 1, map_asset->file_handle);
-
-        if (config->flags.full_check) {
-            uint32_t read_offset = ASSETS_TABLE_OFFSET;
-            uint32_t bytes_left = stored_len;
-            uint8_t buffer[1024];
-
-            while (bytes_left > 0) {
-                uint32_t read_size = (bytes_left > sizeof(buffer)) ? sizeof(buffer) : bytes_left;
-                fseek(map_asset->file_handle, read_offset, SEEK_SET);
-                size_t bytes_read = fread(buffer, 1, read_size, map_asset->file_handle);
-                ESP_GOTO_ON_FALSE(bytes_read == read_size, ESP_ERR_INVALID_SIZE, err, TAG, "fread failed");
-
-                calculated_checksum += compute_checksum(buffer, read_size);
-                read_offset += read_size;
-                bytes_left -= read_size;
-            }
-            calculated_checksum &= 0xFFFF;
-        }
+        fseek(map_asset->file_handle, 0, SEEK_SET);
+        size_t br = fread(&header, sizeof(mmap_assets_header_t), 1, map_asset->file_handle);
+        ESP_GOTO_ON_FALSE(br == 1, ESP_ERR_INVALID_SIZE, err, TAG, "fread header failed");
     } else if (map_asset->flags.mmap_enable) {
         const esp_partition_t *partition = map_asset->partition;
         int free_pages = spi_flash_mmap_get_free_pages(ESP_PARTITION_MMAP_DATA);
@@ -178,33 +202,76 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
         mmap_handle = (esp_partition_mmap_handle_t *)malloc(sizeof(esp_partition_mmap_handle_t));
         ESP_GOTO_ON_ERROR(esp_partition_mmap(partition, offset, size, ESP_PARTITION_MMAP_DATA, &root, mmap_handle), err, TAG, "esp_partition_mmap failed");
 
-        stored_files = *(int *)(root + ASSETS_FILE_NUM_OFFSET);
-        stored_chksum = *(uint32_t *)(root + ASSETS_CHECKSUM_OFFSET);
-        stored_len = *(uint32_t *)(root + ASSETS_TABLE_LEN);
-
-        if (config->flags.full_check) {
-            calculated_checksum = compute_checksum((uint8_t *)(root + ASSETS_TABLE_OFFSET), stored_len);
-        }
+        memcpy(&header, root, sizeof(mmap_assets_header_t));
     } else {
         const esp_partition_t *partition = map_asset->partition;
-        esp_partition_read(partition, ASSETS_FILE_NUM_OFFSET, &stored_files, sizeof(stored_files));
-        esp_partition_read(partition, ASSETS_CHECKSUM_OFFSET, &stored_chksum, sizeof(stored_chksum));
-        esp_partition_read(partition, ASSETS_TABLE_LEN, &stored_len, sizeof(stored_len));
+        esp_partition_read(partition, 0, &header, sizeof(mmap_assets_header_t));
+    }
 
-        if (config->flags.full_check) {
-            uint32_t read_offset = ASSETS_TABLE_OFFSET;
+    bool is_legacy = false;
+    uint32_t stride = 0;
+    uint32_t computed_table_len = 0;
+    uint32_t table_header_offset = 0;
+
+    if (memcmp(header.magic, MMAP_MAGIC_BYTES, 4) == 0) {
+        // New format
+        stored_files = header.files;
+        stored_chksum = header.checksum;
+        stored_len = header.payload_len;
+        stride = header.name_len + 12;
+        table_header_offset = sizeof(mmap_assets_header_t);
+        computed_table_len = stored_files * stride;
+    } else {
+        // Legacy format fallback
+        is_legacy = true;
+        uint32_t *legacy_header = (uint32_t *)&header;
+        uint32_t legacy_files = legacy_header[0];
+        uint32_t legacy_chksum = legacy_header[1];
+        uint32_t legacy_len = legacy_header[2];
+
+        // Ensure we don't assume config parameter defaults if they contradict the binary
+        stored_files = (config->max_files > 0) ? config->max_files : legacy_files;
+        stored_chksum = (config->checksum > 0) ? config->checksum : legacy_chksum;
+        stored_len = legacy_len;
+
+        stride = CONFIG_MMAP_FILE_NAME_LENGTH + 12;
+        table_header_offset = 12; // Legacy header is 12 bytes
+        computed_table_len = stored_files * stride;
+
+        ESP_LOGW(TAG, "Fallback to legacy format (name_len=%d)", CONFIG_MMAP_FILE_NAME_LENGTH);
+    }
+
+    /* Optional: Perform full checksum validation on the payload table */
+    if (config->flags.full_check) {
+        if (map_asset->flags.use_fs || !map_asset->flags.mmap_enable) {
+            uint32_t read_offset = table_header_offset;
             uint32_t bytes_left = stored_len;
-            uint8_t buffer[1024];
+            checksum_buffer = malloc(1024);
+            ESP_GOTO_ON_FALSE(checksum_buffer, ESP_ERR_NO_MEM, err, TAG, "no mem for checksum buffer");
 
             while (bytes_left > 0) {
-                uint32_t read_size = (bytes_left > sizeof(buffer)) ? sizeof(buffer) : bytes_left;
-                ESP_GOTO_ON_ERROR(esp_partition_read(partition, read_offset, buffer, read_size), err, TAG, "esp_partition_read failed");
+                uint32_t read_size = (bytes_left > 1024) ? 1024 : bytes_left;
+                if (map_asset->flags.use_fs) {
+                    fseek(map_asset->file_handle, read_offset, SEEK_SET);
+                    size_t bytes_read = fread(checksum_buffer, 1, read_size, map_asset->file_handle);
+                    if (bytes_read != read_size) {
+                        ESP_GOTO_ON_FALSE(false, ESP_ERR_INVALID_SIZE, err, TAG, "fread failed");
+                    }
+                } else {
+                    if (esp_partition_read(map_asset->partition, read_offset, checksum_buffer, read_size) != ESP_OK) {
+                        ESP_GOTO_ON_ERROR(ESP_FAIL, err, TAG, "esp_partition_read failed");
+                    }
+                }
 
-                calculated_checksum += compute_checksum(buffer, read_size);
+                calculated_checksum += compute_checksum(checksum_buffer, read_size);
                 read_offset += read_size;
                 bytes_left -= read_size;
             }
+            free(checksum_buffer);
+            checksum_buffer = NULL;
             calculated_checksum &= 0xFFFF;
+        } else {
+            calculated_checksum = compute_checksum((uint8_t *)(root + table_header_offset), stored_len);
         }
     }
 
@@ -215,12 +282,12 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     if (config->flags.app_bin_check) {
         if (config->max_files != stored_files) {
             ret = ESP_ERR_INVALID_SIZE;
-            ESP_LOGE(TAG, "bad input file num: Input %d, Stored %d", config->max_files, stored_files);
+            ESP_LOGE(TAG, "Asset count mismatch: App registered %d, Binary contains %d", config->max_files, stored_files);
         }
 
         if (config->checksum != stored_chksum) {
             ret = ESP_ERR_INVALID_CRC;
-            ESP_LOGE(TAG, "bad input chksum: Input 0x%x, Stored 0x%x", (unsigned int)config->checksum, (unsigned int)stored_chksum);
+            ESP_LOGE(TAG, "Checksum mismatch: App expected 0x%04X, Binary contains 0x%04X", (unsigned int)config->checksum, (unsigned int)stored_chksum);
         }
     }
 
@@ -229,42 +296,53 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
     item = (mmap_assets_item_t *)malloc(sizeof(mmap_assets_item_t) * stored_files);
     ESP_GOTO_ON_FALSE(item, ESP_ERR_NO_MEM, err, TAG, "no mem for asset item");
 
-    if (map_asset->flags.use_fs) {
-        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * stored_files);
-        ESP_GOTO_ON_FALSE(table, ESP_ERR_NO_MEM, err, TAG, "no mem for asset table");
-
+    /* Populate the asset table by dynamically striding through the binary table block */
+    if (map_asset->flags.mmap_enable) {
+        const char *table_base = (const char *)root + table_header_offset;
+        const char *data_base = table_base + computed_table_len;
         for (int i = 0; i < stored_files; i++) {
-            fseek(map_asset->file_handle, ASSETS_TABLE_OFFSET + i * sizeof(mmap_assets_table_t), SEEK_SET);
-            size_t bytes_read = fread((table + i), sizeof(mmap_assets_table_t), 1, map_asset->file_handle);
-            ESP_GOTO_ON_FALSE(bytes_read == 1, ESP_ERR_INVALID_SIZE, err, TAG, "fread table failed");
-
-            (item + i)->table = (table + i);
-            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
-        }
-    } else if (map_asset->flags.mmap_enable) {
-        mmap_assets_table_t *table = (mmap_assets_table_t *)(root + ASSETS_TABLE_OFFSET);
-        for (int i = 0; i < stored_files; i++) {
-            (item + i)->table = (table + i);
-            (item + i)->asset_mem = (void *)(root + ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            const char *entry = table_base + i * stride;
+            (item + i)->asset_name = entry;
+            (item + i)->asset_size = *(uint32_t *)(entry + stride - 12);
+            (item + i)->asset_offset = *(uint32_t *)(entry + stride - 8);
+            (item + i)->asset_width = *(uint16_t *)(entry + stride - 4);
+            (item + i)->asset_height = *(uint16_t *)(entry + stride - 2);
+            (item + i)->asset_mem = data_base + (item + i)->asset_offset;
         }
     } else {
-        const esp_partition_t *partition = map_asset->partition;
-        mmap_assets_table_t *table = malloc(sizeof(mmap_assets_table_t) * stored_files);
-        ESP_GOTO_ON_FALSE(table, ESP_ERR_NO_MEM, err, TAG, "no mem for asset table");
+        char *ram_table = malloc(computed_table_len);
+        ESP_GOTO_ON_FALSE(ram_table, ESP_ERR_NO_MEM, err, TAG, "no mem for ram_table");
+        map_asset->ram_table = ram_table;
+
+        if (map_asset->flags.use_fs) {
+            fseek(map_asset->file_handle, table_header_offset, SEEK_SET);
+            size_t bytes_read = fread(ram_table, 1, computed_table_len, map_asset->file_handle);
+            ESP_GOTO_ON_FALSE(bytes_read == computed_table_len, ESP_ERR_INVALID_SIZE, err, TAG, "fread ram_table failed");
+        } else {
+            ret = esp_partition_read(map_asset->partition, table_header_offset, ram_table, computed_table_len);
+            ESP_GOTO_ON_ERROR(ret, err, TAG, "esp_partition_read ram_table failed");
+        }
+
+        const char *data_base_offset = (const char *)(size_t)(table_header_offset + computed_table_len);
 
         for (int i = 0; i < stored_files; i++) {
-            esp_partition_read(partition, ASSETS_TABLE_OFFSET + i * sizeof(mmap_assets_table_t), (table + i), sizeof(mmap_assets_table_t));
-            (item + i)->table = (table + i);
-            (item + i)->asset_mem = (char *)(ASSETS_TABLE_OFFSET + stored_files * sizeof(mmap_assets_table_t) + table[i].asset_offset);
+            const char *entry = ram_table + i * stride;
+            (item + i)->asset_name = entry;
+            (item + i)->asset_size = *(uint32_t *)(entry + stride - 12);
+            (item + i)->asset_offset = *(uint32_t *)(entry + stride - 8);
+            (item + i)->asset_width = *(uint16_t *)(entry + stride - 4);
+            (item + i)->asset_height = *(uint16_t *)(entry + stride - 2);
+            (item + i)->asset_mem = data_base_offset + (item + i)->asset_offset;
         }
     }
 
+    /* Optional: Verify sub-file metadata magic head numbers */
     for (int i = 0; i < stored_files; i++) {
         ESP_LOGD(TAG, "[%d], offset:[%" PRIu32 "], size:[%" PRIu32 "], name:%s, %p",
                  i,
-                 (item + i)->table->asset_offset,
-                 (item + i)->table->asset_size,
-                 (item + i)->table->asset_name,
+                 (item + i)->asset_offset,
+                 (item + i)->asset_size,
+                 (item + i)->asset_name,
                  (item + i)->asset_mem);
 
         if (config->flags.metadata_check) {
@@ -272,15 +350,15 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
             if (map_asset->flags.mmap_enable) {
                 magic_ptr = (uint16_t *)(item + i)->asset_mem;
             } else if (map_asset->flags.use_fs) {
-                fseek(map_asset->file_handle, (int)(item + i)->asset_mem, SEEK_SET);
+                fseek(map_asset->file_handle, (int)(size_t)(item + i)->asset_mem, SEEK_SET);
                 fread(&magic_data, ASSETS_FILE_MAGIC_LEN, 1, map_asset->file_handle);
                 magic_ptr = &magic_data;
             } else {
-                esp_partition_read(map_asset->partition, (int)(item + i)->asset_mem, &magic_data, ASSETS_FILE_MAGIC_LEN);
+                esp_partition_read(map_asset->partition, (int)(size_t)(item + i)->asset_mem, &magic_data, ASSETS_FILE_MAGIC_LEN);
                 magic_ptr = &magic_data;
             }
             ESP_GOTO_ON_FALSE(*magic_ptr == ASSETS_FILE_MAGIC_HEAD, ESP_ERR_INVALID_CRC, err, TAG,
-                              "(%s) bad file magic header", (item + i)->table->asset_name);
+                              "(%s) bad file magic header", (item + i)->asset_name);
         }
     }
 
@@ -291,17 +369,26 @@ esp_err_t mmap_assets_new(const mmap_assets_config_t *config, mmap_assets_handle
 
     ESP_LOGD(TAG, "new asset handle:@%p", map_asset);
 
-    ESP_LOGI(TAG, "Partition '%s' successfully created, version: %d.%d.%d",
-             config->partition_label, ESP_MMAP_ASSETS_VER_MAJOR, ESP_MMAP_ASSETS_VER_MINOR, ESP_MMAP_ASSETS_VER_PATCH);
+    uint8_t bin_ver_major = is_legacy ? 0 : ((header.version >> 16) & 0xFF);
+    uint8_t bin_ver_minor = is_legacy ? 0 : ((header.version >> 8) & 0xFF);
+    uint8_t bin_ver_patch = is_legacy ? 0 : (header.version & 0xFF);
+
+    ESP_LOGI(TAG, "MMAP Assets [%s] mounted successfully. (Lib: v%d.%d.%d, Bin: v%d.%d.%d)",
+             config->partition_label,
+             ESP_MMAP_ASSETS_VER_MAJOR, ESP_MMAP_ASSETS_VER_MINOR, ESP_MMAP_ASSETS_VER_PATCH,
+             bin_ver_major, bin_ver_minor, bin_ver_patch);
 
     return ret;
 
 err:
+    if (checksum_buffer) {
+        free(checksum_buffer);
+    }
     if (item) {
-        if (map_asset && false == map_asset->flags.mmap_enable) {
-            free((void *)(item + 0)->table);
-        }
         free(item);
+    }
+    if (map_asset && map_asset->ram_table) {
+        free(map_asset->ram_table);
     }
 
     if (mmap_handle) {
@@ -341,10 +428,11 @@ esp_err_t mmap_assets_del(mmap_assets_handle_t handle)
     }
 
     if (map_asset->item) {
-        if (false == map_asset->flags.mmap_enable) {
-            free((void *)(map_asset->item + 0)->table);
-        }
         free(map_asset->item);
+    }
+
+    if (map_asset->ram_table) {
+        free(map_asset->ram_table);
     }
 
     if (map_asset) {
@@ -408,7 +496,7 @@ size_t mmap_assets_copy_by_index(mmap_assets_handle_t handle, int index, void *d
     ESP_RETURN_ON_FALSE(map_asset->max_asset > index, 0, TAG,
                         "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
 
-    uint32_t asset_size = (map_asset->item + index)->table->asset_size - ASSETS_FILE_MAGIC_LEN;
+    uint32_t asset_size = (map_asset->item + index)->asset_size - ASSETS_FILE_MAGIC_LEN;
     if (size > asset_size) {
         size = asset_size;
     }
@@ -443,7 +531,7 @@ const char *mmap_assets_get_name(mmap_assets_handle_t handle, int index)
     ESP_RETURN_ON_FALSE(map_asset->max_asset > index, NULL, TAG,
                         "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
 
-    return (map_asset->item + index)->table->asset_name;
+    return (map_asset->item + index)->asset_name;
 }
 
 int mmap_assets_get_size(mmap_assets_handle_t handle, int index)
@@ -454,7 +542,7 @@ int mmap_assets_get_size(mmap_assets_handle_t handle, int index)
     ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
                         "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
 
-    return (map_asset->item + index)->table->asset_size;
+    return (map_asset->item + index)->asset_size;
 }
 
 int mmap_assets_get_width(mmap_assets_handle_t handle, int index)
@@ -465,7 +553,7 @@ int mmap_assets_get_width(mmap_assets_handle_t handle, int index)
     ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
                         "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
 
-    return (map_asset->item + index)->table->asset_width;
+    return (map_asset->item + index)->asset_width;
 }
 
 int mmap_assets_get_height(mmap_assets_handle_t handle, int index)
@@ -476,5 +564,5 @@ int mmap_assets_get_height(mmap_assets_handle_t handle, int index)
     ESP_RETURN_ON_FALSE(map_asset->max_asset > index, -1, TAG,
                         "Invalid index: %d. Maximum index is %d.", index, map_asset->max_asset);
 
-    return (map_asset->item + index)->table->asset_height;
+    return (map_asset->item + index)->asset_height;
 }

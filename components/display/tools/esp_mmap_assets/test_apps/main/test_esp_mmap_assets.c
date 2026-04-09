@@ -186,6 +186,28 @@ TEST_CASE("test assets mmap table", "[mmap_assets][File System]")
     esp_vfs_spiffs_unregister(conf.partition_label);
 }
 
+TEST_CASE("test assets mmap table", "[mmap_assets][mmap_enable][legacy format]")
+{
+    mmap_assets_handle_t asset_handle;
+
+    const mmap_assets_config_t config = {
+        .partition_label = "assets_legacy",
+        .flags = {
+            .mmap_enable = true,
+            .full_check = true,
+        },
+    };
+
+    TEST_ESP_OK(mmap_assets_new(&config, &asset_handle));
+
+    int stored_files = mmap_assets_get_stored_files(asset_handle);
+    ESP_LOGI(TAG, "stored_files:%d", stored_files);
+
+    print_file_list(asset_handle, stored_files, true);
+
+    mmap_assets_del(asset_handle);
+}
+
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD  (800)
 
