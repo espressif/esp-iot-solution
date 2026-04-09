@@ -452,14 +452,15 @@ def pack_assets(config: PackModelsConfig):
 
         merged_data.extend(bin_data)
 
+    actual_max_name = max([len(f[0]) for f in file_info_list]) if file_info_list else 15
+    max_name_len = (actual_max_name + 1 + 3) & ~3
+
     total_files = len(file_info_list)
 
     mmap_table = bytearray()
     for file_name, offset, file_size, width, height in file_info_list:
-        if len(file_name) > int(max_name_len):
-            print(f'\033[1;33mWarn:\033[0m "{file_name}" exceeds {max_name_len} bytes and will be truncated.')
-        fixed_name = file_name.ljust(int(max_name_len), '\0')[:int(max_name_len)]
-        mmap_table.extend(fixed_name.encode('utf-8'))
+        fixed_name = file_name.encode('utf-8').ljust(max_name_len, b'\0')
+        mmap_table.extend(fixed_name)
         mmap_table.extend(file_size.to_bytes(4, byteorder='little'))
         mmap_table.extend(offset.to_bytes(4, byteorder='little'))
         mmap_table.extend(width.to_bytes(2, byteorder='little'))
@@ -468,8 +469,15 @@ def pack_assets(config: PackModelsConfig):
     combined_data = mmap_table + merged_data
     combined_checksum = compute_checksum(combined_data)
     combined_data_length = len(combined_data).to_bytes(4, byteorder='little')
-    header_data = total_files.to_bytes(4, byteorder='little') + combined_checksum.to_bytes(4, byteorder='little')
-    final_data = header_data + combined_data_length + combined_data
+
+    magic = b'MMAP'
+    version = (0x00010000).to_bytes(4, byteorder='little')
+    name_len_bytes = max_name_len.to_bytes(4, byteorder='little')
+    total_files_bytes = total_files.to_bytes(4, byteorder='little')
+    reserved = b'\x00' * 8
+
+    header_data = magic + version + name_len_bytes + total_files_bytes + combined_checksum.to_bytes(4, byteorder='little') + combined_data_length + reserved
+    final_data = header_data + combined_data
 
     with open(out_file, 'wb') as output_bin:
         output_bin.write(final_data)
@@ -646,6 +654,7 @@ def process_assets_build(config_data):
     recommended_size = math.ceil(total_size / 1024)
     partition_size = math.ceil(int(config_data['assets_size'], 16))
 
+    print(f'{"Gen version:":<30} {GREEN}{"v1.0.0":>8}{RESET}')
     print(f'{"Total size:":<30} {GREEN}{total_size / 1024:>8.2f}K ({total_size}){RESET}')
     print(f'{"Partition size:":<30} {GREEN}{partition_size / 1024:>8.2f}K ({partition_size}){RESET}')
 
@@ -670,6 +679,7 @@ def process_assets_merge(config_data):
     recommended_size = math.ceil(total_size / 1024)
     partition_size = math.ceil(int(config_data['assets_size'], 16))
 
+    print(f'{"Gen version:":<30} {GREEN}{"v1.0.0":>8}{RESET}')
     print(f'{"Asset size:":<30} {GREEN}{asset_size / 1024:>8.2f}K ({asset_size}){RESET}')
     print(f'{"App size:":<30} {GREEN}{app_size / 1024:>8.2f}K ({app_size}){RESET}')
     print(f'{"Total size:":<30} {GREEN}{total_size / 1024:>8.2f}K ({total_size}){RESET}')
