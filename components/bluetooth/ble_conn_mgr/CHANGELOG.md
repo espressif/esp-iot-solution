@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.1 - 2026-04-09
+
+### Bug Fixes:
+
+- Fix missing `ESP_BLE_CONN_EVENT_DATA_RECEIVE` on peripheral GATT writes when `uuid_fn` is NULL.
+
 ## v1.0.0 - 2026-03-05
 
 ### Enhancements:

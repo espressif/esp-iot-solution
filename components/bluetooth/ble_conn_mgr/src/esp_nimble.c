@@ -1967,7 +1967,13 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 conn_data.type = chr->chr.uuid.u.type;
                 ble_uuid_flat(&chr->chr.uuid.u, &conn_data.uuid);
                 rc = esp_ble_conn_on_gatts_attr_value_set(event->notify_rx.attr_handle, &chr->chr.uuid.u, conn_data.data_len, conn_data.data);
-                esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DATA_RECEIVE, &conn_data, sizeof(conn_data), portMAX_DELAY);
+                /* On success, ownership passes to app (handler must free conn_data.data). On failure, clear attr cache and free buffer. */
+                if (esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DATA_RECEIVE,
+                                   &conn_data, sizeof(conn_data), portMAX_DELAY) != ESP_OK) {
+                    ESP_LOGE(TAG, "Failed to post DATA_RECEIVE event");
+                    esp_ble_conn_on_gatts_attr_value_set(event->notify_rx.attr_handle, &chr->chr.uuid.u, 0, NULL);
+                    free(conn_data.data);
+                }
             }
             break;
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC)
@@ -2267,18 +2273,37 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
                 if (chr->uuid_fn) {
                     rc = chr->uuid_fn(data_buf, data_buf_len, &outbuf, &outlen, NULL, &att_status);
                 } else {
-                    esp_ble_conn_event_send(s_conn_session, ESP_BLE_CONN_EVENT_DATA_RECEIVE, data_buf, data_buf_len, NULL);
+                    /* Same delivery as BLE_GAP_EVENT_NOTIFY_RX: esp_event_post (not session queue).
+                     * On success, ownership of data_buf passes to the app: handler must free(data_receive.data). */
+                    esp_ble_conn_data_t conn_data = {
+                        .type = chr->type,
+                        .write_conn_id = conn_handle,
+                        .uuid = chr->uuid,
+                        .data = data_buf,
+                        .data_len = data_buf_len,
+                    };
+                    if (esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DATA_RECEIVE,
+                                       &conn_data, sizeof(conn_data), portMAX_DELAY) == ESP_OK) {
+                        data_buf = NULL;
+                    } else {
+                        ESP_LOGE(TAG, "Failed to post DATA_RECEIVE event");
+                    }
                 }
             } else {
                 ESP_LOGE(TAG, "Error getting character from uuid buffers");
             }
 
-            if (esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf)!= 0) {
+            if (esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf) != 0) {
                 ESP_LOGE(TAG, "Failed to read characteristic with attr_handle = %d", attr_handle);
+                if (data_buf) {
+                    free(data_buf);
+                }
                 return ESP_IOT_ATT_INTERNAL_ERROR;
             }
 
-            free(data_buf);
+            if (data_buf) {
+                free(data_buf);
+            }
             data_buf = NULL;
             break;
 
