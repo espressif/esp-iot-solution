@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.0.1 - 2026-3-31
+
+* Fix requires in CMake for IDF6.
+
 ## v1.0.0 - 2024-8-14
 
 * Release the official version.
