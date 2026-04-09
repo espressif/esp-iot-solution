@@ -17,6 +17,7 @@
 #include "freertos/idf_additions.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_idf_version.h"
 #include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "lvgl.h"
@@ -41,6 +42,8 @@ static esp_err_t tick_init(void);
 static void lvgl_worker(void *arg);
 static esp_err_t adapter_wait_for_all_flush_done(int32_t timeout_ms);
 static esp_err_t adapter_unregister_all_inputs(void);
+static esp_err_t adapter_stop_tick_timer(void);
+static esp_err_t adapter_start_tick_timer(void);
 
 /*****************************************************************************
  *                         Public API Implementation                         *
@@ -162,6 +165,54 @@ static esp_err_t adapter_unregister_all_inputs(void)
     }
 
     return ESP_OK;
+}
+
+static esp_err_t adapter_stop_tick_timer(void)
+{
+    if (!s_ctx.tick_timer) {
+        return ESP_OK;
+    }
+
+    esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
+    esp_err_t ret;
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    ret = esp_timer_stop_blocking(timer, portMAX_DELAY);
+    if (ret == ESP_ERR_NOT_FINISHED) {
+        ret = ESP_OK;
+    }
+#else
+    ret = esp_timer_stop(timer);
+#endif
+
+    if (ret == ESP_ERR_INVALID_STATE) {
+        return ESP_OK;
+    }
+
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to stop LVGL tick timer (%d)", ret);
+    }
+
+    return ret;
+}
+
+static esp_err_t adapter_start_tick_timer(void)
+{
+    if (!s_ctx.tick_timer) {
+        return ESP_OK;
+    }
+
+    esp_err_t ret = esp_timer_start_periodic((esp_timer_handle_t)s_ctx.tick_timer,
+                                             s_ctx.config.tick_period_ms * 1000);
+    if (ret == ESP_ERR_INVALID_STATE) {
+        return ESP_OK;
+    }
+
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to start LVGL tick timer (%d)", ret);
+    }
+
+    return ret;
 }
 
 esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
@@ -362,11 +413,14 @@ esp_err_t esp_lv_adapter_pause(int32_t timeout_ms)
         if (s_ctx.pause_done_sem) {
             xSemaphoreGive(s_ctx.pause_done_sem);
         }
+        /* Stop the tick timer so tickless light sleep can enter naturally. */
+        (void)adapter_stop_tick_timer();
         return ESP_OK;
     }
 
     if (!s_ctx.task || !s_ctx.pause_done_sem) {
         s_ctx.pause_ack = true;
+        (void)adapter_stop_tick_timer();
         return ESP_OK;
     }
 
@@ -376,6 +430,7 @@ esp_err_t esp_lv_adapter_pause(int32_t timeout_ms)
         s_ctx.paused = false;
         return ESP_ERR_TIMEOUT;
     }
+    (void)adapter_stop_tick_timer();
     return ESP_OK;
 }
 
@@ -387,6 +442,9 @@ esp_err_t esp_lv_adapter_resume(void)
     }
 
     bool was_sleeping = s_ctx.sleep_state.is_sleeping;
+
+    /* Restart the periodic tick timer before unblocking the worker task. */
+    (void)adapter_start_tick_timer();
 
     s_ctx.paused = false;
     s_ctx.pause_ack = false;
