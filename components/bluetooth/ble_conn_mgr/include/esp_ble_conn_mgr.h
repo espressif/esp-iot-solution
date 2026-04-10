@@ -381,7 +381,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_STOPPED              = 2,    /*!< When BLE connection management stop, the event comes */
     ESP_BLE_CONN_EVENT_CONNECTED            = 3,    /*!< When a new connection was established, the event comes */
     ESP_BLE_CONN_EVENT_DISCONNECTED         = 4,    /*!< When a connection was terminated, the event comes */
-    ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When receive a notification or indication data, the event comes */
+    ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When notification, indication, or peripheral write data (uuid_fn NULL) is delivered to the application, the event comes */
     ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When the ble discover service complete, the event comes */
 
     ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< When the periodic adv report, the event comes */
@@ -486,6 +486,10 @@ typedef struct {
 
 /**
  * @brief   This structure maps handler required by UUID which are used to data.
+ *
+ * @note For ESP_BLE_CONN_EVENT_DATA_RECEIVE, the data field is heap-allocated by ble_conn_mgr.
+ *       The event handler must call free() on data after use when data is non-NULL.
+ *       esp_event_post copies this structure by value only and does not take ownership of data.
  */
 typedef struct {
     uint8_t type;                                   /*!< Type of the UUID */
