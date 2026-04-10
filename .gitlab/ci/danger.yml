@@ -8,5 +8,6 @@ run-danger-mr-linter:
   stage: pre_check
   # just ignore for now until the BOT_TOKEN is ready
   allow_failure: true
+  timeout: 10 minutes
   tags:
-    - dangerjs
+    - build # dangerjs

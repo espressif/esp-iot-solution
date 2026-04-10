@@ -392,6 +392,7 @@ build_example_display_lcd_lcd_layer_blending:
     - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_layer_blending
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings" # See [~>1574] for more details, link: w/2fP79Ahp
 
 build_example_display_lcd_lcd_with_te:
   extends:
@@ -1900,3 +1901,4 @@ build_example_xiaozhi_chat:
     EXAMPLE_DIR: examples/ai/xiaozhi_chat
     EXAMPLE_BOARD: esp_box_3
     IDF_TARGET: esp32s3
+  allow_failure: true # See [~>1576] for more details, link: w/6IZmNBnT

@@ -4,8 +4,8 @@ dependencies:
     version: "~1.*"
     override_path: "../../../../../../components/bluetooth/ble_conn_mgr"
   ble_otp:
-    version: "~0.1.0"
+    version: "~0.1.*"
     override_path: "../../../../../../components/bluetooth/ble_profiles/std/ble_otp"
   ble_services:
-    version: "~1.2.0"
+    version: "~1.*"
     override_path: "../../../../../../components/bluetooth/ble_services"
