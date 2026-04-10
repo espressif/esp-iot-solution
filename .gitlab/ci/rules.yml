@@ -979,6 +979,8 @@
       changes: *patterns-components_bluetooth_ble_profiles_std_ble_otp
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_otp_client
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_services
 
 .rules:build:example_bluetooth_ble_otp_server:
   rules:
@@ -990,6 +992,8 @@
       changes: *patterns-components_bluetooth_ble_profiles_std_ble_otp
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_otp_server
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_services
 
 .rules:build:example_bluetooth_ble_midi:
   rules:
