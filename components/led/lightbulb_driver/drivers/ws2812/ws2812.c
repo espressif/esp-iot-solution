@@ -8,7 +8,7 @@
 
 #include <esp_log.h>
 #include <driver/spi_master.h>
-#include <hal/spi_hal.h>
+#include "soc/spi_periph.h"
 #include "esp_heap_caps.h"
 #include "esp_idf_version.h"
 #include "driver_utils.h"
