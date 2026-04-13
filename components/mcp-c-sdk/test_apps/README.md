@@ -43,9 +43,9 @@ The test application covers all public APIs:
 - Full workflow (create server, add tool with properties, register endpoint, handle requests, cleanup)
 - MCP protocol message handling (initialize, tools/list, tools/call)
 
-### MCP 2024-11-05 Protocol Compliance Tests
+### MCP Protocol Compliance Tests (2025-focused)
 - **Initialize method tests** (4 cases)
-  - Verify protocolVersion field equals "2024-11-05"
+  - Verify protocolVersion negotiation follows request/compatibility strategy (e.g. "2024-11-05")
   - Verify capabilities structure includes tools and experimental
   - Verify serverInfo contains name and version
   - Verify client capabilities parsing (vision sub-capabilities)
@@ -87,6 +87,14 @@ The test application covers all public APIs:
 - **ping method tests** (1 case)
   - Verify ping response format
 
+- **MCP 2025 feature tests** (6 cases)
+  - `resources/list` and `resources/read`
+  - `prompts/list` and `prompts/get`
+  - `completion/complete`
+  - `tasks` workflow (`tools/call` with task mode, `tasks/get`, `tasks/result`)
+  - `tasks/cancel` unknown task error path
+  - `logging/setLevel`
+
 ### Thread Safety Tests
 - Concurrent tool add/remove operations
 - Multi-threaded access to server
@@ -109,6 +117,66 @@ The test application covers all public APIs:
 cd components/mcp-c-sdk/test_apps
 idf.py build
 ```
+
+### Recommended Execution Order
+
+Run tests in this order to reduce false negatives and speed up triage:
+
+1) **Unit matrix first (`pytest_mcp.py`)**
+- Verifies SDK core APIs, protocol handling, and matrix configs (`sdkconfig.ci.*`).
+- Command (from repo root):
+
+```bash
+python -m pytest components/mcp-c-sdk/test_apps/pytest_mcp.py \
+  --target esp32c3 \
+  --port /dev/ttyUSB0
+```
+
+2) **HTTP integration matrix next (`pytest_mcp_http_integration.py`)**
+- Verifies HTTP transport behavior and auth/session/JWT-related profiles.
+- Required environment:
+
+```bash
+export MCP_HTTP_HOST=<DUT_IP>
+export MCP_HTTP_ENDPOINT=mcp_server
+export MCP_AUTH_TOKEN=<GOOD_TOKEN>
+# Only needed for scope profile:
+# export MCP_AUTH_LOW_SCOPE_TOKEN=<LOW_SCOPE_TOKEN>
+```
+
+- Command:
+
+```bash
+python -m pytest components/mcp-c-sdk/test_apps/pytest_mcp_http_integration.py -v
+```
+
+Tips:
+- If firmware already matches the selected binary, append `--skip-autoflash y` to pytest commands.
+- To run selected Unity cases only, set `UNITY_TEST_FILTER` before running `pytest_mcp.py`.
+  - Group example: `UNITY_TEST_FILTER="[gate]"`
+  - Name example: `UNITY_TEST_FILTER="test_a|test_b"`
+
+### Local Automation Script
+
+You can run build + pytest + log collection with one command:
+
+```bash
+./components/mcp-c-sdk/test_apps/run_test_apps.sh --port /dev/ttyUSB0
+```
+
+Common options:
+- `--target esp32c3|esp32s3`
+- `--skip-build`
+- `--skip-autoflash`
+- `--skip-port-probe`
+- `--unity-filter "[protocol]"`
+- `--pytest-k "default or api_test"`
+- `--log-dir <DIR>`
+
+Notes:
+- The script calls `tools/build_apps.py`, which requires Python module `idf_build_apps`.
+- If binaries are already prepared, use `--skip-build` to skip the build phase.
+- Unity menu-based execution requires a bidirectional serial console (read + write).
 
 ### Run All Tests
 ```bash
@@ -146,6 +214,9 @@ idf.py -p <PORT> flash monitor --filter "error"
 
 # Run response parsing tests
 idf.py -p <PORT> flash monitor --filter "response"
+
+# Run MCP 2025 feature tests
+idf.py -p <PORT> flash monitor --filter "2025"
 ```
 
 ## Test Structure
@@ -159,7 +230,7 @@ Tests are organized by API category:
 - `[integration]` - Integration tests combining multiple APIs
 - `[thread_safety]` - Thread safety tests
 - `[memory]` - Memory leak tests
-- `[protocol]` - MCP 2024-11-05 protocol compliance tests
+- `[protocol]` - MCP protocol compliance tests (JSON-RPC + MCP methods)
   - `[initialize]` - Initialize method tests
   - `[jsonrpc]` - JSON-RPC 2.0 specification tests
   - `[tools][list]` - tools/list method tests
@@ -167,6 +238,7 @@ Tests are organized by API category:
   - `[error]` - Error handling tests
   - `[response]` - Response parsing tests
   - `[ping]` - ping method tests
+  - `[2025]` - MCP 2025 feature tests
 
 ## Notes
 
@@ -176,7 +248,6 @@ Tests are organized by API category:
 - Memory leak tests verify proper resource cleanup
 - MCP Transport Manager tests use a mock transport implementation (no actual HTTP server required)
 - Integration tests verify end-to-end workflows including MCP protocol message handling
-- MCP 2024-11-05 protocol compliance tests verify full specification adherence
-- Test coverage includes JSON-RPC 2.0, all core methods, error codes, and response parsing
-- Total test cases: 85 (53 API tests + 32 protocol compliance tests)
-
+- Protocol compliance tests cover JSON-RPC 2.0 plus MCP core and 2025 feature methods
+- Test coverage includes JSON-RPC 2.0, core MCP methods, 2025 resources/prompts/completion/tasks/logging paths, error codes, and response parsing
+- Total test cases: 91 (53 API tests + 38 protocol compliance tests)

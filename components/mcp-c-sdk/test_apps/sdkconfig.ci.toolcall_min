@@ -1,0 +1,3 @@
+# Unit matrix: minimum toolcall task stack size
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_TOOLCALL_STACK_SIZE=4096

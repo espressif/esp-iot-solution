@@ -1,0 +1,3 @@
+# Unit matrix: disable OAuth protected-resource metadata endpoint
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_HTTP_OAUTH_METADATA_ENABLE=n
