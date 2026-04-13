@@ -10,6 +10,10 @@ This example demonstrates how to implement a **Model Context Protocol (MCP)** se
 * Theme switching (light/dark)
 * HSV color control (array format)
 * RGB color control (object format)
+* Resource registration and read (`resources/list`, `resources/read`)
+* Prompt registration and rendering (`prompts/list`, `prompts/get`)
+* Completion provider (`completion/complete`)
+* Task-mode tool execution (`tools/call` with `params.task={}`, and `tasks/*` polling)
 * Full JSON-RPC 2.0 support
 * Built-in parameter validation
 * Thread-safe tool and property list management with mutex protection
@@ -145,7 +149,187 @@ curl -X POST http://192.168.1.100/mcp_server \
   -d '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"self.screen.set_rgb","arguments":{"RGB":{"red":255,"green":128,"blue":0}}}}'
 ```
 
-**Note:** The endpoint name (`/mcp_server`) is set via `esp_mcp_mgr_register_endpoint()` in the example code. You can customize it to any path you prefer.
+### 8. List Resources
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":8,"method":"resources/list","params":{}}'
+```
+
+### 9. Read Resource
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"device://status"}}'
+```
+
+### 10. List Resource Templates
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":10,"method":"resources/templates/list","params":{}}'
+```
+
+### 11. Subscribe Resource Updates
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":11,"method":"resources/subscribe","params":{"uri":"device://status"}}'
+```
+
+### 12. Unsubscribe Resource Updates
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":12,"method":"resources/unsubscribe","params":{"uri":"device://status"}}'
+```
+
+### 13. List Prompts
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":13,"method":"prompts/list","params":{}}'
+```
+
+### 14. Get Prompt
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":14,"method":"prompts/get","params":{"name":"status.summary","arguments":{"device":"screen"}}}'
+```
+
+### 15. Completion
+
+```bash
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":15,"method":"completion/complete","params":{"ref":{"type":"ref/prompt","name":"status.summary"},"argument":{"name":"device","value":"s"}}}'
+```
+
+### 16. Task-mode Tool Call + Polling
+
+```bash
+# Start async task (returns task metadata in result.task)
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"self.get_device_status","arguments":{},"task":{}}}'
+
+# Query task list
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":17,"method":"tasks/list","params":{}}'
+
+# Query task status/result by task id
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":18,"method":"tasks/get","params":{"taskId":"<task_id>"}}'
+
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":19,"method":"tasks/result","params":{"taskId":"<task_id>"}}'
+
+# Note: tasks/result returns the underlying tool result object (e.g. content/isError),
+# so it does not repeat taskId in the response payload.
+
+# Cancel task
+curl -X POST http://192.168.1.100/mcp_server \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":20,"method":"tasks/cancel","params":{"taskId":"<task_id>"}}'
+```
+
+`notifications/resources/updated` are server notifications delivered over Streamable HTTP SSE.  
+`notifications/resources/list_changed` is emitted when the resource registry changes (for example, resource add/remove).  
+In this example, `self.resource.touch_status` intentionally triggers remove+add to produce both notifications.  
+Resource subscription is session-scoped. Use the same `MCP-Session-Id` on POST and SSE requests to observe updates for that session.  
+When SSE is not enabled (GET returns 405), you can still test `resources/subscribe` / `resources/unsubscribe` request-response behavior.
+
+### 17. Open SSE stream (GET)
+
+```bash
+curl -N http://192.168.1.100/mcp_server \
+  -H "Accept: text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25"
+```
+
+### 17.1 SSE-only endpoint (/mcp_server_sse)
+
+When SSE is enabled, the server also registers a SSE-only endpoint: `/mcp_server_sse`.  
+All POST requests must include `MCP-Session-Id` (from the SSE response headers).  
+The HTTP layer returns 202/empty body, and JSON-RPC responses are delivered via SSE events.
+
+```bash
+# 1) Open SSE stream and capture MCP-Session-Id from response headers
+curl -N -D /tmp/mcp_sse.hdr http://192.168.1.100/mcp_server_sse \
+  -H "Accept: text/event-stream" \
+  -H "MCP-Protocol-Version: 2025-11-25"
+
+# 2) Use session id for POST (response arrives via SSE)
+SESSION_ID="$(sed -nE 's/^MCP-Session-Id:[[:space:]]*([^[:space:]\r]+).*/\1/ip' /tmp/mcp_sse.hdr | sed -n '1p' | tr -d '\r')"
+curl -i -X POST http://192.168.1.100/mcp_server_sse \
+  -H "Content-Type: application/json" \
+  -H "MCP-Protocol-Version: 2025-11-25" \
+  -H "MCP-Session-Id: ${SESSION_ID}" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"ping","params":{}}'
+```
+
+### 18. End-to-end SSE observable test script
+
+```bash
+# default run
+bash test_sse_e2e.sh 192.168.1.100 mcp_server
+
+# print each JSON-RPC response
+bash test_sse_e2e.sh 192.168.1.100 mcp_server --verbose
+
+# keep SSE log file after script exits
+bash test_sse_e2e.sh 192.168.1.100 mcp_server --keep-log
+
+# strict mode: assert key fields in responses
+bash test_sse_e2e.sh 192.168.1.100 mcp_server --strict
+```
+
+> **Note:** This script targets Streamable HTTP (POST returns JSON). Use it with `/mcp_server`.  
+> `/mcp_server_sse` is SSE-only; POST returns 202 and responses arrive on the SSE stream.
+
+This script is a full smoke test for the example and covers:
+- `initialize` + `notifications/initialized`
+- `ping` (including string `id`)
+- `tools/list`
+- `tools/call` for all example tools:
+  - `self.get_device_status`
+  - `self.audio_speaker.set_volume`
+  - `self.screen.set_brightness`
+  - `self.screen.set_theme`
+  - `self.screen.set_rgb`
+  - `self.screen.set_hsv`
+  - `self.resource.touch_status`
+- `resources/list`, `resources/read`, `resources/templates/list`, `resources/subscribe`, `resources/unsubscribe`
+- `prompts/list`, `prompts/get`
+- `completion/complete`
+- task mode (`tools/call` with `task={}`), `tasks/get`, `tasks/result`, `tasks/cancel`
+- JSON-RPC batch request handling (mixed request + notification + error)
+- JSON-RPC error envelope checks with `error.data` (e.g. `method`, `uri`, `expected`)
+- SSE checks for `notifications/resources/updated` and `notifications/resources/list_changed`
+- SSE heartbeat comment (`: ping`) and reconnect flow with `MCP-Session-Id` + `Last-Event-ID`
+
+`--strict` additionally validates key fields in response payloads, such as:
+- `resources/templates/list` must include `device://sensors/{id}`
+- `prompts/list` must include `status.summary`
+- task mode response must include `taskId`
+- batch/error responses must include expected IDs/codes and `error.data`
+- reconnect stream must still observe notifications
+
+> **Note:** strict mode waits for SSE heartbeat, so runtime is longer (about 15-20s extra by default).
+
+**Note:** The endpoint name (`/mcp_server`) is set via `esp_mcp_mgr_register_endpoint()` in the example code. You can customize it to any path you prefer.  
+When SSE is enabled, `/mcp_server_sse` is also provided as the SSE-only endpoint (POST responses delivered over SSE).
 
 ## Registered Tools
 
@@ -157,6 +341,19 @@ curl -X POST http://192.168.1.100/mcp_server \
 | `self.screen.set_theme` | `theme` (string) | Set screen theme |
 | `self.screen.set_hsv` | `HSV` (array[3]) | Set HSV color |
 | `self.screen.set_rgb` | `RGB` (object) | Set RGB color |
+| `self.resource.touch_status` | None | Trigger `notifications/resources/updated` for SSE testing |
+| `self.server.roots_list` | None | Emit server-initiated `roots/list` request to current session |
+| `self.server.sampling_create` | None | Emit server-initiated `sampling/create` request to current session |
+| `self.server.elicitation_request` | None | Emit server-initiated `elicitation/request` request to current session |
+
+## Registered Resource / Prompt / Completion
+
+| Type | Name/URI | Description |
+|------|----------|-------------|
+| Resource | `device://status` | Returns current simulated device status as JSON |
+| Resource Template | `device://sensors/{id}` | Template URI for per-sensor data |
+| Prompt | `status.summary` | Generates a user prompt for status summarization |
+| Completion | argument `theme` / `device` | Returns suggested completion values |
 
 ## Property Types
 
@@ -281,4 +478,3 @@ esp_mcp_add_tool(mcp, tool);
 * [Model Context Protocol Specification](https://modelcontextprotocol.io/)
 * [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/)
 * [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
-

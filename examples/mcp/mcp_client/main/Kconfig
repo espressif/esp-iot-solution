@@ -3,7 +3,9 @@ menu "Example Configuration"
         string "Remote MCP server host"
         default "192.168.1.100"
         help
-            Remote MCP server host/IP.
+            Hostname or IP, or a full origin such as https://dashscope.aliyuncs.com
+            (do not also add a scheme in code; port still applies unless it matches the
+            default for the scheme: 443 for https, 80 for http).
 
     config MCP_REMOTE_PORT
         int "Remote MCP server port"
@@ -24,5 +26,55 @@ menu "Example Configuration"
         default 5000
         help
             Set the time to wait for communication timeout in milliseconds.
+
+    config MCP_DEMO_RESOURCES
+        bool "Enable resources/* demo requests"
+        default n
+        help
+            Send resources/list, resources/templates/list and resources/read
+            after initialize. Useful when remote server exposes resource APIs.
+
+    config MCP_DEMO_RESOURCE_URI
+        string "Demo resources/read URI"
+        default "resource://device/status"
+        depends on MCP_DEMO_RESOURCES
+        help
+            URI used by the resources/read demo request.
+
+    config MCP_DEMO_PROMPTS
+        bool "Enable prompts/* demo requests"
+        default n
+        help
+            Send prompts/list and prompts/get after initialize. Useful when
+            remote server exposes prompt APIs.
+
+    config MCP_DEMO_PROMPT_NAME
+        string "Demo prompts/get name"
+        default "status_prompt"
+        depends on MCP_DEMO_PROMPTS
+        help
+            Prompt name used by the prompts/get demo request.
+
+    config MCP_TOOLS_LIST_PAGINATION
+        bool "Enable tools/list pagination demo"
+        default y
+        help
+            Repeatedly call tools/list with nextCursor until exhausted or
+            max pages reached.
+
+    config MCP_TOOLS_LIST_MAX_PAGES
+        int "Max tools/list pages"
+        range 1 10
+        default 3
+        depends on MCP_TOOLS_LIST_PAGINATION
+        help
+            Maximum number of tools/list pages requested in one run.
+
+    config MCP_DYNAMIC_TOOL_CALL
+        bool "Enable dynamic tools/call from tools/list result"
+        default y
+        help
+            Call the first tool name discovered in tools/list results using
+            empty JSON args {}.
 
 endmenu

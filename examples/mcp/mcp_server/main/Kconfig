@@ -24,4 +24,9 @@ menu "Example Configuration"
         help
             Set the time to wait for communication timeout. Use a value big enough to avoid retransmissions.
 
+    config SNTP_TIME_SERVER
+        string "SNTP server name"
+        default "pool.ntp.org"
+        help
+            Hostname of the main SNTP server.
 endmenu
