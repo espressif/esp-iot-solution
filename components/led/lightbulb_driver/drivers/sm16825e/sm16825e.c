@@ -264,6 +264,7 @@ static void cleanup(void)
 {
     if (s_sm16825e && s_sm16825e->spi_handle) {
         spi_bus_remove_device(s_sm16825e->spi_handle);
+        spi_bus_free(SPI2_HOST);
         s_sm16825e->spi_handle = NULL;
     }
 
@@ -278,7 +279,7 @@ static void cleanup(void)
     }
 }
 
-esp_err_t sm16825e_init(driver_sm16825e_t *config, void(*hook_func)(void *))
+esp_err_t sm16825e_init(driver_sm16825e_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);

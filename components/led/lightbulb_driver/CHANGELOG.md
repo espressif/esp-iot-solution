@@ -1,10 +1,17 @@
 # ChangeLog
 
+## v2.0.0 - 2026-4-1
+
+### Refactor:
+
+* Implement multiple instances driver by lightbulb component
+* Modify lightbulb component structure to the factory pattern
+
 ## v1.11.2 - 2026-03-26
 
 ### Bug Fix:
 
-- Fixed some compatibility issues
+* Fixed some compatibility issues
 
 ## v1.11.1 - 2025-11-14
 

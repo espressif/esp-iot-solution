@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
 
 #include <esp_console.h>
 #include <esp_log.h>
+#include <nvs_flash.h>
 
 #include "lightbulb.h"
 #include "lightbulb_example_cmd.h"
@@ -83,18 +84,25 @@ lightbulb_gamma_config_t Gamma = {
 
 void app_main(void)
 {
+    /* Initialize NVS */
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+
     /* Not a warning, just highlighted */
     ESP_LOGW(TAG, "Lightbulb Example Start");
+
+    lightbulb_handle_t handle = NULL;
 
     lightbulb_config_t config = {
         //1. Select and configure the chip
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = CONFIG_WS2812_LED_NUM,
         .driver_conf.ws2812.ctrl_io = CONFIG_WS2812_LED_GPIO,
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
-        .type = DRIVER_SM16825E,
         .driver_conf.sm16825e.led_num = CONFIG_SM16825E_LED_NUM,
         .driver_conf.sm16825e.ctrl_io = CONFIG_SM16825E_LED_GPIO,
         .io_conf.sm16825e_io.red = OUT4,
@@ -105,7 +113,6 @@ void app_main(void)
         .driver_conf.sm16825e.current = {150, 150, 150, 150, 150},
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = CONFIG_PWM_FREQ_HZ,
 #ifdef CONFIG_IDF_TARGET_ESP32C2
         /* Adapt to ESP8684-DevKitM-1
@@ -116,7 +123,6 @@ void app_main(void)
 #endif
 #endif
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.freq_khz = 300,
         .driver_conf.bp57x8d.enable_iic_queue = true,
         .driver_conf.bp57x8d.iic_clk = CONFIG_BP5758D_IIC_CLK_GPIO,
@@ -126,7 +132,7 @@ void app_main(void)
         // 2. Configure the drive capability
         .capability.enable_fade = true,
         .capability.fade_time_ms = 800,
-        .capability.enable_status_storage = false,
+        .capability.enable_status_storage = true,
 
 #if CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
         .capability.led_beads = LED_BEADS_3CH_RGB,
@@ -183,9 +189,23 @@ void app_main(void)
         .init_status.hue = 0,
         .init_status.saturation = 100,
         .init_status.value = 100,
+
+        //8. Nvs param
+        .nvs_key = "lightbulb_demo",
     };
-    esp_err_t err = lightbulb_init(&config);
-    if (err != ESP_OK) {
+
+    // Use factory function based on driver selection
+#ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
+    handle = lightbulb_new_ws2812_device(&config);
+#elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_SM16825E
+    handle = lightbulb_new_sm16825e_device(&config);
+#elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_BP5758D
+    handle = lightbulb_new_bp57x8d_device(&config);
+#elif CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_PWM
+    handle = lightbulb_new_pwm_device(&config);
+#endif
+
+    if (handle == NULL) {
         ESP_LOGE(TAG, "There may be some errors in the configuration, please check the log.");
         return;
     }
@@ -194,7 +214,7 @@ void app_main(void)
      * @brief Initialize console function
      *
      */
-    err = lightbulb_example_console_init();
+    err = lightbulb_example_console_init(handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Unable to initialize console, please check the log.");
     } else {
@@ -226,8 +246,8 @@ void app_main(void)
     test_case |= LIGHTING_BASIC_FIVE;
     test_case |= LIGHTING_WHITE_EFFECT;
 #endif
-    lightbulb_lighting_output_test(test_case, 2000);
-    lightbulb_deinit();
+    lightbulb_lighting_output_test(handle, test_case, 2000);
+    lightbulb_deinit(handle);
     vTaskDelay(pdMS_TO_TICKS(2000));
 
 #ifdef CONFIG_LIGHTBULB_DEMO_DRIVER_SELECT_WS2812
@@ -237,7 +257,7 @@ void app_main(void)
         .led_num = CONFIG_WS2812_LED_NUM,
         .ctrl_io = CONFIG_WS2812_LED_GPIO,
     };
-    ws2812_init(&ws2812, NULL);
+    ws2812_init(&ws2812, NULL, NULL);
     /* Red */
     ws2812_set_rgb_channel(255, 0, 0);
     vTaskDelay(pdMS_TO_TICKS(2000) * 1);
