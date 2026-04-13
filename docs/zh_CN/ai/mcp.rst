@@ -18,4 +18,27 @@ MCP 组件为访问常用 MCP 功能提供了简化的 API 接口。它支持 HT
 API 参考
 -----------------
 
-.. include-build-file:: inc/esp_mcp_mgr.inc
+为提升可读性，MCP API 按能力分组展示：
+
+API 模块速览
+^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - 模块
+     - 用途
+   * - 核心与管理器
+     - MCP 生命周期、请求分发，以及传输管理器/会话处理相关接口。
+   * - 工具与数据
+     - 工具定义与执行接口，以及公共属性/数据值结构。
+   * - Prompt/Resource/Completion
+     - Prompt/Resource 提供接口，以及 Completion 回调接口。
+
+.. toctree::
+   :maxdepth: 1
+
+   ../mcp/core_and_manager
+   ../mcp/tooling_and_data
+   ../mcp/prompt_resource_completion
