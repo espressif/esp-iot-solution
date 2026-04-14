@@ -156,12 +156,12 @@ Manager::Manager(damiao::Motor_Control* motor_control)
     }
 
     // Initialize the Color detector
-    color_detect_ = new ColorDetect(640, 480);
+    color_detect_ = new ColorDetect(224, 224);
     if (color_detect_ == nullptr) {
         ESP_LOGE(TAG, "Failed to create Color detector");
         return;
     }
-    color_detect_->register_color({38, 52, 158}, {88, 186, 242}, "default");
+    color_detect_->register_color({35, 100, 100}, {85, 255, 255}, "default");
 
     // Create the LCD refresh task
     if (xTaskCreatePinnedToCore(lcd_refresh_task, "lcd_refresh_task", 10 * 1024, this, 6, &lcd_refresh_task_handle_, 0) != pdPASS) {
@@ -380,7 +380,7 @@ void Manager::color_detect_task(void* arg)
         .data = NULL,
         .width = 640,
         .height = 480,
-        .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565,
+        .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565LE,
     };
     color_detect_queue_msg_t msg;
 
@@ -1154,7 +1154,9 @@ void Manager::change_change_color(const std::vector<uint8_t> &hsv_min, const std
     color_detect_->delete_color("default");
 
     // Register new color with name "default"
-    color_detect_->register_color(hsv_min, hsv_max, "default");
+    const std::array<uint8_t, 3> hsv_min_arr = {hsv_min[0], hsv_min[1], hsv_min[2]};
+    const std::array<uint8_t, 3> hsv_max_arr = {hsv_max[0], hsv_max[1], hsv_max[2]};
+    color_detect_->register_color(hsv_min_arr, hsv_max_arr, "default");
 
     ESP_LOGI(TAG, "Changed color range: HSV_min=[%d, %d, %d], HSV_max=[%d, %d, %d]",
              hsv_min[0], hsv_min[1], hsv_min[2],

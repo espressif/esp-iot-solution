@@ -47,6 +47,20 @@ menu "Example Configuration"
             Contours with an area smaller than this value will be filtered out.
             Helps remove noise and small irrelevant shapes during image processing.
 
+    config EXAMPLE_CV_DETECT_WIDTH
+        int "CV Detection Width"
+        default 320
+        range 32 2048
+        help
+            Width used by the detection pipeline. Lower values reduce CPU load.
+
+    config EXAMPLE_CV_DETECT_HEIGHT
+        int "CV Detection Height"
+        default 240
+        range 32 2048
+        help
+            Height used by the detection pipeline. Lower values reduce CPU load.
+
     config EXAMPLE_LCD_BUF_COUNT
         int "LCD Buffer Count"
         default 2

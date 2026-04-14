@@ -2,7 +2,11 @@ idf_component_register(SRC_DIRS "."
                     INCLUDE_DIRS "." "include/")
 
 idf_component_get_property(esp-dl espressif__esp-dl COMPONENT_LIB)
-target_compile_options(${esp-dl} PRIVATE -Wno-unused-variable -Wno-unused-but-set-variable)
+target_compile_options(${esp-dl} PRIVATE
+    -Wno-unused-variable
+    -Wno-unused-but-set-variable
+    -Wno-deprecated-declarations
+    -Wno-missing-field-initializers)
 
 if(CONFIG_IDF_TARGET STREQUAL "esp32p4")
     set(CONFIG_MODEL_FILE_PATH "models/esp32p4/har.espdl")

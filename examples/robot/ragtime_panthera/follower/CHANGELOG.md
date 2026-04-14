@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.2.1 - 2026-4-14
+
+### Bug Fix:
+
+* Changed the CAN TX/RX pins to avoid occupying USB SERIAL JTAG
+* Replaced the temporary `color_detect` component
+
 ## v0.2.0 - 2026-2-1
 
 ### Enhancements:
