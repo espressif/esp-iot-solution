@@ -126,7 +126,7 @@ This project uses an **eye-to-hand** configuration, meaning the camera is fixed 
 
 3. **Set the Matrix**: Use the console command to store the calibration matrix:
    ```bash
-   panthera_set_version_matrix -1 <m1> -2 <m2> -3 <m3> -4 <m4> -5 <m5> -6 <m6> -7 <m7> -8 <m8> -9 <m9>
+   panthera_set_vision_matrix -1 <m1> -2 <m2> -3 <m3> -4 <m4> -5 <m5> -6 <m6> -7 <m7> -8 <m8> -9 <m9>
    ```
 
 ### Calibration Tips
@@ -153,8 +153,8 @@ When `CONSOLE_CONTROL` is enabled in the project configuration, you can control 
 
 | Command | Description | Usage |
 |---------|-------------|-------|
-| `panthera_set_version_matrix` | Set the vision calibration matrix | `panthera_set_version_matrix -1 <m1> -2 <m2> ... -9 <m9>` |
-| `panthera_get_version_matrix` | Read and display the current calibration matrix | `panthera_get_version_matrix` |
+| `panthera_set_vision_matrix` | Set the vision calibration matrix | `panthera_set_vision_matrix -1 <m1> -2 <m2> ... -9 <m9>` |
+| `panthera_get_vision_matrix` | Read and display the current calibration matrix | `panthera_get_vision_matrix` |
 
 ### Vision Commands
 
@@ -172,10 +172,10 @@ panthera_enable on
 panthera_goto_position -x 0.3 -y 0.2 -z 0.1
 
 # Set calibration matrix
-panthera_set_version_matrix -1 -0.000002 -2 -0.001861 -3 0.867622 -4 -0.001776 -5 -0.000079 -6 0.450608 -7 0.000000 -8 -0.000000 -9 0.039700
+panthera_set_vision_matrix -1 -0.000002 -2 -0.001861 -3 0.867622 -4 -0.001776 -5 -0.000079 -6 0.450608 -7 0.000000 -8 -0.000000 -9 0.039700
 
 # Verify the matrix
-panthera_get_version_matrix
+panthera_get_vision_matrix
 
 # Change color detection HSV range (example: green color)
 panthera_change_color --h_min 35 --s_min 100 --v_min 100 --h_max 85 --s_max 255 --v_max 255

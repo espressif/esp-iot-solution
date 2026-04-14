@@ -12,14 +12,14 @@ menu "Panthera Follower Configuration"
         config CAN_TX_NUM
             int "CAN TX Pin"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-            default 24
+            default 7
             help
                 TX Pin of the CAN Transceiver
 
         config CAN_RX_NUM
             int "CAN RX Pin"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-            default 25
+            default 8
             help
                 RX Pin of the CAN Transceiver
     endmenu

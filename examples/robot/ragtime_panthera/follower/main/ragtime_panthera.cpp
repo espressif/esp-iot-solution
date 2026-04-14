@@ -63,7 +63,7 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // Initialize the motor control
-    motor_control = damiao::Motor_Control::getInstance(GPIO_NUM_24, GPIO_NUM_25);
+    motor_control = damiao::Motor_Control::getInstance(static_cast<gpio_num_t>(CONFIG_CAN_TX_NUM), static_cast<gpio_num_t>(CONFIG_CAN_RX_NUM));
     ret = motor_control->init();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Motor control initialization failed: %s", esp_err_to_name(ret));
@@ -102,6 +102,7 @@ extern "C" void app_main(void)
         ESP_LOGE(TAG, "Failed to get manager instance");
         return;
     }
+
     if (manager->register_esp_now_receiver(UART_NUM_1, 115200) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to register ESP-NOW receiver");
         return;

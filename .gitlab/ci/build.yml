@@ -100,9 +100,9 @@ build_example_ai_esp_dl_human_activity_recognition:
   extends:
     - .build_examples_template
     - .rules:build:example_ai_esp_dl_human_activity_recognition
-    - .build_idf_ge_than_v5_3
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
+    IMAGE: espressif/idf:release-v5.5
 
 build_example_ai_esp_dl_self_learning_classification:
   extends:
@@ -1786,7 +1786,6 @@ build_example_ragtime_panthera_follower:
     EXAMPLE_DIR: examples/robot/ragtime_panthera/follower
     SKIP_RECEIVER_BUILD: "1"
     BUILD_RECURSIVE: "0"
-  allow_failure: true # see esp-iot-solution!1516 for more details
 
 build_example_robot_ragtime_panthera_leader:
   extends:

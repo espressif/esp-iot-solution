@@ -6,15 +6,11 @@ cmake_minimum_required(VERSION 3.16)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/spiffs)
 
 # project version
-set(PROJECT_VER "0.2.0")
+set(PROJECT_VER "0.2.1")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-list(APPEND CMAKE_CXX_FLAGS
-    "-Wno-deprecated-enum-enum-conversion"
-    "-Wno-write-strings"
-    "-Wno-cast-user-defined"
-)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-enum-enum-conversion -Wno-write-strings -Wno-cast-user-defined")
 
 add_compile_options(
     -Wno-format
@@ -23,6 +19,7 @@ add_compile_options(
     -Wno-unused-but-set-variable
     -Wno-cast-function-type
     -Wno-ignored-qualifiers
+    -Wno-deprecated-declarations
 )
 
 project(ragtime_panthera)
