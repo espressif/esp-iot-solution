@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v2.0.1 - 2026-4-13
+
+### Refactor:
+
+* Use soc/spi_periph.h for spi_periph_signal and SPI register access instead of hal/spi_hal.h
+* Affected: ws2812 and sm16825e SPI helpers.
+
 ## v2.0.0 - 2026-4-1
 
 ### Refactor:
