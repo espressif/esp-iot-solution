@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.1.0 - 2026-04-17
+
+### Enhancements:
+
+- Support SMP out-of-band (OOB) pairing.
+- Add optional auto GATT Service Changed trigger based on configurable schema version (`BLE_CONN_MGR_GATT_CHANGED_AUTO`, default disabled).
+
 ## v1.0.1 - 2026-04-09
 
 ### Bug Fixes:

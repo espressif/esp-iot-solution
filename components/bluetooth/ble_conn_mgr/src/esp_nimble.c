@@ -4,10 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <inttypes.h>
+#include <stddef.h>
 #include <string.h>
 
 #include "esp_log.h"
 #include "esp_event.h"
+#include "nvs.h"
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_mac.h"
 #endif
@@ -26,6 +29,10 @@
 #include "host/ble_sm.h"
 #include "host/ble_l2cap.h"
 #include "host/util/util.h"
+#if MYNEWT_VAL(BLE_SM_SC)
+#include "ble_hs_priv.h"
+#include "ble_sm_priv.h"
+#endif
 #include "os/os_mempool.h"
 #include "os/os_mbuf.h"
 #include "services/gap/ble_svc_gap.h"
@@ -38,6 +45,14 @@
 #include "esp_nimble.h"
 
 static const char *TAG = "blecm_nimble";
+#if defined(CONFIG_BLE_CONN_MGR_GATT_CHANGED_AUTO) && defined(CONFIG_BT_NIMBLE_GATT_CACHING) && \
+    (defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH))
+static const char *NVS_NS_BLE_CONN_MGR = "ble_conn_mgr";
+static const char *NVS_KEY_GATT_SCHEMA_VER = "gatt_schema_ver";
+/* Schema version to persist after at least one Service Changed indication is acked (BLE_HS_EDONE). */
+static uint32_t s_gatt_schema_nvs_pending_ver;
+static void esp_ble_conn_gatt_schema_commit_nvs(uint32_t ver);
+#endif
 
 /* BLE disconnect reason sentinel value: indicates no disconnect has occurred yet */
 #define BLE_CONN_DISCONNECT_REASON_INVALID 0xFFFF
@@ -161,6 +176,10 @@ typedef struct esp_ble_conn_link_t {
     SemaphoreHandle_t semaphore;
     QueueHandle_t queue;
     esp_err_t last_read_rc;
+#if MYNEWT_VAL(BLE_SM_SC)
+    struct ble_sm_sc_oob_data sc_oob_local_store;   /* Per-link local SC OOB backing storage */
+    struct ble_sm_sc_oob_data sc_oob_remote_store;  /* Per-link peer SC OOB backing storage */
+#endif
 } esp_ble_conn_link_t;
 SLIST_HEAD(esp_ble_conn_link_list_t, esp_ble_conn_link_t);
 
@@ -233,7 +252,6 @@ typedef struct esp_ble_conn_session_t {
     esp_ble_conn_nimble_cb_t    *set_mtu_cb;            /* MTU set callback */
 
     uint32_t                     local_passkey;         /* Local passkey for SMP DISP; 0 = not set, auto-inject disabled */
-
     /* User-configured adv/scan params; 0/NULL = use defaults */
     esp_ble_conn_adv_params_t     adv_params_cfg;
     esp_ble_conn_scan_params_t   scan_params_cfg;
@@ -250,6 +268,14 @@ static esp_ble_conn_session_t *s_conn_session = NULL;
 static esp_ble_conn_mgr_ctx_t s_mgr_ctx_fallback;
 static esp_ble_conn_mgr_ctx_t *s_mgr_ctx_ptr = &s_mgr_ctx_fallback;
 #define s_mgr_ctx (*s_mgr_ctx_ptr)
+#if MYNEWT_VAL(BLE_SM_SC)
+_Static_assert(sizeof(esp_ble_conn_sc_oob_data_t) == sizeof(struct ble_sm_sc_oob_data),
+               "esp_ble_conn_sc_oob_data_t must match ble_sm_sc_oob_data size");
+_Static_assert(offsetof(esp_ble_conn_sc_oob_data_t, r) == offsetof(struct ble_sm_sc_oob_data, r),
+               "esp_ble_conn_sc_oob_data_t.r offset mismatch");
+_Static_assert(offsetof(esp_ble_conn_sc_oob_data_t, c) == offsetof(struct ble_sm_sc_oob_data, c),
+               "esp_ble_conn_sc_oob_data_t.c offset mismatch");
+#endif
 /* Keep legacy API behavior: report the most recent disconnection reason. */
 static uint16_t s_last_disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
 static uint16_t s_last_disconnect_conn_handle = BLE_CONN_HANDLE_INVALID;
@@ -2048,6 +2074,17 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                     }
                 }
             }
+#if defined(CONFIG_BLE_CONN_MGR_GATT_CHANGED_AUTO) && defined(CONFIG_BT_NIMBLE_GATT_CACHING) && \
+    (defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH))
+#if MYNEWT_VAL(BLE_GATT_CACHING)
+            if (s_gatt_schema_nvs_pending_ver != 0 && event->notify_tx.indication &&
+                event->notify_tx.status == BLE_HS_EDONE &&
+                event->notify_tx.attr_handle == ble_svc_gatt_changed_handle()) {
+                esp_ble_conn_gatt_schema_commit_nvs(s_gatt_schema_nvs_pending_ver);
+                s_gatt_schema_nvs_pending_ver = 0;
+            }
+#endif
+#endif
             if (notify_link) {
                 esp_ble_conn_link_unref(notify_link);
             }
@@ -2197,6 +2234,14 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 case BLE_SM_IOACT_INPUT:
                     evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_INPUT;
                     break;
+                case BLE_SM_IOACT_OOB:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_OOB;
+                    break;
+#if MYNEWT_VAL(BLE_SM_SC)
+                case BLE_SM_IOACT_OOB_SC:
+                    evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_OOB_SC;
+                    break;
+#endif
                 default:
                     evt.passkey_action.action = ESP_BLE_CONN_SM_ACT_NONE;
                     break;
@@ -2320,6 +2365,74 @@ static void esp_ble_conn_on_reset(int reason)
     ESP_LOGE(TAG, "Resetting state; reason=%d", reason);
 }
 
+#if defined(CONFIG_BLE_CONN_MGR_GATT_CHANGED_AUTO) && defined(CONFIG_BT_NIMBLE_GATT_CACHING) && \
+    (defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH))
+static void esp_ble_conn_gatt_schema_commit_nvs(uint32_t ver)
+{
+    nvs_handle_t nvs_handle;
+    esp_err_t err;
+
+    err = nvs_open(NVS_NS_BLE_CONN_MGR, NVS_READWRITE, &nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Persist GATT schema version: nvs_open(RW) failed, err=0x%x", err);
+        return;
+    }
+    err = nvs_set_u32(nvs_handle, NVS_KEY_GATT_SCHEMA_VER, ver);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Persist GATT schema version failed (set), err=0x%x", err);
+        nvs_close(nvs_handle);
+        return;
+    }
+    err = nvs_commit(nvs_handle);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Persist GATT schema version failed (commit), err=0x%x", err);
+        nvs_close(nvs_handle);
+        return;
+    }
+    nvs_close(nvs_handle);
+}
+
+static void esp_ble_conn_maybe_mark_gatt_changed(void)
+{
+    nvs_handle_t nvs_handle;
+    uint32_t stored_ver = 0;
+    uint32_t current_ver = (uint32_t)CONFIG_BLE_CONN_MGR_GATT_SCHEMA_VERSION;
+    bool schema_changed = false;
+    esp_err_t err;
+
+    /* Read-only first: avoids creating the namespace on every host sync when schema is unchanged. */
+    err = nvs_open(NVS_NS_BLE_CONN_MGR, NVS_READONLY, &nvs_handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        schema_changed = true;
+        ESP_LOGI(TAG, "No NVS namespace for GATT schema, trigger Service Changed");
+    } else if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Skip GATT changed check: nvs_open(RO) failed, err=0x%x", err);
+        return;
+    } else {
+        err = nvs_get_u32(nvs_handle, NVS_KEY_GATT_SCHEMA_VER, &stored_ver);
+        nvs_close(nvs_handle);
+        if (err == ESP_ERR_NVS_NOT_FOUND) {
+            schema_changed = true;
+            ESP_LOGI(TAG, "No stored GATT schema version, trigger Service Changed");
+        } else if (err != ESP_OK) {
+            ESP_LOGW(TAG, "Skip GATT changed check: nvs_get_u32 failed, err=0x%x", err);
+            return;
+        } else if (stored_ver != current_ver) {
+            schema_changed = true;
+            ESP_LOGI(TAG, "GATT schema changed: stored=%" PRIu32 ", current=%" PRIu32, stored_ver, current_ver);
+        }
+    }
+
+    if (!schema_changed) {
+        return;
+    }
+
+    ble_svc_gatt_changed(0x0001, 0xFFFF);
+    /* Defer NVS until a Service Changed indication is acked so a reset before delivery can re-trigger. */
+    s_gatt_schema_nvs_pending_ver = current_ver;
+}
+#endif
+
 static void esp_ble_conn_on_sync(void)
 {
     int rc;
@@ -2336,6 +2449,11 @@ static void esp_ble_conn_on_sync(void)
         ESP_LOGE(TAG, "Error determining address type; rc=%d", rc);
         return;
     }
+
+#if defined(CONFIG_BLE_CONN_MGR_GATT_CHANGED_AUTO) && defined(CONFIG_BT_NIMBLE_GATT_CACHING) && \
+    (defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH))
+    esp_ble_conn_maybe_mark_gatt_changed();
+#endif
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     /* Begin advertising. */
@@ -4186,6 +4304,173 @@ esp_err_t esp_ble_conn_numcmp_reply(uint16_t conn_handle, bool accept)
         return ESP_ERR_NOT_SUPPORTED;
     }
     return (rc == 0) ? ESP_OK : ESP_FAIL;
+}
+
+esp_err_t esp_ble_conn_sm_oob_flag_set(bool enable)
+{
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    ble_hs_cfg.sm_oob_data_flag = enable ? 1 : 0;
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_conn_sc_oob_data_generate(esp_ble_conn_sc_oob_data_t *out)
+{
+#if MYNEWT_VAL(BLE_SM_SC)
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!out) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return (ble_sm_sc_oob_generate_data((struct ble_sm_sc_oob_data *)out) == 0) ? ESP_OK : ESP_FAIL;
+#else
+    (void)out;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+esp_err_t esp_ble_conn_oob_legacy_tk_reply(uint16_t conn_handle, const uint8_t tk[16])
+{
+#if NIMBLE_BLE_SM
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX || !tk) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    struct ble_sm_io io = {
+        .action = BLE_SM_IOACT_OOB,
+    };
+    memcpy(io.oob, tk, sizeof(io.oob));
+    int rc = ble_sm_inject_io(conn_handle, &io);
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (rc == BLE_HS_EINVAL || rc == BLE_HS_ENOENT) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (rc == BLE_HS_EALREADY) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
+#else
+    (void)conn_handle;
+    (void)tk;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+}
+
+#if MYNEWT_VAL(BLE_SM_SC)
+/* NimBLE 1.6+ (ESP-IDF >= 5.3): ble_sm_process_result(..., bool tx_fail) */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#define ESP_BLE_CONN_SM_PROCESS_RESULT(conn_h, res_ptr) \
+    ble_sm_process_result((conn_h), (res_ptr), true)
+#else
+#define ESP_BLE_CONN_SM_PROCESS_RESULT(conn_h, res_ptr) \
+    ble_sm_process_result((conn_h), (res_ptr))
+#endif
+
+/**
+ * NimBLE ble_sm_inject_io() returns res.app_status after ble_sm_process_result(), which stays 0 when
+ * LE SC OOB preconditions fail (res.sm_err = BLE_SM_ERR_OOB only). Mirror that failure path so the
+ * application does not treat the reply as accepted.
+ *
+ * @return ESP_OK to continue with ble_sm_inject_io(); ESP_FAIL if pairing was aborted with Pairing Failed.
+ */
+static esp_err_t esp_ble_conn_sc_oob_preflight(uint16_t conn_handle, bool have_local, bool have_remote)
+{
+    struct ble_sm_proc *proc;
+    struct ble_sm_result res_fail;
+
+    ble_hs_lock();
+    proc = ble_sm_proc_find(conn_handle, BLE_SM_PROC_STATE_NONE, -1, NULL);
+    if (proc == NULL || (proc->flags & BLE_SM_PROC_F_IO_INJECTED) ||
+        ble_sm_ioact_state(BLE_SM_IOACT_OOB_SC) != proc->state) {
+        ble_hs_unlock();
+        return ESP_OK;
+    }
+    if (ble_sm_sc_oob_data_check(proc, have_local, have_remote)) {
+        ble_hs_unlock();
+        return ESP_OK;
+    }
+
+    memset(&res_fail, 0, sizeof(res_fail));
+    res_fail.sm_err = BLE_SM_ERR_OOB;
+    ble_hs_unlock();
+    ESP_BLE_CONN_SM_PROCESS_RESULT(conn_handle, &res_fail);
+    ESP_LOGW(TAG, "SC OOB reply rejected (data does not match pairing OOB expectations)");
+    return ESP_FAIL;
+}
+#undef ESP_BLE_CONN_SM_PROCESS_RESULT
+#endif
+
+esp_err_t esp_ble_conn_sc_oob_reply(uint16_t conn_handle,
+                                    const esp_ble_conn_sc_oob_data_t *local,
+                                    const esp_ble_conn_sc_oob_data_t *remote)
+{
+#if MYNEWT_VAL(BLE_SM_SC)
+    esp_ble_conn_link_t *link = NULL;
+    struct ble_sm_io io = {
+        .action = BLE_SM_IOACT_OOB_SC,
+    };
+    struct ble_sm_sc_oob_data *plocal = NULL;
+    struct ble_sm_sc_oob_data *premote = NULL;
+    esp_err_t pre_rc;
+
+    if (conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!local && !remote) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    pre_rc = esp_ble_conn_sc_oob_preflight(conn_handle, local != NULL, remote != NULL);
+    if (pre_rc != ESP_OK) {
+        esp_ble_conn_link_unref(link);
+        return pre_rc;
+    }
+
+    if (local) {
+        memcpy(&link->sc_oob_local_store, local, sizeof(link->sc_oob_local_store));
+        plocal = &link->sc_oob_local_store;
+    }
+    if (remote) {
+        memcpy(&link->sc_oob_remote_store, remote, sizeof(link->sc_oob_remote_store));
+        premote = &link->sc_oob_remote_store;
+    }
+    io.oob_sc_data.local = plocal;
+    io.oob_sc_data.remote = premote;
+
+    int rc = ble_sm_inject_io(conn_handle, &io);
+    esp_ble_conn_link_unref(link);
+    if (rc == BLE_HS_ENOTSUP) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (rc == BLE_HS_EINVAL || rc == BLE_HS_ENOENT) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (rc == BLE_HS_EALREADY) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (rc == BLE_HS_SM_US_ERR(BLE_SM_ERR_OOB)) {
+        return ESP_FAIL;
+    }
+    return (rc == 0) ? ESP_OK : ESP_FAIL;
+#else
+    (void)conn_handle;
+    (void)local;
+    (void)remote;
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
 }
 
 esp_err_t esp_ble_conn_l2cap_coc_create_server(uint16_t psm, uint16_t mtu,

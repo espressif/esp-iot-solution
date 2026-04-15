@@ -54,11 +54,27 @@ extern "C"
  */
 typedef enum {
     ESP_BLE_CONN_SM_ACT_NONE   = 0,  /*!< No action / unknown / other */
-    ESP_BLE_CONN_SM_ACT_OOB    = 1,  /*!< Out-of-band (OOB) data required */
+    ESP_BLE_CONN_SM_ACT_OOB    = 1,  /*!< Legacy LE OOB; call esp_ble_conn_oob_legacy_tk_reply() */
     ESP_BLE_CONN_SM_ACT_INPUT  = 2,  /*!< User must enter passkey; call esp_ble_conn_passkey_reply() */
     ESP_BLE_CONN_SM_ACT_DISP   = 3,  /*!< Display passkey to user, application should display the passkey */
     ESP_BLE_CONN_SM_ACT_NUMCMP = 4,  /*!< Numeric comparison; call esp_ble_conn_numcmp_reply() */
+    ESP_BLE_CONN_SM_ACT_OOB_SC = 5,  /*!< LE Secure Connections OOB; call esp_ble_conn_sc_oob_data_generate() / esp_ble_conn_sc_oob_reply() */
 } esp_ble_conn_sm_action_t;
+
+/** @brief Length of random value r in LE Secure Connections OOB data (bytes, Core Spec). */
+#define ESP_BLE_CONN_SC_OOB_R_LEN   16
+/** @brief Length of confirm value c in LE Secure Connections OOB data (bytes, Core Spec). */
+#define ESP_BLE_CONN_SC_OOB_C_LEN   16
+
+/**
+ * @brief   LE Secure Connections OOB data for a side channel (e.g. NFC)
+ *
+ * Same memory layout as NimBLE struct ble_sm_sc_oob_data.
+ */
+typedef struct {
+    uint8_t r[ESP_BLE_CONN_SC_OOB_R_LEN]; /*!< Random value */
+    uint8_t c[ESP_BLE_CONN_SC_OOB_C_LEN]; /*!< Confirm value */
+} esp_ble_conn_sc_oob_data_t;
 
 /**
  * @brief   L2CAP CoC channel handle (opaque pointer)
@@ -646,7 +662,7 @@ typedef struct {
         struct {
             uint16_t conn_handle;                         /*!< Connection handle */
             esp_ble_conn_sm_action_t action;               /*!< Passkey action type, see esp_ble_conn_sm_action_t */
-            uint32_t passkey;                             /*!< Passkey to display (DISP), or for user to enter (INPUT), or to compare (NUMCMP) */
+            uint32_t passkey;                             /*!< Passkey (DISP / INPUT / NUMCMP); not used for OOB or OOB_SC */
         } passkey_action;                                 /*!< ESP_BLE_CONN_EVENT_PASSKEY_ACTION */
     };
 } esp_ble_conn_event_data_t;
@@ -1123,7 +1139,11 @@ esp_err_t esp_ble_conn_set_local_passkey(uint32_t passkey);
  * @brief   Initiate BLE security procedure.
  *
  * Call this to start pairing. When ESP_BLE_CONN_EVENT_PASSKEY_ACTION occurs,
- * use esp_ble_conn_passkey_reply() or esp_ble_conn_numcmp_reply() to respond.
+ * respond with esp_ble_conn_passkey_reply(), esp_ble_conn_numcmp_reply(),
+ * esp_ble_conn_oob_legacy_tk_reply(), or esp_ble_conn_sc_oob_reply() as needed.
+ *
+ * @note  For OOB / side-channel pairing (e.g. NFC), see the section
+ *        "Out-of-band (OOB) pairing" in this component's README.md.
  *
  * @param[in] conn_handle  Connection handle
  *
@@ -1167,6 +1187,80 @@ esp_err_t esp_ble_conn_passkey_reply(uint16_t conn_handle, uint32_t passkey);
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_numcmp_reply(uint16_t conn_handle, bool accept);
+
+/**
+ * @brief   Set local OOB pairing capability (Pairing Request / Response OOB data flag).
+ *
+ * @param[in] enable  Non-zero to indicate OOB data is available for the next pairing
+ *
+ * @note  Must agree with the peer when both sides use OOB (e.g. NFC). With menuconfig
+ *        `BLE_CONN_MGR_SM` enabled, `BLE_CONN_MGR_SM_CAP` bit0 sets the initial value
+ *        in esp_ble_conn_start(). See README.md (Out-of-band pairing) for context.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ */
+esp_err_t esp_ble_conn_sm_oob_flag_set(bool enable);
+
+/**
+ * @brief   Generate local LE Secure Connections OOB random and confirm values.
+ *
+ * @param[out] out  Buffer for r and c (e.g. to place on an NFC tag for the peer)
+ *
+ * @note  Requires Secure Connections (sm_sc). Typical use: peripheral generates and
+ *        exports OOB data; central reads peer OOB over the side channel during pairing.
+ *        See README.md (Out-of-band pairing) for a full flow.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out is NULL
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_NOT_SUPPORTED if LE SC OOB is not supported in this build
+ *  - ESP_FAIL on other stack error
+ */
+esp_err_t esp_ble_conn_sc_oob_data_generate(esp_ble_conn_sc_oob_data_t *out);
+
+/**
+ * @brief   Reply with legacy LE OOB Temporary Key (16 bytes).
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action ESP_BLE_CONN_SM_ACT_OOB.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] tk           16-byte TK from the OOB channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE SMP is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_oob_legacy_tk_reply(uint16_t conn_handle, const uint8_t tk[16]);
+
+/**
+ * @brief   Reply with LE Secure Connections OOB data.
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action ESP_BLE_CONN_SM_ACT_OOB_SC.
+ * Pass local data from esp_ble_conn_sc_oob_data_generate() and/or remote data from the
+ * side channel; use NULL for a side that is not available (depends on initiator role).
+ * Local and remote buffers are copied and need not stay valid after this returns.
+ * See README.md (Out-of-band pairing) for when to pass local vs remote.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] local        Local (r, c), or NULL
+ * @param[in] remote       Peer (r, c), or NULL
+ *
+ * @return
+ *  - ESP_OK if the stack accepted the OOB reply for the current pairing step (pairing may still fail later;
+ *    outcome is also reported via ESP_BLE_CONN_EVENT_ENC_CHANGE / pairing events)
+ *  - ESP_ERR_INVALID_ARG if conn_handle is invalid or both local and remote are NULL
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE LE SC OOB is not supported in this build
+ *  - ESP_FAIL if the supplied OOB data does not match the active pairing procedure (pairing is aborted),
+ *    or on other stack error
+ */
+esp_err_t esp_ble_conn_sc_oob_reply(uint16_t conn_handle,
+                                    const esp_ble_conn_sc_oob_data_t *local,
+                                    const esp_ble_conn_sc_oob_data_t *remote);
 
 /**
  * @brief   Create an L2CAP CoC server
