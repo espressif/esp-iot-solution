@@ -3,6 +3,8 @@
 This directory contains a range of example [esp32-camera](https://github.com/espressif/esp32-camera) projects.   
 See the [README.md](../../README.md) file in the upper level directory for more information about examples.
 
+**Note:** The ESP32 and ESP32-S2 chips can only be used with the esp32-camera component. The ESP32-S3 and ESP32-P4 chips are recommended to use the [esp-video](https://github.com/espressif/esp-video-components/tree/master/esp_video) component.
+
 ## Camera driver workflow
 ![](../../docs/_static/camera-workflow.png)
 
