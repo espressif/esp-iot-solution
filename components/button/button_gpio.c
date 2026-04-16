@@ -56,7 +56,8 @@ static esp_err_t button_gpio_set_intr(int gpio_num, gpio_int_type_t intr_type, g
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Set gpio interrupt type failed");
     if (!isr_service_installed) {
         ret = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
-        ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Install gpio interrupt service failed");
+        // ESP_ERR_INVALID_STATE = service previously installed by another component (idempotent)
+        ESP_RETURN_ON_FALSE((ret == ESP_OK) || (ret == ESP_ERR_INVALID_STATE), ret, TAG, "Install gpio interrupt service failed");
         isr_service_installed = true;
     }
     ret = gpio_isr_handler_add(gpio_num, isr_handler, (void *)gpio_num);
