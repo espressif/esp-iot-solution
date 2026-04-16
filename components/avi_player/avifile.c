@@ -196,10 +196,7 @@ int avi_parser(avi_typedef *AVI_file, const uint8_t *buffer, uint32_t length)
         int ret = strl_parser(AVI_file, pdata, length - (pdata - buffer), &strl_size);
         if (0 > ret) {
             ESP_LOGE(TAG, "strl of stream%d prase failed", i);
-            break;
-            /**
-             * TODO: how to deal this error? maybe we should search for the next strl.
-             */
+            return -1;
         }
         pdata += strl_size;
     }
