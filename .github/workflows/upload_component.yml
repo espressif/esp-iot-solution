@@ -102,6 +102,7 @@ jobs:
             components/mcp-c-sdk;
             components/openai;
             components/sensors/adc/mcp3201;
+            components/sensors/angle_sensor/as5600;
             components/sensors/battery_fuel_gauge/adc_battery_estimation;
             components/sensors/battery_fuel_gauge/max17048;
             components/sensors/battery_fuel_gauge/bq27220;
