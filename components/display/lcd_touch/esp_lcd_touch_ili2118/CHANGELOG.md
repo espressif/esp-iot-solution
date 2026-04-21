@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.2 - 2026-04-21
+
+### Changes:
+
+* Add default I2C frequency to configuration macro
+
 ## v0.1.1 - 2025-12-09
 
 ### Changes:
