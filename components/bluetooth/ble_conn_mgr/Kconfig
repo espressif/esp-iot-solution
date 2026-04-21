@@ -37,6 +37,35 @@ menu "BLE Connection Management"
             This value must not exceed the underlying BLE stack's maximum
             connection configuration.
 
+    config BLE_CONN_MGR_GATT_CHANGED_AUTO
+        bool "Auto trigger GATT Service Changed on schema version update"
+        depends on BT_NIMBLE_ENABLED && (BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH) && BT_NIMBLE_GATT_SERVER
+        default n
+        select BT_NIMBLE_GATT_CACHING if BT_NIMBLE_ENABLED
+        help
+            Automatically compare the configured GATT schema version with a
+            persisted value in NVS at BLE host sync time. If the version changed,
+            ble_conn_mgr calls ble_svc_gatt_changed(0x0001, 0xFFFF) so bonded
+            clients can refresh their attribute cache.
+
+            When this option is enabled, NimBLE GATT caching (CONFIG_BT_NIMBLE_GATT_CACHING)
+            is turned on as well.
+
+    config BLE_CONN_MGR_GATT_SCHEMA_VERSION
+        int "GATT schema version"
+        depends on BLE_CONN_MGR_GATT_CHANGED_AUTO
+        range 1 999
+        default 1
+        help
+            Application-defined GATT database schema version used by
+            BLE_CONN_MGR_GATT_CHANGED_AUTO. Increase this value whenever the
+            server GATT database layout changes.
+
+            Valid range is 1..999. Zero is reserved so the value is never
+            ambiguous next to an unset NVS key. The value is stored with
+            nvs_set_u32 (uint32_t). If you need a larger monotonic counter,
+            bump in application code and call ble_svc_gatt_changed() yourself.
+
     config BLE_CONN_MGR_EXTENDED_ADV
         bool
         depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED

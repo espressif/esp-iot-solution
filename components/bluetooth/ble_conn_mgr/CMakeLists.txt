@@ -6,6 +6,8 @@ set(priv_req "")
 
 if(CONFIG_BT_NIMBLE_ENABLED)
     list(APPEND srcs     "src/esp_nimble.c")
+    idf_component_get_property(_ble_cm_bt_dir bt COMPONENT_DIR)
+    list(APPEND priv_includes "${_ble_cm_bt_dir}/host/nimble/nimble/nimble/host/src")
 elseif(CONFIG_BT_BLUEDROID_ENABLED)
     list(APPEND srcs     "src/esp_bluedroid.c")
     message(FATAL_ERROR "Bluedroid support is not implemented yet for BLE connect management")
@@ -14,6 +16,7 @@ list(APPEND include "include")
 list(APPEND priv_includes   "src/priv_includes")
 
 list(APPEND req "bt")
+list(APPEND req "nvs_flash")
 
 idf_component_register(SRCS "${srcs}"
                        INCLUDE_DIRS "${include}"
