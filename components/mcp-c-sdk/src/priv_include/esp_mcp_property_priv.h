@@ -15,13 +15,12 @@ extern "C" {
 
 /**
  * @brief Context for property list foreach callback
- *
  */
 typedef struct esp_mcp_property_foreach_ctx_s {
-    esp_mcp_property_list_t *list;                                        /*!< Pointer to the property list (must not be NULL) */
-    void *arg;                                                            /*!< Arguments passed to the callback (must not be NULL) */
-    esp_err_t (*callback)(const esp_mcp_property_t *property, void *arg); /*!< Callback function called for each property (must not be NULL) */
-    bool has_error;                                                       /*!< Whether an error occurred (must not be NULL) */
+    esp_mcp_property_list_t *list;                                        /*!< Property list being iterated */
+    void *arg;                                                            /*!< User context passed to callback */
+    esp_err_t (*callback)(const esp_mcp_property_t *property, void *arg); /*!< Callback function for each property */
+    bool has_error;                                                       /*!< Set when callback returns error */
 } esp_mcp_property_foreach_ctx_t;
 
 /**
@@ -101,8 +100,7 @@ esp_err_t esp_mcp_property_list_remove_property(esp_mcp_property_list_t *list, e
  * @note This is an internal API used by the MCP server implementation.
  *
  * @param[in] list Pointer to the property list (must not be NULL)
- * @param[in] callback Callback function called for each property (must not be NULL)
- * @param[in] arg User data passed to the callback
+ * @param[in] ctx Iteration context containing callback and user argument
  * @return
  *      - ESP_OK: All properties processed successfully
  *      - Other: Error code returned by callback

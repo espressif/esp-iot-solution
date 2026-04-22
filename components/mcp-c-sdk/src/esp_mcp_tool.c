@@ -17,6 +17,260 @@
 
 static const char *TAG = "esp_mcp_tool";
 
+#ifndef CONFIG_MCP_TOOL_RESULT_TEXT_MAX_LEN
+#define CONFIG_MCP_TOOL_RESULT_TEXT_MAX_LEN 8192
+#endif
+
+#ifndef CONFIG_MCP_TOOL_RESULT_BLOB_MAX_LEN
+#define CONFIG_MCP_TOOL_RESULT_BLOB_MAX_LEN 65536
+#endif
+
+static bool esp_mcp_tool_str_len_ok(const char *s, size_t max_len)
+{
+    return s && strnlen(s, max_len + 1) <= max_len;
+}
+
+struct esp_mcp_tool_result_s {
+    bool is_error;
+    cJSON *content;            // array
+    cJSON *structured;         // object or NULL
+};
+
+static esp_err_t esp_mcp_tool_result_to_json_obj(const esp_mcp_tool_result_t *r, cJSON **out_obj)
+{
+    ESP_RETURN_ON_FALSE(r && out_obj, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(r->content, ESP_ERR_INVALID_STATE, TAG, "Invalid content");
+
+    cJSON *obj = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(obj, ESP_ERR_NO_MEM, TAG, "No mem");
+
+    cJSON *content_dup = cJSON_Duplicate(r->content, 1);
+    if (!content_dup || !cJSON_AddItemToObject(obj, "content", content_dup)) {
+        cJSON_Delete(content_dup);
+        cJSON_Delete(obj);
+        return ESP_ERR_NO_MEM;
+    }
+    if (!cJSON_AddBoolToObject(obj, "isError", r->is_error)) {
+        cJSON_Delete(obj);
+        return ESP_ERR_NO_MEM;
+    }
+    if (r->structured) {
+        cJSON *struct_dup = cJSON_Duplicate(r->structured, 1);
+        if (!struct_dup || !cJSON_AddItemToObject(obj, "structuredContent", struct_dup)) {
+            cJSON_Delete(struct_dup);
+            cJSON_Delete(obj);
+            return ESP_ERR_NO_MEM;
+        }
+    }
+
+    *out_obj = obj;
+    return ESP_OK;
+}
+
+esp_mcp_tool_result_t *esp_mcp_tool_result_create(void)
+{
+    esp_mcp_tool_result_t *r = calloc(1, sizeof(*r));
+    if (!r) {
+        return NULL;
+    }
+    r->content = cJSON_CreateArray();
+    if (!r->content) {
+        free(r);
+        return NULL;
+    }
+    r->is_error = false;
+    r->structured = NULL;
+    return r;
+}
+
+esp_err_t esp_mcp_tool_result_destroy(esp_mcp_tool_result_t *result)
+{
+    ESP_RETURN_ON_FALSE(result, ESP_ERR_INVALID_ARG, TAG, "Invalid result");
+    if (result->content) {
+        cJSON_Delete(result->content);
+    }
+    if (result->structured) {
+        cJSON_Delete(result->structured);
+    }
+    free(result);
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_tool_result_set_is_error(esp_mcp_tool_result_t *result, bool is_error)
+{
+    ESP_RETURN_ON_FALSE(result, ESP_ERR_INVALID_ARG, TAG, "Invalid result");
+    result->is_error = is_error;
+    return ESP_OK;
+}
+
+static esp_err_t esp_mcp_tool_result_add_content_item(esp_mcp_tool_result_t *result, cJSON *item)
+{
+    ESP_RETURN_ON_FALSE(result && item, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    if (!result->content) {
+        cJSON_Delete(item);
+        ESP_LOGE(TAG, "Invalid content array");
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!cJSON_AddItemToArray(result->content, item)) {
+        cJSON_Delete(item);
+        ESP_LOGE(TAG, "content append failed");
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_tool_result_add_text(esp_mcp_tool_result_t *result, const char *text)
+{
+    ESP_RETURN_ON_FALSE(result && text, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(esp_mcp_tool_str_len_ok(text, CONFIG_MCP_TOOL_RESULT_TEXT_MAX_LEN),
+                        ESP_ERR_INVALID_SIZE,
+                        TAG,
+                        "Text content too large");
+    cJSON *t = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(t, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(t, "type", "text") ||
+            !cJSON_AddStringToObject(t, "text", text)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_content_item(result, t);
+}
+
+esp_err_t esp_mcp_tool_result_add_image_base64(esp_mcp_tool_result_t *result, const char *mime_type, const char *base64_data)
+{
+    ESP_RETURN_ON_FALSE(result && mime_type && base64_data, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(esp_mcp_tool_str_len_ok(base64_data, CONFIG_MCP_TOOL_RESULT_BLOB_MAX_LEN),
+                        ESP_ERR_INVALID_SIZE,
+                        TAG,
+                        "Image data too large");
+    cJSON *t = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(t, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(t, "type", "image") ||
+            !cJSON_AddStringToObject(t, "mimeType", mime_type) ||
+            !cJSON_AddStringToObject(t, "data", base64_data)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_content_item(result, t);
+}
+
+esp_err_t esp_mcp_tool_result_add_audio_base64(esp_mcp_tool_result_t *result, const char *mime_type, const char *base64_data)
+{
+    ESP_RETURN_ON_FALSE(result && mime_type && base64_data, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(esp_mcp_tool_str_len_ok(base64_data, CONFIG_MCP_TOOL_RESULT_BLOB_MAX_LEN),
+                        ESP_ERR_INVALID_SIZE,
+                        TAG,
+                        "Audio data too large");
+    cJSON *t = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(t, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(t, "type", "audio") ||
+            !cJSON_AddStringToObject(t, "mimeType", mime_type) ||
+            !cJSON_AddStringToObject(t, "data", base64_data)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_content_item(result, t);
+}
+
+esp_err_t esp_mcp_tool_result_add_resource_link(esp_mcp_tool_result_t *result,
+                                                const char *uri,
+                                                const char *name,
+                                                const char *description,
+                                                const char *mime_type)
+{
+    ESP_RETURN_ON_FALSE(result && uri, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    cJSON *t = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(t, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(t, "type", "resource_link") ||
+            !cJSON_AddStringToObject(t, "uri", uri)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    if (name && !cJSON_AddStringToObject(t, "name", name)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    if (description && !cJSON_AddStringToObject(t, "description", description)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    if (mime_type && !cJSON_AddStringToObject(t, "mimeType", mime_type)) {
+        cJSON_Delete(t);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_content_item(result, t);
+}
+
+static esp_err_t esp_mcp_tool_result_add_embedded_resource(esp_mcp_tool_result_t *result, cJSON *resource_obj)
+{
+    ESP_RETURN_ON_FALSE(result && resource_obj, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    cJSON *t = cJSON_CreateObject();
+    if (!t) {
+        cJSON_Delete(resource_obj);
+        ESP_LOGE(TAG, "No mem");
+        return ESP_ERR_NO_MEM;
+    }
+    if (!cJSON_AddStringToObject(t, "type", "resource") ||
+            !cJSON_AddItemToObject(t, "resource", resource_obj)) {
+        cJSON_Delete(resource_obj);
+        cJSON_Delete(t);
+        ESP_LOGE(TAG, "No mem");
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_content_item(result, t);
+}
+
+esp_err_t esp_mcp_tool_result_add_embedded_resource_text(esp_mcp_tool_result_t *result,
+                                                         const char *uri,
+                                                         const char *mime_type,
+                                                         const char *text)
+{
+    ESP_RETURN_ON_FALSE(result && uri && mime_type && text, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    cJSON *r = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(r, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(r, "uri", uri) ||
+            !cJSON_AddStringToObject(r, "mimeType", mime_type) ||
+            !cJSON_AddStringToObject(r, "text", text)) {
+        cJSON_Delete(r);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_embedded_resource(result, r);
+}
+
+esp_err_t esp_mcp_tool_result_add_embedded_resource_blob(esp_mcp_tool_result_t *result,
+                                                         const char *uri,
+                                                         const char *mime_type,
+                                                         const char *base64_blob)
+{
+    ESP_RETURN_ON_FALSE(result && uri && mime_type && base64_blob, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    cJSON *r = cJSON_CreateObject();
+    ESP_RETURN_ON_FALSE(r, ESP_ERR_NO_MEM, TAG, "No mem");
+    if (!cJSON_AddStringToObject(r, "uri", uri) ||
+            !cJSON_AddStringToObject(r, "mimeType", mime_type) ||
+            !cJSON_AddStringToObject(r, "blob", base64_blob)) {
+        cJSON_Delete(r);
+        return ESP_ERR_NO_MEM;
+    }
+    return esp_mcp_tool_result_add_embedded_resource(result, r);
+}
+
+esp_err_t esp_mcp_tool_result_set_structured_json(esp_mcp_tool_result_t *result, const char *structured_json_object)
+{
+    ESP_RETURN_ON_FALSE(result && structured_json_object, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    cJSON *o = cJSON_Parse(structured_json_object);
+    ESP_RETURN_ON_FALSE(o, ESP_ERR_INVALID_ARG, TAG, "Invalid JSON object");
+    if (!cJSON_IsObject(o)) {
+        cJSON_Delete(o);
+        ESP_LOGE(TAG, "structured JSON must be an object");
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (result->structured) {
+        cJSON_Delete(result->structured);
+    }
+    result->structured = o;
+    return ESP_OK;
+}
+
 static esp_err_t esp_mcp_tool_required_props_cb(const esp_mcp_property_t *property, void *arg)
 {
     esp_mcp_property_foreach_ctx_t *ctx = (esp_mcp_property_foreach_ctx_t *)arg;
@@ -32,11 +286,10 @@ static esp_err_t esp_mcp_tool_required_props_cb(const esp_mcp_property_t *proper
     return ESP_OK;
 }
 
-esp_mcp_tool_t *esp_mcp_tool_create(const char *name, const char *description, esp_mcp_tool_callback_t callback)
+static esp_mcp_tool_t *esp_mcp_tool_create_base(const char *name, const char *description)
 {
     ESP_RETURN_ON_FALSE(name, NULL, TAG, "Invalid name");
     ESP_RETURN_ON_FALSE(description, NULL, TAG, "Invalid description");
-    ESP_RETURN_ON_FALSE(callback, NULL, TAG, "Invalid callback");
 
     esp_mcp_tool_t *tool = (esp_mcp_tool_t *)calloc(1, sizeof(esp_mcp_tool_t));
     ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Failed to allocate memory for tool");
@@ -56,10 +309,93 @@ esp_mcp_tool_t *esp_mcp_tool_create(const char *name, const char *description, e
         return NULL;
     }
 
-    tool->callback = callback;
+    tool->callback = NULL;
     tool->properties = esp_mcp_property_list_create();
+    if (!tool->properties) {
+        ESP_LOGE(TAG, "esp_mcp_tool_create_base: Failed to create property list");
+        free(tool->description);
+        free(tool->name);
+        free(tool);
+        return NULL;
+    }
+    tool->task_support[0] = '\0';
 
     return tool;
+}
+
+esp_mcp_tool_t *esp_mcp_tool_create(const char *name, const char *description, esp_mcp_tool_callback_t callback)
+{
+    ESP_RETURN_ON_FALSE(callback, NULL, TAG, "Invalid callback");
+    esp_mcp_tool_t *tool = esp_mcp_tool_create_base(name, description);
+    ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Failed to create tool");
+    tool->callback = callback;
+    return tool;
+}
+
+esp_mcp_tool_t *esp_mcp_tool_create_ex(const char *name, const char *title, const char *description, esp_mcp_tool_callback_ex_t callback)
+{
+    ESP_RETURN_ON_FALSE(name && description && callback, NULL, TAG, "Invalid args");
+    esp_mcp_tool_t *tool = esp_mcp_tool_create_base(name, description);
+    ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Failed to create tool");
+    tool->callback_ex = (void *)callback;
+    if (title) {
+        (void)esp_mcp_tool_set_title(tool, title);
+    }
+    return tool;
+}
+
+static esp_err_t esp_mcp_tool_set_dup_str(char **dst, const char *src)
+{
+    if (*dst) {
+        free(*dst);
+        *dst = NULL;
+    }
+    if (!src) {
+        return ESP_OK;
+    }
+    *dst = strdup(src);
+    return *dst ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+esp_err_t esp_mcp_tool_set_title(esp_mcp_tool_t *tool, const char *title)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    return esp_mcp_tool_set_dup_str(&tool->title, title);
+}
+
+esp_err_t esp_mcp_tool_set_icons_json(esp_mcp_tool_t *tool, const char *icons_json)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    return esp_mcp_tool_set_dup_str(&tool->icons_json, icons_json);
+}
+
+esp_err_t esp_mcp_tool_set_output_schema_json(esp_mcp_tool_t *tool, const char *schema_json)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    return esp_mcp_tool_set_dup_str(&tool->output_schema_json, schema_json);
+}
+
+esp_err_t esp_mcp_tool_set_annotations_json(esp_mcp_tool_t *tool, const char *annotations_json)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    return esp_mcp_tool_set_dup_str(&tool->annotations_json, annotations_json);
+}
+
+esp_err_t esp_mcp_tool_set_task_support(esp_mcp_tool_t *tool, const char *task_support)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    if (!task_support) {
+        tool->task_support[0] = '\0';
+        return ESP_OK;
+    }
+    if (strcmp(task_support, "required") != 0 &&
+            strcmp(task_support, "optional") != 0 &&
+            strcmp(task_support, "forbidden") != 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    strncpy(tool->task_support, task_support, sizeof(tool->task_support) - 1);
+    tool->task_support[sizeof(tool->task_support) - 1] = '\0';
+    return ESP_OK;
 }
 
 char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
@@ -70,7 +406,18 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
     ESP_RETURN_ON_FALSE(json, NULL, TAG, "Failed to allocate memory for json");
 
     cJSON_AddStringToObject(json, "name", tool->name);
+    if (tool->title) {
+        cJSON_AddStringToObject(json, "title", tool->title);
+    }
     cJSON_AddStringToObject(json, "description", tool->description);
+    if (tool->icons_json) {
+        cJSON *icons = cJSON_Parse(tool->icons_json);
+        if (icons && cJSON_IsArray(icons)) {
+            cJSON_AddItemToObject(json, "icons", icons);
+        } else if (icons) {
+            cJSON_Delete(icons);
+        }
+    }
 
     cJSON *input_schema = cJSON_CreateObject();
     if (!input_schema) {
@@ -79,6 +426,7 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
         return NULL;
     }
     cJSON_AddStringToObject(input_schema, "type", "object");
+    cJSON_AddBoolToObject(input_schema, "additionalProperties", false);
 
     char *properties_json = esp_mcp_property_list_to_json(tool->properties);
     if (properties_json) {
@@ -120,6 +468,30 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
 
     cJSON_AddItemToObject(json, "inputSchema", input_schema);
 
+    if (tool->output_schema_json) {
+        cJSON *out_schema = cJSON_Parse(tool->output_schema_json);
+        if (out_schema && cJSON_IsObject(out_schema)) {
+            cJSON_AddItemToObject(json, "outputSchema", out_schema);
+        } else if (out_schema) {
+            cJSON_Delete(out_schema);
+        }
+    }
+    if (tool->annotations_json) {
+        cJSON *ann = cJSON_Parse(tool->annotations_json);
+        if (ann && cJSON_IsObject(ann)) {
+            cJSON_AddItemToObject(json, "annotations", ann);
+        } else if (ann) {
+            cJSON_Delete(ann);
+        }
+    }
+    if (tool->task_support[0]) {
+        cJSON *exec = cJSON_CreateObject();
+        if (exec) {
+            cJSON_AddStringToObject(exec, "taskSupport", tool->task_support);
+            cJSON_AddItemToObject(json, "execution", exec);
+        }
+    }
+
     char *result = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
@@ -130,70 +502,60 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
 char *esp_mcp_tool_call(const esp_mcp_tool_t *tool, const esp_mcp_property_list_t *properties)
 {
     ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Invalid tool");
-    ESP_RETURN_ON_FALSE(tool->callback, NULL, TAG, "Invalid callback");
     ESP_RETURN_ON_FALSE(properties, NULL, TAG, "Invalid properties");
 
-    esp_mcp_value_t result = tool->callback(properties);
+    esp_mcp_tool_result_t *r = esp_mcp_tool_result_create();
+    ESP_RETURN_ON_FALSE(r, NULL, TAG, "No mem");
 
-    cJSON *result_json = cJSON_CreateObject();
-    if (!result_json) {
-        ESP_LOGE(TAG, "Failed to allocate memory for result");
-        esp_mcp_value_destroy(&result);
+    if (tool->callback_ex) {
+        esp_mcp_tool_callback_ex_t cb = (esp_mcp_tool_callback_ex_t)tool->callback_ex;
+        esp_err_t cb_ret = cb(properties, r);
+        if (cb_ret != ESP_OK) {
+            (void)esp_mcp_tool_result_set_is_error(r, true);
+            if (cJSON_GetArraySize(r->content) == 0) {
+                (void)esp_mcp_tool_result_add_text(r, "Tool execution failed");
+            }
+        }
+    } else {
+        if (!tool->callback) {
+            ESP_LOGE(TAG, "Invalid callback");
+            esp_mcp_tool_result_destroy(r);
+            return NULL;
+        }
+        esp_mcp_value_t v = tool->callback(properties);
+        char text_str[64] = {0};
+        switch (v.type) {
+        case ESP_MCP_VALUE_TYPE_BOOLEAN:
+            (void)esp_mcp_tool_result_add_text(r, v.data.bool_value ? "true" : "false");
+            break;
+        case ESP_MCP_VALUE_TYPE_INTEGER:
+            snprintf(text_str, sizeof(text_str), "%d", v.data.int_value);
+            (void)esp_mcp_tool_result_add_text(r, text_str);
+            break;
+        case ESP_MCP_VALUE_TYPE_FLOAT:
+            snprintf(text_str, sizeof(text_str), "%g", v.data.float_value);
+            (void)esp_mcp_tool_result_add_text(r, text_str);
+            break;
+        case ESP_MCP_VALUE_TYPE_STRING:
+            (void)esp_mcp_tool_result_add_text(r, v.data.string_value ? v.data.string_value : "");
+            break;
+        default:
+            (void)esp_mcp_tool_result_add_text(r, "");
+            break;
+        }
+        esp_mcp_value_destroy(&v);
+    }
+
+    cJSON *result_obj = NULL;
+    if (esp_mcp_tool_result_to_json_obj(r, &result_obj) != ESP_OK) {
+        esp_mcp_tool_result_destroy(r);
         return NULL;
     }
+    char *result_str = cJSON_PrintUnformatted(result_obj);
+    cJSON_Delete(result_obj);
+    esp_mcp_tool_result_destroy(r);
 
-    cJSON *content = cJSON_CreateArray();
-    if (!content) {
-        ESP_LOGE(TAG, "Failed to allocate memory for content");
-        cJSON_Delete(result_json);
-        esp_mcp_value_destroy(&result);
-        return NULL;
-    }
-
-    cJSON *text = cJSON_CreateObject();
-    if (!text) {
-        ESP_LOGE(TAG, "Failed to allocate memory for text");
-        cJSON_Delete(content);
-        cJSON_Delete(result_json);
-        esp_mcp_value_destroy(&result);
-        return NULL;
-    }
-
-    cJSON_AddStringToObject(text, "type", "text");
-    switch (result.type) {
-    case ESP_MCP_VALUE_TYPE_BOOLEAN:
-        cJSON_AddStringToObject(text, "text", result.data.bool_value ? "true" : "false");
-        break;
-    case ESP_MCP_VALUE_TYPE_INTEGER: {
-        char text_str[22] = {0};
-        snprintf(text_str, sizeof(text_str), "%d", result.data.int_value);
-        cJSON_AddStringToObject(text, "text", text_str);
-    }
-    break;
-    case ESP_MCP_VALUE_TYPE_FLOAT: {
-        char text_str[32] = {0};
-        snprintf(text_str, sizeof(text_str), "%g", result.data.float_value);
-        cJSON_AddStringToObject(text, "text", text_str);
-    }
-    break;
-    case ESP_MCP_VALUE_TYPE_STRING:
-        cJSON_AddStringToObject(text, "text", result.data.string_value);
-        break;
-    default:
-        ESP_LOGE(TAG, "mcp_tool_call: Unknown return type");
-        break;
-    }
-
-    cJSON_AddItemToArray(content, text);
-    cJSON_AddItemToObject(result_json, "content", content);
-    cJSON_AddBoolToObject(result_json, "isError", false);
-
-    char *result_str = cJSON_PrintUnformatted(result_json);
-    cJSON_Delete(result_json);
-
-    esp_mcp_value_destroy(&result);
-
-    ESP_RETURN_ON_FALSE(result_str, NULL, TAG, "Failed to print tool call result to json");
+    ESP_RETURN_ON_FALSE(result_str, NULL, TAG, "Failed to print tool result to json");
     return result_str;
 }
 
@@ -223,6 +585,18 @@ esp_err_t esp_mcp_tool_destroy(esp_mcp_tool_t *tool)
 
     if (tool->description) {
         free(tool->description);
+    }
+    if (tool->title) {
+        free(tool->title);
+    }
+    if (tool->icons_json) {
+        free(tool->icons_json);
+    }
+    if (tool->output_schema_json) {
+        free(tool->output_schema_json);
+    }
+    if (tool->annotations_json) {
+        free(tool->annotations_json);
     }
 
     esp_mcp_property_list_destroy(tool->properties);

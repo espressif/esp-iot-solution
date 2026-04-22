@@ -47,8 +47,11 @@ typedef struct esp_mcp_tool_foreach_ctx_s {
     void *tools_array;                                  /*!< Pointer to the tools array (must not be NULL) */
     const char *cursor_str;                             /*!< Cursor string (must not be NULL) */
     char *next_cursor;                                  /*!< Next cursor string (must not be NULL) */
+    size_t next_cursor_cap;                             /*!< Size of next_cursor buffer in bytes (including NUL) */
     bool *found_cursor;                                 /*!< Pointer to the found cursor flag (must not be NULL) */
     bool should_break;                                  /*!< Whether to break the iteration (must not be NULL) */
+    size_t page_limit;                                  /*!< Max tools in this page; 0 = unlimited */
+    size_t emitted;                                     /*!< Tools appended this page (after cursor match) */
 } esp_mcp_tool_foreach_ctx_t;
 
 /**
