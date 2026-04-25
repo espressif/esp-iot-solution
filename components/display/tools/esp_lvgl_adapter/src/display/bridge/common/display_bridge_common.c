@@ -296,9 +296,16 @@ void display_cache_msync_range(const void *addr,
                                size_t size,
                                size_t cache_line_size)
 {
-    if (!addr || size == 0 || cache_line_size == 0) {
+    if (!addr || size == 0) {
         return;
     }
+
+    size_t line_size = esp_cache_get_line_size_by_addr(addr);
+    if (line_size == 0) {
+        return;
+    }
+
+    cache_line_size = line_size;
 
     /* Align to cache line boundaries */
     uintptr_t start_addr = (uintptr_t)addr;
@@ -318,6 +325,10 @@ void display_cache_msync_framebuffer(void *buffer,
                                      size_t size)
 {
     if (!buffer || size == 0) {
+        return;
+    }
+
+    if (esp_cache_get_line_size_by_addr(buffer) == 0) {
         return;
     }
 

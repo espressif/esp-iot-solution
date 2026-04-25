@@ -1746,7 +1746,11 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
         /* Configure and start PPA */
         size_t buffer_size = heap_caps_get_allocated_size(dst_fb);
         if (buffer_size == 0) {
-            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * hor_res * ver_res, hw_resource.data_cache_line_size);
+            buffer_size = (size_t)color_bytes * hor_res * ver_res;
+            size_t line_size = esp_cache_get_line_size_by_addr(dst_fb);
+            if (line_size > 0) {
+                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
+            }
         }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer          = src,
@@ -1835,7 +1839,11 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
         /* Fill operation config for PPA rotation, without recalculating each time */
         size_t buffer_size = heap_caps_get_allocated_size(to);
         if (buffer_size == 0) {
-            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * w * h, hw_resource.data_cache_line_size);
+            buffer_size = (size_t)color_bytes * w * h;
+            size_t line_size = esp_cache_get_line_size_by_addr(to);
+            if (line_size > 0) {
+                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
+            }
         }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer = from,
