@@ -4,9 +4,13 @@ set(srcs
     "src/esp_mcp_property.c"
     "src/esp_mcp_tool.c"
     "src/esp_mcp_data.c"
+    "src/esp_mcp_resource.c"
+    "src/esp_mcp_prompt.c"
+    "src/esp_mcp_completion.c"
+    "src/esp_mcp_task.c"
 )
 
-set(priv_req "esp_common" "app_update" "json" "esp_http_server" "esp_http_client" "http_parser")
+set(priv_req "esp_common" "app_update" "json" "esp_http_server" "esp_http_client" "http_parser" "esp_timer" "mbedtls")
 
 # Conditionally compile built-in HTTP transport
 if(CONFIG_MCP_TRANSPORT_HTTP_SERVER)

@@ -9,6 +9,257 @@ menu "Model Context Protocol"
             For other transport methods, implement a custom transport by providing an esp_mcp_transport_t
             implementation in esp_mcp_mgr_config_t.
 
+    config MCP_HTTP_SSE_ENABLE
+        bool "Enable Streamable HTTP SSE (GET)"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        default y
+        help
+            Enable SSE stream on MCP HTTP GET endpoint (`Accept: text/event-stream`).
+            When disabled, GET returns 405.
+
+    config MCP_HTTP_SSE_MAX_CLIENTS
+        int "Maximum concurrent SSE clients"
+        depends on MCP_HTTP_SSE_ENABLE
+        range 1 32
+        default 4
+        help
+            Maximum number of concurrent SSE clients connected to a single endpoint.
+
+    config MCP_HTTP_SSE_QUEUE_LEN
+        int "Per-client SSE queue depth"
+        depends on MCP_HTTP_SSE_ENABLE
+        range 1 256
+        default 32
+        help
+            Per-client buffered notification count. Oldest events are dropped when full.
+
+    config MCP_HTTP_SSE_REPLAY_DEPTH
+        int "SSE replay history depth"
+        depends on MCP_HTTP_SSE_ENABLE
+        range 1 512
+        default 128
+        help
+            Number of recent SSE events kept for Last-Event-ID replay.
+
+
+    config MCP_HTTP_SSE_TASK_STACK_SIZE
+        int "SSE client task stack size (words)"
+        depends on MCP_HTTP_SSE_ENABLE
+        range 2048 16384
+        default 4096
+        help
+            FreeRTOS stack depth for each SSE client task. Increase for large
+            JSON notifications or TLS-heavy deployments.
+
+    config MCP_HTTP_SSE_HEARTBEAT_MS
+        int "SSE heartbeat interval (ms)"
+        depends on MCP_HTTP_SSE_ENABLE
+        range 100 60000
+        default 15000
+        help
+            Interval for heartbeat comments over SSE to keep connections alive.
+
+    config MCP_HTTP_SESSION_TTL_MS
+        int "MCP session TTL (ms)"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        range 1000 86400000
+        default 600000
+        help
+            Session timeout for MCP-Session-Id. Expired sessions return 404.
+            Range is 1 second to 24 hours. Very small values can expire sessions during
+            normal multi-request flows; very large values delay cleanup of idle sessions.
+
+
+    config MCP_RESOURCE_SUBSCRIPTIONS_MAX
+        int "Maximum resource subscriptions per MCP instance"
+        range 4 256
+        default 64
+        help
+            Maximum number of resource subscriptions stored in MCP engine state.
+            Higher values allow more subscribed resources but increase static memory use.
+
+    config MCP_HTTP_DEFAULT_PROTOCOL_VERSION
+        string "Default MCP protocol version when header is missing"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        default "2025-03-26"
+        help
+            Fallback version used when MCP-Protocol-Version request header is absent.
+            This value is also echoed back via MCP-Protocol-Version response header.
+
+    config MCP_HTTP_CORS_ENABLE
+        bool "Streamable HTTP: CORS preflight (OPTIONS) and Allow-Origin reflection"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        default n
+        help
+            For browser-based MCP clients: register HTTP OPTIONS on MCP paths and return
+            Access-Control-Allow-Methods / Allow-Headers on preflight. When Origin is
+            present and matches Host (same rules as DNS-rebinding checks), responses to
+            POST/GET/DELETE also include Access-Control-Allow-Origin and
+            Access-Control-Expose-Headers for MCP-Session-Id and MCP-Protocol-Version.
+            Keep disabled unless you need cross-origin web UIs talking directly to the device.
+
+    config MCP_HTTP_AUTH_ENABLE
+        bool "Enable HTTP Bearer authentication"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        default n
+        help
+            Require Authorization: Bearer <token> on MCP POST/GET endpoints.
+
+    config MCP_HTTP_AUTH_BEARER_TOKEN
+        string "Bearer token for MCP HTTP auth"
+        depends on MCP_HTTP_AUTH_ENABLE
+        default "mcp-dev-token"
+        help
+            Shared bearer token used for transport-level authentication.
+
+    config MCP_HTTP_AUTH_REQUIRED_SCOPE
+        string "Required OAuth scope"
+        depends on MCP_HTTP_AUTH_ENABLE
+        default "mcp:full"
+        help
+            Required scope advertised in WWW-Authenticate responses.
+
+    config MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        bool "Enable JWT claims verification skeleton"
+        depends on MCP_HTTP_AUTH_ENABLE
+        default n
+        help
+            Enable JWT header/payload verification skeleton for Bearer tokens.
+            This validates token format and key claims (iss/aud/exp/nbf/iat) and can be
+            extended with full JWK signature verification.
+
+    config MCP_HTTP_AUTH_JWT_EXPECT_ISS
+        string "Expected JWT issuer (iss)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        default MCP_HTTP_OAUTH_ISSUER
+        help
+            Expected issuer claim in incoming access tokens.
+
+    config MCP_HTTP_AUTH_JWT_EXPECT_AUD
+        string "Expected JWT audience (aud)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        default MCP_HTTP_OAUTH_RESOURCE
+        help
+            Expected audience claim in incoming access tokens.
+
+    config MCP_HTTP_AUTH_JWT_REQUIRE_KID
+        bool "Require JWT header kid"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        default y
+        help
+            Require a key id (kid) in JWT header for JWKS key selection.
+
+    config MCP_HTTP_AUTH_JWT_VERIFY_SIGNATURE
+        bool "Enable JWT signature verification (JWKS placeholder)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        default n
+        help
+            Enable cryptographic JWT signature verification against JWKS for supported
+            algorithms (RS256/ES256).
+
+    config MCP_HTTP_AUTH_JWKS_FETCH_TIMEOUT_MS
+        int "JWKS fetch timeout (ms)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        range 100 30000
+        default 3000
+        help
+            HTTP timeout used when downloading JWKS documents.
+
+    config MCP_HTTP_AUTH_JWKS_CACHE_TTL_SEC
+        int "JWKS cache TTL (seconds)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        range 1 86400
+        default 300
+        help
+            JWKS cache lifetime before re-fetching.
+
+
+    config MCP_HTTP_AUTH_JWKS_MAX_SIZE
+        int "JWKS maximum size (bytes)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        range 1024 262144
+        default 16384
+        help
+            Upper bound for downloaded JWKS JSON payload. Responses exceeding
+            this limit are rejected to avoid memory exhaustion.
+
+    config MCP_HTTP_AUTH_JWKS_JSON_OVERRIDE
+        string "JWKS JSON override (optional)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        default ""
+        help
+            Optional inline JWKS JSON. When set, network fetch is skipped and this
+            document is used for key selection and verification.
+
+    config MCP_HTTP_AUTH_JWT_CLOCK_SKEW_SEC
+        int "JWT clock skew tolerance (seconds)"
+        depends on MCP_HTTP_AUTH_JWT_VERIFY_ENABLE
+        range 0 3600
+        default 300
+        help
+            Allowed skew (seconds) when validating exp, nbf, and iat against local time.
+            Embedded devices may have RTC drift or delayed NTP sync; many cloud IdPs document
+            ~5 minutes tolerance. Default 300s balances availability with rejecting clearly
+            stale tokens. Tighten if clocks are well synchronized; increase only if needed.
+
+    config MCP_HTTP_AUTH_SCOPE_ENABLE
+        bool "Enable bearer scope check matrix"
+        depends on MCP_HTTP_AUTH_ENABLE
+        default n
+        help
+            Enable explicit scope-insufficient path for auth matrix testing.
+
+    config MCP_HTTP_AUTH_LOW_SCOPE_TOKEN
+        string "Low-scope bearer token"
+        depends on MCP_HTTP_AUTH_SCOPE_ENABLE
+        default "mcp-readonly-token"
+        help
+            Token that is authenticated but rejected with scope_insufficient.
+
+    config MCP_HTTP_OAUTH_METADATA_ENABLE
+        bool "Enable OAuth metadata endpoints"
+        depends on MCP_TRANSPORT_HTTP_SERVER
+        default y
+        help
+            Expose OAuth metadata endpoints used by MCP 2025-11-25 authorization:
+            - /.well-known/oauth-protected-resource
+            - /.well-known/oauth-authorization-server
+
+    config MCP_HTTP_OAUTH_ISSUER
+        string "OAuth issuer URL"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local"
+
+    config MCP_HTTP_OAUTH_JWKS_URI
+        string "OAuth JWKS URI"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local/.well-known/jwks.json"
+
+    config MCP_HTTP_OAUTH_AUTH_SERVER
+        string "OAuth authorization server URL"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local"
+
+    config MCP_HTTP_OAUTH_AUTHORIZATION_ENDPOINT
+        string "OAuth authorization endpoint URL"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local/oauth/authorize"
+
+    config MCP_HTTP_OAUTH_TOKEN_ENDPOINT
+        string "OAuth token endpoint URL"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local/oauth/token"
+
+    config MCP_HTTP_OAUTH_REGISTRATION_ENDPOINT
+        string "OAuth dynamic registration endpoint URL"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "https://example.local/oauth/register"
+
+    config MCP_HTTP_OAUTH_RESOURCE
+        string "OAuth protected resource identifier"
+        depends on MCP_HTTP_OAUTH_METADATA_ENABLE
+        default "mcp://esp32"
+
     config MCP_TRANSPORT_HTTP_CLIENT
         bool "Enable built-in HTTP client transport"
         default y
@@ -30,5 +281,21 @@ menu "Model Context Protocol"
         default 8192
         help
             Set the maximum size allowed for the toollist.
+
+    config MCP_TASK_POLL_INTERVAL_MS
+        int "Default task poll interval (ms)"
+        range 100 60000
+        default 1000
+        help
+            Default polling interval in milliseconds for task status updates.
+            This value is used when the server does not specify a custom poll interval.
+
+    config MCP_TASKS_LIST_MAX_COUNT
+        int "Maximum tasks per page in tasks/list response"
+        range 10 1000
+        default 100
+        help
+            Maximum number of tasks returned per page in tasks/list response.
+            Set to 0 to disable pagination (return all tasks).
 
 endmenu

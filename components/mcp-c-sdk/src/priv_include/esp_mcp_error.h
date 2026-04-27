@@ -28,6 +28,7 @@ typedef enum {
     MCP_ERROR_CODE_FAILED_TO_ADD_TOOL                   = -32001,   /*!< Failed to add tool to server */
     MCP_ERROR_CODE_TOOL_CALL_FAILED                     = -32002,   /*!< Tool execution callback failed */
     MCP_ERROR_CODE_FAILED_TO_CREATE_ARGUMENTS           = -32003,   /*!< Failed to create tool arguments */
+    MCP_ERROR_CODE_UNSUPPORTED_ELICITATION_MODE         = -32042,   /*!< Unsupported elicitation mode */
 } esp_mcp_error_code_t;
 
 /**
@@ -44,6 +45,7 @@ typedef enum {
 #define MCP_ERROR_MESSAGE_FAILED_TO_ADD_TOOL            "Failed to add tool"
 #define MCP_ERROR_MESSAGE_TOOL_CALL_FAILED              "Tool call failed"
 #define MCP_ERROR_MESSAGE_FAILED_TO_CREATE_ARGUMENTS    "Failed to create arguments"
+#define MCP_ERROR_MESSAGE_UNSUPPORTED_ELICITATION_MODE  "Unsupported elicitation mode"
 
 #define MCP_ERROR_BUF_MAX_SIZE                          64      /*!< Maximum size (bytes) for error message buffer */
 

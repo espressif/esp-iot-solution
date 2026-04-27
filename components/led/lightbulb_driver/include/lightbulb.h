@@ -432,93 +432,93 @@ typedef struct {
     bool interrupt_forbidden;           /**< If true, the auto-stop timer can only be stopped by specific interfaces or FreeRTOS triggers. */
 } lightbulb_effect_config_t;
 
+#ifdef CONFIG_ENABLE_PWM_DRIVER
 /**
  * @brief Create and initialize a PWM-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_PWM_DRIVER
 lightbulb_handle_t lightbulb_new_pwm_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
 /**
  * @brief Create and initialize a SM2182E-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_SM2182E_DRIVER
 lightbulb_handle_t lightbulb_new_sm2182e_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
 /**
  * @brief Create and initialize a SM2135EH-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
 lightbulb_handle_t lightbulb_new_sm2135eh_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
 /**
  * @brief Create and initialize a SM2x35EGH-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
 lightbulb_handle_t lightbulb_new_sm2x35egh_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
 /**
  * @brief Create and initialize a BP57x8D-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
 lightbulb_handle_t lightbulb_new_bp57x8d_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
 /**
  * @brief Create and initialize a BP1658CJ-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
 lightbulb_handle_t lightbulb_new_bp1658cj_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
 /**
  * @brief Create and initialize a KP18058-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_KP18058_DRIVER
 lightbulb_handle_t lightbulb_new_kp18058_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
 /**
  * @brief Create and initialize a WS2812-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_WS2812_DRIVER
 lightbulb_handle_t lightbulb_new_ws2812_device(lightbulb_config_t *config);
 #endif
 
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
 /**
  * @brief Create and initialize a SM16825E-based lightbulb device.
  *
  * @param config Pointer to lightbulb configuration
  * @return lightbulb_handle_t Lightbulb handle, or NULL on failure.
  */
-#ifdef CONFIG_ENABLE_SM16825E_DRIVER
 lightbulb_handle_t lightbulb_new_sm16825e_device(lightbulb_config_t *config);
 #endif
 

@@ -12,10 +12,20 @@ This example demonstrates using an ESP device as an **MCP client** to call a rem
 
 - Connect Wi-Fi (`protocol_examples_common`)
 - Initialize MCP manager with built-in **HTTP client transport**
-- Send JSON-RPC requests:
-  - `initialize`
-  - `tools/list`
-  - `tools/call` (example: call `get_device_status` with `{}`)
+- Send JSON-RPC requests in order:
+  - `initialize`, then **wait for its response** before any other MCP request
+  - `tools/list` (with optional pagination via `nextCursor`)
+  - optional dynamic `tools/call` for the first discovered tool name
+  - `tools/call` (several static example tool invocations)
+  - optional `resources/*` and `prompts/*` demo requests (Kconfig-controlled)
+
+### `initialize` and `notifications/initialized`
+
+The example requests a recent MCP protocol version; the **negotiated** `protocolVersion` in the `initialize` result decides whether a `notifications/initialized` notification is required.
+
+The MCP manager (`esp_mcp_mgr`) sends `notifications/initialized` automatically when that negotiated version is **newer than** `2024-11-05` (lexicographic compare in the SDK). You do **not** need to call `esp_mcp_mgr_post_initialized` yourself in that flow. If you send it manually from an `initialize` response callback, the manager will not send a second copy.
+
+Sending `tools/list` or `tools/call` before the `initialize` response completes can violate session ordering; this example waits until the pending `initialize` response (and any follow-up work in the callback path) has finished before continuing.
 
 ## How to Use Example
 
@@ -39,6 +49,13 @@ In the `Example Configuration` menu (this example):
 - `Remote MCP server host`: MCP server host/IP
 - `Remote MCP server port`: MCP server port
 - `Remote MCP endpoint name`: HTTP path used as `POST /<endpoint>`
+- `Enable resources/* demo requests`: turn on `resources/list`, `resources/templates/list`, `resources/read`
+- `Demo resources/read URI`: URI used by `resources/read` when enabled
+- `Enable prompts/* demo requests`: turn on `prompts/list` and `prompts/get`
+- `Demo prompts/get name`: prompt name used by `prompts/get` when enabled
+- `Enable tools/list pagination demo`: request next pages with `nextCursor`
+- `Max tools/list pages`: upper bound for pagination loop
+- `Enable dynamic tools/call from tools/list result`: call first discovered tool with `{}`
 
 ### Build and Flash
 
@@ -59,7 +76,7 @@ After flashing the firmware, you should see the device connect to Wi-Fi and then
 ```
 I (...) example_connect: - IPv4 address: 192.168.1.10
 I (...) mcp_client: Remote base_url=http://192.168.1.100:80, endpoint=mcp_server
-I (...) mcp_client: Response callback: is_error=0, ep_name=mcp_server, resp_json=...
+I (...) mcp_client: [Success] Endpoint: mcp_server
 ```
 
 ## Run Together with `mcp_server` Example

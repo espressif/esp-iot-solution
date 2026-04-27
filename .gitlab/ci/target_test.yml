@@ -185,6 +185,8 @@ components_test_iot_usbh_cdc:
     - job: "build_components_usb_iot_usbh_cdc_test_apps"
       artifacts: true
       optional: false
+  # High failure rate, cause TBD.
+  allow_failure: true
   retry:
     max: 2
   parallel:

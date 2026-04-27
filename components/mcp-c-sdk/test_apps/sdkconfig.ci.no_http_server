@@ -1,0 +1,3 @@
+# Unit matrix: build without built-in HTTP server transport
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_TRANSPORT_HTTP_SERVER=n
