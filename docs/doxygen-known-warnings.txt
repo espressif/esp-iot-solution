@@ -1,14 +1,6 @@
-bldc_control.h:line: warning: parameters of member bldc_control_config_t::@73 are not (all) documented
-bldc_control.h:line: warning: parameters of member bldc_control_config_t::@75 are not (all) documented
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@81 are not (all) documented
+bldc_control.h:line: warning: parameters of member bldc_control_config_t::@83 are not (all) documented
+esp_ble_conn_mgr.h:line: warning: parameters of member esp_ble_conn_event_data_t::@13 are not (all) documented
 esp_ble_conn_mgr.h:line: warning: parameters of member esp_ble_conn_l2cap_coc_event::@3 are not (all) documented
-sensor_type.h:line: warning: parameters of member sensor_data_t::@81 are not (all) documented
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
-lightbulb.h:line: warning: argument 'config' of command @param is not found in the argument list of lightbulb_deinit(lightbulb_handle_t handle)
+sensor_type.h:line: warning: parameters of member sensor_data_t::@89 are not (all) documented
 

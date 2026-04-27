@@ -128,3 +128,8 @@ output.json
 **/dist/
 
 *.log
+
+# AI related files
+.cursor/
+.codex
+.gemini/
