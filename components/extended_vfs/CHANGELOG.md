@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v0.4.0 - 2026-04-30
+
+* Add full support for ESP-IDF 5.3+ new driver architecture
+  - GPIO: Compatible with `esp_driver_gpio` component
+  - I2C: Compatible with `esp_driver_i2c` component
+  - LEDC: Compatible with `esp_driver_ledc` component
+  - SPI: Compatible with `esp_driver_spi` component
+  - Maintains backward compatibility with ESP-IDF 4.4.3+
+
 ## v0.3.2 - 2023-11-23
 
 * Fix possible cmake_utilities dependency issue

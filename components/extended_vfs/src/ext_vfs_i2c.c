@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,30 +9,223 @@
 
 #include "esp_vfs.h"
 #include "esp_log.h"
+
+/* ESP-IDF >= 5.3.0 uses new I2C driver architecture */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+#include "driver/i2c_master.h"
+#if SOC_I2C_SUPPORT_SLAVE
+#include "driver/i2c_slave.h"
+#endif
+/* Use (i2c_addr_bit_len_t)1 instead of I2C_ADDR_BIT_LEN_10: some targets omit the enum member
+ * even when macros disagree across IDF versions; the numeric value matches the driver API. */
+#if defined(SOC_I2C_SUPPORT_10BIT_ADDR) && SOC_I2C_SUPPORT_10BIT_ADDR
+#define EXT_VFS_I2C_10BIT_OK 1
+#else
+#define EXT_VFS_I2C_10BIT_OK 0
+#endif
+#else
 #include "driver/i2c.h"
+#endif
 
 #include "ext_vfs_export.h"
 
 #include "ioctl/esp_i2c_ioctl.h"
 
-#ifndef CONFIG_IDF_TARGET_ESP32C2
+#if SOC_I2C_SUPPORT_SLAVE
 #define I2C_SLAVE_VFS
 #endif
 
-#define I2C_PORT_NUM    I2C_NUM_MAX  /*!< I2C port number */
-
-#define I2C_TRANSFER_TIMEOUT    (1000 / portTICK_PERIOD_MS)  /*!< I2C transfer timeout time(FreeRTOS ticks) */
+#define I2C_PORT_NUM           I2C_NUM_MAX  /*!< I2C port number */
+#define I2C_TRANSFER_TIMEOUT   (1000 / portTICK_PERIOD_MS)  /*!< I2C transfer timeout time(FreeRTOS ticks) */
+#define I2C_SLAVE_BUF_DEPTH    256
 
 typedef struct i2c_stat {
     uint32_t opened :  1;  /*!< 1: I2C device is open, 0: I2C device is not open */
     uint32_t master :  1;  /*!< 1: I2C master mode, 0: slave mode */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    uint32_t addr_10bit : 1; /*!< 1: 10-bit address, 0: 7-bit address */
+    i2c_master_bus_handle_t bus_handle;     /*!< I2C master bus handle */
+    i2c_master_dev_handle_t dev_handle;     /*!< I2C master device handle */
+    i2c_slave_dev_handle_t slave_handle;    /*!< I2C slave device handle */
+    uint16_t slave_addr;                     /*!< Slave address for master mode */
+    uint32_t scl_speed_hz;                   /*!< Master SCL frequency (Hz) for bus device; from cfg->master.clock */
+#endif
 } i2c_stat_t;
 
 static const char *TAG = "ext_vfs_i2c";
 
 static i2c_stat_t i2c_stat[I2C_PORT_NUM];
 
-static int config_i2c(int port, const i2c_cfg_t *cfg)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+static int config_i2c_driver(int port, const i2c_cfg_t *cfg)
+{
+    esp_err_t err;
+
+    if (cfg->flags & I2C_MASTER) {
+        i2c_master_bus_config_t bus_config = {
+            .i2c_port = port,
+            .sda_io_num = cfg->sda_pin,
+            .scl_io_num = cfg->scl_pin,
+            .clk_source = I2C_CLK_SRC_DEFAULT,
+            .glitch_ignore_cnt = 7,
+            .flags.enable_internal_pullup = (cfg->flags & (I2C_SDA_PULLUP | I2C_SCL_PULLUP)) ? true : false,
+        };
+
+        err = i2c_new_master_bus(&bus_config, &i2c_stat[port].bus_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "i2c_new_master_bus failed: %s", esp_err_to_name(err));
+            errno = EIO;
+            return -1;
+        }
+
+        i2c_stat[port].master = 1;
+        i2c_stat[port].addr_10bit = (cfg->flags & I2C_ADDR_10BIT) ? 1 : 0;
+        i2c_stat[port].scl_speed_hz = cfg->master.clock;
+    } else {
+#ifdef I2C_SLAVE_VFS
+        i2c_slave_config_t slave_config = {
+            .i2c_port = port,
+            .sda_io_num = cfg->sda_pin,
+            .scl_io_num = cfg->scl_pin,
+            .slave_addr = cfg->slave.addr,
+            .addr_bit_len = ((cfg->flags & I2C_ADDR_10BIT) && EXT_VFS_I2C_10BIT_OK) ? ((i2c_addr_bit_len_t)1) : I2C_ADDR_BIT_LEN_7,
+            .send_buf_depth = I2C_SLAVE_BUF_DEPTH,
+        };
+
+        err = i2c_new_slave_device(&slave_config, &i2c_stat[port].slave_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "i2c_new_slave_device failed: %s", esp_err_to_name(err));
+            errno = EIO;
+            return -1;
+        }
+
+        i2c_stat[port].master = 0;
+        i2c_stat[port].addr_10bit = (cfg->flags & I2C_ADDR_10BIT) ? 1 : 0;
+#else
+        errno = EINVAL;
+        return -1;
+#endif
+    }
+
+    return 0;
+}
+
+static int i2c_master_transfer(int port, const i2c_msg_t *msg)
+{
+    esp_err_t err;
+
+    if (!i2c_stat[port].dev_handle || i2c_stat[port].slave_addr != msg->addr) {
+        i2c_device_config_t dev_config = {
+            .dev_addr_length = (i2c_stat[port].addr_10bit && EXT_VFS_I2C_10BIT_OK) ? ((i2c_addr_bit_len_t)1) : I2C_ADDR_BIT_LEN_7,
+            .device_address = msg->addr,
+            .scl_speed_hz = i2c_stat[port].scl_speed_hz ? i2c_stat[port].scl_speed_hz : 100000,
+        };
+
+        if (i2c_stat[port].dev_handle) {
+            esp_err_t ret = i2c_master_bus_rm_device(i2c_stat[port].dev_handle);
+            if (ret != ESP_OK) {
+                ESP_LOGE(TAG, "i2c_master_bus_rm_device failed: %s", esp_err_to_name(ret));
+                errno = EIO;
+                return -1;
+            } else {
+                i2c_stat[port].dev_handle = NULL;
+            }
+        }
+
+        err = i2c_master_bus_add_device(i2c_stat[port].bus_handle, &dev_config, &i2c_stat[port].dev_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "i2c_master_bus_add_device failed: %s", esp_err_to_name(err));
+            errno = EIO;
+            return -1;
+        }
+
+        i2c_stat[port].slave_addr = msg->addr;
+    }
+
+    if (msg->flags & (I2C_MSG_NO_START | I2C_MSG_NO_END)) {
+        errno = ENOTSUP;
+        return -1;
+    }
+
+    if (msg->flags & I2C_MSG_WRITE) {
+        err = i2c_master_transmit(i2c_stat[port].dev_handle, msg->buffer, msg->size, I2C_TRANSFER_TIMEOUT);
+    } else {
+        err = i2c_master_receive(i2c_stat[port].dev_handle, msg->buffer, msg->size, I2C_TRANSFER_TIMEOUT);
+    }
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C transfer failed: %s", esp_err_to_name(err));
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
+
+#ifdef I2C_SLAVE_VFS
+static int i2c_slave_transfer(int port, const i2c_msg_t *msg)
+{
+    esp_err_t err;
+
+    if (msg->flags & I2C_MSG_WRITE) {
+        err = i2c_slave_transmit(i2c_stat[port].slave_handle, msg->buffer, msg->size, I2C_TRANSFER_TIMEOUT);
+    } else {
+        err = i2c_slave_receive(i2c_stat[port].slave_handle, msg->buffer, msg->size);
+    }
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "I2C slave transfer failed: %s", esp_err_to_name(err));
+        errno = EIO;
+        return -1;
+    }
+
+    return 0;
+}
+#endif
+
+static esp_err_t i2c_driver_close(int port)
+{
+    esp_err_t err = ESP_OK;
+    esp_err_t first_err = ESP_OK;
+    // 1. Remove device from bus first
+    if (i2c_stat[port].dev_handle) {
+        err = i2c_master_bus_rm_device(i2c_stat[port].dev_handle);
+        if (err != ESP_OK && first_err == ESP_OK) {
+            first_err = err;
+            ESP_LOGW(TAG, "Failed to remove I2C device: %s", esp_err_to_name(err));
+        } else {
+            i2c_stat[port].dev_handle = NULL;
+        }
+    }
+    // 2. Delete slave device if exists (no slave driver / symbols on e.g. ESP32-C2)
+#ifdef I2C_SLAVE_VFS
+    if (i2c_stat[port].slave_handle) {
+        err = i2c_del_slave_device(i2c_stat[port].slave_handle);
+        if (err != ESP_OK && first_err == ESP_OK) {
+            first_err = err;
+            ESP_LOGW(TAG, "Failed to delete slave device: %s", esp_err_to_name(err));
+        } else {
+            i2c_stat[port].slave_handle = NULL;
+        }
+    }
+#endif
+    // 3. Delete master bus last
+    if (i2c_stat[port].bus_handle) {
+        err = i2c_del_master_bus(i2c_stat[port].bus_handle);
+        if (err != ESP_OK && first_err == ESP_OK) {
+            first_err = err;
+            ESP_LOGW(TAG, "Failed to delete master bus: %s", esp_err_to_name(err));
+        } else {
+            i2c_stat[port].bus_handle = NULL;
+        }
+    }
+
+    return first_err;
+}
+
+#else  // ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+
+static int config_i2c_driver_legacy(int port, const i2c_cfg_t *cfg)
 {
     i2c_config_t conf = {};
     esp_err_t err;
@@ -55,7 +248,7 @@ static int config_i2c(int port, const i2c_cfg_t *cfg)
 
         i2c_stat[port].master = 0;
 #else
-        errno = -EINVAL;
+        errno = EINVAL;
         return -1;
 #endif
     }
@@ -65,7 +258,7 @@ static int config_i2c(int port, const i2c_cfg_t *cfg)
     }
 
     if (cfg->flags & I2C_SCL_PULLUP) {
-        conf.sda_pullup_en = true;
+        conf.scl_pullup_en = true;
     }
 
     conf.sda_io_num = cfg->sda_pin;
@@ -86,7 +279,7 @@ static int config_i2c(int port, const i2c_cfg_t *cfg)
     return 0;
 }
 
-static int i2c_master_transfer(int port, const i2c_msg_t *msg)
+static int i2c_master_transfer_legacy(int port, const i2c_msg_t *msg)
 {
     esp_err_t err;
     i2c_cmd_handle_t cmd;
@@ -149,7 +342,7 @@ errout_create_cmdlink:
 }
 
 #ifdef I2C_SLAVE_VFS
-static int i2c_slave_transfer(int port, const i2c_msg_t *msg)
+static int i2c_slave_transfer_legacy(int port, const i2c_msg_t *msg)
 {
     int ret;
 
@@ -159,7 +352,7 @@ static int i2c_slave_transfer(int port, const i2c_msg_t *msg)
         ret = i2c_slave_read_buffer(port, msg->buffer, msg->size, I2C_TRANSFER_TIMEOUT);
     }
 
-    if (ret != ESP_OK) {
+    if (ret < 0) {
         errno = EIO;
         return -1;
     }
@@ -168,15 +361,39 @@ static int i2c_slave_transfer(int port, const i2c_msg_t *msg)
 }
 #endif
 
+static esp_err_t i2c_driver_close_legacy(int port)
+{
+    return i2c_driver_delete(port);
+}
+
+#endif
+
+static int config_i2c(int port, const i2c_cfg_t *cfg)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    return config_i2c_driver(port, cfg);
+#else
+    return config_i2c_driver_legacy(port, cfg);
+#endif
+}
+
 static int i2c_transfer(int port, const i2c_msg_t *msg)
 {
     int ret;
 
     if (i2c_stat[port].master) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
         ret = i2c_master_transfer(port, msg);
+#else
+        ret = i2c_master_transfer_legacy(port, msg);
+#endif
     } else {
 #ifdef I2C_SLAVE_VFS
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
         ret = i2c_slave_transfer(port, msg);
+#else
+        ret = i2c_slave_transfer_legacy(port, msg);
+#endif
 #else
         ret = -1;
 #endif
@@ -198,7 +415,7 @@ static int i2c_master_read_write(int port, uint16_t addr, uint8_t *buffer, uint3
     msg.addr   = addr;
     msg.buffer = buffer;
     msg.size   = size;
-    ret = i2c_master_transfer(port, &msg);
+    ret = i2c_transfer(port, &msg);
 
     return ret;
 }
@@ -293,6 +510,7 @@ static int i2c_open(const char *path, int flags, int mode)
         return -1;
     }
 
+    memset(&i2c_stat[fd], 0, sizeof(i2c_stat_t));
     i2c_stat[fd].opened = 1;
 
     return fd;
@@ -304,7 +522,12 @@ static int i2c_close(int fd)
 
     ESP_LOGV(TAG, "close(%d)", fd);
 
-    err = i2c_driver_delete(fd);
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    err = i2c_driver_close(fd);
+#else
+    err = i2c_driver_close_legacy(fd);
+#endif
+
     if (err != ESP_OK) {
         errno = EIO;
         return -1;
