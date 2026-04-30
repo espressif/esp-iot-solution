@@ -1,0 +1,5 @@
+dependencies:
+  idf:
+    version: ">=4.4"
+  servo:
+    override_path: "../.."
