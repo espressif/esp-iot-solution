@@ -570,15 +570,36 @@ static void in_xfer_cb(usb_transfer_t *in_xfer)
         return;
     }
     case USB_TRANSFER_STATUS_NO_DEVICE:
-    case USB_TRANSFER_STATUS_CANCELED:
         return;
-    default:
-        // Any other error
-        ESP_LOGW(TAG, "IN Transfer failed, EP:%d, status %d", in_xfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_NUM_MASK, in_xfer->status);
-        if (retry_count++ < CONFIG_USBH_CDC_IN_EP_RETRY_COUNT) {
-            _cdc_reset_transfer_endpoint(cdc_port->cdc_dev->dev_hdl, in_xfer);
+    case USB_TRANSFER_STATUS_CANCELED:
+        /*
+         * CANCELED fires when the USB host flushes the endpoint during
+         * SET_INTERFACE (alt=0 → alt=1 for CDC-ECM).  Resubmit so the IN
+         * transfer chain restarts automatically once alt=1 is active and the
+         * bulk endpoint physically exists.  Skip if the port is being closed.
+         */
+        if (!cdc_port->to_close) {
+            retry_count = 0;
             _cdc_host_transfer_submit(cdc_port, in_xfer);
         }
+        return;
+    default:
+        /*
+         * IN transfer failed (typically STATUS_ERROR on alt=0 before SET_INTERFACE).
+         *
+         * Do NOT clear the pipe or resubmit here.  _handle_pending_ep (USB host
+         * client error handler) calls USBH_EP_CMD_FLUSH on the endpoint, which
+         * requires the pipe to be in HALTED state.  Calling endpoint_clear
+         * (HALTED→ACTIVE) before that FLUSH runs causes an ESP_ERR_INVALID_STATE
+         * crash.
+         *
+         * The pipe stays HALTED after every error.  The ECM layer calls
+         * usbh_cdc_restart_in_transfer() after SET_INTERFACE completes (alt=1
+         * is active) to restart the IN transfer chain cleanly.
+         */
+        ESP_LOGW(TAG, "IN Transfer failed, EP:%d, status %d",
+                 in_xfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_NUM_MASK,
+                 in_xfer->status);
         break;
     }
 }
@@ -606,6 +627,49 @@ static void out_xfer_cb(usb_transfer_t *out_xfer)
         ESP_LOGW(TAG, "OUT Transfer failed, EP:%d, status %d", out_xfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_NUM_MASK, out_xfer->status);
         break;
     }
+}
+
+/*
+ * Restart the IN bulk transfer chain after the interface has switched to alt=1.
+ * Must be called from the ECM layer once SET_INTERFACE(alt=1) has completed and
+ * the bulk IN endpoint is physically present.
+ */
+esp_err_t usbh_cdc_restart_in_transfer(usbh_cdc_port_handle_t handle)
+{
+    usbh_cdc_port_t *cdc_port = (usbh_cdc_port_t *)handle;
+    if (!cdc_port || !cdc_port->data.in_xfer) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    /* Clear HALTED→ACTIVE before submitting */
+    usb_host_endpoint_clear(cdc_port->cdc_dev->dev_hdl,
+                            cdc_port->data.in_xfer->bEndpointAddress);
+    return _cdc_host_transfer_submit(cdc_port, cdc_port->data.in_xfer);
+}
+
+/*
+ * Recover the OUT bulk pipe after a software reboot.
+ *
+ * On a software reboot the USB device is not power-cycled, so a failed OUT
+ * transfer from the previous session can leave the pipe in HALTED state.
+ * This function clears the halt and releases the semaphore so future writes
+ * can proceed.  The semaphore-count guard prevents touching a healthy pipe
+ * (which would produce a spurious ESP_ERR_INVALID_STATE from the USB host
+ * layer on a normal hardware reboot).
+ *
+ * Must be called from the ECM layer after SET_INTERFACE(alt=1) completes.
+ */
+esp_err_t usbh_cdc_restart_out_transfer(usbh_cdc_port_handle_t handle)
+{
+    usbh_cdc_port_t *cdc_port = (usbh_cdc_port_t *)handle;
+    if (!cdc_port || !cdc_port->data.out_xfer || cdc_port->out_ringbuf_handle) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (uxSemaphoreGetCount(cdc_port->data.out_xfer_free_sem) == 0) {
+        usb_host_endpoint_clear(cdc_port->cdc_dev->dev_hdl,
+                                cdc_port->data.out_xfer->bEndpointAddress);
+        xSemaphoreGive(cdc_port->data.out_xfer_free_sem);
+    }
+    return ESP_OK;
 }
 
 static void _cdc_tx_xfer_submit(usb_transfer_t *out_xfer)
@@ -706,6 +770,11 @@ static esp_err_t _cdc_transfers_allocate(usbh_cdc_port_t *cdc_port, const usb_ep
             cdc_port->data.out_xfer->context = cdc_port;
             cdc_port->data.out_xfer->num_bytes = out_buf_len;
             cdc_port->data.out_xfer->callback = out_xfer_cb;
+            /* CDC-ECM spec §3.3.1: host MUST send a ZLP when a segment size is
+             * an exact multiple of the bulk OUT MPS, so the device can detect
+             * end-of-transfer. Without this flag the device's BULK OUT endpoint
+             * stalls permanently on such transfers. */
+            cdc_port->data.out_xfer->flags = USB_TRANSFER_FLAG_ZERO_PACK;
         }
     }
     return ret;
