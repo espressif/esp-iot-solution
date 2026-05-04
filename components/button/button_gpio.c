@@ -105,6 +105,9 @@ esp_err_t iot_button_new_gpio_device(const button_config_t *button_config, const
             gpio_conf.pull_up_en = GPIO_PULLUP_ENABLE;
         }
     }
+#if SOC_GPIO_SUPPORT_PIN_HYS_FILTER
+    gpio_conf.hys_ctrl_mode = gpio_cfg->hys_ctrl_mode;
+#endif
     ret = gpio_config(&gpio_conf);
     ESP_GOTO_ON_FALSE(ret == ESP_OK, ret, err, TAG, "GPIO config failed");
 
