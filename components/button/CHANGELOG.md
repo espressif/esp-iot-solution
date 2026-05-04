@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.1.7 - 2026-05-04
+
+### Feature:
+
+* Added `hys_ctrl_mode` field to `button_gpio_config_t` for chips that support GPIO input hysteresis (`SOC_GPIO_SUPPORT_PIN_HYS_FILTER`, e.g. ESP32-P4). Set `hys_ctrl_mode = GPIO_HYS_SOFT_ENABLE` to suppress spurious PRESS_DOWN/PRESS_UP events caused by a signal glitching around the switching threshold. Fixes [#663](https://github.com/espressif/esp-iot-solution/issues/663).
+
 ## v4.1.6 - 2026-02-09
 
 ### Fix:
