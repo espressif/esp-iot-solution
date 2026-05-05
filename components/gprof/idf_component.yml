@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.2.1"
 description: Espressif GNU Profiler for ESP-IDF
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/gprof
 dependencies:

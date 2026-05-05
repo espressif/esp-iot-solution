@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.2.1 - 2026-05-22
+
+* Made the gprof flash dump deterministic:
+  - Honor `ESPPORT`/`IDF_PORT` so esptool talks to the correct board when several are connected
+  - Pass `--after no-reset` to esptool to keep the target from resetting between flash reads
+  - Validate the saved-size header against the gprof partition size before reading the payload
+
 ## v0.2.0 - 2025-12-03
 
 * Fixed compatibility with IDF v6.0

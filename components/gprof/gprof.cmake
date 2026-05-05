@@ -42,13 +42,15 @@ if(CONFIG_GPROF_ENABLE)
     set(gprof_file "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.gprof.out")
 
     partition_table_get_partition_info(gprof_partition_offset "--partition-type data --partition-subtype 0x3a" "offset")
-    if (NOT gprof_partition_offset)
+    partition_table_get_partition_info(gprof_partition_size "--partition-type data --partition-subtype 0x3a" "size")
+    if (NOT gprof_partition_offset OR NOT gprof_partition_size)
         message(FATAL_ERROR "Gprof partition (type: data, subtype: 0x3a) is not found in the partition table")
     endif()
 
     list(APPEND gprof_opts
         dump
         --partition-offset ${gprof_partition_offset}
+        --partition-size   ${gprof_partition_size}
         --elf           ${project_elf}
         --output        ${gprof_file}
         --gcc           ${CMAKE_C_COMPILER})

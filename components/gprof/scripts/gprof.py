@@ -43,6 +43,32 @@ def relink(args):
 
     open(args.output, 'w+').write('\n'.join(lines))
 
+def build_esptool_cmd():
+    esptool_cmd = [sys.executable, '-m', 'esptool', '--after', 'no-reset']
+    port = os.environ.get('ESPPORT') or os.environ.get('IDF_PORT')
+    if port:
+        esptool_cmd.extend(['--port', port])
+    return esptool_cmd
+
+def read_flash(esptool_cmd, offset, size, output, env):
+    cmd = [*esptool_cmd, 'read_flash', str(offset), str(size), output]
+    print('cmd: ', cmd)
+    subprocess.check_output(cmd, env=env)
+
+def validate_gprof_size(size, max_size):
+    if size == 0xFFFFFFFF:
+        raise RuntimeError(
+            'GProf partition appears erased. Run the profiling app first and, '
+            'if multiple boards are connected, set ESPPORT or IDF_PORT to the target port.'
+        )
+    if size == 0:
+        raise RuntimeError('GProf partition contains empty profile data. Run the profiling app first.')
+    if max_size is not None and size > max_size:
+        raise RuntimeError(
+            'Invalid GProf data size: %d bytes exceeds the gprof partition payload capacity of %d bytes'
+            % (size, max_size)
+        )
+
 def dump(args):
     logging.debug('elf:             %s'%(args.elf))
     logging.debug('output:          %s'%(args.output))
@@ -51,21 +77,23 @@ def dump(args):
 
     offset = parse_int(args.partition_offset, {'x': 16})
     logging.debug('partition offset: %x'%(offset))
+    partition_size = parse_int(args.partition_size) if args.partition_size else None
+    logging.debug('partition size:   %s'%('unknown' if partition_size is None else '%x'%(partition_size)))
 
     READ_LEN = 4096
+    HEADER_LEN = 16
     new_env = os.environ.copy()
     new_env['LC_ALL'] = 'C'
-    esptool_cmd = [sys.executable, '-m', 'esptool']
-    cmd = [*esptool_cmd, 'read_flash', str(offset), str(READ_LEN), args.output]
-    print('cmd: ', cmd)
-    StringIO(subprocess.check_output(cmd, env=new_env).decode())
+    esptool_cmd = build_esptool_cmd()
+    read_flash(esptool_cmd, offset, READ_LEN, args.output, new_env)
 
-    HEADER_LEN = 16
     buf = open(args.output, 'rb').read()
+    if len(buf) < HEADER_LEN:
+        raise RuntimeError('Failed to read GProf partition header')
     size = struct.unpack('I', buf[0:4])[0]
+    validate_gprof_size(size, None if partition_size is None else partition_size - HEADER_LEN)
     if size > READ_LEN - HEADER_LEN:
-        cmd = [esptool_cmd[0], esptool_cmd[1], 'read_flash', str(offset + HEADER_LEN), str(size), args.output]
-        StringIO(subprocess.check_output(cmd, env=new_env).decode())
+        read_flash(esptool_cmd, offset + HEADER_LEN, size, args.output, new_env)
         buf = open(args.output, 'rb').read()
     else:
         buf = buf[HEADER_LEN:size + HEADER_LEN]
@@ -160,6 +188,12 @@ def main():
     parser_dump.add_argument(
         '--partition-offset',
         help='Offset of the gprof partition, in bytes',
+        type=str  # accept hex strings
+    )
+
+    parser_dump.add_argument(
+        '--partition-size',
+        help='Size of the gprof partition, in bytes',
         type=str  # accept hex strings
     )
 
