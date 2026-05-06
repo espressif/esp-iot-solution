@@ -86,6 +86,8 @@ typedef struct {
     void *dummy_draw_user_ctx;              /*!< User context for dummy draw callbacks */
     void (*rounder_cb)(lv_area_t *, void *); /*!< Area rounding callback */
     void *rounder_user_data;                /*!< User data for rounder callback */
+    esp_lv_adapter_draw_bitmap_callbacks_t draw_bitmap_cbs; /*!< Draw bitmap callback collection */
+    void *draw_bitmap_user_ctx;             /*!< User context for draw bitmap callbacks */
     lv_display_t *lv_disp;                   /*!< Associated LVGL display handle */
     struct esp_lv_adapter_te_sync_context *te_ctx; /*!< TE sync runtime context */
     gpio_int_type_t te_intr_type;           /*!< Computed TE interrupt type */

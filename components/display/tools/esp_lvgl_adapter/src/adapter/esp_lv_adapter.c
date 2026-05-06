@@ -867,6 +867,15 @@ esp_err_t esp_lv_adapter_set_area_rounder_cb(lv_display_t *disp,
     return display_manager_set_area_rounder_cb(disp, rounder_cb, user_data);
 }
 
+esp_err_t esp_lv_adapter_set_draw_bitmap_callbacks(lv_display_t *disp,
+                                                   const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                   void *user_ctx)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    return display_manager_set_draw_bitmap_callbacks(disp, cbs, user_ctx);
+}
+
 esp_err_t esp_lv_adapter_deinit(void)
 {
     /* Check if already deinitialized */

@@ -251,6 +251,30 @@ esp_err_t display_manager_set_dummy_draw_callbacks(lv_display_t *disp,
     return ESP_OK;
 }
 
+esp_err_t display_manager_set_draw_bitmap_callbacks(lv_display_t *disp,
+                                                    const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                    void *user_ctx)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Display handle cannot be NULL");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_INVALID_ARG, TAG, "Display not registered");
+
+    if (cbs) {
+        node->cfg.draw_bitmap_cbs = *cbs;
+        node->cfg.draw_bitmap_user_ctx = user_ctx;
+    } else {
+        memset(&node->cfg.draw_bitmap_cbs, 0, sizeof(node->cfg.draw_bitmap_cbs));
+        node->cfg.draw_bitmap_user_ctx = NULL;
+    }
+
+    if (node->bridge && node->bridge->set_draw_bitmap_callbacks) {
+        node->bridge->set_draw_bitmap_callbacks(node->bridge, cbs, user_ctx);
+    }
+
+    return ESP_OK;
+}
+
 esp_err_t display_manager_dummy_draw_blit(lv_display_t *disp,
                                           int x_start,
                                           int y_start,

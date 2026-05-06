@@ -78,6 +78,13 @@ esp_err_t display_manager_set_dummy_draw_callbacks(lv_display_t *disp,
                                                    const esp_lv_adapter_dummy_draw_callbacks_t *cbs,
                                                    void *user_ctx);
 
+/**
+ * @brief Register draw bitmap callbacks for a display
+ */
+esp_err_t display_manager_set_draw_bitmap_callbacks(lv_display_t *disp,
+                                                    const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                    void *user_ctx);
+
 esp_err_t display_manager_dummy_draw_blit(lv_display_t *disp,
                                           int x_start,
                                           int y_start,
