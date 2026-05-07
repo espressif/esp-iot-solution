@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -211,8 +211,13 @@ static void _modem_daemon_task(void *param)
 
             ESP_LOGI(TAG, "Check network registration...");
             esp_modem_at_cereg_t _cereg = {0};
-            DTE_RETRY_OPERATION(at_cmd_get_network_reg_status(at_parser, &_cereg) == ESP_OK && _cereg.stat == 1, !esp_modem_dte_is_connected(dte_drv));
-            ESP_GOTO_ON_FALSE(_cereg.stat == 1, 0, _ppp_abort, TAG, "Modem network registration not ready!");
+            DTE_RETRY_OPERATION(
+                at_cmd_get_network_reg_status(at_parser, &_cereg) == ESP_OK &&
+                (_cereg.stat == 1 || _cereg.stat == 5),
+                !esp_modem_dte_is_connected(dte_drv));
+            ESP_GOTO_ON_FALSE(
+                (_cereg.stat == 1 || _cereg.stat == 5),
+                0, _ppp_abort, TAG, "Modem network registration not ready!");
 
             ESP_LOGI(TAG, "PPP Dial up...");
             ret = esp_modem_dte_dial_up(dte_drv);
