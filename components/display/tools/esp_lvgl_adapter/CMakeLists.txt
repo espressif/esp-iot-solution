@@ -132,7 +132,18 @@ target_link_libraries(${COMPONENT_LIB} PUBLIC idf::${lvgl_name})
 
 set(ESP_LV_ADAPTER_PPA_ALIGNMENT 128)
 
+set(ESP_LV_ADAPTER_HAS_CACHE_LINE_SIZE_BY_ADDR 0)
+set(ESP_CACHE_HEADER "$ENV{IDF_PATH}/components/esp_mm/include/esp_cache.h")
+if(EXISTS "${ESP_CACHE_HEADER}")
+    file(READ "${ESP_CACHE_HEADER}" ESP_CACHE_HEADER_CONTENT)
+    string(FIND "${ESP_CACHE_HEADER_CONTENT}" "esp_cache_get_line_size_by_addr" ESP_CACHE_LINE_SIZE_BY_ADDR_POS)
+    if(NOT ESP_CACHE_LINE_SIZE_BY_ADDR_POS EQUAL -1)
+        set(ESP_LV_ADAPTER_HAS_CACHE_LINE_SIZE_BY_ADDR 1)
+    endif()
+endif()
+
 target_compile_definitions(${COMPONENT_LIB} PUBLIC LVGL_PORT_PPA_ALIGNMENT=${ESP_LV_ADAPTER_PPA_ALIGNMENT})
+target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_LV_ADAPTER_HAS_CACHE_LINE_SIZE_BY_ADDR=${ESP_LV_ADAPTER_HAS_CACHE_LINE_SIZE_BY_ADDR})
 target_compile_options(${COMPONENT_LIB} PUBLIC -include "${CMAKE_CURRENT_SOURCE_DIR}/src/display/ports/lvgl_port_alignment.h")
 
 if("${lvgl_name}" IN_LIST build_components)

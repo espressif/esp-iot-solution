@@ -24,6 +24,7 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_memory_utils.h"
+#include "common/display_bridge_common.h"
 #include "stdlib/lv_mem.h"
 #include "misc/lv_color.h"
 
@@ -81,7 +82,7 @@ static size_t ppa_get_cache_line_size(const void *addr)
         return 0;
     }
 
-    return esp_cache_get_line_size_by_addr(addr);
+    return display_bridge_get_cache_line_size_by_addr(addr);
 }
 
 static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size)

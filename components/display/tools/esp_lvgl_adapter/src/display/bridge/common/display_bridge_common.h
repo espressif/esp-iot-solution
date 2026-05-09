@@ -232,6 +232,14 @@ void display_rotate_image(const void *src,
 /* Cache management */
 
 /**
+ * @brief Get cache line size for the memory region containing the given address
+ *
+ * @param addr Buffer address
+ * @return Cache line size in bytes, or 0 if the address is not cacheable
+ */
+size_t display_bridge_get_cache_line_size_by_addr(const void *addr);
+
+/**
  * @brief Synchronize cache for a specific memory range
  *
  * @param addr Starting address
