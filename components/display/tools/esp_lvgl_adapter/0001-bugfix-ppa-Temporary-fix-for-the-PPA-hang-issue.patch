@@ -4,13 +4,13 @@ Date: Wed, 11 Feb 2026 15:36:03 +0800
 Subject: [PATCH] bugfix(ppa): Temporary fix for the PPA hang issue
 
 ---
- components/esp_driver_ppa/src/ppa_srm.c | 22 +---------------------
- 1 file changed, 1 insertion(+), 21 deletions(-)
+ components/esp_driver_ppa/src/ppa_srm.c | 19 +------------------
+ 1 file changed, 1 insertion(+), 18 deletions(-)
 
 diff --git a/components/esp_driver_ppa/src/ppa_srm.c b/components/esp_driver_ppa/src/ppa_srm.c
 --- a/components/esp_driver_ppa/src/ppa_srm.c
 +++ b/components/esp_driver_ppa/src/ppa_srm.c
-@@ -156,29 +156,9 @@
+@@ -152,25 +152,8 @@ bool ppa_srm_transaction_on_picked(uint32_t num_chans, const dma2d_trans_channel
      ppa_ll_srm_enable_mirror_x(platform->hal.dev, srm_trans_desc->mirror_x);
      ppa_ll_srm_enable_mirror_y(platform->hal.dev, srm_trans_desc->mirror_y);
  
@@ -24,10 +24,7 @@ diff --git a/components/esp_driver_ppa/src/ppa_srm.c b/components/esp_driver_ppa
 -    h_in_left = (h_in_left == 0) ? h_mb : h_in_left;
 -    uint32_t h_left = h_in_left * srm_trans_desc->scale_y_int + h_in_left * srm_trans_desc->scale_y_frag / PPA_LL_SRM_SCALING_FRAG_MAX;
 -    const uint32_t dma2d_fifo_depth_bits = 12 * 128;
--    color_space_pixel_format_t out_pixel_format = {
--        .color_type_id = ppa_out_color_mode,
--    };
--    uint32_t out_pixel_depth = color_hal_pixel_format_get_bit_depth(out_pixel_format);
+-    uint32_t out_pixel_depth = color_hal_pixel_format_fourcc_get_bit_depth((esp_color_fourcc_t)ppa_out_color_mode);
 -    bool bypass_mb_order = false;
 -    if (((w_out > w_divisor) || (srm_trans_desc->in.block_h > h_mb)) && // will be cut into more than one trans unit
 -            ((w_left * h_left * out_pixel_depth) < dma2d_fifo_depth_bits)

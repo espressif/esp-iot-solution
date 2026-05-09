@@ -704,7 +704,7 @@ esp_lv_adapter_deinit();
 
 如果您在 ESP32-P4 上使用 `ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL` 模式并启用屏幕旋转时遇到画面卡死问题，需要应用以下补丁：
 
-**适用版本**：ESP-IDF release/v5.5 (commit `3f0857fa42e58e8f87b7fab742e4582e28ddd512`)
+**适用版本**：ESP-IDF `tags/v6.0` (commit `662a3be354759d9487bf4b1a629fadb766cb1800`)
 
 **补丁文件**：`0001-bugfix-ppa-Temporary-fix-for-the-PPA-hang-issue.patch`
 
@@ -730,7 +730,7 @@ git apply /path/to/esp_lvgl_adapter/0001-bugfix-ppa-Temporary-fix-for-the-PPA-ha
 检查 `components/esp_driver_ppa/src/ppa_srm.c` 文件中是否包含以下代码：
 
 ```c
-PPA.sr_byte_order.sr_macro_bk_ro_bypass = 1;
+ppa_ll_srm_bypass_mb_order(platform->hal.dev, true);
 ```
 
 ---
