@@ -1242,7 +1242,7 @@ static void display_bridge_v8_flush_default(esp_lv_adapter_display_bridge_v8_t *
     const int offsety2 = area->y2;
 
     if (impl->cfg.draw_bitmap_cbs.custom_draw_bitmap) {
-        esp_err_t ret = impl->cfg.draw_bitmap_cbs.custom_draw_bitmap((lv_display_t *)drv->disp, panel_handle,
+        esp_err_t ret = impl->cfg.draw_bitmap_cbs.custom_draw_bitmap(impl->cfg.lv_disp, panel_handle,
                                                                      offsetx1, offsety1, offsetx2 + 1, offsety2 + 1,
                                                                      color_map, impl->cfg.draw_bitmap_user_ctx);
         if (ret != ESP_OK) {

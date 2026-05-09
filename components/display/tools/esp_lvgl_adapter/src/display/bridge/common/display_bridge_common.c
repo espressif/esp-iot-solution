@@ -17,6 +17,7 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_memory_utils.h"
 #include "esp_timer.h"
@@ -294,24 +295,15 @@ size_t display_bridge_get_cache_line_size_by_addr(const void *addr)
         return 0;
     }
 
-#if ESP_LV_ADAPTER_HAS_CACHE_LINE_SIZE_BY_ADDR
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
     return esp_cache_get_line_size_by_addr(addr);
 #else
     size_t align = 0;
-    uint32_t caps = 0;
-
-    if (esp_ptr_external_ram(addr)) {
-        caps = MALLOC_CAP_SPIRAM;
-    } else if (esp_ptr_internal(addr)) {
-        caps = MALLOC_CAP_INTERNAL;
-    } else {
+    uint32_t caps = esp_ptr_external_ram(addr) ? MALLOC_CAP_SPIRAM :
+                    esp_ptr_internal(addr)      ? MALLOC_CAP_INTERNAL : 0;
+    if (caps == 0 || esp_cache_get_alignment(caps, &align) != ESP_OK) {
         return 0;
     }
-
-    if (esp_cache_get_alignment(caps, &align) != ESP_OK) {
-        return 0;
-    }
-
     return align;
 #endif
 }
