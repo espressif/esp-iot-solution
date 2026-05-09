@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,7 +16,9 @@
 #endif
 #include "esp_private/usb_phy.h"
 #include "tusb.h"
+#include "device/usbd_pvt.h"
 #include "usb_device_uvc.h"
+#include "usb_descriptors.h"
 
 static const char *TAG = "usbd_uvc";
 
@@ -47,6 +49,13 @@ typedef struct {
 } uvc_device_t;
 
 static uvc_device_t s_uvc_device;
+
+static void uvc_reset_streaming_ep(uint8_t ep_addr)
+{
+    usbd_edpt_stall(0, ep_addr);
+    usbd_edpt_clear_stall(0, ep_addr);
+    usbd_edpt_release(0, ep_addr);
+}
 
 static void usb_phy_init(void)
 {
@@ -285,6 +294,16 @@ int tud_video_commit_cb(uint_fast8_t ctl_idx, uint_fast8_t stm_idx,
     }
     s_uvc_device.interval_ms[ctl_idx] = parameters->dwFrameInterval / 10000;
     int frame_index = parameters->bFrameIndex - 1;
+    /* Stop before re-start to avoid sensor double-init on re-commit. */
+    if (s_uvc_device.user_config[ctl_idx].stop_cb) {
+        s_uvc_device.user_config[ctl_idx].stop_cb(s_uvc_device.user_config[ctl_idx].cb_ctx);
+    }
+    /* Flush orphaned in-flight xfer left by host close without SET_INTERFACE. */
+#if CONFIG_UVC_SUPPORT_TWO_CAM
+    uvc_reset_streaming_ep(ctl_idx == 0 ? EPNUM_CAM1_VIDEO_IN : EPNUM_CAM2_VIDEO_IN);
+#else
+    uvc_reset_streaming_ep(EPNUM_CAM1_VIDEO_IN);
+#endif
     esp_err_t ret = s_uvc_device.user_config[ctl_idx].start_cb(s_uvc_device.format[ctl_idx], UVC_FRAMES_INFO[ctl_idx][frame_index].width,
                                                                UVC_FRAMES_INFO[ctl_idx][frame_index].height, UVC_FRAMES_INFO[ctl_idx][frame_index].rate, s_uvc_device.user_config[ctl_idx].cb_ctx);
 

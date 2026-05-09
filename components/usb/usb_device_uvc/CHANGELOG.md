@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v1.3.0 2026-5-9
+
+### Enhancements:
+
+* Update tinyusb version and add ESP32-S31/H4 support.
+
+### Bug Fix:
+
+* Fix blank screen on bulk mode reopen by resetting the IN endpoint and invoking `stop_cb` before `start_cb` on re-commit.
+
 ## v1.2.0 2025-8-5
 
 * Support deinitialization.

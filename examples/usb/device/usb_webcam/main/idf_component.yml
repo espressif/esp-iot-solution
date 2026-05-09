@@ -17,5 +17,5 @@ dependencies:
     override_path: "../eyes_show"
   cmake_utilities: "*"
   usb_device_uvc:
-    version: "1.2.*"
+    version: "1.3.*"
     override_path: "../../../../../components/usb/usb_device_uvc"
