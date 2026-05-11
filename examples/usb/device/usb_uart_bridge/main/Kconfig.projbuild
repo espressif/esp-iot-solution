@@ -8,42 +8,50 @@ menu "USB UART Bridge Example"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         default 3 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         default 5 if IDF_TARGET_ESP32P4
+        default 35 if IDF_TARGET_ESP32S31
         depends on UART_AUTO_DOWNLOAD
     config BOARD_AUTODLD_BOOT_PIN
         int "Auto download BOOT pin"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         default 26 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         default 6 if IDF_TARGET_ESP32P4
+        default 36 if IDF_TARGET_ESP32S31
         depends on UART_AUTO_DOWNLOAD
     config BOARD_UART_TXD_PIN
         int "UART TXD pin"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         default 45 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         default 46 if IDF_TARGET_ESP32P4
+        default 37 if IDF_TARGET_ESP32S31
     config BOARD_UART_RXD_PIN
         int "UART RXD pin"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         default 46 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
         default 27 if IDF_TARGET_ESP32P4
+        default 38 if IDF_TARGET_ESP32S31
     config UART_RX_BUF_SIZE
         int "UART RX buffer size (Bytes)"
         default 256 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-        default 512 if IDF_TARGET_ESP32P4
+        default 512 if IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31
     config UART_TX_BUF_SIZE
         int "UART TX buffer size (Bytes)"
         default 1024
     config USB_RX_BUF_SIZE
         int "USB RX buffer size (Bytes)"
         default 256 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-        default 512 if IDF_TARGET_ESP32P4
+        default 512 if IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31
     config USB_TX_BUF_SIZE
         int "USB TX buffer size (Bytes)"
         default 1024

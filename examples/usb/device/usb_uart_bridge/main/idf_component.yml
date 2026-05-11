@@ -2,8 +2,9 @@ targets:
   - esp32s2
   - esp32s3
   - esp32p4
+  - esp32s31
 dependencies:
   espressif/esp_tinyusb:
-    version: "^1.7.0"
+    version: "^2.2.0"
     rules:
       - if: "idf_version >=5.0"

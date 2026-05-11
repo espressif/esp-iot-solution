@@ -6,7 +6,7 @@ dependencies:
   espressif/button:
     override_path: "../../../../../components/button"
   espressif/tinyusb:
-    version: ">=0.18.0~1"
+    version: "^0.19.0~3"
   espressif/knob:
     version: ">=1.0.1"
   espressif/esp32_s3_usb_otg:
