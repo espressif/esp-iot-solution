@@ -131,6 +131,7 @@ public:
     void halPwmWrite();
 
 private:
+    void preparePinsAndVoltage();
     DriverMode driverMode;
     std::vector<int> ledc_channels;
     uint32_t mcpwm_period;

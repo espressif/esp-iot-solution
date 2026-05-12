@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,15 +10,23 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 #include "soc/soc_caps.h"
+#if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0))
 #include "soc/uart_channel.h"
+#else
+#include "soc/uart_pins.h"
+#endif
 
 /**
  * ESP32-S-Devkitc default serial port: tx:1 rx:3
  * ESP32-S3-Devkitc default serial port: tx:43 rx:44
  */
-
+#if (ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0))
 #define TX0 UART_NUM_0_TXD_DIRECT_GPIO_NUM
 #define RX0 UART_NUM_0_RXD_DIRECT_GPIO_NUM
+#else
+#define TX0 U0TXD_GPIO_NUM
+#define RX0 U0RXD_GPIO_NUM
+#endif
 
 class HardwareSerial : public Stream {
 public:

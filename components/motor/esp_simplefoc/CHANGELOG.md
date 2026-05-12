@@ -1,5 +1,20 @@
 # ChangeLog
 
+## 1.3.0 - 2026-5-17
+
+### Enhancements:
+* FOC:
+    * Refactor 3PWM hardware resource allocation to use SoC capability macros and improve automatic driver selection.
+    * Add ESP-IDF hardware support for ``InlineCurrentSense`` based on ADC oneshot and calibration drivers.
+    * Add ESP-IDF hardware support for ``LowsideCurrentSense`` on MCPWM-based ``BLDCDriver3PWM`` and ``BLDCDriver6PWM``.
+    * Add ESP platform support for ``StepperDriver2PWM`` and ``StepperDriver4PWM``.
+    * Add compatibility support for ESP-IDF release/v6.0.
+    * Update ``test_apps`` to support newer ESP-IDF test app directory layouts.
+
+### Bug Fix:
+* FOC:
+    * Fix repeated LEDC initialization warnings by improving 3PWM LEDC resource cleanup.
+
 ## v1.2.3 - 2026-1-23
 
 ### Bug Fix:
@@ -77,5 +92,3 @@
     * Add ESP-IDF driver for Arduino-FOC.
     * Fix mcpwm driver for esp-simplefoc.
     * Compatible with SimpleFOC Studio host computer.
-
-
