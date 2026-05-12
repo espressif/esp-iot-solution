@@ -8,8 +8,10 @@
 #include <string.h>
 #include <sys/queue.h>
 #include "esp_err.h"
+#include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -17,13 +19,9 @@
 #include "usb/uvc_host.h"
 #include "app_uvc.h"
 
-#if CONFIG_SPIRAM
-#define NUMBER_OF_FRAME_BUFFERS 6 // Number of frames from the camera
-#else
-#define NUMBER_OF_FRAME_BUFFERS 3 // Number of frames from the camera
-#endif
+#define DEFAULT_FRAME_BUFFERS 2 // Number of frames from the camera when SPIRAM is unavailable
 #define JPG_MIN_SIZE 40000
-#define JPG_COMPRESSION_RATIO 5
+#define JPG_COMPRESSION_RATIO 6
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define UVC_ESTIMATE_JPG_SIZE_B(width, height, bpp) \
     (max(((width) * (height) * (bpp) / 8) / JPG_COMPRESSION_RATIO, JPG_MIN_SIZE))
@@ -37,7 +35,19 @@ static const char *FORMAT_STR[] = {
     "FORMAT_YUY2",
     "FORMAT_H264",
     "FORMAT_H265",
+    "FORMAT_NV12",
 };
+
+static const char *uvc_format_to_str(int format)
+{
+    // Keep log formatting safe when a camera reports an unknown or unsupported format.
+    if (format >= 0 && format < sizeof(FORMAT_STR) / sizeof(FORMAT_STR[0])) {
+        return FORMAT_STR[format];
+    }
+
+    ESP_LOGE(TAG, "Unknown UVC format: %d", format);
+    return "FORMAT_UNKNOWN";
+}
 
 #define EVENT_DISCONNECT ((1 << 2))
 #define EVENT_START      ((1 << 3))
@@ -56,6 +66,7 @@ typedef struct uvc_dev_s {
     bool if_streaming;
     int active_frame_index;                        // Only used for if_streaming is true
     int require_frame_index;
+    int64_t last_frame_time_us;
     size_t frame_info_num;
     SLIST_ENTRY(uvc_dev_s) list_entry;
     uvc_host_frame_info_t frame_info[];
@@ -70,6 +81,52 @@ static uvc_dev_obj_t p_uvc_dev_obj = {0};
 
 static esp_err_t uvc_open(uvc_dev_t *dev, int frame_index);
 static esp_err_t uvc_cleanup_stream(uvc_dev_t *dev);
+
+static size_t uvc_get_urb_size(size_t frame_size)
+{
+    const size_t small_frame_size = 80 * 1024;
+    const size_t medium_frame_size = 160 * 1024;
+    const size_t small_urb_size = 4 * 1024;
+    const size_t medium_urb_size = 8 * 1024;
+    const size_t large_urb_size = 10 * 1024;
+
+    size_t urb_size = large_urb_size;
+    // Use smaller URBs for small frames to save memory, and larger URBs for big frames to reduce interrupt pressure.
+    if (frame_size <= small_frame_size) {
+        urb_size = small_urb_size;
+    } else if (frame_size <= medium_frame_size) {
+        urb_size = medium_urb_size;
+    }
+
+    return urb_size;
+}
+
+static int uvc_get_frame_buffer_count(size_t frame_size)
+{
+#if CONFIG_SPIRAM
+    if (frame_size == 0) {
+        ESP_LOGE(TAG, "Invalid frame size for SPIRAM frame buffer calculation");
+        return 0;
+    }
+
+    // Frame buffers require contiguous allocations, so the largest free block is the practical limit.
+    size_t free_spiram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t largest_spiram = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+    size_t buffer_count = largest_spiram / frame_size;
+    buffer_count = buffer_count > 8 ? 8 : buffer_count; // Limit the maximum number of frame buffers to prevent excessive memory usage
+
+    if (buffer_count == 0) {
+        ESP_LOGE(TAG, "Not enough SPIRAM for one frame buffer, free=%zu, largest=%zu, frame_size=%zu", free_spiram, largest_spiram, frame_size);
+        return 0;
+    }
+
+    ESP_LOGI(TAG, "SPIRAM frame buffers: free=%zu, largest=%zu, frame_size=%zu, count=%zu", free_spiram, largest_spiram, frame_size, buffer_count);
+    return (int)buffer_count;
+#else
+    (void)frame_size;
+    return DEFAULT_FRAME_BUFFERS;
+#endif
+}
 
 static esp_err_t uvc_cleanup_stream(uvc_dev_t *dev)
 {
@@ -233,6 +290,7 @@ static void uvc_task(void *arg)
             }
 
             ESP_LOGI(TAG, "uvc begin to stream");
+            dev->last_frame_time_us = 0;
             err = uvc_host_stream_start(dev->stream);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "Cam[%d] stream_start failed: %s", dev->index, esp_err_to_name(err));
@@ -276,15 +334,25 @@ void driver_event_cb(const uvc_host_driver_event_data_t *event, void *user_ctx)
         uvc_host_frame_info_t *frame_info = (uvc_host_frame_info_t *)calloc(dev->frame_info_num, sizeof(uvc_host_frame_info_t));
         assert(frame_info);
 
-        uvc_host_get_frame_list(dev->dev_addr, dev->uvc_stream_index, (uvc_host_frame_info_t (*)[])frame_info, &dev->frame_info_num);
+        esp_err_t err = uvc_host_get_frame_list(dev->dev_addr, dev->uvc_stream_index, (uvc_host_frame_info_t (*)[])frame_info, &dev->frame_info_num);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Cam[%d] get frame list failed: %s", dev->index, esp_err_to_name(err));
+            free(frame_info);
+            free(dev);
+            dev = NULL;
+            return;
+        }
         int pick_frame_info_num = 0;
         for (int i = 0; i < dev->frame_info_num; i++) {
+            const char *format_str = uvc_format_to_str(frame_info[i].format);
             if (frame_info[i].format == UVC_VS_FORMAT_MJPEG) {
                 dev->frame_info[pick_frame_info_num] = frame_info[i];
                 pick_frame_info_num++;
-                ESP_LOGI(TAG, "Pick Cam[%d] %s %d*%d@%.1ffps", dev->index, FORMAT_STR[frame_info[i].format], frame_info[i].h_res, frame_info[i].v_res, UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval));
+                ESP_LOGI(TAG, "Pick Cam[%d] %s %u*%u@%.1ffps", dev->index, format_str, frame_info[i].h_res, frame_info[i].v_res,
+                         UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval));
             } else {
-                ESP_LOGI(TAG, "Drop Cam[%d] %s %d*%d@%.1ffps", dev->index, FORMAT_STR[frame_info[i].format], frame_info[i].h_res, frame_info[i].v_res, UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval));
+                ESP_LOGI(TAG, "Drop Cam[%d] %s %u*%u@%.1ffps", dev->index, format_str, frame_info[i].h_res, frame_info[i].v_res,
+                         UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval));
             }
         }
         dev->frame_info_num = pick_frame_info_num;
@@ -331,12 +399,25 @@ void stream_callback(const uvc_host_stream_event_data_t *event, void *user_ctx)
 bool frame_callback(const uvc_host_frame_t *frame, void *user_ctx)
 {
     uvc_dev_t *dev = (uvc_dev_t *)user_ctx;
+    int64_t now_us = esp_timer_get_time();
+    float fps = 0.0f;
+    float interval_ms = 0.0f;
+
+    // Track instant FPS in the device object so each camera owns its timing state.
+    if (dev->last_frame_time_us > 0) {
+        interval_ms = (now_us - dev->last_frame_time_us) / 1000.0f;
+        if (interval_ms > 0.0f) {
+            fps = 1000.0f / interval_ms;
+        }
+    }
+    dev->last_frame_time_us = now_us;
+
     switch (frame->vs_format.format) {
     case UVC_VS_FORMAT_YUY2:
     case UVC_VS_FORMAT_H264:
     case UVC_VS_FORMAT_H265:
     case UVC_VS_FORMAT_MJPEG:
-        ESP_LOGI(TAG, "Cam[%d] Frame received, size: %d", dev->index, frame->data_len);
+        ESP_LOGI(TAG, "Cam[%d] Frame received, size: %d, fps=%.2f", dev->index, frame->data_len, fps);
         break;
     default:
         ESP_LOGI(TAG, "Unsupported format!");
@@ -353,6 +434,14 @@ bool frame_callback(const uvc_host_frame_t *frame, void *user_ctx)
 
 static esp_err_t uvc_open(uvc_dev_t *dev, int frame_index)
 {
+    size_t frame_size = UVC_ESTIMATE_JPG_SIZE_B(dev->frame_info[frame_index].h_res, dev->frame_info[frame_index].v_res, 16);
+    int number_of_frame_buffers = uvc_get_frame_buffer_count(frame_size);
+    size_t urb_size = uvc_get_urb_size(frame_size);
+    if (number_of_frame_buffers <= 0) {
+        ESP_LOGE(TAG, "Failed to calculate frame buffers for UVC[%d], frame_size=%zu", dev->index, frame_size);
+        return ESP_ERR_NO_MEM;
+    }
+
     const uvc_host_stream_config_t stream_config = {
         .event_cb = stream_callback,
         .frame_cb = frame_callback,
@@ -370,20 +459,20 @@ static esp_err_t uvc_open(uvc_dev_t *dev, int frame_index)
             .format = dev->frame_info[frame_index].format,
         },
         .advanced = {
-            .number_of_frame_buffers = NUMBER_OF_FRAME_BUFFERS,
-            .frame_size = UVC_ESTIMATE_JPG_SIZE_B(dev->frame_info[frame_index].h_res, dev->frame_info[frame_index].v_res, 16),
+            .number_of_frame_buffers = number_of_frame_buffers,
+            .frame_size = frame_size,
 #if CONFIG_SPIRAM
             .frame_heap_caps = MALLOC_CAP_SPIRAM,
 #else
             .frame_heap_caps = 0,
 #endif
             .number_of_urbs = 3,
-            .urb_size = 4 * 1024,
+            .urb_size = urb_size,
         },
     };
 
     ESP_LOGI(TAG, "Opening the UVC[%d]...", dev->index);
-    ESP_LOGI(TAG, "frame_size.advanced.frame_size: %d", stream_config.advanced.frame_size);
+    ESP_LOGI(TAG, "UVC[%d] buffers: frame_size=%zu, frame_buffers=%d, urb_size=%zu", dev->index, frame_size, number_of_frame_buffers, urb_size);
     esp_err_t err = uvc_host_stream_open(&stream_config, pdMS_TO_TICKS(5000), &dev->stream);
     if (ESP_OK != err) {
         ESP_LOGI(TAG, "Failed to open UVC[%d]", dev->index);
@@ -438,9 +527,10 @@ find_dev:
     return ESP_OK;
 }
 
-esp_err_t app_uvc_get_dev_frame_info(int index, uvc_dev_info_t *dev_info)
+esp_err_t app_uvc_get_dev_frame_info(int index, uvc_dev_info_t **dev_info)
 {
     ESP_RETURN_ON_FALSE(dev_info != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid pointer");
+    *dev_info = NULL;
 
     uvc_dev_t *dev;
     int i = 0;
@@ -455,18 +545,27 @@ esp_err_t app_uvc_get_dev_frame_info(int index, uvc_dev_info_t *dev_info)
     return ESP_ERR_NOT_FOUND;
 
 find_dev:
-    dev_info->index  = dev->index;
-    dev_info->if_streaming = dev->if_streaming;
-    dev_info->resolution_count = dev->frame_info_num;
-    dev_info->active_resolution = dev->active_frame_index;
-    assert(dev_info->resolution_count <= MAX_RESOLUTION);
+    size_t info_size = sizeof(uvc_dev_info_t) + dev->frame_info_num * sizeof(uvc_resolution_t);
+    uvc_dev_info_t *info = (uvc_dev_info_t *)calloc(1, info_size);
+    ESP_RETURN_ON_FALSE(info != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate device frame info");
+
+    info->index  = dev->index;
+    info->if_streaming = dev->if_streaming;
+    info->resolution_count = dev->frame_info_num;
+    info->active_resolution = dev->active_frame_index;
 
     for (int i = 0; i < dev->frame_info_num; i++) {
-        dev_info->resolution[i].width = dev->frame_info[i].h_res;
-        dev_info->resolution[i].height = dev->frame_info[i].v_res;
+        info->resolution[i].width = dev->frame_info[i].h_res;
+        info->resolution[i].height = dev->frame_info[i].v_res;
     }
 
+    *dev_info = info;
     return ESP_OK;
+}
+
+void app_uvc_free_dev_frame_info(uvc_dev_info_t *dev_info)
+{
+    free(dev_info);
 }
 
 esp_err_t app_uvc_get_connect_dev_num(int *num)
@@ -482,7 +581,7 @@ uvc_host_frame_t *app_uvc_get_frame_by_index(int index)
     uvc_dev_t *dev;
     SLIST_FOREACH(dev, &p_uvc_dev_obj.uvc_devices_list, list_entry) {
         if (dev->index == index) {
-            if (xQueueReceive(dev->frame_queue, &frame, pdMS_TO_TICKS(100)) == pdTRUE) {
+            if (xQueueReceive(dev->frame_queue, &frame, pdMS_TO_TICKS(1000)) == pdTRUE) {
                 return frame;
             } else {
                 return NULL;
