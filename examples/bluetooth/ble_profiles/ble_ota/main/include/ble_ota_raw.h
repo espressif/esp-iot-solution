@@ -13,8 +13,11 @@
  *  @brief Example helper API for BLE OTA raw profile demo.
  */
 
-/** Default ring buffer size when @ref ble_ota_raw_ringbuf_init is called with 0. */
-#define BLE_OTA_RAW_RINGBUF_DEFAULT_SIZE   8192
+/** Firmware sector size matching @c esp_ble_ota_raw (START ACK window uses ringbuf / this). */
+#define BLE_OTA_RAW_SECTOR_BYTES           4096
+
+/** Default ring buffer size when @ref ble_ota_raw_ringbuf_init is called with 0 (12 KiB ≈ 3 sectors). */
+#define BLE_OTA_RAW_RINGBUF_DEFAULT_SIZE   (1024 * 12)
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +32,8 @@ extern "C" {
  *
  * @param[in] ringbuf_size  Buffer size in bytes. Set 0 to use
  *                          @ref BLE_OTA_RAW_RINGBUF_DEFAULT_SIZE.
+ *                          On success, updates BLE OTA START ACK send window as
+ *                          @c ringbuf_size / @ref BLE_OTA_RAW_SECTOR_BYTES (clamped by profile).
  *
  * @return true if the ring buffer is successfully created (including after
  *         reinitialization), false if allocation/creation fails.
@@ -46,7 +51,8 @@ bool ble_ota_raw_ringbuf_init(uint32_t ringbuf_size);
  *
  * @return true if preconditions are met and the OTA worker task exists (created
  *         in this call or already running), false if ring buffer is not
- *         initialized or task creation fails.
+ *         initialized, OTA update partition cannot be resolved, or task
+ *         creation fails.
  */
 bool ble_ota_raw_task_init(void);
 
