@@ -11,6 +11,17 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "sdkconfig.h"
+#if defined(CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN)
+/* CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN is only configurable when BT_NIMBLE_EXT_ADV is enabled. */
+#define ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN
+#else
+/* Legacy advertising payload max length is always 31 bytes; keep this fallback for non-EXT_ADV builds. */
+#define ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN 31
+#endif
+/* Bluetooth Core Spec maximum periodic advertising data payload length. */
+#define ESP_BLE_CONN_PERIODIC_REPORT_DATA_MAX_LEN 247
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -106,6 +117,9 @@ typedef struct {
     uint8_t *data; /*!< SDU data buffer */
 } esp_ble_conn_l2cap_coc_sdu_t;
 
+/** @brief Scan result is from legacy advertising (not extended discovery). */
+#define ESP_BLE_CONN_SCAN_EXT_STATUS_LEGACY     0xff
+
 /**
  * @brief   BLE scan result data
  */
@@ -113,8 +127,12 @@ typedef struct {
     uint8_t addr[6];                          /*!< Peer address */
     uint8_t addr_type;                        /*!< Peer address type */
     int8_t rssi;                              /*!< RSSI in dBm */
-    uint8_t adv_data_len;                     /*!< Advertising data length */
-    uint8_t adv_data[ESP_BLE_CONN_ADV_DATA_MAX_LEN]; /*!< Advertising data */
+    uint8_t ext_data_status;                 /*!< Extended: NimBLE BLE_GAP_EXT_ADV_DATA_STATUS_*; ESP_BLE_CONN_SCAN_EXT_STATUS_LEGACY if legacy */
+    uint8_t prim_phy;                         /*!< Extended: primary PHY (BLE_HCI_LE_PHY_*); 0 if legacy */
+    uint8_t sec_phy;                          /*!< Extended: secondary PHY; 0 if legacy */
+    uint8_t sid;                              /*!< Extended: Advertising Set ID; 0 if legacy */
+    uint16_t adv_data_len;                    /*!< Octets valid in adv_data (this fragment; extended adv may span multiple events) */
+    uint8_t adv_data[ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN]; /*!< Advertising data fragment */
 } esp_ble_conn_scan_result_t;
 
 typedef bool (*esp_ble_conn_scan_cb_t)(const esp_ble_conn_scan_result_t *result, void *arg);
@@ -400,7 +418,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When notification, indication, or peripheral write data (uuid_fn NULL) is delivered to the application, the event comes */
     ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When the ble discover service complete, the event comes */
 
-    ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< When the periodic adv report, the event comes */
+    ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< Periodic advertising report; see esp_ble_conn_periodic_report_t. */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST   = 8,    /*!< When the periodic sync lost, the event comes */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9,    /*!< When the periodic sync, the event comes */
     ESP_BLE_CONN_EVENT_CCCD_UPDATE          = 10,   /*!< When CCCD (Client Characteristic Configuration Descriptor) is written, the event comes */
@@ -409,6 +427,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_SCAN_RESULT          = 13,   /*!< When a BLE advertisement is received during scan (central role), the event comes */
     ESP_BLE_CONN_EVENT_ENC_CHANGE           = 14,   /*!< When link encryption state changes (pairing/encryption complete or failed), the event comes */
     ESP_BLE_CONN_EVENT_PASSKEY_ACTION       = 15,   /*!< When passkey input/display/confirm is needed during pairing, the event comes */
+    ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED  = 16,   /*!< When the GAP device name is changed locally or via GATT write, the event comes */
 } esp_ble_conn_event_t;
 
 /**
@@ -530,6 +549,9 @@ typedef struct {
 
 /**
  * @brief   This structure represents a periodic advertising report received on established sync.
+ *
+ * @note    @c data contains an inline copy of the periodic advertising payload. The buffer lifetime is managed
+ *          by esp_event and no free() is required by the event handler.
  */
 typedef struct {
     uint16_t sync_handle;                           /*!< Periodic sync handle */
@@ -537,7 +559,7 @@ typedef struct {
     int8_t rssi;                                    /*!< Received signal strength indication in dBm (127 if unavailable) */
     uint8_t data_status;                            /*!< Advertising data status*/
     uint8_t data_length;                            /*!< Advertising Data length */
-    const uint8_t *data;                            /*!< Advertising data */
+    uint8_t data[ESP_BLE_CONN_PERIODIC_REPORT_DATA_MAX_LEN]; /*!< Advertising data payload copy */
 } esp_ble_conn_periodic_report_t;
 
 /**
@@ -580,7 +602,7 @@ typedef struct {
  *          extended fields are applied when CONFIG_BLE_CONN_MGR_EXTENDED_ADV is enabled.
  */
 typedef struct {
-    uint8_t  adv_handle;           /*!< Advertising_Handle: instance index; 0 = use default (e.g. 1) */
+    uint8_t  adv_handle;           /*!< Advertising_Handle: set index (0x00–0xEF); 0 after esp_ble_conn_set_default_adv_params */
     uint16_t adv_event_properties; /*!< Advertising_Event_Properties: BIT0=connectable, BIT1=scannable, BIT2=directed, BIT3=high_duty_directed, BIT4=legacy_pdu, BIT5=anonymous, BIT6=include_tx_power, BIT7=scan_req_notif */
     uint16_t itvl_min;            /*!< Primary_Advertising_Interval_Min (0.625ms). Valid 0x0020–0x4000, 0 = default */
     uint16_t itvl_max;            /*!< Primary_Advertising_Interval_Max (0.625ms). Valid 0x0020–0x4000, 0 = default */
@@ -615,7 +637,7 @@ typedef struct {
     bool     passive;             /*!< Scan_Type: true = passive scan (no scan requests), false = active */
     bool     filter_duplicates;   /*!< true = filter duplicate advertisements */
     bool     limited;             /*!< true = limited discovery procedure */
-    uint8_t  scan_phys;           /*!< Scanning PHYs (bitmask). 0 = standard scan (1M). Reserved and currently ignored by NimBLE backend */
+    uint8_t  scan_phys;           /*!< Scanning PHYs: LE 1M (0x01) and/or LE Coded (0x04) per HCI extended scan; bit 0x02 (2M) is not a scanning PHY and is ignored by the stack. */
 } esp_ble_conn_scan_params_t;
 
 /**
@@ -664,6 +686,9 @@ typedef struct {
             esp_ble_conn_sm_action_t action;               /*!< Passkey action type, see esp_ble_conn_sm_action_t */
             uint32_t passkey;                             /*!< Passkey (DISP / INPUT / NUMCMP); not used for OOB or OOB_SC */
         } passkey_action;                                 /*!< ESP_BLE_CONN_EVENT_PASSKEY_ACTION */
+        struct {
+            char name[MAX_BLE_DEVNAME_LEN + 1];           /*!< New GAP device name (NUL-terminated) */
+        } device_name_changed;                            /*!< ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED */
     };
 } esp_ble_conn_event_data_t;
 
@@ -1008,6 +1033,27 @@ esp_err_t esp_ble_conn_set_data_len(uint16_t conn_handle, uint16_t tx_octets, ui
  *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
  */
 esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params);
+
+/**
+ * @brief   Set local GAP device name.
+ *
+ *          This function updates NimBLE GAP Device Name and the internal local name.
+ *          If advertising is active, advertising data is refreshed automatically.
+ *
+ * @note    To allow a connected peer to rename this device over GATT Device Name (0x2A00),
+ *          enable CONFIG_BT_NIMBLE_SVC_GAP_NAME_WRITE. When name is changed by GATT write,
+ *          BLE_CONN_MGR_EVENTS posts ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED.
+ *
+ * @param[in] name  New local device name.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized or role is not peripheral
+ *  - ESP_ERR_INVALID_ARG if name is NULL, empty, or exceeds MAX_BLE_DEVNAME_LEN
+ *  - ESP_ERR_NO_MEM on allocation failure
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_device_name_set(const char *name);
 
 /**
  * @brief   Set advertising data (legacy or extended).
@@ -1413,7 +1459,7 @@ esp_err_t esp_ble_conn_register_scan_callback(esp_ble_conn_scan_cb_t cb, void *c
  *  - ESP_ERR_NOT_FOUND if AD type is not present
  *  - ESP_ERR_INVALID_ARG on invalid parameters
  */
-esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint8_t adv_len, uint8_t ad_type,
+esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint16_t adv_len, uint8_t ad_type,
                                       const uint8_t **out_data, uint8_t *out_len);
 
 /**

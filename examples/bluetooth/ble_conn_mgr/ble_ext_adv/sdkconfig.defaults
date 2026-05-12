@@ -1,0 +1,12 @@
+# Override some defaults so BT stack is enabled
+# by default in this example
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_NIMBLE_EXT_ADV=y
+
+CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL=y
+CONFIG_BLE_CONN_MGR_EXTENDED_ADV=y
+# Non-legacy extended: do not use connectable+scannable together (NimBLE returns BLE_HS_EINVAL).
+CONFIG_BLE_CONN_MGR_EXTENDED_ADV_CAP=0
+# This demo focuses on extended advertising only (no periodic train)
+CONFIG_BLE_CONN_MGR_PERIODIC_ADV=n

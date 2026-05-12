@@ -144,6 +144,22 @@ build_example_bluetooth_ble_conn_mgr_ble_periodic_sync:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_periodic_sync
 
+build_example_bluetooth_ble_conn_mgr_ble_ext_adv:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_conn_mgr
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_ext_adv
+
+build_example_bluetooth_ble_conn_mgr_ble_ext_scan:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_conn_mgr
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_conn_mgr/ble_ext_scan
+
 build_example_bluetooth_ble_conn_mgr_ble_spp_client:
   extends:
     - .build_examples_template

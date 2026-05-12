@@ -68,7 +68,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_EXTENDED_ADV
         bool
-        depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        depends on (BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH) && SOC_BLE_50_SUPPORTED
         default n
         select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
         prompt "Enable Extended Adv"
@@ -118,7 +118,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_PERIODIC_SYNC
         bool
-        depends on BLE_CONN_MGR_ROLE_CENTRAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        depends on (BLE_CONN_MGR_ROLE_CENTRAL || BLE_CONN_MGR_ROLE_BOTH) && SOC_BLE_50_SUPPORTED
         default n
         select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
         prompt "Enable Periodic Sync"
@@ -138,16 +138,28 @@ menu "BLE Connection Management"
 
             - BIT0: Reports flag, it is initially disabled when sync is created if set.
 
+    config BLE_CONN_MGR_PERIODIC_SYNC_AUTO_SID
+        int "Auto-create periodic sync on EXT_DISC when Advertising SID matches (-1=disabled)"
+        depends on BLE_CONN_MGR_PERIODIC_SYNC
+        range -1 15
+        default 2
+        help
+            Demo / legacy behavior: when BLE_CONN_MGR_PERIODIC_SYNC is enabled and this value is 0..15,
+            each BLE_GAP_EVENT_EXT_DISC with this Advertising SID triggers ble_gap_periodic_adv_sync_create.
+            Use -1 to disable when the central only needs extended scanning (e.g. extended advertising
+            without periodic trains). Ignored when Periodic Sync is disabled. Default 2 matches Espressif periodic examples.
+
     menuconfig BLE_CONN_MGR_SM
         bool "Enable Security Manager"
 
     config BLE_CONN_MGR_SM_DEFAULT_CAP
         int "Default Security Manager Capability (when SM disabled)"
         range 0 15
-        default 10
+        default 0
         help
             Security manager capability bitmap used when BLE_CONN_MGR_SM is disabled.
-            Bits:
+            Default 0 means no bonding, MITM, or Secure Connections until you raise this
+            (or enable BLE_CONN_MGR_SM). Bits:
             - BIT0: OOB
             - BIT1: Bond
             - BIT2: MITM
@@ -219,5 +231,15 @@ menu "BLE Connection Management"
         default 512
         help
             Set the default SDU MTU used by BLE L2CAP CoC memory pool.
+
+    config BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN
+        int "Max octets copied per extended scan report fragment into esp_ble_conn_scan_result_t"
+        depends on BT_NIMBLE_EXT_ADV
+        range 31 1650
+        default 31
+        help
+            Extended advertising reports may be split across multiple HCI fragments
+            (each up to 255 octets). This sets the size of esp_ble_conn_scan_result_t.adv_data
+            and caps each posted fragment. Larger values increase RAM for every central build.
 
 endmenu
