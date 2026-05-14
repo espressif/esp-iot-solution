@@ -15,9 +15,20 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "log_router.h"
+#include "esp_log_color.h"
+
+#include "sdkconfig.h"
 
 static const char *TAG = "log_router";
 
+// Truncated messages will be immediately followed by this message
+#if (CONFIG_LOG_ROUTER_APPEND_STRING_ON_TRUNCATE)
+#if (CONFIG_LOG_COLORS)
+static const char *TRUNCATE_MESSAGE = LOG_ITALIC(LOG_COLOR_PURPLE) "" CONFIG_LOG_ROUTER_TRUNCATE_STRING "" LOG_RESET_COLOR "\n" ;
+#else
+static const char *TRUNCATE_MESSAGE = CONFIG_LOG_ROUTER_TRUNCATE_STRING "\n" ;
+#endif
+#endif
 // Global mutex for thread safety
 static SemaphoreHandle_t g_log_router_mutex = NULL;
 
@@ -93,6 +104,96 @@ static esp_err_t esp_log_router_flush_buffer(esp_log_router_slist_t *item)
     return ESP_OK;
 }
 
+static void router_fwrite(const void *__restrict buffer, size_t size, size_t n, esp_log_router_slist_t *item, uint32_t now)
+{
+    bool should_flush = false;
+
+    size_t len = n * size;
+
+    // Check if we need to flush due to threshold
+    if ((item->buffer_pos + len) >= item->flush_threshold) {
+        should_flush = true;
+        log_router_debug_printf("Flush buffer due to threshold\n");
+    }
+
+    // Check if we need to flush due to timeout
+    if ((now - item->last_flush_time) >= item->flush_timeout_ms) {
+        should_flush = true;
+        log_router_debug_printf("Flush buffer due to timeout\n");
+    }
+
+    // Flush buffer if needed
+    if (should_flush) {
+#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
+        uint64_t flush_start_time = esp_timer_get_time();
+#endif
+        esp_err_t flush_ret = esp_log_router_flush_buffer(item);
+#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
+        uint32_t flush_duration_us = esp_timer_get_time() - flush_start_time;
+        log_router_debug_printf("Flush operation took %ums, file: %s\n", flush_duration_us / 1000, item->file_path);
+#endif
+        if (flush_ret != ESP_OK) {
+            log_router_debug_printf("Failed to flush buffer: %s\n", esp_err_to_name(flush_ret));
+            // Flush failed, write directly to file
+            size_t written = fwrite(buffer, 1, len, item->log_fp);
+            if (written != len) {
+                log_router_debug_printf("Failed to write directly to file, written: %zu, expected: %d\n", written, len);
+                // Try to seek to beginning and retry
+                if (fseek(item->log_fp, 0, SEEK_SET) == 0 && ftruncate(fileno(item->log_fp), 0) == 0) {
+                    log_router_debug_printf("File truncated, retrying direct write\n");
+                    written = fwrite(buffer, 1, len, item->log_fp);
+                    if (written != len) {
+                        log_router_debug_printf("Retry direct write also failed\n");
+                        return;
+                    }
+                } else {
+                    log_router_debug_printf("Failed to seek/truncate file for direct write\n");
+                    return;
+                }
+            }
+            fflush(item->log_fp);
+            fsync(fileno(item->log_fp));
+            return; // Skip buffer write since we already wrote to file
+        }
+        // Flush successful, buffer is now empty, continue to buffer write
+    }
+
+    // Try to add to buffer, if still too large, write directly to file
+    if ((item->buffer_pos + len) < item->buffer_size) {
+        memcpy(item->buffer + item->buffer_pos, buffer, len);
+        item->buffer_pos += len;
+    } else {
+        // Buffer is too small, write directly to file
+#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
+        uint64_t write_start_time = esp_timer_get_time();
+#endif
+        size_t written = fwrite(buffer, 1, len, item->log_fp);
+        if (written != len) {
+            log_router_debug_printf("Failed to write directly to file, written: %zu, expected: %d\n", written, len);
+            // Try to seek to beginning and retry
+            if (fseek(item->log_fp, 0, SEEK_SET) == 0 && ftruncate(fileno(item->log_fp), 0) == 0) {
+                log_router_debug_printf("File truncated, retrying direct write\n");
+                written = fwrite(buffer, 1, len, item->log_fp);
+                if (written != len) {
+                    log_router_debug_printf("Retry direct write also failed\n");
+                    return;
+                }
+            } else {
+                log_router_debug_printf("Failed to seek/truncate file for direct write\n");
+                return;
+            }
+        }
+        fflush(item->log_fp);
+        fsync(fileno(item->log_fp));
+#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
+        uint32_t write_duration_us = esp_timer_get_time() - write_start_time;
+        log_router_debug_printf("Direct write took %ums, size: %d, file: %s\n", write_duration_us / 1000, len, item->file_path);
+#endif
+    }
+
+    return;
+}
+
 int esp_log_router_flash_vprintf(const char *format, va_list args)
 {
     int ret = 0;
@@ -124,8 +225,9 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
     esp_log_router_slist_t *item;
     int len = vsnprintf(vprintf_buffer, sizeof(vprintf_buffer), format, args);
     if (len > 0) {
+        int trunc_b = 0;
         if (len > (sizeof(vprintf_buffer) - 1)) {
-            int trunc_b = len - (sizeof(vprintf_buffer) - 1);
+            trunc_b = len - (sizeof(vprintf_buffer) - 1);
             log_router_debug_printf("Buffer too small, lost %d bytes\n", trunc_b);
             len = sizeof(vprintf_buffer) - 1;
         }
@@ -161,88 +263,13 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
             bool tag_match = (item->tag == NULL) || (tag_len > 0 && strncmp(tag_start, item->tag, tag_len) == 0 && item->tag[tag_len] == '\0');
 
             if (level_match && tag_match && item->log_fp) {
-                bool should_flush = false;
+                router_fwrite(vprintf_buffer, 1, len, item, now);
 
-                // Check if we need to flush due to threshold
-                if ((item->buffer_pos + len) >= item->flush_threshold) {
-                    should_flush = true;
-                    log_router_debug_printf("Flush buffer due to threshold\n");
+#if (CONFIG_LOG_ROUTER_APPEND_STRING_ON_TRUNCATE)
+                if (trunc_b > 0) {
+                    router_fwrite(TRUNCATE_MESSAGE, 1, strlen(TRUNCATE_MESSAGE), item, now);
                 }
-
-                // Check if we need to flush due to timeout
-                if ((now - item->last_flush_time) >= item->flush_timeout_ms) {
-                    should_flush = true;
-                    log_router_debug_printf("Flush buffer due to timeout\n");
-                }
-
-                // Flush buffer if needed
-                if (should_flush) {
-#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
-                    uint64_t flush_start_time = esp_timer_get_time();
 #endif
-                    esp_err_t flush_ret = esp_log_router_flush_buffer(item);
-#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
-                    uint32_t flush_duration_us = esp_timer_get_time() - flush_start_time;
-                    log_router_debug_printf("Flush operation took %ums, file: %s\n", flush_duration_us / 1000, item->file_path);
-#endif
-                    if (flush_ret != ESP_OK) {
-                        log_router_debug_printf("Failed to flush buffer: %s\n", esp_err_to_name(flush_ret));
-                        // Flush failed, write directly to file
-                        size_t written = fwrite(vprintf_buffer, 1, len, item->log_fp);
-                        if (written != len) {
-                            log_router_debug_printf("Failed to write directly to file, written: %zu, expected: %d\n", written, len);
-                            // Try to seek to beginning and retry
-                            if (fseek(item->log_fp, 0, SEEK_SET) == 0 && ftruncate(fileno(item->log_fp), 0) == 0) {
-                                log_router_debug_printf("File truncated, retrying direct write\n");
-                                written = fwrite(vprintf_buffer, 1, len, item->log_fp);
-                                if (written != len) {
-                                    log_router_debug_printf("Retry direct write also failed\n");
-                                    continue;
-                                }
-                            } else {
-                                log_router_debug_printf("Failed to seek/truncate file for direct write\n");
-                                continue;
-                            }
-                        }
-                        fflush(item->log_fp);
-                        fsync(fileno(item->log_fp));
-                        continue; // Skip buffer write since we already wrote to file
-                    }
-                    // Flush successful, buffer is now empty, continue to buffer write
-                }
-
-                // Try to add to buffer, if still too large, write directly to file
-                if ((item->buffer_pos + len) < item->buffer_size) {
-                    memcpy(item->buffer + item->buffer_pos, vprintf_buffer, len);
-                    item->buffer_pos += len;
-                } else {
-                    // Buffer is too small, write directly to file
-#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
-                    uint64_t write_start_time = esp_timer_get_time();
-#endif
-                    size_t written = fwrite(vprintf_buffer, 1, len, item->log_fp);
-                    if (written != len) {
-                        log_router_debug_printf("Failed to write directly to file, written: %zu, expected: %d\n", written, len);
-                        // Try to seek to beginning and retry
-                        if (fseek(item->log_fp, 0, SEEK_SET) == 0 && ftruncate(fileno(item->log_fp), 0) == 0) {
-                            log_router_debug_printf("File truncated, retrying direct write\n");
-                            written = fwrite(vprintf_buffer, 1, len, item->log_fp);
-                            if (written != len) {
-                                log_router_debug_printf("Retry direct write also failed\n");
-                                continue;
-                            }
-                        } else {
-                            log_router_debug_printf("Failed to seek/truncate file for direct write\n");
-                            continue;
-                        }
-                    }
-                    fflush(item->log_fp);
-                    fsync(fileno(item->log_fp));
-#ifdef CONFIG_LOG_ROUTER_DEBUG_OUTPUT
-                    uint32_t write_duration_us = esp_timer_get_time() - write_start_time;
-                    log_router_debug_printf("Direct write took %ums, size: %d, file: %s\n", write_duration_us / 1000, len, item->file_path);
-#endif
-                }
             }
         }
     }

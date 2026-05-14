@@ -36,6 +36,29 @@ menu "LOG ROUTER"
             Larger buffer can handle longer log messages but uses more stack space.
             Range: 256 to 1024 bytes
 
+    config LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
+        bool "Show message on truncate"
+        default y
+        help
+            When enabled, log messages that are truncated because they do not fit
+            into LOG_ROUTER_FORMAT_BUFFER_SIZE will have a string appended to them,
+            to indicate that the log message is incomplete.
+
+    if LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
+		config LOG_ROUTER_TRUNCATE_STRING
+			string
+			default "<TRUNCATED>"
+			prompt "Append this string to truncated logs"
+			help
+				String appended to truncated log messages. If log colors are enabled,
+				it will be formatted as purple italics: see CONFIG_LOG_COLORS
+
+				A newline character is also added, so that the next log message starts
+				on its own line.
+
+
+	endif #LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
+
     config LOG_ROUTER_DEBUG_OUTPUT
         bool "Enable debug output"
         default y
