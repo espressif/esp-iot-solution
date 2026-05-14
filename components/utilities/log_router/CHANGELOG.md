@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.2 - 2026-05-15
+
+### Bug fix ###
+
+* Prevent buffer overrun when messages are truncated.
+* Stop wasting a byte at the end of the buffer.
+
 ## v0.1.1 - 2025-08-25
 
 ### Bug fix ###
