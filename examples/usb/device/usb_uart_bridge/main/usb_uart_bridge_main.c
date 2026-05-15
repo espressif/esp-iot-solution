@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,8 +16,9 @@
 #include "rom/ets_sys.h"
 
 #include "tinyusb.h"
+#include "tinyusb_default_config.h"
+#include "tinyusb_cdc_acm.h"
 #include "tusb.h"
-#include "tusb_cdc_acm.h"
 
 static const char *TAG = "USB2UART";
 
@@ -70,11 +71,7 @@ static void board_uart_init(void)
         .parity = CFG_PARITY(s_parity_active),
         .stop_bits = CFG_STOP_BITS(s_stop_bits_active),
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-#if CONFIG_IDF_TARGET_ESP32P4
         .source_clk = UART_SCLK_DEFAULT,
-#else
-        .source_clk = UART_SCLK_APB,
-#endif
     };
 
     uart_driver_install(BOARD_UART_PORT, UART_RX_BUF_SIZE, UART_TX_BUF_SIZE, 0, NULL, 0);
@@ -108,30 +105,29 @@ static bool board_autodl_gpio_init(void)
 }
 #endif
 
-// Invoked when device is mounted
-void tud_mount_cb(void)
+static void tinyusb_event_callback(tinyusb_event_t *event, void *arg)
 {
-    ESP_LOGI(TAG, "USB Mounted");
-}
-
-// Invoked when device is unmounted
-void tud_umount_cb(void)
-{
-    ESP_LOGI(TAG, "USB Unmounted");
-}
-
-// Invoked when usb bus is suspended
-// remote_wakeup_en : if host allows us to perform remote wakeup
-// USB Specs: Within 7ms, device must draw an average current less than 2.5 mA from bus
-void tud_suspend_cb(bool remote_wakeup_en)
-{
-    ESP_LOGI(TAG, "USB Suspend");
-}
-
-// Invoked when usb bus is resumed
-void tud_resume_cb(void)
-{
-    ESP_LOGI(TAG, "USB Resume");
+    (void) arg;
+    switch (event->id) {
+    case TINYUSB_EVENT_ATTACHED:
+        ESP_LOGI(TAG, "USB Mounted");
+        break;
+    case TINYUSB_EVENT_DETACHED:
+        ESP_LOGI(TAG, "USB Unmounted");
+        break;
+#ifdef CONFIG_TINYUSB_SUSPEND_CALLBACK
+    case TINYUSB_EVENT_SUSPENDED:
+        ESP_LOGI(TAG, "USB Suspend");
+        break;
+#endif
+#ifdef CONFIG_TINYUSB_RESUME_CALLBACK
+    case TINYUSB_EVENT_RESUMED:
+        ESP_LOGI(TAG, "USB Resume");
+        break;
+#endif
+    default:
+        break;
+    }
 }
 
 void tud_cdc_tx_complete_cb(const uint8_t itf)
@@ -330,25 +326,18 @@ void app_main(void)
         assert(0);
     }
 
-    tinyusb_config_t tusb_cfg = {
-        .descriptor = NULL,
-        .string_descriptor = NULL,
-        .external_phy = false
-    };
-
+    tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG(tinyusb_event_callback);
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
     tinyusb_config_cdcacm_t amc_cfg = {
-        .usb_dev = TINYUSB_USBDEV_0,
         .cdc_port = TINYUSB_CDC_ACM_0,
-        .rx_unread_buf_sz = USB_RX_BUF_SIZE,
-        .callback_rx = &tinyusb_cdc_rx_callback, // the first way to register a callback
+        .callback_rx = &tinyusb_cdc_rx_callback,
         .callback_rx_wanted_char = NULL,
         .callback_line_state_changed = &tinyusb_cdc_line_state_changed_callback,
-        .callback_line_coding_changed = &tinyusb_cdc_line_coding_changed_callback
+        .callback_line_coding_changed = &tinyusb_cdc_line_coding_changed_callback,
     };
 
-    ESP_ERROR_CHECK(tusb_cdc_acm_init(&amc_cfg));
+    ESP_ERROR_CHECK(tinyusb_cdcacm_init(&amc_cfg));
 
     TaskHandle_t usb_tx_handle = NULL;
     xTaskCreate(usb_tx_task, "usb_tx", 4096, NULL, 4, &usb_tx_handle);
