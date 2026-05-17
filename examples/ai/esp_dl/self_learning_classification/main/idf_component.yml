@@ -7,4 +7,4 @@ dependencies:
     override_path: ../components/imagenet_cls
   espressif/esp32_p4_function_ev_board: "5.0.3"
   lvgl/lvgl: "9.4.0"
-  espressif/esp_video: "1.4.1"
+  espressif/esp_video: "2.0.1"
