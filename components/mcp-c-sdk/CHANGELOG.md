@@ -1,5 +1,24 @@
 # ChangeLog
 
+## [v2.0.1] - 2026-05-18
+
+This release keeps `mcp-c-sdk` build-compatible with **ESP-IDF 5.5** and **ESP-IDF 6.0.1+** while preserving the v2.0.0 Streamable HTTP, SSE, OAuth/JWT, and task-capable MCP behavior.
+
+### Changed
+
+- **Component version**: Bumped the manifest version from **`2.0.0~1`** to **`2.0.1`**.
+- **JSON stack**: Standardized on managed **`espressif/cjson`** for all supported IDF versions:
+  - `CMakeLists.txt` now uses `cjson` in `PRIV_REQUIRES` instead of the legacy built-in `json` component.
+  - `idf_component.yml` declares `espressif/cjson: "1.*"`.
+- **Test apps**: `test_apps/main/CMakeLists.txt` now depends on `cjson` directly (aligned with the component itself).
+
+### Fixed
+
+- **IDF 6 / Mbed TLS 4.x (HTTP server transport)**: Removed direct includes of private Mbed TLS headers (`mbedtls/rsa.h`, `mbedtls/ecp.h`, `mbedtls/ecdsa.h`). JWT verification now uses public `mbedtls_pk`, `mbedtls/bignum.h`, and `mbedtls/asn1*.h` only.
+- **JWT RS256 verification**: Build DER `SubjectPublicKeyInfo` from JWK `n` / `e`, import the key with `mbedtls_pk_parse_public_key()`, and verify with `mbedtls_pk_verify()`.
+- **JWT ES256 verification**: Build DER `SubjectPublicKeyInfo` from JWK `x` / `y`, convert JWT raw `R || S` signatures to ASN.1 DER, and verify through `mbedtls_pk_verify()`.
+- **HTTP client build on IDF 6+**: Added a `default` branch in `esp_mcp_http_client_event_handler()` so newly introduced `esp_http_client` event IDs (for example `HTTP_EVENT_ON_HEADERS_COMPLETE` and `HTTP_EVENT_ON_STATUS_CODE`) do not trigger `-Werror=switch` when building with newer ESP-IDF.
+
 ## [v2.0.0] - 2026-04-13
 
 Targets **MCP protocol `2025-11-25`** as the default negotiated surface (with **legacy `2024-11-05`** transport still selectable via Kconfig where applicable). This release aligns the SDK with **Streamable HTTP** (JSON-RPC over HTTP + SSE), optional **OAuth** discovery metadata, richer **auth** options, and the **Prompts / Resources / Completions / Tasks** capability set.

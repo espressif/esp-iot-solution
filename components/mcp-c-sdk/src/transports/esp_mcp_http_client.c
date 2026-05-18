@@ -568,6 +568,9 @@ static esp_err_t esp_mcp_http_client_event_handler(esp_http_client_event_t *even
     case HTTP_EVENT_REDIRECT:
         ESP_LOGI(TAG, "[%s] HTTP_EVENT_REDIRECT", channel_name);
         break;
+    default:
+        ESP_LOGD(TAG, "[%s] HTTP_EVENT_UNKNOWN: %d", channel_name, event->event_id);
+        break;
     }
     return ESP_OK;
 }

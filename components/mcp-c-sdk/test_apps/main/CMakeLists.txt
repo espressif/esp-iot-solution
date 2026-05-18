@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "."
                        PRIV_INCLUDE_DIRS "."
-                       PRIV_REQUIRES unity mcp-c-sdk test_utils json esp_http_client)
+                       PRIV_REQUIRES unity mcp-c-sdk test_utils cjson esp_http_client)
