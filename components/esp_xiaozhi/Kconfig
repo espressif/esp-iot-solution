@@ -49,6 +49,15 @@ menu "Xiaozhi Assistant"
             help
                 Maximum size in bytes for the UDP audio receive buffer.
 
+        config XIAOZHI_UDP_MAX_AUDIO_PAYLOAD_SIZE
+            int "UDP maximum audio payload size (bytes)"
+            range 256 1456
+            default 1400
+            help
+                Maximum plain audio payload size sent in one UDP packet.
+                The UDP transport prepends a 16-byte nonce, so keep this value
+                at or below 1456 to avoid IP fragmentation on a 1500-byte MTU.
+
         config XIAOZHI_MAX_CONSECUTIVE_UDP_ERRORS
             int "Max consecutive UDP errors before giving up"
             range 1 100

@@ -64,8 +64,7 @@ esp_err_t esp_xiaozhi_chat_get_board_info(esp_xiaozhi_chat_board_info_t *board_i
         snprintf(board_info->mac_address, 18, "%02x:%02x:%02x:%02x:%02x:%02x",
                  mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
     } else {
-        strncpy(board_info->mac_address, "Unknown", 18);
-        board_info->mac_address[17] = '\0';
+        snprintf(board_info->mac_address, sizeof(board_info->mac_address), "%s", "Unknown");
         ESP_LOGE(TAG, "Failed to get MAC address: %s", esp_err_to_name(ret));
     }
 
@@ -178,8 +177,8 @@ esp_err_t esp_xiaozhi_chat_get_board_json(esp_xiaozhi_chat_board_info_t *board_i
         if (json_len >= buffer_size) {
             ret = ESP_ERR_INVALID_SIZE;
         } else {
-            strncpy(json_buffer, json_string, buffer_size);
-            json_buffer[buffer_size - 1] = '\0';
+            memcpy(json_buffer, json_string, json_len);
+            json_buffer[json_len] = '\0';
         }
         cJSON_free(json_string);
     }

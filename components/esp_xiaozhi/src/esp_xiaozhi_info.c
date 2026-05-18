@@ -339,12 +339,11 @@ static esp_err_t esp_xiaozhi_chat_http_data_handler(const char *data, size_t dat
         cJSON *server_time = cJSON_GetObjectItem(root, "server_time");
         if (cJSON_IsObject(server_time)) {
             cJSON *timestamp = cJSON_GetObjectItem(server_time, "timestamp");
-            cJSON *timezone_offset = cJSON_GetObjectItem(server_time, "timezone_offset");
-
             if (cJSON_IsNumber(timestamp)) {
 #if CONFIG_XIAOZHI_SYNC_SYSTEM_TIME_FROM_SERVER
                 struct timeval tv;
                 double ts = timestamp->valuedouble;
+                cJSON *timezone_offset = cJSON_GetObjectItem(server_time, "timezone_offset");
                 if (cJSON_IsNumber(timezone_offset)) {
                     ts += (timezone_offset->valueint * 60 * 1000);
                 }

@@ -45,5 +45,31 @@ Examples
 API Reference
 -------------
 
+The following sections are generated from the public headers under ``components/esp_xiaozhi/include/``.
+
+Chat
+~~~~
+
 .. include-build-file:: inc/esp_xiaozhi_chat.inc
+
+Device information
+~~~~~~~~~~~~~~~~~~
+
 .. include-build-file:: inc/esp_xiaozhi_info.inc
+
+NVS operations
+~~~~~~~~~~~~~~
+
+Optional hooks to redirect keystore NVS access (e.g. run NVS on an SRAM task). See ``esp_xiaozhi_nvs_ops.h``.
+
+.. include-build-file:: inc/esp_xiaozhi_nvs_ops.inc
+
+Camera explain
+~~~~~~~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_camera.inc
+
+Video explain
+~~~~~~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_video.inc

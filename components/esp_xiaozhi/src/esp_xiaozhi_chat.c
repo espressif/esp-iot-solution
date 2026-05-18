@@ -17,7 +17,12 @@
 #include <freertos/queue.h>
 #include <freertos/task.h>
 #include <freertos/idf_additions.h>
+#include <esp_idf_version.h>
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#include <psa/crypto.h>
+#else
 #include <mbedtls/aes.h>
+#endif
 #include <freertos/event_groups.h>
 #include <freertos/semphr.h>
 #include <stdint.h>
@@ -44,6 +49,8 @@
 #define ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT 3
 #define ESP_XIAOZHI_CHAT_TASK_EXIT_WAIT_MS 2000
 #define ESP_XIAOZHI_CHAT_UDP_RECV_TIMEOUT_MS 200
+#define ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS 20
+#define ESP_XIAOZHI_CHAT_UDP_BACKPRESSURE_DELAY_MS 10
 #define ESP_XIAOZHI_CHAT_UDP_MIN_PORT 1
 #define ESP_XIAOZHI_CHAT_UDP_MAX_PORT 65535
 
@@ -54,6 +61,15 @@
 #define ESP_XIAOZHI_CHAT_MAX_CHANNELS 2
 #define ESP_XIAOZHI_CHAT_MIN_FRAME_DURATION_MS 10
 #define ESP_XIAOZHI_CHAT_MAX_FRAME_DURATION_MS 120
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+typedef struct {
+    psa_key_id_t key_id;
+    bool key_imported;
+} esp_xiaozhi_chat_aes_ctr_context_t;
+#else
+typedef mbedtls_aes_context esp_xiaozhi_chat_aes_ctr_context_t;
+#endif
 
 /* Internal sync bits: server hello received, receive enabled, shutdown, task exited */
 #define ESP_XIAOZHI_CHAT_SERVER_HELLO          (1 << 0) /*!< Server hello received */
@@ -73,7 +89,7 @@ typedef struct {
     struct sockaddr_in udp_addr;
     char udp_server[ESP_XIAOZHI_CHAT_MAX_STRING_SIZE];
     int udp_port;
-    mbedtls_aes_context aes_ctx;
+    esp_xiaozhi_chat_aes_ctr_context_t aes_ctx;
     uint8_t aes_nonce[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
     uint32_t local_sequence;
     uint32_t remote_sequence;
@@ -130,6 +146,111 @@ static StackType_t s_audio_input_task_stack[CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE
 #endif
 
 static void esp_xiaozhi_chat_audio_input(void *pvParameter);
+
+static void esp_xiaozhi_chat_aes_ctr_init(esp_xiaozhi_chat_aes_ctr_context_t *ctx)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    ctx->key_id = 0;
+    ctx->key_imported = false;
+#else
+    mbedtls_aes_init(ctx);
+#endif
+}
+
+static int esp_xiaozhi_chat_aes_ctr_setkey(esp_xiaozhi_chat_aes_ctr_context_t *ctx,
+                                           const uint8_t *key,
+                                           size_t key_bits)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    if (ctx->key_imported) {
+        psa_destroy_key(ctx->key_id);
+        ctx->key_id = 0;
+        ctx->key_imported = false;
+    }
+
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        return (int)status;
+    }
+
+    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT);
+    psa_set_key_algorithm(&attributes, PSA_ALG_CTR);
+    psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
+    psa_set_key_bits(&attributes, key_bits);
+
+    status = psa_import_key(&attributes, key, key_bits / 8, &ctx->key_id);
+    psa_reset_key_attributes(&attributes);
+    if (status != PSA_SUCCESS) {
+        ctx->key_id = 0;
+        return (int)status;
+    }
+
+    ctx->key_imported = true;
+    return 0;
+#else
+    return mbedtls_aes_setkey_enc(ctx, key, (unsigned int)key_bits);
+#endif
+}
+
+static int esp_xiaozhi_chat_aes_ctr_crypt(esp_xiaozhi_chat_aes_ctr_context_t *ctx,
+                                          size_t length,
+                                          uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE],
+                                          const uint8_t *input,
+                                          uint8_t *output)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    if (!ctx->key_imported) {
+        return PSA_ERROR_BAD_STATE;
+    }
+
+    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
+    psa_status_t status = psa_cipher_encrypt_setup(&operation, ctx->key_id, PSA_ALG_CTR);
+    if (status != PSA_SUCCESS) {
+        return (int)status;
+    }
+
+    status = psa_cipher_set_iv(&operation, nonce_counter, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
+    if (status != PSA_SUCCESS) {
+        psa_cipher_abort(&operation);
+        return (int)status;
+    }
+
+    size_t output_len = 0;
+    status = psa_cipher_update(&operation, input, length, output, length, &output_len);
+    if (status != PSA_SUCCESS) {
+        psa_cipher_abort(&operation);
+        return (int)status;
+    }
+
+    uint8_t finish_buf[16] = {0};
+    size_t finish_len = 0;
+    status = psa_cipher_finish(&operation, finish_buf, sizeof(finish_buf), &finish_len);
+    if (status != PSA_SUCCESS) {
+        psa_cipher_abort(&operation);
+        return (int)status;
+    }
+
+    return (output_len == length && finish_len == 0) ? 0 : PSA_ERROR_GENERIC_ERROR;
+#else
+    size_t nc_off = 0;
+    uint8_t stream_block[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE] = {0};
+    return mbedtls_aes_crypt_ctr(ctx, length, &nc_off, nonce_counter, stream_block, input, output);
+#endif
+}
+
+static void esp_xiaozhi_chat_aes_ctr_free(esp_xiaozhi_chat_aes_ctr_context_t *ctx)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    if (ctx->key_imported) {
+        psa_destroy_key(ctx->key_id);
+        ctx->key_id = 0;
+        ctx->key_imported = false;
+    }
+#else
+    mbedtls_aes_free(ctx);
+#endif
+}
 
 static esp_xiaozhi_chat_t *esp_xiaozhi_chat_get_instance(void)
 {
@@ -278,7 +399,7 @@ static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat
                 return ESP_ERR_INVALID_ARG;
             }
         }
-        strncpy(xiaozhi_chat->session_id, session_id->valuestring, session_id_len);
+        memcpy(xiaozhi_chat->session_id, session_id->valuestring, session_id_len);
         xiaozhi_chat->session_id[session_id_len] = '\0';
         ESP_LOGD(TAG, "Session established");
     }
@@ -315,7 +436,7 @@ static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat
                     ESP_LOGE(TAG, "Server is too long: %u > %u", server_len, sizeof(xiaozhi_chat->udp->udp_server) - 1);
                     return ESP_ERR_INVALID_ARG;
                 }
-                strncpy(xiaozhi_chat->udp->udp_server, server->valuestring, server_len);
+                memcpy(xiaozhi_chat->udp->udp_server, server->valuestring, server_len);
                 xiaozhi_chat->udp->udp_server[server_len] = '\0';
             }
             if (port && cJSON_IsNumber(port)) {
@@ -352,9 +473,12 @@ static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat
                 esp_xiaozhi_chat_decode_hex_string(nonce->valuestring, xiaozhi_chat->udp->aes_nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
                 esp_xiaozhi_chat_decode_hex_string(key->valuestring, aes_key, ESP_XIAOZHI_CHAT_AES_KEY_SIZE);
 
-                mbedtls_aes_init(&xiaozhi_chat->udp->aes_ctx);
-                mbedtls_aes_setkey_enc(&xiaozhi_chat->udp->aes_ctx, aes_key, 128);
+                int aes_ret = esp_xiaozhi_chat_aes_ctr_setkey(&xiaozhi_chat->udp->aes_ctx, aes_key, 128);
                 memset(aes_key, 0, ESP_XIAOZHI_CHAT_AES_KEY_SIZE);
+                if (aes_ret != 0) {
+                    ESP_LOGE(TAG, "Failed to set AES key: %d", aes_ret);
+                    return ESP_FAIL;
+                }
 
                 xiaozhi_chat->udp->local_sequence = 0;
                 xiaozhi_chat->udp->remote_sequence = 0;
@@ -389,13 +513,18 @@ static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, 
         return ESP_ERR_INVALID_STATE;
     }
 
+    cJSON *method = cJSON_GetObjectItem(payload_obj, "method");
+    if (cJSON_IsString(method)) {
+        ESP_LOGI(TAG, "Received MCP method: %s", method->valuestring);
+    }
+
     char *payload_mcp = cJSON_PrintUnformatted(payload_obj);
     if (!payload_mcp) {
         ESP_LOGE(TAG, "Failed to print MCP payload");
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGD(TAG, "Received MCP message: %s", payload_mcp);
+    ESP_LOGI(TAG, "Received MCP message: %s", payload_mcp);
 
     esp_err_t ret = esp_xiaozhi_mcp_handle_message(xiaozhi_chat->mcp_mgr_handle,
                                                    "mcp_server",
@@ -929,12 +1058,12 @@ static void esp_xiaozhi_chat_audio_input(void *pvParameter)
                 continue;
             }
 
-            size_t nc_off = 0;
-            uint8_t stream_block[16] = {0};
             const uint8_t *nonce = (const uint8_t *)buffer;
             const uint8_t *encrypted = (const uint8_t *)buffer + ESP_XIAOZHI_CHAT_AES_NONCE_SIZE;
 
-            int ret = mbedtls_aes_crypt_ctr(&xiaozhi_chat->udp->aes_ctx, decrypted_size, &nc_off, (uint8_t *)nonce, stream_block, (uint8_t *)encrypted, decrypted_data);
+            uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
+            memcpy(nonce_counter, nonce, sizeof(nonce_counter));
+            int ret = esp_xiaozhi_chat_aes_ctr_crypt(&xiaozhi_chat->udp->aes_ctx, decrypted_size, nonce_counter, encrypted, decrypted_data);
             if (ret != 0) {
                 ESP_LOGE(TAG, "Failed to decrypt audio data, ret: %d", ret);
                 free(decrypted_data);
@@ -1014,6 +1143,14 @@ static esp_err_t esp_xiaozhi_chat_audio_open(esp_xiaozhi_chat_t *xiaozhi_chat)
         close(sockfd);
         freeaddrinfo(res);
         ESP_RETURN_ON_ERROR(ESP_FAIL, TAG, "Failed to set audio socket recv timeout: %s", strerror(errno));
+    }
+
+    struct timeval send_timeout = {
+        .tv_sec = ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS / 1000,
+        .tv_usec = (ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS % 1000) * 1000,
+    };
+    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
+        ESP_LOGW(TAG, "Failed to set audio socket send timeout: %s", strerror(errno));
     }
 
     if (xSemaphoreTake(xiaozhi_chat->udp->channel_mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
@@ -1098,6 +1235,11 @@ static esp_err_t esp_xiaozhi_chat_audio_send(esp_xiaozhi_chat_t *xiaozhi_chat, c
             xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
             return ESP_ERR_INVALID_STATE;
         }
+        if (packet->payload_size > CONFIG_XIAOZHI_UDP_MAX_AUDIO_PAYLOAD_SIZE) {
+            xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
+            ESP_LOGW(TAG, "UDP audio payload too large: %u > %u", packet->payload_size, CONFIG_XIAOZHI_UDP_MAX_AUDIO_PAYLOAD_SIZE);
+            return ESP_ERR_INVALID_SIZE;
+        }
         uint8_t nonce[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
         memcpy(nonce, xiaozhi_chat->udp->aes_nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
 
@@ -1110,10 +1252,9 @@ static esp_err_t esp_xiaozhi_chat_audio_send(esp_xiaozhi_chat_t *xiaozhi_chat, c
         if (encrypted) {
             memcpy(encrypted, nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
 
-            size_t nc_off = 0;
-            uint8_t stream_block[16] = {0};
-
-            int ret = mbedtls_aes_crypt_ctr(&xiaozhi_chat->udp->aes_ctx, packet->payload_size, &nc_off, nonce, stream_block, packet->payload, &encrypted[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE]);
+            uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
+            memcpy(nonce_counter, nonce, sizeof(nonce_counter));
+            int ret = esp_xiaozhi_chat_aes_ctr_crypt(&xiaozhi_chat->udp->aes_ctx, packet->payload_size, nonce_counter, packet->payload, &encrypted[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE]);
 
             if (ret == 0) {
                 ssize_t sent = send(xiaozhi_chat->udp->udp_socket, (const char *)encrypted, encrypted_size, 0);
@@ -1123,6 +1264,9 @@ static esp_err_t esp_xiaozhi_chat_audio_send(esp_xiaozhi_chat_t *xiaozhi_chat, c
                     result = ESP_FAIL;
                     if (sent < 0) {
                         ESP_LOGW(TAG, "UDP send failed: errno=%d (%s)", errno, strerror(errno));
+                        if (errno == ENOMEM || errno == EAGAIN || errno == EWOULDBLOCK) {
+                            vTaskDelay(pdMS_TO_TICKS(ESP_XIAOZHI_CHAT_UDP_BACKPRESSURE_DELAY_MS));
+                        }
                     } else {
                         ESP_LOGW(TAG, "UDP send short: sent=%zd, expected=%zu", (size_t)sent, encrypted_size);
                     }
@@ -1168,6 +1312,7 @@ esp_err_t esp_xiaozhi_chat_init(esp_xiaozhi_chat_config_t *config, esp_xiaozhi_c
         ESP_RETURN_ON_FALSE(xiaozhi_chat->udp->audio_receive_events, ESP_ERR_NO_MEM, TAG, "Failed to create receive event group");
         xEventGroupSetBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
         xiaozhi_chat->udp->udp_socket = -1;
+        esp_xiaozhi_chat_aes_ctr_init(&xiaozhi_chat->udp->aes_ctx);
     }
 
     xiaozhi_chat->audio_type = config->audio_type;
@@ -1219,7 +1364,7 @@ esp_err_t esp_xiaozhi_chat_deinit(esp_xiaozhi_chat_handle_t chat_hd)
     }
 
     if (xiaozhi_chat->udp) {
-        mbedtls_aes_free(&xiaozhi_chat->udp->aes_ctx);
+        esp_xiaozhi_chat_aes_ctr_free(&xiaozhi_chat->udp->aes_ctx);
         if (xiaozhi_chat->udp->audio_receive_events) {
             vEventGroupDelete(xiaozhi_chat->udp->audio_receive_events);
             xiaozhi_chat->udp->audio_receive_events = NULL;

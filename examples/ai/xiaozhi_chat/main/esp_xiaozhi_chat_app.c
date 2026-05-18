@@ -42,6 +42,7 @@ static char *TAG = "ESP_XIAOZHI_CHAT_APP";
 #define ESP_XIAOZHI_CHAT_APP_AUDIO_READ_ERROR_BACKOFF_MS 20
 #define ESP_XIAOZHI_CHAT_APP_AUDIO_READ_ERROR_LOG_INTERVAL 50
 #define ESP_XIAOZHI_CHAT_APP_AUDIO_READ_MAX_ERRORS 200
+#define ESP_XIAOZHI_CHAT_APP_AUDIO_SEND_MAX_TRANSIENT_ERRORS 8
 
 static int current_volume = 50;
 static int current_brightness = 80;
@@ -53,6 +54,7 @@ static int current_red = 0;          // 0..255
 static int current_green = 0;        // 0..255
 static int current_blue = 0;         // 0..255
 static esp_xiaozhi_camera_handle_t *s_camera_explain = NULL;
+static esp_codec_dev_handle_t s_play_dev = NULL;
 
 static esp_err_t init_camera_explain_if_needed(void)
 {
@@ -227,7 +229,9 @@ static esp_mcp_value_t set_volume_callback(const esp_mcp_property_list_t* proper
 
     current_volume = volume;
     ESP_LOGI(TAG, "Volume set to: %d", current_volume);
-    esp_xiaozhi_chat_display_set_volume(current_volume);
+    if (s_play_dev != NULL && esp_codec_dev_set_out_vol(s_play_dev, current_volume) != ESP_CODEC_DEV_OK) {
+        ESP_LOGW(TAG, "Failed to apply output volume to codec device");
+    }
 
     return esp_mcp_value_create_bool(true);
 }
@@ -523,12 +527,14 @@ static void esp_xiaozhi_chat_app_event(void *arg, esp_event_base_t event_base, i
     case ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_OPENED:
         ESP_LOGI(TAG, "audio channel opened");
         xiaozhi_chat_app->wakeuped = true;
+        xiaozhi_chat_app->audio_send_errors = 0;
         esp_xiaozhi_chat_display_set_status("Listening...");
         esp_xiaozhi_chat_display_set_emotion("thinking");
         break;
     case ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_CLOSED:
         ESP_LOGI(TAG, "audio channel closed");
         xiaozhi_chat_app->wakeuped = false;
+        xiaozhi_chat_app->audio_send_errors = 0;
         esp_xiaozhi_chat_display_set_status("Ready");
         esp_xiaozhi_chat_display_set_emotion("neutral");
         break;
@@ -712,6 +718,8 @@ static void esp_xiaozhi_chat_app_audio_channel(void *pv)
                 ESP_LOGW(TAG, "Ignore offline event before chat is initialized");
                 continue;
             }
+            xiaozhi_chat_app->wakeuped = false;
+            xiaozhi_chat_app->audio_send_errors = 0;
             esp_xiaozhi_chat_app_audio_error(esp_xiaozhi_chat_close_audio_channel(xiaozhi_chat_app->chat));
         }
 
@@ -738,7 +746,23 @@ static void esp_xiaozhi_chat_app_audio_read(void *pv)
         }
 
         if (ret > 0 && xiaozhi_chat_app->wakeuped && xiaozhi_chat_app->chat != 0) {
-            esp_xiaozhi_chat_app_audio_error(esp_xiaozhi_chat_send_audio_data(xiaozhi_chat_app->chat, (char *)data, ret));
+            esp_err_t send_ret = esp_xiaozhi_chat_send_audio_data(xiaozhi_chat_app->chat, (char *)data, ret);
+            if (send_ret == ESP_OK) {
+                xiaozhi_chat_app->audio_send_errors = 0;
+            } else {
+                esp_xiaozhi_chat_app_audio_error(send_ret);
+                if (send_ret == ESP_FAIL || send_ret == ESP_ERR_TIMEOUT) {
+                    xiaozhi_chat_app->audio_send_errors++;
+                    if (xiaozhi_chat_app->audio_send_errors >= ESP_XIAOZHI_CHAT_APP_AUDIO_SEND_MAX_TRANSIENT_ERRORS) {
+                        ESP_LOGW(TAG, "Too many transient audio send failures, closing audio channel");
+                        xiaozhi_chat_app->wakeuped = false;
+                        xiaozhi_chat_app->audio_send_errors = 0;
+                        if (xiaozhi_chat_app->data_evt_group != NULL) {
+                            xEventGroupSetBits(xiaozhi_chat_app->data_evt_group, ESP_XIAOZHI_CHAT_APP_OFFLINE);
+                        }
+                    }
+                }
+            }
             continue;
         }
 
@@ -790,6 +814,7 @@ static esp_err_t esp_xiaozhi_chat_app_audio(esp_xiaozhi_chat_app_t *xiaozhi_chat
 
     config.play_dev = bsp_info.play_dev;
     config.rec_dev = bsp_info.rec_dev;
+    s_play_dev = (esp_codec_dev_handle_t)bsp_info.play_dev;
     strcpy(config.mic_layout, bsp_info.mic_layout);
     config.board_sample_rate = bsp_info.sample_rate;
     config.board_bits = bsp_info.sample_bits;
@@ -928,6 +953,7 @@ static esp_err_t esp_xiaozhi_chat_app_audio(esp_xiaozhi_chat_app_t *xiaozhi_chat
         if (play_dev_opened) {
             esp_codec_dev_close(config.play_dev);
         }
+        s_play_dev = NULL;
         if (audio_manager_inited) {
             audio_manager_deinit();
         }

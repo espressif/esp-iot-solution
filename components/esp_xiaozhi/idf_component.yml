@@ -1,12 +1,14 @@
-version: "0.1.0"
+version: "0.1.1"
 description: Xiaozhi Agent which provides Xiaozhi API integration
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/esp_xiaozhi
 dependencies:
-  idf: ">=5.5,<6"
+  idf: ">=5.5"
   cmake_utilities: "0.*"
   espressif/esp_websocket_client: ^1.6.1
+  espressif/cjson: "1.*"
+  espressif/mqtt: "1.*"
   espressif/mcp-c-sdk:
-    version: ^1.0.0
+    version: ^2.0.1
     require: public
 
 examples:
