@@ -24,12 +24,12 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_memory_utils.h"
+#include "common/display_bridge_common.h"
 #include "stdlib/lv_mem.h"
 #include "misc/lv_color.h"
 
 static ppa_client_handle_t s_blend_handle = NULL;
 static ppa_client_handle_t s_fill_handle = NULL;
-static size_t s_cache_align = 0;
 static bool s_handler_registered = false;
 
 static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
@@ -40,7 +40,10 @@ static lv_draw_sw_custom_blend_handler_t s_custom_handler = {
 };
 
 static void lvgl_port_ppa_v9_register_handler(void);
-static size_t ppa_align(void);
+static size_t ppa_get_cache_line_size(const void *addr);
+static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size);
+static bool ppa_buffer_cache_aligned(const void *addr);
+static void ppa_cache_msync_addr(const void *addr, size_t size, int flag);
 static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_area, void *buf, int flag);
 static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_area, lv_color_t *buf);
 static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_color_t *fg_buf,
@@ -73,24 +76,49 @@ static void lvgl_port_ppa_v9_register_handler(void)
     s_handler_registered = true;
 }
 
-static size_t ppa_align(void)
+static size_t ppa_get_cache_line_size(const void *addr)
 {
-    if (s_cache_align == 0) {
-        esp_cache_get_alignment(MALLOC_CAP_SPIRAM, &s_cache_align);
-        if (s_cache_align == 0) {
-            s_cache_align = LVGL_PORT_PPA_ALIGNMENT;
-        }
+    if (!addr) {
+        return 0;
     }
-    return s_cache_align;
+
+    return display_bridge_get_cache_line_size_by_addr(addr);
+}
+
+static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size)
+{
+    size_t align = ppa_get_cache_line_size(addr);
+
+    return (align > 0) ? LVGL_PORT_PPA_ALIGN_UP(size, align) : size;
+}
+
+static bool ppa_buffer_cache_aligned(const void *addr)
+{
+    size_t align = ppa_get_cache_line_size(addr);
+
+    return (align == 0) || (((uintptr_t)addr & (align - 1)) == 0);
+}
+
+static void ppa_cache_msync_addr(const void *addr, size_t size, int flag)
+{
+    size_t align = ppa_get_cache_line_size(addr);
+    if (!addr || size == 0 || align == 0) {
+        return;
+    }
+
+    uintptr_t start = (uintptr_t)addr;
+    uintptr_t aligned_start = start & ~((uintptr_t)align - 1);
+    size_t aligned_size = LVGL_PORT_PPA_ALIGN_UP(size + (start - aligned_start), align);
+
+    esp_cache_msync((void *)aligned_start, aligned_size, flag);
 }
 
 static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_area, void *buf, int flag)
 {
-    if (!area || !buf_area || !buf || !esp_ptr_external_ram(buf)) {
+    if (!area || !buf_area || !buf) {
         return;
     }
 
-    size_t align = ppa_align();
     lv_coord_t width = lv_area_get_width(area);
     lv_coord_t height = lv_area_get_height(area);
     lv_coord_t buf_w = lv_area_get_width(buf_area);
@@ -100,20 +128,15 @@ static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_ar
         return;
     }
 
-    lv_coord_t off_x = area->x1 - buf_area->x1;
     lv_coord_t off_y = area->y1 - buf_area->y1;
 
-    if (off_x < 0 || off_y < 0 || (off_x + width) > buf_w || (off_y + height) > buf_h) {
+    if (area->x1 < buf_area->x1 || off_y < 0 || area->x2 > buf_area->x2 || (off_y + height) > buf_h) {
         return;
     }
 
-    uint8_t *start = (uint8_t *)buf + ((size_t)off_y * buf_w + off_x) * sizeof(lv_color_t);
-    size_t bytes = (size_t)width * height * sizeof(lv_color_t);
-    uintptr_t addr = (uintptr_t)start;
-    uintptr_t aligned_addr = addr & ~(align - 1);
-    size_t total = LVGL_PORT_PPA_ALIGN_UP(bytes + (addr - aligned_addr), align);
-
-    esp_cache_msync((void *)aligned_addr, total, flag);
+    uint8_t *start = (uint8_t *)buf + (size_t)off_y * buf_w * sizeof(lv_color_t);
+    size_t bytes = (size_t)buf_w * height * sizeof(lv_color_t);
+    ppa_cache_msync_addr(start, bytes, flag);
 }
 
 static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_area, lv_color_t *buf)
@@ -142,7 +165,7 @@ static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_col
     if ((uint32_t)fg_off_y + block_h > fg_h) {
         fg_h = fg_off_y + block_h;
     }
-    size_t align = ppa_align();
+    size_t out_buffer_size = ppa_get_aligned_buffer_size(bg_buf, sizeof(lv_color_t) * bg_w * bg_h);
 
     ppa_blend_oper_config_t cfg = {
         .in_bg = {
@@ -167,7 +190,7 @@ static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_col
         },
         .out = {
             .buffer = bg_buf,
-            .buffer_size = LVGL_PORT_PPA_ALIGN_UP(sizeof(lv_color_t) * bg_w * bg_h, align),
+            .buffer_size = out_buffer_size,
             .pic_w = bg_w,
             .pic_h = bg_h,
             .block_offset_x = bg_off_x,
@@ -192,7 +215,7 @@ static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area
 {
     uint16_t bg_w = lv_area_get_width(bg_area);
     uint16_t bg_h = lv_area_get_height(bg_area);
-    size_t align = ppa_align();
+    size_t out_buffer_size = ppa_get_aligned_buffer_size(bg_buf, sizeof(lv_color_t) * bg_w * bg_h);
 
     lv_color32_t c32 = lv_color_to_32(color, LV_OPA_COVER);
     uint32_t argb = ((uint32_t)c32.alpha << 24) | ((uint32_t)c32.red << 16) |
@@ -201,7 +224,7 @@ static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area
     ppa_fill_oper_config_t cfg = {
         .out = {
             .buffer = bg_buf,
-            .buffer_size = LVGL_PORT_PPA_ALIGN_UP(sizeof(lv_color_t) * bg_w * bg_h, align),
+            .buffer_size = out_buffer_size,
             .pic_w = bg_w,
             .pic_h = bg_h,
             .block_offset_x = block_area->x1 - bg_area->x1,
@@ -334,8 +357,7 @@ static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc
     }
 
     lv_color_t *bg_buf = (lv_color_t *)layer->draw_buf->data;
-    size_t align = ppa_align();
-    if (!bg_buf || ((uintptr_t)bg_buf % align) != 0) {
+    if (!bg_buf || !ppa_buffer_cache_aligned(bg_buf)) {
         lv_draw_ppa_v9_sw_fallback(t, dsc);
         return;
     }
@@ -373,15 +395,9 @@ static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc
         }
 
         /* Writeback source buffer cache */
-        const uint8_t *src_ptr8 = (const uint8_t *)dsc->src_buf +
-                                  (size_t)src_off_y * src_stride +
-                                  (size_t)src_off_x * src_px_size;
-        uintptr_t src_addr = (uintptr_t)src_ptr8;
-        uintptr_t src_aligned = src_addr & ~(align - 1);
-        size_t src_total = LVGL_PORT_PPA_ALIGN_UP(
-                               (size_t)lv_area_get_width(&block_area) * lv_area_get_height(&block_area) * src_px_size +
-                               (src_addr - src_aligned), align);
-        esp_cache_msync((void *)src_aligned, src_total, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+        const uint8_t *src_ptr8 = (const uint8_t *)dsc->src_buf + (size_t)src_off_y * src_stride;
+        size_t src_bytes = src_stride * lv_area_get_height(&block_area);
+        ppa_cache_msync_addr(src_ptr8, src_bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
         uint16_t src_stride_px = src_stride / src_px_size;
         ppa_blend(bg_buf, &layer->buf_area, (const lv_color_t *)dsc->src_buf,

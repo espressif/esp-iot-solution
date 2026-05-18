@@ -68,6 +68,7 @@ typedef struct {
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
     lv_point_t last_point;              /*!< Last touch point coordinates */
     lv_indev_state_t last_state;        /*!< Last touch state */
+    esp_lv_adapter_touch_callbacks_t cbs; /*!< User event callbacks */
 #if LV_USE_GESTURE_RECOGNITION
     uint8_t prev_hw_track_id[MAX_TOUCH_POINTS_V9]; /*!< HW track IDs from previous read */
     uint8_t prev_lv_id[MAX_TOUCH_POINTS_V9];       /*!< LVGL touch IDs mapped from previous HW tracks */
@@ -133,6 +134,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    touch_ctx->cbs = config->callbacks;
 #if LV_USE_GESTURE_RECOGNITION
     touch_ctx->prev_count = 0;
     touch_ctx->next_lv_id = 0;
@@ -311,16 +313,14 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
         esp_lcd_touch_point_data_t touch_data[MAX_TOUCH_POINTS_V9] = {0};
         uint8_t count = 0;
 
-        /* Read touch data from hardware */
-        esp_lcd_touch_read_data(touch_ctx->handle);
-
-        /* Get touch coordinates */
-        esp_err_t ret = esp_lcd_touch_get_data(
-                            touch_ctx->handle,
-                            touch_data,
-                            &count,
-                            MAX_TOUCH_POINTS_V9
-                        );
+        esp_err_t ret;
+        if (touch_ctx->cbs.custom_touch_read) {
+            ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
+                                                   MAX_TOUCH_POINTS_V9, touch_ctx->cbs.user_ctx);
+        } else {
+            esp_lcd_touch_read_data(touch_ctx->handle);
+            ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V9);
+        }
 
 #if LV_USE_GESTURE_RECOGNITION
         if (ret == ESP_OK) {
@@ -403,6 +403,11 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
     }
 
     esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)isr_ctx->touch_ctx;
+
+    if (touch_ctx->cbs.on_interrupt) {
+        touch_ctx->cbs.on_interrupt(tp, touch_ctx->cbs.user_ctx);
+    }
+
     if (!touch_ctx->touch_sem) {
         return;
     }
@@ -573,6 +578,7 @@ typedef struct {
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
     lv_point_t last_point;              /*!< Last touch point coordinates */
     lv_indev_state_t last_state;        /*!< Last touch state */
+    esp_lv_adapter_touch_callbacks_t cbs; /*!< User event callbacks */
 } esp_lv_adapter_touch_ctx_t;
 
 /* Forward declarations */
@@ -603,6 +609,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    touch_ctx->cbs = config->callbacks;
 
     bool with_irq = touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC;
     touch_ctx->with_irq = with_irq;
@@ -766,16 +773,14 @@ static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
         esp_lcd_touch_point_data_t touch_data[MAX_TOUCH_POINTS_V8] = {0};
         uint8_t count = 0;
 
-        /* Read touch data from hardware */
-        esp_lcd_touch_read_data(touch_ctx->handle);
-
-        /* Get touch coordinates */
-        esp_err_t ret = esp_lcd_touch_get_data(
-                            touch_ctx->handle,
-                            touch_data,
-                            &count,
-                            MAX_TOUCH_POINTS_V8
-                        );
+        esp_err_t ret;
+        if (touch_ctx->cbs.custom_touch_read) {
+            ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
+                                                   MAX_TOUCH_POINTS_V8, touch_ctx->cbs.user_ctx);
+        } else {
+            esp_lcd_touch_read_data(touch_ctx->handle);
+            ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V8);
+        }
 
         /* Update last state */
         if (ret == ESP_OK && count > 0) {
@@ -805,6 +810,11 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
     }
 
     esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)isr_ctx->touch_ctx;
+
+    if (touch_ctx->cbs.on_interrupt) {
+        touch_ctx->cbs.on_interrupt(tp, touch_ctx->cbs.user_ctx);
+    }
+
     if (!touch_ctx->touch_sem) {
         return;
     }
@@ -818,3 +828,27 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
 }
 
 #endif /* LVGL_VERSION_MAJOR >= 9 */
+
+esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
+                                             const esp_lv_adapter_touch_callbacks_t *cbs)
+{
+    ESP_RETURN_ON_FALSE(touch, ESP_ERR_INVALID_ARG, TAG, "Touch handle cannot be NULL");
+
+#if LVGL_VERSION_MAJOR >= 9
+    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)lv_indev_get_driver_data(touch);
+#else
+    lv_indev_drv_t *drv = touch->driver;
+    ESP_RETURN_ON_FALSE(drv, ESP_ERR_INVALID_STATE, TAG, "Touch driver not initialized");
+    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)drv->user_data;
+#endif
+
+    ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
+
+    if (cbs) {
+        touch_ctx->cbs = *cbs;
+    } else {
+        memset(&touch_ctx->cbs, 0, sizeof(touch_ctx->cbs));
+    }
+
+    return ESP_OK;
+}

@@ -96,6 +96,17 @@ struct esp_lv_adapter_display_bridge {
     void (*set_area_rounder)(esp_lv_adapter_display_bridge_t *bridge,
                              void (*rounder_cb)(lv_area_t *, void *),
                              void *user_data);
+
+    /**
+     * @brief Set draw bitmap callbacks
+     *
+     * @param bridge   Bridge instance
+     * @param cbs      Callback collection (NULL to clear)
+     * @param user_ctx User context passed to callbacks
+     */
+    void (*set_draw_bitmap_callbacks)(esp_lv_adapter_display_bridge_t *bridge,
+                                      const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                      void *user_ctx);
 };
 
 /**********************

@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.0 (2026-05-09)
+
+* Add draw bitmap and touch callback hooks for external display/input adaptation
+* Improve cache synchronization for accelerated display paths
+* Update the PPA hang workaround patch and documentation for ESP-IDF `tags/v6.0`
+
 ## v0.4.3 (2026-04-03)
 
 * Fix `pause()` / `resume()` handling so the internal `LVGL tick` timer is stopped during pause and restarted during resume

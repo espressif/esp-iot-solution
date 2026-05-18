@@ -17,7 +17,9 @@
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "esp_log.h"
+#include "esp_memory_utils.h"
 #include "esp_timer.h"
 
 #include "freertos/FreeRTOS.h"
@@ -287,6 +289,25 @@ void IRAM_ATTR display_rotate_image(const void *src,
  *   CACHE MANAGEMENT
  **********************/
 
+size_t display_bridge_get_cache_line_size_by_addr(const void *addr)
+{
+    if (!addr) {
+        return 0;
+    }
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    return esp_cache_get_line_size_by_addr(addr);
+#else
+    size_t align = 0;
+    uint32_t caps = esp_ptr_external_ram(addr) ? MALLOC_CAP_SPIRAM :
+                    esp_ptr_internal(addr)      ? MALLOC_CAP_INTERNAL : 0;
+    if (caps == 0 || esp_cache_get_alignment(caps, &align) != ESP_OK) {
+        return 0;
+    }
+    return align;
+#endif
+}
+
 /**
  * @brief Synchronize cache for a specific memory range
  *
@@ -296,9 +317,16 @@ void display_cache_msync_range(const void *addr,
                                size_t size,
                                size_t cache_line_size)
 {
-    if (!addr || size == 0 || cache_line_size == 0) {
+    if (!addr || size == 0) {
         return;
     }
+
+    size_t line_size = display_bridge_get_cache_line_size_by_addr(addr);
+    if (line_size == 0) {
+        return;
+    }
+
+    cache_line_size = line_size;
 
     /* Align to cache line boundaries */
     uintptr_t start_addr = (uintptr_t)addr;
@@ -318,6 +346,10 @@ void display_cache_msync_framebuffer(void *buffer,
                                      size_t size)
 {
     if (!buffer || size == 0) {
+        return;
+    }
+
+    if (display_bridge_get_cache_line_size_by_addr(buffer) == 0) {
         return;
     }
 

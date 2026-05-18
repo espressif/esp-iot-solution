@@ -347,6 +347,68 @@ esp_err_t esp_lv_adapter_set_area_rounder_cb(lv_display_t *disp,
                                              void (*rounder_cb)(lv_area_t *area, void *user_data),
                                              void *user_data);
 
+/**
+ * @brief Draw bitmap callback collection
+ *
+ * When @c custom_draw_bitmap is non-NULL it replaces the @c esp_lcd_panel_draw_bitmap call made
+ * by the adapter during normal LVGL flush (TEAR_AVOID_MODE_NONE only) and during dummy-draw blit.
+ * All surrounding flush-ready / ISR / task-notify logic remains unchanged.
+ *
+ * On success (ESP_OK) the callback must ensure the completion signal is triggered (e.g. by calling
+ * @c esp_lcd_panel_draw_bitmap internally so its done-ISR fires). On failure the adapter
+ * calls @c lv_display_flush_ready / task-notify itself as a fallback, so the flush handshake
+ * always completes.
+ *
+ * Not supported for TE-sync flush (TEAR_AVOID_MODE_TE_SYNC): the TE path always calls
+ * @c esp_lcd_panel_draw_bitmap directly and will not invoke this callback.
+ * RGB / MIPI-DSI frame-buffer modes do not call @c esp_lcd_panel_draw_bitmap either and will not
+ * invoke this callback.
+ *
+ * All members are optional; set to NULL to use default behaviour.
+ */
+typedef struct {
+    /**
+     * @brief Replace the default @c esp_lcd_panel_draw_bitmap call.
+     *
+     * Return ESP_OK to indicate the blit was successfully initiated (completion signal will arrive
+     * asynchronously). Return any other value to tell the adapter that the blit failed and no
+     * completion signal will come; the adapter will then unblock the flush handshake immediately.
+     *
+     * @param disp       LVGL display handle
+     * @param panel      LCD panel handle (pass to esp_lcd_panel_draw_bitmap if needed)
+     * @param x_start    Left boundary (inclusive)
+     * @param y_start    Top boundary (inclusive)
+     * @param x_end      Right boundary (exclusive)
+     * @param y_end      Bottom boundary (exclusive)
+     * @param color_map  Pixel data buffer
+     * @param user_ctx   User context passed to @c esp_lv_adapter_set_draw_bitmap_callbacks
+     * @return ESP_OK on success, any other value on failure
+     */
+    esp_err_t (*custom_draw_bitmap)(lv_display_t *disp,
+                                    esp_lcd_panel_handle_t panel,
+                                    int x_start, int y_start, int x_end, int y_end,
+                                    const void *color_map, void *user_ctx);
+} esp_lv_adapter_draw_bitmap_callbacks_t;
+
+/**
+ * @brief Register draw bitmap callbacks for a display
+ *
+ * Replaces any previously registered callbacks. Pass NULL to clear all callbacks.
+ *
+ * @param[in] disp     LVGL display handle
+ * @param[in] cbs      Callback collection (NULL to clear)
+ * @param[in] user_ctx User context pointer passed back to each callback
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_ARG: Invalid display handle
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ *      - ESP_ERR_NOT_FOUND: Display not found
+ */
+esp_err_t esp_lv_adapter_set_draw_bitmap_callbacks(lv_display_t *disp,
+                                                   const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                   void *user_ctx);
+
 #ifdef __cplusplus
 }
 #endif

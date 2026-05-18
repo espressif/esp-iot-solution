@@ -272,6 +272,9 @@ static esp_err_t display_bridge_v8_update_panel(esp_lv_adapter_display_bridge_t 
 static void display_bridge_v8_set_area_rounder(esp_lv_adapter_display_bridge_t *bridge,
                                                void (*rounder_cb)(lv_area_t *, void *),
                                                void *user_data);
+static void display_bridge_v8_set_draw_bitmap_callbacks(esp_lv_adapter_display_bridge_t *bridge,
+                                                        const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                        void *user_ctx);
 
 /* Core callbacks */
 static void display_bridge_v8_flush_entry(esp_lv_adapter_display_bridge_t *bridge,
@@ -460,6 +463,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
     impl->base.dummy_draw_blit = display_bridge_v8_dummy_draw_blit;
     impl->base.update_panel = display_bridge_v8_update_panel;
     impl->base.set_area_rounder = display_bridge_v8_set_area_rounder;
+    impl->base.set_draw_bitmap_callbacks = display_bridge_v8_set_draw_bitmap_callbacks;
     impl->cfg = *cfg;
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
@@ -816,7 +820,14 @@ static esp_err_t display_bridge_v8_dummy_draw_blit(esp_lv_adapter_display_bridge
         impl->dummy_draw_wait_mask = 0;
     }
 
-    esp_err_t ret = display_lcd_blit_area(impl->panel, x_start, y_start, x_end, y_end, frame_buffer);
+    esp_err_t ret;
+    if (impl->cfg.draw_bitmap_cbs.custom_draw_bitmap) {
+        ret = impl->cfg.draw_bitmap_cbs.custom_draw_bitmap(impl->cfg.lv_disp, impl->panel,
+                                                           x_start, y_start, x_end, y_end,
+                                                           frame_buffer, impl->cfg.draw_bitmap_user_ctx);
+    } else {
+        ret = display_lcd_blit_area(impl->panel, x_start, y_start, x_end, y_end, frame_buffer);
+    }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit area failed: %s", esp_err_to_name(ret));
         impl->dummy_draw_wait_task = NULL;
@@ -875,6 +886,24 @@ static void display_bridge_v8_set_area_rounder(esp_lv_adapter_display_bridge_t *
     lv_disp_drv_t *drv = impl->cfg.lv_disp ? impl->cfg.lv_disp->driver : NULL;
     if (drv) {
         drv->rounder_cb = rounder_cb ? rounder_cb_wrapper : NULL;
+    }
+}
+
+static void display_bridge_v8_set_draw_bitmap_callbacks(esp_lv_adapter_display_bridge_t *bridge,
+                                                        const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
+                                                        void *user_ctx)
+{
+    esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)bridge;
+    if (!impl) {
+        return;
+    }
+
+    if (cbs) {
+        impl->cfg.draw_bitmap_cbs = *cbs;
+        impl->cfg.draw_bitmap_user_ctx = user_ctx;
+    } else {
+        memset(&impl->cfg.draw_bitmap_cbs, 0, sizeof(impl->cfg.draw_bitmap_cbs));
+        impl->cfg.draw_bitmap_user_ctx = NULL;
     }
 }
 
@@ -1212,11 +1241,21 @@ static void display_bridge_v8_flush_default(esp_lv_adapter_display_bridge_v8_t *
     const int offsety1 = area->y1;
     const int offsety2 = area->y2;
 
-    esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
-        /* Callback won't be triggered on failure, must notify LVGL immediately */
-        display_manager_flush_ready(drv);
+    if (impl->cfg.draw_bitmap_cbs.custom_draw_bitmap) {
+        esp_err_t ret = impl->cfg.draw_bitmap_cbs.custom_draw_bitmap(impl->cfg.lv_disp, panel_handle,
+                                                                     offsetx1, offsety1, offsetx2 + 1, offsety2 + 1,
+                                                                     color_map, impl->cfg.draw_bitmap_user_ctx);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Custom draw bitmap failed: %s", esp_err_to_name(ret));
+            display_manager_flush_ready(drv);
+        }
+    } else {
+        esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
+            /* Callback won't be triggered on failure, must notify LVGL immediately */
+            display_manager_flush_ready(drv);
+        }
     }
 }
 
@@ -1259,7 +1298,6 @@ static void display_bridge_v8_flush_gpio_te(esp_lv_adapter_display_bridge_v8_t *
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
-        /* Don't wait for callback that will never come */
         display_manager_flush_ready(drv);
         return;
     }
@@ -1669,7 +1707,11 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
 
         size_t buffer_size = heap_caps_get_allocated_size(dst_fb);
         if (buffer_size == 0) {
-            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * hor_res * ver_res, hw_resource.data_cache_line_size);
+            buffer_size = (size_t)color_bytes * hor_res * ver_res;
+            size_t line_size = display_bridge_get_cache_line_size_by_addr(dst_fb);
+            if (line_size > 0) {
+                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
+            }
         }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer          = src,
@@ -1755,7 +1797,11 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
 
         size_t buffer_size = heap_caps_get_allocated_size(to);
         if (buffer_size == 0) {
-            buffer_size = LVGL_PORT_PPA_ALIGN_UP((size_t)color_bytes * w * h, hw_resource.data_cache_line_size);
+            buffer_size = (size_t)color_bytes * w * h;
+            size_t line_size = display_bridge_get_cache_line_size_by_addr(to);
+            if (line_size > 0) {
+                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
+            }
         }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer = from,
