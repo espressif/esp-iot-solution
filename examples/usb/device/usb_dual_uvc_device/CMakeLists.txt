@@ -17,7 +17,7 @@ if (CONFIG_IDF_TARGET_ESP32S2 OR CONFIG_IDF_TARGET_ESP32S3)
     endif()
 endif()
 
-if (CONFIG_IDF_TARGET_ESP32P4)
+if (CONFIG_IDF_TARGET_ESP32P4 OR CONFIG_IDF_TARGET_ESP32S31)
     if (CONFIG_FORMAT_H264_CAM1)
         set(URL "https://dl.espressif.com/esp-iot-solution/static/p4_introduce_1280_720_h264.avi")
     elseif(CONFIG_FORMAT_MJPEG_CAM1)

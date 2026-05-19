@@ -145,10 +145,6 @@ uint8_t const *tud_descriptor_device_cb(void)
 #endif
 
 #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_CAM1_VIDEO_CAPTURE_DESC_LEN + TUD_CAM2_VIDEO_CAPTURE_DESC_LEN)
-#define EPNUM_CAM1_VIDEO_IN    0x81
-#if CONFIG_UVC_SUPPORT_TWO_CAM
-#define EPNUM_CAM2_VIDEO_IN    0x82
-#endif
 
 uint8_t const desc_fs_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
