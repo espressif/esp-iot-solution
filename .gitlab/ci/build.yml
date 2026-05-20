@@ -530,6 +530,14 @@ build_example_display_gui_lvgl_lottie_player:
     EXAMPLE_DIR: examples/display/gui/lvgl_lottie_player
     IMAGE: espressif/idf:release-v5.5
 
+build_example_display_gui_esp_painter_demo:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_esp_painter_demo
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/display/gui/esp_painter_demo
+
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
     - .build_examples_template
