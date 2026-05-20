@@ -22,9 +22,9 @@
 #include <cJSON.h>
 #include <mbedtls/md.h>
 #include <mbedtls/pk.h>
-#include <mbedtls/rsa.h>
-#include <mbedtls/ecp.h>
-#include <mbedtls/ecdsa.h>
+#include <mbedtls/bignum.h>
+#include <mbedtls/asn1.h>
+#include <mbedtls/asn1write.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <freertos/task.h>
@@ -1088,6 +1088,158 @@ static cJSON *esp_mcp_http_jwks_select_key(cJSON *jwks, const char *kid, const c
     return NULL;
 }
 
+/* Keep JWT verification on public Mbed TLS APIs shared by IDF 5.5 and 6.x.
+ * IDF 6 moved direct RSA/ECDSA headers to private paths, so JWK keys are
+ * wrapped into DER SubjectPublicKeyInfo and verified through mbedtls_pk. */
+#define ESP_MCP_HTTP_RSA_SPKI_DER_MAX 1024
+#define ESP_MCP_HTTP_EC_SPKI_DER_MAX 128
+#define ESP_MCP_HTTP_ECDSA_SIG_DER_MAX 80
+#define ESP_MCP_HTTP_OID_RSA_ENCRYPTION "\x2A\x86\x48\x86\xF7\x0D\x01\x01\x01"
+#define ESP_MCP_HTTP_OID_EC_PUBLIC_KEY  "\x2A\x86\x48\xCE\x3D\x02\x01"
+#define ESP_MCP_HTTP_OID_SECP256R1      "\x2A\x86\x48\xCE\x3D\x03\x01\x07"
+
+#define ESP_MCP_HTTP_ASN1_CHK_ADD(g, f) do { \
+        int asn1_ret = (f); \
+        if (asn1_ret < 0) { \
+            ret = asn1_ret; \
+            goto cleanup; \
+        } \
+        (g) += (size_t)asn1_ret; \
+    } while (0)
+
+static int esp_mcp_http_build_rsa_spki_der(const uint8_t *n, size_t n_len,
+                                           const uint8_t *e, size_t e_len,
+                                           uint8_t *der, size_t der_size,
+                                           size_t *out_der_len)
+{
+    mbedtls_mpi N;
+    mbedtls_mpi E;
+    mbedtls_mpi_init(&N);
+    mbedtls_mpi_init(&E);
+
+    int ret = mbedtls_mpi_read_binary(&N, n, n_len);
+    if (ret == 0) {
+        ret = mbedtls_mpi_read_binary(&E, e, e_len);
+    }
+    if (ret != 0) {
+        goto cleanup;
+    }
+
+    unsigned char *c = der + der_size;
+    size_t len = 0;
+
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, der, &E));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, der, &N));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
+
+    if (c <= der) {
+        ret = MBEDTLS_ERR_ASN1_BUF_TOO_SMALL;
+        goto cleanup;
+    }
+    *--c = 0;
+    len += 1;
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_BIT_STRING));
+
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_algorithm_identifier_ext(&c, der,
+                                                                               ESP_MCP_HTTP_OID_RSA_ENCRYPTION,
+                                                                               sizeof(ESP_MCP_HTTP_OID_RSA_ENCRYPTION) - 1,
+                                                                               0, 1));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
+
+    memmove(der, c, len);
+    if (out_der_len) {
+        *out_der_len = len;
+    }
+    ret = 0;
+
+cleanup:
+    mbedtls_mpi_free(&N);
+    mbedtls_mpi_free(&E);
+    return ret;
+}
+
+static int esp_mcp_http_build_ec_spki_der(const uint8_t pub_uncompressed[65],
+                                          uint8_t *der, size_t der_size,
+                                          size_t *out_der_len)
+{
+    int ret = 0;
+    unsigned char *c = der + der_size;
+    size_t len = 0;
+    size_t par_len = 0;
+
+    if ((size_t)(c - der) < 66) {
+        return MBEDTLS_ERR_ASN1_BUF_TOO_SMALL;
+    }
+    c -= 65;
+    memcpy(c, pub_uncompressed, 65);
+    len += 65;
+    *--c = 0;
+    len += 1;
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_BIT_STRING));
+
+    ESP_MCP_HTTP_ASN1_CHK_ADD(par_len, mbedtls_asn1_write_oid(&c, der,
+                                                              ESP_MCP_HTTP_OID_SECP256R1,
+                                                              sizeof(ESP_MCP_HTTP_OID_SECP256R1) - 1));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_algorithm_identifier_ext(&c, der,
+                                                                               ESP_MCP_HTTP_OID_EC_PUBLIC_KEY,
+                                                                               sizeof(ESP_MCP_HTTP_OID_EC_PUBLIC_KEY) - 1,
+                                                                               par_len, 1));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
+
+    memmove(der, c, len);
+    if (out_der_len) {
+        *out_der_len = len;
+    }
+
+cleanup:
+    return ret;
+}
+
+static int esp_mcp_http_build_ecdsa_der_signature(const uint8_t *sig, size_t sig_len,
+                                                  uint8_t *der, size_t der_size,
+                                                  size_t *out_der_len)
+{
+    if (sig_len != 64) {
+        return -1;
+    }
+
+    mbedtls_mpi r;
+    mbedtls_mpi s;
+    mbedtls_mpi_init(&r);
+    mbedtls_mpi_init(&s);
+
+    int ret = mbedtls_mpi_read_binary(&r, sig, 32);
+    if (ret == 0) {
+        ret = mbedtls_mpi_read_binary(&s, sig + 32, 32);
+    }
+    if (ret != 0) {
+        goto cleanup;
+    }
+
+    unsigned char *c = der + der_size;
+    size_t len = 0;
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, der, &s));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_mpi(&c, der, &r));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_len(&c, der, len));
+    ESP_MCP_HTTP_ASN1_CHK_ADD(len, mbedtls_asn1_write_tag(&c, der, MBEDTLS_ASN1_CONSTRUCTED | MBEDTLS_ASN1_SEQUENCE));
+
+    memmove(der, c, len);
+    if (out_der_len) {
+        *out_der_len = len;
+    }
+    ret = 0;
+
+cleanup:
+    mbedtls_mpi_free(&r);
+    mbedtls_mpi_free(&s);
+    return ret;
+}
+
 static int esp_mcp_http_verify_rs256_jwk(const cJSON *jwk,
                                          const uint8_t *hash,
                                          const uint8_t *sig,
@@ -1108,22 +1260,20 @@ static int esp_mcp_http_verify_rs256_jwk(const cJSON *jwk,
         free(e_bin);
         return -1;
     }
-    mbedtls_rsa_context rsa;
-    mbedtls_rsa_init(&rsa);
-    int rc = mbedtls_rsa_import_raw(&rsa, n_bin, n_len, NULL, 0, NULL, 0, NULL, 0, e_bin, e_len);
+
+    uint8_t der[ESP_MCP_HTTP_RSA_SPKI_DER_MAX];
+    size_t der_len = 0;
+    int rc = esp_mcp_http_build_rsa_spki_der(n_bin, n_len, e_bin, e_len, der, sizeof(der), &der_len);
     if (rc == 0) {
-        rc = mbedtls_rsa_complete(&rsa);
-    }
-    if (rc == 0) {
-        mbedtls_rsa_set_padding(&rsa, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_SHA256);
-        size_t rsa_len = mbedtls_rsa_get_len(&rsa);
-        if (sig_len != rsa_len) {
-            rc = -1;
-        } else {
-            rc = mbedtls_rsa_pkcs1_verify(&rsa, MBEDTLS_MD_SHA256, 32, hash, sig);
+        mbedtls_pk_context pk;
+        mbedtls_pk_init(&pk);
+        rc = mbedtls_pk_parse_public_key(&pk, der, der_len);
+        if (rc == 0) {
+            rc = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 32, sig, sig_len);
         }
+        mbedtls_pk_free(&pk);
     }
-    mbedtls_rsa_free(&rsa);
+
     free(n_bin);
     free(e_bin);
     return rc;
@@ -1152,39 +1302,37 @@ static int esp_mcp_http_verify_es256_jwk(const cJSON *jwk,
         free(y_bin);
         return -1;
     }
-    mbedtls_ecp_group grp;
-    mbedtls_ecp_point q;
-    mbedtls_mpi r;
-    mbedtls_mpi s;
-    uint8_t pub_uncompressed[65];
-    mbedtls_ecp_group_init(&grp);
-    mbedtls_ecp_point_init(&q);
-    mbedtls_mpi_init(&r);
-    mbedtls_mpi_init(&s);
-    int rc = mbedtls_ecp_group_load(&grp, MBEDTLS_ECP_DP_SECP256R1);
-    if (rc == 0) {
-        pub_uncompressed[0] = 0x04;
-        memcpy(&pub_uncompressed[1], x_bin, 32);
-        memcpy(&pub_uncompressed[33], y_bin, 32);
-        rc = mbedtls_ecp_point_read_binary(&grp, &q, pub_uncompressed, sizeof(pub_uncompressed));
-    }
-    if (rc == 0) {
-        rc = mbedtls_mpi_read_binary(&r, sig, 32);
-    }
-    if (rc == 0) {
-        rc = mbedtls_mpi_read_binary(&s, sig + 32, 32);
-    }
-    if (rc == 0) {
-        rc = mbedtls_ecdsa_verify(&grp, hash, 32, &q, &r, &s);
-    }
-    mbedtls_ecp_group_free(&grp);
-    mbedtls_ecp_point_free(&q);
-    mbedtls_mpi_free(&r);
-    mbedtls_mpi_free(&s);
+
+    uint8_t pub_uncompressed[65] = {0};
+    pub_uncompressed[0] = 0x04;
+    memcpy(&pub_uncompressed[1], x_bin, 32);
+    memcpy(&pub_uncompressed[33], y_bin, 32);
     free(x_bin);
     free(y_bin);
+
+    uint8_t key_der[ESP_MCP_HTTP_EC_SPKI_DER_MAX];
+    size_t key_der_len = 0;
+    uint8_t sig_der[ESP_MCP_HTTP_ECDSA_SIG_DER_MAX];
+    size_t sig_der_len = 0;
+
+    int rc = esp_mcp_http_build_ec_spki_der(pub_uncompressed, key_der, sizeof(key_der), &key_der_len);
+    if (rc == 0) {
+        rc = esp_mcp_http_build_ecdsa_der_signature(sig, sig_len, sig_der, sizeof(sig_der), &sig_der_len);
+    }
+    if (rc == 0) {
+        mbedtls_pk_context pk;
+        mbedtls_pk_init(&pk);
+        rc = mbedtls_pk_parse_public_key(&pk, key_der, key_der_len);
+        if (rc == 0) {
+            rc = mbedtls_pk_verify(&pk, MBEDTLS_MD_SHA256, hash, 32, sig_der, sig_der_len);
+        }
+        mbedtls_pk_free(&pk);
+    }
+
     return rc;
 }
+
+#undef ESP_MCP_HTTP_ASN1_CHK_ADD
 
 static int esp_mcp_http_verify_jwt_signature(const char *alg,
                                              const char *kid,

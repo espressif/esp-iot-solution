@@ -10,7 +10,7 @@ set(srcs
     "src/esp_mcp_task.c"
 )
 
-set(priv_req "esp_common" "app_update" "json" "esp_http_server" "esp_http_client" "http_parser" "esp_timer" "mbedtls")
+set(priv_req "esp_common" "app_update" "cjson" "esp_http_server" "esp_http_client" "http_parser" "esp_timer" "mbedtls")
 
 # Conditionally compile built-in HTTP transport
 if(CONFIG_MCP_TRANSPORT_HTTP_SERVER)
