@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -34,6 +34,9 @@ static const char *TAG = "PPP_4G_main";
 static modem_wifi_config_t s_modem_wifi_config = MODEM_WIFI_DEFAULT_CONFIG();
 static EventGroupHandle_t s_event_group;
 #define EVENT_GOT_IP_BIT                   (BIT0)
+
+// Set PDP Context for 4G module, which is required by some modules to access the network. Please set APN according to your SIM card if enabled.
+#define ENABLE_PDP_CONTEXT_SETUP            0
 
 // All supported modem IDs
 static const usb_modem_id_t usb_modem_id_list[] = {
@@ -213,6 +216,14 @@ void app_main(void)
         .modem_id_list = usb_modem_id_list,
         .at_tx_buffer_size = 256,
         .at_rx_buffer_size = 256,
+#if ENABLE_PDP_CONTEXT_SETUP
+        .pdp = {
+            .enable = true,
+            .cid = 1,
+            .type = "IP",
+            .apn = "cmnet",
+        },
+#endif
     };
     usbh_modem_install(&modem_config);
     ESP_LOGI(TAG, "modem board installed");

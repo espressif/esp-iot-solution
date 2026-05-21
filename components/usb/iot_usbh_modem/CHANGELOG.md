@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.1.0 - 2026-05-21
+
+### Features:
+
+* Added optional PDP context setup before PPP dial-up.
+
 ## v2.0.0 - 2025-10-15
 
 ### Bug Fixes:

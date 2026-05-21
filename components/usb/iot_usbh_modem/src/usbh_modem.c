@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -65,6 +66,7 @@ typedef struct {
     bool auto_connect;
     EventGroupHandle_t evt_hdl;
     iot_eth_netif_glue_handle_t glue;
+    usbh_modem_pdp_config_t pdp;
 } modem_board_t;
 
 static modem_board_t *g_modem_board;
@@ -78,6 +80,49 @@ static const char *MODEM_STAGE_STR(int code)
         }
     }
     return "unknown";
+}
+
+static void modem_board_clear_pdp_context_config(void)
+{
+    if (g_modem_board == NULL) {
+        return;
+    }
+
+    // The PDP strings are owned by this component after installation.
+    if (g_modem_board->pdp.type != NULL) {
+        free((void *)g_modem_board->pdp.type);
+    }
+    if (g_modem_board->pdp.apn != NULL) {
+        free((void *)g_modem_board->pdp.apn);
+    }
+    memset(&g_modem_board->pdp, 0, sizeof(g_modem_board->pdp));
+}
+
+static esp_err_t modem_board_configure_pdp_context(at_handle_t at_parser)
+{
+    ESP_RETURN_ON_FALSE(at_parser != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid AT parser");
+    if (!g_modem_board->pdp.enable) {
+        ESP_LOGI(TAG, "Skip PDP context setup");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Set PDP context: cid=%d, type=%s, apn=%s", g_modem_board->pdp.cid, g_modem_board->pdp.type, g_modem_board->pdp.apn);
+    esp_modem_at_pdp_t pdp = {
+        .cid = g_modem_board->pdp.cid,
+        .type = g_modem_board->pdp.type,
+        .apn = g_modem_board->pdp.apn,
+    };
+    esp_err_t ret = at_cmd_set_pdp_context(at_parser, &pdp);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to set PDP context");
+
+    char str[128] = {0};
+    ret = at_cmd_get_pdp_context(at_parser, str, sizeof(str));
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "PDP context after setup: \"%s\"", str);
+    } else {
+        ESP_LOGW(TAG, "Failed to read PDP context after setup: %s", esp_err_to_name(ret));
+    }
+    return ESP_OK;
 }
 
 static esp_err_t modem_sync_state(iot_eth_driver_t *dte_drv)
@@ -214,6 +259,10 @@ static void _modem_daemon_task(void *param)
             DTE_RETRY_OPERATION(at_cmd_get_network_reg_status(at_parser, &_cereg) == ESP_OK && _cereg.stat == 1, !esp_modem_dte_is_connected(dte_drv));
             ESP_GOTO_ON_FALSE(_cereg.stat == 1, 0, _ppp_abort, TAG, "Modem network registration not ready!");
 
+            ESP_LOGI(TAG, "Check PDP context...");
+            ret = modem_board_configure_pdp_context(at_parser);
+            ESP_GOTO_ON_ERROR(ret, _ppp_abort, TAG, "PDP context setup failed");
+
             ESP_LOGI(TAG, "PPP Dial up...");
             ret = esp_modem_dte_dial_up(dte_drv);
             if (ret == ESP_OK) {
@@ -256,11 +305,24 @@ esp_err_t usbh_modem_install(const usbh_modem_config_t *config)
     ESP_RETURN_ON_FALSE(config->modem_id_list != NULL, ESP_ERR_INVALID_ARG, TAG, "Modem ID list can not be NULL");
     ESP_RETURN_ON_FALSE(config->at_tx_buffer_size, ESP_ERR_INVALID_ARG, TAG, "AT TX buffer size can not be 0");
     ESP_RETURN_ON_FALSE(config->at_rx_buffer_size, ESP_ERR_INVALID_ARG, TAG, "AT RX buffer size can not be 0");
+    if (config->pdp.enable) {
+        ESP_RETURN_ON_FALSE(config->pdp.cid > 0, ESP_ERR_INVALID_ARG, TAG, "PDP CID must be greater than 0 when PDP setup is enabled");
+        ESP_RETURN_ON_FALSE(config->pdp.type != NULL && config->pdp.type[0] != '\0',
+                            ESP_ERR_INVALID_ARG, TAG, "PDP type can not be empty when PDP setup is enabled");
+        ESP_RETURN_ON_FALSE(config->pdp.apn != NULL && config->pdp.apn[0] != '\0',
+                            ESP_ERR_INVALID_ARG, TAG, "PDP APN can not be empty when PDP setup is enabled");
+    }
 
     esp_err_t ret = ESP_OK;
     ESP_LOGI(TAG, "iot_usbh_modem, version: %d.%d.%d", IOT_USBH_MODEM_VER_MAJOR, IOT_USBH_MODEM_VER_MINOR, IOT_USBH_MODEM_VER_PATCH);
     g_modem_board = calloc(1, sizeof(modem_board_t));
     ESP_RETURN_ON_FALSE(g_modem_board != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate modem board");
+    if (config->pdp.enable) {
+        g_modem_board->pdp = config->pdp;
+        g_modem_board->pdp.type = strdup(config->pdp.type);
+        g_modem_board->pdp.apn = strdup(config->pdp.apn);
+        ESP_GOTO_ON_FALSE(g_modem_board->pdp.type != NULL && g_modem_board->pdp.apn != NULL, ESP_ERR_NO_MEM, err, TAG, "Failed to copy PDP context strings");
+    }
 
     g_modem_board->evt_hdl = xEventGroupCreate();
     ESP_GOTO_ON_FALSE(g_modem_board->evt_hdl != NULL, ESP_ERR_NO_MEM, err, TAG, "Failed to create event group");
@@ -330,6 +392,7 @@ err:
     if (g_modem_board->evt_hdl != NULL) {
         vEventGroupDelete(g_modem_board->evt_hdl);
     }
+    modem_board_clear_pdp_context_config();
     free(g_modem_board);
     g_modem_board = NULL;
     return ret;
@@ -350,6 +413,7 @@ esp_err_t usbh_modem_uninstall(void)
     xEventGroupSetBits(g_modem_board->evt_hdl, MODEM_DESTROY_BIT);
     xEventGroupWaitBits(g_modem_board->evt_hdl, MODEM_DESTROY_DONE_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
     vEventGroupDelete(g_modem_board->evt_hdl);
+    modem_board_clear_pdp_context_config();
     free(g_modem_board);
     g_modem_board = NULL;
     return ESP_OK;
