@@ -7,7 +7,8 @@
 #include "bthome_v2.h"
 #include "stdio.h"
 #include "string.h"
-#include "mbedtls/ccm.h"
+#include <stdbool.h>
+#include "psa/crypto.h"
 #include "esp_check.h"
 
 static const char *TAG = "bthome";
@@ -15,7 +16,8 @@ static const char *BTHOME_COUNTER_KEY = "counter";
 
 /* BTHome constants */
 #define BTHOME_NONCE_LEN    13
-#define BTHOME_MAC_LEN      6
+#define BTHOME_BLE_MAC_LEN  6
+#define BTHOME_TAG_LEN      4
 #define BTHOME_COUNTER_LEN  4
 #define BTHOME_UUID_LEN     2
 const static uint16_t BTHOME_UUID = 0xfcd2;
@@ -42,7 +44,8 @@ typedef struct bthome_t {
     uint8_t peer_mac[6];            /* Peer MAC address */
     uint32_t counter;               /* Counter for encryption */
     bthome_callbacks_t callbacks;  /* Callback functions */
-    mbedtls_ccm_context aes_ctx;    /* AES context for encryption */
+    psa_key_id_t key_id;            /* PSA key identifier */
+    bool key_imported;              /* Key import status */
 } bthome_t;
 
 /**
@@ -218,23 +221,51 @@ void bthome_free_reports(bthome_reports_t *reports)
     free(reports);
 }
 
-int bthome_decrypt_payload(bthome_handle_t handle, uint8_t *data, uint8_t len, uint8_t *dec_data, uint8_t *dec_data_len)
+static esp_err_t bthome_decrypt_payload(bthome_handle_t handle, uint8_t *data, uint8_t len, uint8_t *dec_data, uint8_t *dec_data_len)
 {
     bthome_t *bthome = (bthome_t *)handle;
     uint8_t nonce[BTHOME_NONCE_LEN];
     uint8_t *nonce_p = nonce;
-    memcpy(nonce_p, bthome->peer_mac, BTHOME_MAC_LEN);  //mac
-    nonce_p += BTHOME_MAC_LEN;
+    if (!bthome->key_imported) {
+        ESP_LOGE(TAG, "encryption key not set");
+        return ESP_ERR_INVALID_STATE;
+    }
+    memcpy(nonce_p, bthome->peer_mac, BTHOME_BLE_MAC_LEN);  //mac
+    nonce_p += BTHOME_BLE_MAC_LEN;
     memcpy(nonce_p, data, BTHOME_UUID_LEN); //uuid
     nonce_p += BTHOME_UUID_LEN;
     memcpy(nonce_p, data + 2, 1); //device data type
     nonce_p += 1;
-    memcpy(nonce_p, &data[len - 8], BTHOME_COUNTER_LEN);
+    memcpy(nonce_p, &data[len - BTHOME_COUNTER_LEN - BTHOME_TAG_LEN], BTHOME_COUNTER_LEN);
     nonce_p += BTHOME_COUNTER_LEN;
-    *dec_data_len = len - 11;
-    uint8_t tag[4];
-    memcpy(tag, data + len - 4, 4);
-    return  mbedtls_ccm_auth_decrypt(&bthome->aes_ctx, *dec_data_len, nonce, BTHOME_NONCE_LEN, NULL, 0, data + 3, dec_data, tag, 4);
+    *dec_data_len = len - (BTHOME_UUID_LEN + 1 + BTHOME_COUNTER_LEN + BTHOME_TAG_LEN);
+
+    uint8_t cipher_and_tag[35];
+    size_t cipher_and_tag_len = *dec_data_len + BTHOME_TAG_LEN;
+    if (cipher_and_tag_len > sizeof(cipher_and_tag)) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    memcpy(cipher_and_tag, data + 3, *dec_data_len);
+    memcpy(cipher_and_tag + *dec_data_len, data + len - BTHOME_TAG_LEN, BTHOME_TAG_LEN);
+
+    size_t output_len = 0;
+    psa_status_t status = psa_aead_decrypt(bthome->key_id,
+                                           PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, BTHOME_TAG_LEN),
+                                           nonce,
+                                           BTHOME_NONCE_LEN,
+                                           NULL,
+                                           0,
+                                           cipher_and_tag,
+                                           cipher_and_tag_len,
+                                           dec_data,
+                                           *dec_data_len,
+                                           &output_len);
+    if (status != PSA_SUCCESS) {
+        ESP_LOGE(TAG, "psa_aead_decrypt failed, status %ld", (long)status);
+        return ESP_FAIL;
+    }
+    *dec_data_len = output_len;
+    return ESP_OK;
 }
 
 static bthome_reports_t *bthome_parse_service_data(bthome_handle_t handle, uint8_t *data, uint8_t len)
@@ -255,7 +286,7 @@ static bthome_reports_t *bthome_parse_service_data(bthome_handle_t handle, uint8
     } else {
         uint8_t payload_len = 0;
         uint8_t payload_dec[31];
-        if (bthome_decrypt_payload(bthome, data, len, payload_dec, &payload_len) == 0) {
+        if (bthome_decrypt_payload(bthome, data, len, payload_dec, &payload_len) == ESP_OK) {
             ESP_LOG_BUFFER_HEX_LEVEL("payload_dec", payload_dec, payload_len, ESP_LOG_DEBUG);
             return bthome_parse_payload(payload_dec, payload_len);
         } else {
@@ -326,19 +357,38 @@ static esp_err_t bthome_encrypt_payload(bthome_handle_t handle, const uint16_t *
     bthome_t *bthome = (bthome_t *)handle;
     uint8_t nonce[BTHOME_NONCE_LEN];
     uint8_t *nonce_p = nonce;
-    memcpy(nonce_p, bthome->local_mac, BTHOME_MAC_LEN);
-    nonce_p += BTHOME_MAC_LEN;
+    if (!bthome->key_imported) {
+        ESP_LOGE(TAG, "encryption key not set");
+        return ESP_ERR_INVALID_STATE;
+    }
+    memcpy(nonce_p, bthome->local_mac, BTHOME_BLE_MAC_LEN);
+    nonce_p += BTHOME_BLE_MAC_LEN;
     memcpy(nonce_p, uuid, BTHOME_UUID_LEN);
     nonce_p += BTHOME_UUID_LEN;
     memcpy(nonce_p, device_info, 1);
     nonce_p += 1;
     memcpy(nonce_p, &bthome->counter, BTHOME_COUNTER_LEN);
     nonce_p += BTHOME_COUNTER_LEN;
-    int ret = mbedtls_ccm_encrypt_and_tag(&bthome->aes_ctx, data_len, nonce, BTHOME_NONCE_LEN, NULL, 0, raw_data, enc_data, tag, 4);
-    if (ret != 0) {
-        ESP_LOGE(TAG, "mbedtls_ccm_encrypt_and_tag failed, ret %d", ret);
+
+    uint8_t enc_data_with_tag[35];
+    size_t out_len = 0;
+    psa_status_t status = psa_aead_encrypt(bthome->key_id,
+                                           PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, BTHOME_TAG_LEN),
+                                           nonce,
+                                           BTHOME_NONCE_LEN,
+                                           NULL,
+                                           0,
+                                           raw_data,
+                                           data_len,
+                                           enc_data_with_tag,
+                                           sizeof(enc_data_with_tag),
+                                           &out_len);
+    if (status != PSA_SUCCESS || out_len != (size_t)(data_len + BTHOME_TAG_LEN)) {
+        ESP_LOGE(TAG, "psa_aead_encrypt failed, status %ld", (long)status);
         return ESP_FAIL;
     }
+    memcpy(enc_data, enc_data_with_tag, data_len);
+    memcpy(tag, enc_data_with_tag + data_len, BTHOME_TAG_LEN);
 
     ESP_LOGD(TAG, "raw_data:");
     for (int i = 0; i < data_len; i++) {
@@ -352,14 +402,14 @@ static esp_err_t bthome_encrypt_payload(bthome_handle_t handle, const uint16_t *
     }
     ESP_LOGD(TAG, "\n");
 
-    ESP_LOGD(TAG, "ret %d\n", ret);
+    ESP_LOGD(TAG, "psa_aead_encrypt status %ld\n", (long)status);
     ESP_LOGD(TAG, "enc:");
     for (int i = 0; i < data_len; i++) {
         ESP_LOGD(TAG, " %x", enc_data[i]);
     }
 
     ESP_LOGD(TAG, "tag:");
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < BTHOME_TAG_LEN; i++) {
         ESP_LOGD(TAG, " %x", tag[i]);
     }
     ESP_LOGD(TAG, "\n");
@@ -420,9 +470,26 @@ esp_err_t bthome_set_encrypt_key(bthome_handle_t handle, const uint8_t *key)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "handle is null");
     ESP_RETURN_ON_FALSE(key, ESP_ERR_INVALID_ARG, TAG, "key is null");
+    ESP_RETURN_ON_FALSE(psa_crypto_init() == PSA_SUCCESS, ESP_FAIL, TAG, "psa_crypto_init failed");
     bthome_t* bthome = (bthome_t*)handle;
+    if (bthome->key_imported) {
+        psa_destroy_key(bthome->key_id);
+        bthome->key_imported = false;
+    }
+    psa_key_attributes_t key_attr = PSA_KEY_ATTRIBUTES_INIT;
+    psa_set_key_type(&key_attr, PSA_KEY_TYPE_AES);
+    psa_set_key_bits(&key_attr, 128);
+    psa_set_key_usage_flags(&key_attr, PSA_KEY_USAGE_ENCRYPT | PSA_KEY_USAGE_DECRYPT);
+    psa_set_key_algorithm(&key_attr, PSA_ALG_AEAD_WITH_SHORTENED_TAG(PSA_ALG_CCM, BTHOME_TAG_LEN));
+    psa_status_t status = psa_import_key(&key_attr, key, 16, &bthome->key_id);
+    psa_reset_key_attributes(&key_attr);
+    if (status != PSA_SUCCESS) {
+        ESP_LOGE(TAG, "psa_import_key failed, status %ld", (long)status);
+        return ESP_FAIL;
+    }
     memcpy(bthome->key, key, 16);
-    return  mbedtls_ccm_setkey(&bthome->aes_ctx, MBEDTLS_CIPHER_ID_AES, key, 128);
+    bthome->key_imported = true;
+    return ESP_OK;
 }
 
 esp_err_t bthome_set_local_mac_addr(bthome_handle_t handle, uint8_t *mac)
@@ -469,11 +536,13 @@ esp_err_t bthome_load_params(bthome_handle_t handle)
 esp_err_t bthome_create(bthome_handle_t *handle)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "handle is null");
+    ESP_RETURN_ON_FALSE(psa_crypto_init() == PSA_SUCCESS, ESP_FAIL, TAG, "psa_crypto_init failed");
     bthome_t *bthome = (bthome_t *)calloc(1, sizeof(bthome_t));
     if (bthome == NULL) {
         return ESP_ERR_NO_MEM;
     }
-    mbedtls_ccm_init(&bthome->aes_ctx);
+    bthome->key_id = 0;
+    bthome->key_imported = false;
     *handle = (bthome_handle_t)bthome;
     return ESP_OK;
 }
@@ -482,7 +551,10 @@ esp_err_t bthome_delete(bthome_handle_t handle)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "handle is null");
     bthome_t *bthome = (bthome_t *)handle;
-    mbedtls_ccm_free(&bthome->aes_ctx);
+    if (bthome->key_imported) {
+        psa_destroy_key(bthome->key_id);
+        bthome->key_imported = false;
+    }
     free(bthome);
     return ESP_OK;
 }

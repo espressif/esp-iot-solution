@@ -6,6 +6,7 @@ targets:
   - esp32s3
   - esp32c2
   - esp32c6
+  - esp32h4
 description: BTHome component for ESP-IDF
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_adv/bthome
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/bluetooth/ble_adv/bthome.html
