@@ -8,6 +8,7 @@
 
 #if CONFIG_EXAMPLE_LCD_INTERFACE_RGB
 
+#include "esp_idf_version.h"
 #include "esp_lcd_panel_rgb.h"
 #include "driver/gpio.h"
 
@@ -83,7 +84,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     ESP_LOGI(TAG, "Initialize RGB panel");
     esp_lcd_rgb_panel_config_t panel_conf = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
-        .dma_burst_size = 64,
+        .dma_burst_size = 128,
         .data_width = HW_LCD_DATA_WIDTH,
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
         .in_color_format = LCD_COLOR_FMT_RGB565,

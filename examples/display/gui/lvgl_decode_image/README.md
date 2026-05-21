@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-C3 |
-| ----------------- | -------- | -------- | -------- |
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 | ESP32-C3 |
+| ----------------- | -------- | -------- | --------- | -------- |
 
 # LVGL Image Decoder Example
 
@@ -11,7 +11,7 @@ The example showcases:
 - **Multiple image format support**: JPG, PNG, QOI, Split-PNG (SPNG), Split-JPEG (SJPG), and PNG-JPEG (PJPG)
 - **Memory-mapped assets**: Store images in flash partitions for efficient access
 - **Split image formats**: Reduce RAM usage by decoding images in strips (SPNG/SJPG)
-- **Hardware acceleration**: Hardware JPEG decoding on ESP32-P4
+- **Hardware acceleration**: Hardware JPEG decoding on ESP32-P4 and ESP32-S31
 - **Interactive format switching**: Cycle through different formats using button or encoder
 - **Automatic animation**: Images play continuously with format information display
 - **Responsive UI**: Adapts to various screen sizes (240x240 to 1024x600)
@@ -20,12 +20,12 @@ The example showcases:
 
 | Format | Description | Chip Support | Memory Usage | Decode Speed |
 |--------|-------------|--------------|--------------|--------------|
-| **JPG** | Standard JPEG | ESP32-S3, ESP32-P4 | Medium | Fast |
-| **PNG** | Standard PNG | ESP32-S3, ESP32-P4 | High | Medium |
-| **QOI** | Quite OK Image | ESP32-S3, ESP32-P4 | Low | Very Fast |
+| **JPG** | Standard JPEG | ESP32-S3, ESP32-S31, ESP32-P4 | Medium | Fast |
+| **PNG** | Standard PNG | ESP32-S3, ESP32-S31, ESP32-P4 | High | Medium |
+| **QOI** | Quite OK Image | ESP32-S3, ESP32-S31, ESP32-P4 | Low | Very Fast |
 | **SPNG** | Split PNG (16-line strips) | All | Very Low | Medium |
 | **SJPG** | Split JPEG (16-line strips) | All | Very Low | Fast |
-| **PJPG** | PNG-JPEG | ESP32-P4 only | Low | Very Fast |
+| **PJPG** | PNG-JPEG | ESP32-P4, ESP32-S31 | Low | Very Fast |
 
 ### Format Details
 
@@ -53,6 +53,7 @@ The example showcases:
 * A development board with:
   - **ESP32-P4**: All formats supported
   - **ESP32-S3**: All except PJPG
+  - **ESP32-S31**: All formats supported
   - **ESP32-C3**: Only SPNG and SJPG (limited RAM)
 * A LCD panel with supported interface (MIPI DSI / RGB / QSPI / SPI)
 * (Optional) Touch panel or rotary encoder for interaction
@@ -66,6 +67,7 @@ The example showcases:
 | ESP32-S3 | RGB | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
 | ESP32-S3 | QSPI | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
 | ESP32-S3 | SPI | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
+| ESP32-S31 | RGB | Refer to your board documentation |
 | ESP32-C3 | SPI | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
 
 ### Hardware Connection
@@ -128,7 +130,7 @@ Run `idf.py menuconfig` and navigate to `Example Configuration`:
 1. Set the target chip:
 ```bash
 idf.py set-target esp32p4
-# or esp32s3, esp32c3
+# or esp32s3, esp32s31, esp32c3
 ```
 
 2. Build and flash:
@@ -166,7 +168,7 @@ I (xxx) decode_demo: Init LCD 1024x600
 I (xxx) decode_demo: Init touch
 I (xxx) decode_demo: SPNG ready (8 files)
 I (xxx) decode_demo: SJPG ready (8 files)
-I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 only
+I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 / ESP32-S31 only
 ```
 
 **Interaction:**
@@ -177,6 +179,7 @@ I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 only
 **Chip-Specific Behavior:**
 - **ESP32-P4**: All formats available (JPG → PNG → QOI → SPNG → SJPG → PJPG)
 - **ESP32-S3**: 5 formats (JPG → PNG → QOI → SPNG → SJPG)
+- **ESP32-S31**: All formats available (JPG → PNG → QOI → SPNG → SJPG → PJPG)
 - **ESP32-C3**: 2 formats only (SPNG → SJPG)
 
 ## Code Structure
@@ -223,7 +226,7 @@ Partition Table (partitions.csv):
 │ qoi       (100KB)  - QOI images      │ ← 8 QOI (converted)
 │ spng      (100KB)  - Split PNG       │ ← 8 SPNG (converted)
 │ sjpg      (100KB)  - Split JPEG      │ ← 8 SJPG (converted)
-│ pjpg      (100KB)  - PJPEG           │ ← 8 PJPG (converted, ESP32-P4)
+│ pjpg      (100KB)  - PJPEG           │ ← 8 PJPG (converted, ESP32-P4 / ESP32-S31)
 └──────────────────────────────────────┘
 ```
 
@@ -291,7 +294,7 @@ LVGL image widget loads from virtual path.
 - Some formats may be unavailable on your chip
 
 **PJPG not available:**
-- Only supported on ESP32-P4
+- Only supported on ESP32-P4 and ESP32-S31
 
 **Memory allocation failures:**
 - Enable PSRAM for large displays
@@ -305,7 +308,7 @@ LVGL image widget loads from virtual path.
 
 ## Choosing the Right Format
 
-**For ESP32-P4:**
+**For ESP32-P4 / ESP32-S31:**
 - Use **PJPG** for best performance (hardware accelerated)
 - Use **SJPG** if PJPG not available
 

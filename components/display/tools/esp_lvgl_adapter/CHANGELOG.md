@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.5.1 (2026-05-21)
+
+* Add optional FreeType render pool reduction for lower stack usage
+* Add optional LVGL FreeRTOS thread stack allocation in PSRAM
+* Relax LVGL v9's conservative 32KB FreeType draw-stack diagnostic when the small render pool is enabled
+* Simplify optional dependency linking with `idf_component_optional_requires`
+
 ## v0.5.0 (2026-05-09)
 
 * Add draw bitmap and touch callback hooks for external display/input adaptation

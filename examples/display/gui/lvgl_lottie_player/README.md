@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-P4 | ESP32-S3 | 
-| ----------------- | -------- | -------- | 
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 |
+| ----------------- | -------- | -------- | --------- |
 
 # LVGL Lottie Player Example
 
@@ -21,6 +21,7 @@ For detailed Lottie usage and API reference, please refer to the [component READ
 
 ```bash
 cd examples/display/gui/lvgl_lottie_player
+idf.py set-target esp32s31
 idf.py build flash monitor
 ```
 

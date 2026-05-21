@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-C3 |
-| ----------------- | -------- | -------- | -------- |
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 | ESP32-C3 |
+| ----------------- | -------- | -------- | --------- | -------- |
 
 # LVGL Common Demo (Benchmark)
 
@@ -25,7 +25,7 @@ This example is ideal for:
 
 ### Hardware Required
 
-* An ESP32-P4, ESP32-S3, or ESP32-C3 development board
+* An ESP32-P4, ESP32-S3, ESP32-S31, or ESP32-C3 development board
 * A LCD panel with one of the supported interfaces:
   - **MIPI DSI**: For high-resolution displays (e.g., 1024x600)
   - **RGB**: For parallel RGB interface displays (e.g., 800x480)
@@ -42,6 +42,7 @@ This example is ideal for:
 | ESP32-S3 | RGB | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
 | ESP32-S3 | QSPI | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
 | ESP32-S3 | SPI | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
+| ESP32-S31 | RGB | Refer to your board documentation |
 | ESP32-C3 | SPI | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
 
 ### Hardware Connection
@@ -85,6 +86,8 @@ Run `idf.py menuconfig` and navigate to `Example Configuration`:
 idf.py set-target esp32p4
 # or
 idf.py set-target esp32s3
+# or
+idf.py set-target esp32s31
 # or
 idf.py set-target esp32c3
 ```

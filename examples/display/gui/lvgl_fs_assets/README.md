@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-C3 |
-| ----------------- | -------- | -------- | -------- |
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 | ESP32-C3 |
+| ----------------- | -------- | -------- | --------- | -------- |
 
 # LVGL Filesystem Assets Example
 
@@ -86,7 +86,7 @@ idf.py set-target esp32s3
 idf.py build flash monitor
 ```
 
-Replace `esp32s3` with `esp32p4` or `esp32c3` as needed.
+Replace `esp32s3` with `esp32s31`, `esp32p4`, or `esp32c3` as needed.
 
 ## Result
 

@@ -87,6 +87,12 @@
 
 # ESP-IDF 6.0 is currently in pre-release stage.
 
+.build_idf_ge_than_v5_5_with_pre_release:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.0
+
 .build_idf_active_release_version_with_pre_release:
   parallel:
     matrix:
@@ -454,7 +460,7 @@ build_example_display_gui_lvgl_dummy_draw:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_dummy_draw
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_dummy_draw
 
@@ -462,7 +468,7 @@ build_example_display_gui_lvgl_common_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_common_demo
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_common_demo
 
@@ -470,7 +476,7 @@ build_example_display_gui_lvgl_decode_image:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_decode_image
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_decode_image
 
@@ -478,7 +484,7 @@ build_example_display_gui_lvgl_freetype_font:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_freetype_font
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_freetype_font
 
@@ -486,7 +492,7 @@ build_example_display_gui_lvgl_multi_screen:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_multi_screen
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_multi_screen
 
@@ -494,15 +500,15 @@ build_example_display_gui_lvgl_light_sleep_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_light_sleep_demo
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_light_sleep_demo
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_mono_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_mono_demo
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_mono_demo
 
@@ -510,15 +516,15 @@ build_example_display_gui_lvgl_eaf_player:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_eaf_player
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_eaf_player
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_display_gui_lvgl_fs_assets:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_fs_assets
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_fs_assets
 
@@ -526,9 +532,9 @@ build_example_display_gui_lvgl_lottie_player:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_lottie_player
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_lottie_player
-    IMAGE: espressif/idf:release-v5.5
 
 build_example_extended_vfs_gpio_gpio_simple:
   extends:
@@ -1259,9 +1265,7 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lvgl_adapter_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/test_apps
 
@@ -1269,7 +1273,7 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lvgl_adapter_benchmark
-    - .build_idf_ge_than_v5_5
+    - .build_idf_ge_than_v5_5_with_pre_release
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
 

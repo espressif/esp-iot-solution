@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-C3 |
-| ----------------- | -------- | -------- | -------- |
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 | ESP32-C3 |
+| ----------------- | -------- | -------- | --------- | -------- |
 
 | Supported LCD Controller | GC9A01 |
 | ------------------------ | ------ |
@@ -38,7 +38,7 @@ This multi-screen approach is ideal for:
 
 ### Required Components
 
-* An ESP32 or ESP32-S3 development board (other ESP32 series also supported)
+* An ESP32-P4, ESP32-S3, ESP32-S31, or ESP32-C3 development board
 * **Two GC9A01 LCD panels** (240x240 round displays)
   - Operating voltage: 3.3V
   - Interface: SPI (4-wire)
@@ -56,6 +56,7 @@ For single display examples with various LCD interfaces, please refer to:
 | ESP32-S3 | RGB | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
 | ESP32-S3 | QSPI | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
 | ESP32-S3 | SPI | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
+| ESP32-S31 | SPI | Refer to your board documentation |
 | ESP32-C3 | SPI | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
 
 ## Hardware Connection
@@ -64,7 +65,7 @@ For single display examples with various LCD interfaces, please refer to:
 
 | Target | MOSI | SCLK | DC | RST | CS_0 | CS_1 | BL |
 |--------|------|------|----|-----|------|------|----|
-| ESP32-S3 / ESP32-P4 | GPIO 38 | GPIO 45 | GPIO 47 | GPIO 21 | GPIO 41 | GPIO 48 | GPIO 39 |
+| ESP32-S3 / ESP32-S31 / ESP32-P4 | GPIO 38 | GPIO 45 | GPIO 47 | GPIO 21 | GPIO 41 | GPIO 48 | GPIO 39 |
 | ESP32-C3 | GPIO 0 | GPIO 1 | GPIO 7 | GPIO 2 | GPIO 5 | GPIO 8 | GPIO 3 |
 
 ### Wiring Diagram
@@ -105,7 +106,7 @@ ESP32-S3 Dev Board          Display 0 (GC9A01)      Display 1 (GC9A01)
 Edit `hw_multi.h` to customize GPIO assignments:
 
 ```c
-#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32S31 || CONFIG_IDF_TARGET_ESP32P4
 #define BSP_LCD_DATA0   (GPIO_NUM_38)
 #define BSP_LCD_PCLK    (GPIO_NUM_45)
 #define BSP_LCD_DC      (GPIO_NUM_47)
@@ -187,7 +188,7 @@ Run `idf.py menuconfig` and navigate to `Hardware Configuration`:
 1. Set the target chip:
 ```bash
 idf.py set-target esp32s3
-# or esp32, esp32c3, etc.
+# or esp32s31, esp32p4, esp32c3, etc.
 ```
 
 2. Build and flash:
