@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.0 - 2026-06-11
+
+### Features:
+
+* Support ESP32-S31.
+
 ## v0.2.1 - 2026-01-12
 
 ### Bug Fixes:

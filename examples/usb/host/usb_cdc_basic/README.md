@@ -1,3 +1,6 @@
+| Supported Targets | ESP32-P4 | ESP32-S2 | ESP32-S3 | ESP32-S31 |
+| ----------------- | -------- | -------- | -------- | --------- |
+
 # USB Host CDC Basic Example
 
 This example demonstrates how to use [iot_usbh_cdc](https://components.espressif.com/components/espressif/iot_usbh_cdc) to communicate with USB CDC device.
@@ -6,18 +9,24 @@ This example demonstrates how to use [iot_usbh_cdc](https://components.espressif
 
 ### Hardware Required
 
-The example can be run on ESP32-xx based development board with USB Host interface. 
+A development board with USB Host interface is required.
 
 ### Setup the Hardware
 
 Connect the external USB device to ESP32-xx USB interface directly.
 
-| ESP32-xx GPIO | USB Device  |
-| ------------- | ----------- |
-| USB-D+        | D+ (green)  |
-| USB-D-        | D- (white)  |
-| GND           | GND (black) |
-| +5V           | +5V (red)   |
+```
+┌─────────────┐          ┌─────────────────┐
+│             ┼──────────┼5V               │
+│ USB Device  ┼──────────┼GND              │
+│             │          │    ESP32-xx     │
+│             │          │                 │
+│             ┼──────────┼USB D+           │
+│             ┼──────────┼USB D-           │
+│             │          │                 │
+└─────────────┘          │                 │
+                         └─────────────────┘
+```
 
 ### Configure the project
 

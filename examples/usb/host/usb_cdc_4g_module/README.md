@@ -1,10 +1,11 @@
+| Supported Targets | ESP32-P4 | ESP32-S2 | ESP32-S3 | ESP32-S31 |
+| ----------------- | -------- | -------- | -------- | --------- |
+
 * [中文版本](README_cn.md)
 
 # USB CDC 4G Module
 
-This example demonstrates the **ESP32-S2**, **ESP32-S3** series SoC as a USB host to dial-up 4G Cat.1 through PPP to access the Internet, with the help of ESP32-SX Wi-Fi softAP function, share the Internet with IoT devices or mobile devices. Realize low-cost "medium-high-speed" Internet access.It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
-
-In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster speeds. It can also enable hotspot sharing by connecting an external ESP32 chip with Wi-Fi capability.
+This example demonstrates using an ESP chip as a USB host to dial-up 4G modules through PPP to access the Internet and share the network with IoT devices or mobile devices. It is also equipped with a router management interface, which allows you to configure the router online and view the information of connected devices.
 
 **Implemented features:**
 
@@ -18,12 +19,6 @@ In addition, the **ESP32-P4** supports the 4G Cat.4 module (EC20) with faster sp
 ![ESP32-S2_USB_4g_moudle](./_static/esp32s2_cdc_4g_moudle.png)
 
 ## Hardware preparation
-
-**Supported ESP chips:**
-
-- ESP32-S2
-- ESP32-S3
-- ESP32-P4
 
 > We recommend using ESP modules or chips that integrate 4 MB or more of Flash and 2 MB or more of PSRAM. PSRAM is disabled by default in this example; you can enable it for your own tests. In theory, increasing buffer sizes can improve average throughput.
 
@@ -74,7 +69,7 @@ You can enable download speed test by setting `4G Modem Example Config → Enabl
 
 ## Build the example
 
-1. Set the correct build target (for example, **ESP32-S3**):
+1. Set the correct build target, for example:
 
 ```bash
 idf.py set-target esp32s3
