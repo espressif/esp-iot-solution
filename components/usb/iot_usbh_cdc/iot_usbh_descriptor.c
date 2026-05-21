@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -134,9 +134,12 @@ esp_err_t cdc_parse_interface_descriptor(const usb_device_desc_t *device_desc, c
         if (cdc_compliant) {
             info_ret->notif_intf = first_intf_desc; // We make sure that intf_desc is set for CDC compliant devices that use EP0 as notification element
             const usb_ep_desc_t *this_ep = usb_parse_endpoint_descriptor_by_index(first_intf_desc, 0, config_desc->wTotalLength, &desc_offset);
-            assert(this_ep);
-            assert(USB_EP_DESC_GET_XFERTYPE(this_ep) == USB_TRANSFER_TYPE_INTR);
-            info_ret->notif_ep = this_ep;
+            if (this_ep) {
+                assert(USB_EP_DESC_GET_XFERTYPE(this_ep) == USB_TRANSFER_TYPE_INTR);
+                info_ret->notif_ep = this_ep;
+            } else {
+                ESP_LOGD(TAG, "No notification endpoint found for interface %d", intf_idx);
+            }
 
             const int num_of_alternate = usb_parse_interface_number_of_alternate(config_desc, intf_idx + 1);
             for (int i = 0; i < num_of_alternate + 1; i++) {

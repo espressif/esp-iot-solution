@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.0.1 - 2026-06-03
+
+### Bug Fixes:
+
+* Allow CDC notification interfaces without interrupt endpoints.
+
 ## v3.0.0 - 2025-10-15
 
 ### Features:
