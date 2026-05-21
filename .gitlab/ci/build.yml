@@ -935,7 +935,7 @@ build_example_usb_host_usb_audio_player:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_audio_player
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_audio_player
 
