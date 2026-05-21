@@ -1849,14 +1849,20 @@ build_example_weaver_led_light:
   extends:
     - .build_examples_template
     - .rules:build:example_weaver_led_light
-    - .build_idf_ge_than_v5_5
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:v5.5 # Use tag 5.5 instead of release-v5.5, see !1571
+
   variables:
     EXAMPLE_DIR: examples/weaver/led_light
+
 build_example_weaver_imu_gesture:
   extends:
     - .build_examples_template
     - .rules:build:example_weaver_imu_gesture
-    - .build_idf_ge_than_v5_5
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:v5.5 # Use tag 5.5 instead of release-v5.5, see !1571
   variables:
     EXAMPLE_DIR: examples/weaver/imu_gesture
 
@@ -1896,7 +1902,9 @@ build_components_esp_weaver_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_esp_weaver_test_apps
-    - .build_idf_ge_than_v5_5
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:v5.5 # Use tag 5.5 instead of release-v5.5, see !1571
   variables:
     EXAMPLE_DIR: components/esp_weaver/test_apps
 

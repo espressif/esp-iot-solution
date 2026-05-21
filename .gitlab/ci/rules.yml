@@ -851,8 +851,10 @@
 
 .patterns-example_weaver_led_light: &patterns-example_weaver_led_light
   - "examples/weaver/led_light/**/*"
+
 .patterns-example_xiaozhi_chat: &patterns-example_xiaozhi_chat
   - "examples/ai/xiaozhi_chat/**/*"
+
 .patterns-example_weaver_imu_gesture: &patterns-example_weaver_imu_gesture
   - "examples/weaver/imu_gesture/**/*"
 
