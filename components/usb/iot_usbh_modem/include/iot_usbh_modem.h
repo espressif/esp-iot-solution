@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
+#include <stdbool.h>
 #include "esp_err.h"
 #include "esp_netif.h"
 #include "esp_modem_dte_types.h"
@@ -15,12 +16,23 @@ extern "C"
 #endif
 
 /**
+ * @brief USB modem PDP context configuration
+ */
+typedef struct {
+    bool enable;            /*!< Whether to configure PDP context before PPP dial-up */
+    int cid;                /*!< PDP context identifier */
+    const char *type;       /*!< PDP protocol type */
+    const char *apn;        /*!< APN string, required when PDP configuration is enabled */
+} usbh_modem_pdp_config_t;
+
+/**
  * @brief USB modem configuration structure
  */
 typedef struct {
     const usb_modem_id_t *modem_id_list;    /*!< USB modem ID list */
     size_t at_tx_buffer_size;           /*!< AT command tx buffer size */
     size_t at_rx_buffer_size;           /*!< AT command rx buffer size */
+    usbh_modem_pdp_config_t pdp;        /*!< Optional PDP context configuration */
 } usbh_modem_config_t;
 
 /**
