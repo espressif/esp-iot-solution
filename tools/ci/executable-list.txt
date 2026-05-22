@@ -1,4 +1,5 @@
 components/display/tools/esp_lvgl_adapter/benchmark/metrics/convert_xunit_to_metric_json.py
+components/display/tools/esp_painter/tools/font_gen.py
 components/elf_loader/tool/symbols.py
 components/esp_weaver/tools/apply_patches.py
 components/gprof/scripts/gprof.py
