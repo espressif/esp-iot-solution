@@ -20,6 +20,38 @@ menu "USB Device UAC"
         int "UAC sample rate"
         default 48000
 
+    choice UAC_BIT_RESOLUTION
+        prompt "UAC bit resolution"
+        default UAC_BIT_RESOLUTION_16
+        help
+            Bit resolution used for both speaker (RX) and microphone (TX) streams.
+            EP and software buffers scale automatically with the chosen width.
+
+        config UAC_BIT_RESOLUTION_16
+            bool "16-bit (in 16-bit slot)"
+
+        config UAC_BIT_RESOLUTION_24_IN_24
+            bool "24-bit (in 24-bit slot, packed)"
+
+        config UAC_BIT_RESOLUTION_24_IN_32
+            bool "24-bit (in 32-bit slot)"
+
+        config UAC_BIT_RESOLUTION_32
+            bool "32-bit (in 32-bit slot)"
+    endchoice
+
+    config UAC_BIT_RESOLUTION
+        int
+        default 16 if UAC_BIT_RESOLUTION_16
+        default 24 if UAC_BIT_RESOLUTION_24_IN_24 || UAC_BIT_RESOLUTION_24_IN_32
+        default 32 if UAC_BIT_RESOLUTION_32
+
+    config UAC_BYTES_PER_SAMPLE
+        int
+        default 2 if UAC_BIT_RESOLUTION_16
+        default 3 if UAC_BIT_RESOLUTION_24_IN_24
+        default 4 if UAC_BIT_RESOLUTION_24_IN_32 || UAC_BIT_RESOLUTION_32
+
     config UAC_SPK_INTERVAL_MS
         int "UAC SPK interval(ms)"
         default 10

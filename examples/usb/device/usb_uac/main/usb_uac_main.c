@@ -10,11 +10,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "bsp/esp-bsp.h"
-#ifdef CONFIG_ESP32_S3_LCD_EV_BOARD
 #include "bsp_board_extra.h"
-#else
-#include "bsp/bsp_board_extra.h"
-#endif
 #include "usb_device_uac.h"
 
 static const char *TAG = "usb_uac_main";
@@ -49,7 +45,7 @@ static void uac_device_set_volume_cb(uint32_t volume, void *arg)
 void app_main(void)
 {
     bsp_extra_codec_init();
-    bsp_extra_codec_set_fs(CONFIG_UAC_SAMPLE_RATE, 16, CONFIG_UAC_SPEAKER_CHANNEL_NUM);
+    bsp_extra_codec_set_fs(CONFIG_UAC_SAMPLE_RATE, CONFIG_UAC_BYTES_PER_SAMPLE * 8, CONFIG_UAC_SPEAKER_CHANNEL_NUM);
 
     uac_device_config_t config = {
         .output_cb = uac_device_output_cb,

@@ -7,12 +7,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_codec_dev_defaults.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "esp_vfs_fat.h"
+#include "driver/i2c.h"
+#include "driver/i2s_std.h"
+#include "driver/gpio.h"
+#include "driver/ledc.h"
 
 #include "bsp/esp-bsp.h"
-#include "bsp/bsp_board_extra.h"
+#include "bsp_board_extra.h"
 
 static const char *TAG = "bsp_extra_board";
 
@@ -26,6 +33,12 @@ static int _vloume_intensity = CODEC_DEFAULT_VOLUME;
 static audio_player_cb_t audio_idle_callback = NULL;
 static void *audio_idle_cb_user_data = NULL;
 static char audio_file_path[128];
+
+/**************************************************************************************************
+ *
+ * Extra Board Function
+ *
+ **************************************************************************************************/
 
 static esp_err_t audio_mute_function(AUDIO_PLAYER_MUTE_SETTING setting)
 {

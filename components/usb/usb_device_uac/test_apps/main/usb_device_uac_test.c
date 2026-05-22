@@ -11,7 +11,6 @@
 #include "unity_test_utils_memory.h"
 #include "esp_heap_caps.h"
 #include "usb_device_uac.h"
-#include "uac_config.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
@@ -19,6 +18,10 @@
 // Some resources are lazy allocated in GPTimer driver, the threshold is left for that case
 #define TEST_MEMORY_LEAK_THRESHOLD (-300)
 #define UAC_LOOPBACK_BUF_SZ       (16 * 1024)
+#define UAC_LOOPBACK_DROP_SZ      CONFIG_UAC_BYTES_PER_SAMPLE
+
+#define MIC_CHANNEL_NUM CONFIG_UAC_MIC_CHANNEL_NUM
+#define SPEAK_CHANNEL_NUM CONFIG_UAC_SPEAKER_CHANNEL_NUM
 
 #if MIC_CHANNEL_NUM && SPEAK_CHANNEL_NUM
 typedef struct {
@@ -42,8 +45,9 @@ static esp_err_t uac_device_output_cb(uint8_t *buf, size_t len, void *arg)
     portENTER_CRITICAL(&loopback->mux);
     for (size_t i = 0; i < len; i++) {
         if (loopback->data_len == UAC_LOOPBACK_BUF_SZ) {
-            loopback->read_pos = (loopback->read_pos + 1) % UAC_LOOPBACK_BUF_SZ;
-            loopback->data_len--;
+            // Drop a whole sample so read_pos stays subslot-aligned.
+            loopback->read_pos = (loopback->read_pos + UAC_LOOPBACK_DROP_SZ) % UAC_LOOPBACK_BUF_SZ;
+            loopback->data_len -= UAC_LOOPBACK_DROP_SZ;
         }
         loopback->buf[loopback->write_pos] = buf[i];
         loopback->write_pos = (loopback->write_pos + 1) % UAC_LOOPBACK_BUF_SZ;
