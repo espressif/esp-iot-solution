@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -453,7 +453,11 @@ uint8_t bthome_make_adv_data(bthome_handle_t handle, uint8_t *buffer, uint8_t *n
         uint8_t tag[4];
         uint8_t counter[4];
         memcpy(counter, &bthome->counter, 4);
-        bthome_encrypt_payload(handle, &BTHOME_UUID, &info.all, payload, payload_len, payload_enc, tag);
+        esp_err_t enc_ret = bthome_encrypt_payload(handle, &BTHOME_UUID, &info.all, payload, payload_len, payload_enc, tag);
+        if (enc_ret != ESP_OK) {
+            ESP_LOGE(TAG, "encrypt payload failed");
+            return 0;
+        }
         ARRAY_TO_STREAM(buffer, payload_enc, payload_len);
         adv_len += (payload_len + 5);
         ARRAY_TO_STREAM(buffer, counter, 4);

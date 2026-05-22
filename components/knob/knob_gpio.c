@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "esp_check.h"
 #include "driver/gpio.h"
 #include "knob_gpio.h"
+#include "knob_hal.h"
 
 static const char *TAG = "knob gpio";
 
@@ -35,16 +36,26 @@ uint8_t knob_gpio_get_key_level(void *gpio_num)
     return (uint8_t)gpio_get_level((uint32_t)gpio_num);
 }
 
+static esp_err_t gpio_isr_service_ensure_installed(void)
+{
+    esp_err_t ret = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
+    if (ret == ESP_OK || ret == ESP_ERR_INVALID_STATE) {
+        return ESP_OK;
+    }
+    return ret;
+}
+
 esp_err_t knob_gpio_init_intr(uint32_t gpio_num, gpio_int_type_t intr_type, gpio_isr_t isr_handler, void *args)
 {
-    static bool isr_service_installed = false;
-    gpio_set_intr_type(gpio_num, intr_type);
-    if (!isr_service_installed) {
-        gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
-        isr_service_installed = true;
+    esp_err_t ret = gpio_set_intr_type(gpio_num, intr_type);
+    if (ret != ESP_OK) {
+        return ret;
     }
-    gpio_isr_handler_add(gpio_num, isr_handler, args);
-    return ESP_OK;
+    ret = gpio_isr_service_ensure_installed();
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    return gpio_isr_handler_add(gpio_num, isr_handler, args);
 }
 
 esp_err_t knob_gpio_set_intr(uint32_t gpio_num, gpio_int_type_t intr_type)
@@ -69,6 +80,7 @@ esp_err_t knob_gpio_wake_up_control(uint32_t gpio_num, uint8_t wake_up_level, bo
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
 #if SOC_PM_SUPPORT_EXT1_WAKEUP
         ret = esp_sleep_enable_ext1_wakeup_io((1ULL << gpio_num), wake_up_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH);
+        ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "Enable ext1 wakeup failed");
 #else
         /*!< Not support etc: esp32c2, esp32c3. Target must support ext1 wakeup */
         ret = ESP_FAIL;
@@ -105,6 +117,7 @@ esp_err_t knob_gpio_wake_up_init(uint32_t gpio_num, uint8_t wake_up_level)
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
 #if SOC_PM_SUPPORT_EXT1_WAKEUP
     ret = esp_sleep_enable_ext1_wakeup_io((1ULL << gpio_num), wake_up_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW : ESP_EXT1_WAKEUP_ANY_HIGH);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Enable ext1 wakeup failed");
 #else
     /*!< Not support etc: esp32c2, esp32c3. Target must support ext1 wakeup */
     ret = ESP_FAIL;
@@ -116,3 +129,14 @@ esp_err_t knob_gpio_wake_up_init(uint32_t gpio_num, uint8_t wake_up_level)
 #endif
     return ESP_OK;
 }
+
+const knob_hal_t knob_gpio_hal = {
+    .init = knob_gpio_init,
+    .deinit = knob_gpio_deinit,
+    .get_key_level = knob_gpio_get_key_level,
+    .init_intr = knob_gpio_init_intr,
+    .set_intr = knob_gpio_set_intr,
+    .intr_control = knob_gpio_intr_control,
+    .wake_up_control = knob_gpio_wake_up_control,
+    .wake_up_init = knob_gpio_wake_up_init,
+};

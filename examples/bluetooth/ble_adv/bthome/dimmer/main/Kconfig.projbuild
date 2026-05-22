@@ -3,7 +3,8 @@ menu "Example Configuration"
     choice EXAMPLE_MAX_CPU_FREQ
         prompt "Maximum CPU frequency"
         default EXAMPLE_MAX_CPU_FREQ_32 if IDF_TARGET_ESP32H4
-        default EXAMPLE_MAX_CPU_FREQ_80 if !IDF_TARGET_ESP32H4
+        default EXAMPLE_MAX_CPU_FREQ_96 if IDF_TARGET_ESP32H2
+        default EXAMPLE_MAX_CPU_FREQ_80 if !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         depends on PM_ENABLE
         help
             Maximum CPU frequency to use for dynamic frequency scaling.
@@ -11,15 +12,18 @@ menu "Example Configuration"
         config EXAMPLE_MAX_CPU_FREQ_32
             bool "32 MHz"
             depends on IDF_TARGET_ESP32H4
+        config EXAMPLE_MAX_CPU_FREQ_96
+            bool "96 MHz"
+            depends on IDF_TARGET_ESP32H2
         config EXAMPLE_MAX_CPU_FREQ_80
             bool "80 MHz"
-            depends on !IDF_TARGET_ESP32H4
+            depends on !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         config EXAMPLE_MAX_CPU_FREQ_120
             bool "120 MHz"
             depends on IDF_TARGET_ESP32C2
         config EXAMPLE_MAX_CPU_FREQ_160
             bool "160 MHz"
-            depends on !IDF_TARGET_ESP32C2 && !IDF_TARGET_ESP32H4
+            depends on !IDF_TARGET_ESP32C2 && !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         config EXAMPLE_MAX_CPU_FREQ_240
             bool "240 MHz"
             depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32C5
@@ -28,6 +32,7 @@ menu "Example Configuration"
     config EXAMPLE_MAX_CPU_FREQ_MHZ
         int
         default 32 if EXAMPLE_MAX_CPU_FREQ_32
+        default 96 if EXAMPLE_MAX_CPU_FREQ_96
         default 80 if EXAMPLE_MAX_CPU_FREQ_80
         default 120 if EXAMPLE_MAX_CPU_FREQ_120
         default 160 if EXAMPLE_MAX_CPU_FREQ_160
@@ -36,6 +41,8 @@ menu "Example Configuration"
     choice EXAMPLE_MIN_CPU_FREQ
         prompt "Minimum CPU frequency"
         default EXAMPLE_MIN_CPU_FREQ_48M if IDF_TARGET_ESP32C5
+        default EXAMPLE_MIN_CPU_FREQ_16M if IDF_TARGET_ESP32H4
+        default EXAMPLE_MIN_CPU_FREQ_32M if IDF_TARGET_ESP32H2
         default EXAMPLE_MIN_CPU_FREQ_10M
         depends on PM_ENABLE
         help
@@ -50,10 +57,6 @@ menu "Example Configuration"
             depends on XTAL_FREQ_40 || XTAL_FREQ_AUTO
         config EXAMPLE_MIN_CPU_FREQ_32M
             bool "32 MHz (use with 32MHz XTAL)"
-            depends on XTAL_FREQ_32 || XTAL_FREQ_AUTO
-        config EXAMPLE_MIN_CPU_FREQ_24M
-            bool "24 MHz (use with 32MHz XTAL, ESP32-H4)"
-            depends on IDF_TARGET_ESP32H4
             depends on XTAL_FREQ_32 || XTAL_FREQ_AUTO
         config EXAMPLE_MIN_CPU_FREQ_16M
             bool "16 MHz (use with 32MHz XTAL)"
@@ -88,33 +91,53 @@ menu "Example Configuration"
         default 48 if EXAMPLE_MIN_CPU_FREQ_48M
         default 40 if EXAMPLE_MIN_CPU_FREQ_40M
         default 32 if EXAMPLE_MIN_CPU_FREQ_32M
-        default 24 if EXAMPLE_MIN_CPU_FREQ_24M
-        default 16 if EXAMPLE_MIN_CPU_FREQ_16M
-        default 8  if EXAMPLE_MIN_CPU_FREQ_8M
         default 26 if EXAMPLE_MIN_CPU_FREQ_26M
         default 24 if EXAMPLE_MIN_CPU_FREQ_24M
         default 20 if EXAMPLE_MIN_CPU_FREQ_20M
+        default 16 if EXAMPLE_MIN_CPU_FREQ_16M
         default 13 if EXAMPLE_MIN_CPU_FREQ_13M
         default 12 if EXAMPLE_MIN_CPU_FREQ_12M
         default 10 if EXAMPLE_MIN_CPU_FREQ_10M
+        default 8  if EXAMPLE_MIN_CPU_FREQ_8M
 
     config EXAMPLE_POWER_SAVE_RESAMPLE
         bool "Resample beacon when beacon loss is unstable"
         depends on ESP_WIFI_SLP_SAMPLE_BEACON_FEATURE
 
+    config EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+        bool "Use RTC IO driver for button and knob"
+        depends on SOC_RTCIO_INPUT_OUTPUT_SUPPORTED
+        default n
+        help
+            Use iot_button_new_rtc_device() and iot_knob_create_rtc() for
+            low-power wakeup via RTC IO instead of the GPIO driver.
+            Requires all configured button/knob pins to be valid RTC GPIO.
+            Enable this option in sdkconfig (e.g. sdkconfig.defaults.esp32h4)
+            when targeting platforms that need RTC IO wakeup.
+
     config EXAMPLE_GPIO_KNOB_A
         int "Rotary Encoder A Pin"
-        range 0 48
+        range 0 5 if IDF_TARGET_ESP32H4
+        range 0 27 if IDF_TARGET_ESP32H2
+        range 0 48 if !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         default 2
         help
             GPIO number for rotary encoder A pin.
+            ESP32-H4 requires RTC GPIO 0-5.
+            ESP32-H2 uses the GPIO driver; when PM power-down in light sleep is
+            enabled, choose RTC wakeup GPIO 7-14.
 
     config EXAMPLE_GPIO_KNOB_B
         int "Rotary Encoder B Pin"
-        range 0 48
+        range 0 5 if IDF_TARGET_ESP32H4
+        range 0 27 if IDF_TARGET_ESP32H2
+        range 0 48 if !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         default 3
         help
             GPIO number for rotary encoder B pin.
+            ESP32-H4 requires RTC GPIO 0-5.
+            ESP32-H2 uses the GPIO driver; when PM power-down in light sleep is
+            enabled, choose RTC wakeup GPIO 7-14.
 
     config EXAMPLE_POWER_CTRL_IO_NUM
         int "Power Control Pin"
@@ -125,10 +148,15 @@ menu "Example Configuration"
 
     config EXAMPLE_BUTTON_IO_NUM
         int "Button Pin"
-        range 0 48
+        range 0 5 if IDF_TARGET_ESP32H4
+        range 0 27 if IDF_TARGET_ESP32H2
+        range 0 48 if !IDF_TARGET_ESP32H4 && !IDF_TARGET_ESP32H2
         default 0
         help
             GPIO number for button.
+            ESP32-H4 requires RTC GPIO 0-5.
+            ESP32-H2 uses the GPIO driver; when PM power-down in light sleep is
+            enabled, choose RTC wakeup GPIO 7-14.
 
     config EXAMPLE_BUTTON_ACTIVE_LEVEL
         int "Button Active Level"

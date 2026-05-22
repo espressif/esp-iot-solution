@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.2.0 - 2026-06-08
+
+### Feature:
+
+* Modify button to support RTC power domain I/O and improve power saving.
+
 ## v4.1.7 - 2026-06-03
 
 ### Fix:
