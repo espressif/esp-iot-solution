@@ -96,6 +96,14 @@
       - IMAGE: espressif/idf:release-v5.5
       - IMAGE: espressif/idf:release-v6.0
 
+build_example_ai_esp_dl_emotion_recognition:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ai_esp_dl_emotion_recognition
+  variables:
+    EXAMPLE_DIR: examples/ai/esp_dl/emotion_recognition
+    IMAGE: espressif/idf:release-v5.5
+
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
     - .build_examples_template

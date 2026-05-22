@@ -1,0 +1,14 @@
+version: 0.1.0
+targets:
+- esp32p4
+dependencies:
+  idf: '>=5.5'
+  emotion_cls:
+    override_path: ../components/emotion_cls
+  espressif/esp32_p4_function_ev_board: 5.2.*
+  lvgl/lvgl: 9.4.0
+  espressif/esp_video: 2.0.1
+  espressif/human_face_detect: 0.4.2
+  espressif/esp_painter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_painter"

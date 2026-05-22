@@ -527,6 +527,9 @@
   - "components/esp_xiaozhi/include/esp_xiaozhi_chat.h"
 
 # examples folder, in the alphabetic order
+.patterns-example_ai_esp_dl_emotion_recognition: &patterns-example_ai_esp_dl_emotion_recognition
+  - "examples/ai/esp_dl/emotion_recognition/**/*"
+
 .patterns-example_ai_esp_dl_human_activity_recognition: &patterns-example_ai_esp_dl_human_activity_recognition
   - "examples/ai/esp_dl/human_activity_recognition/**/*"
 
@@ -900,6 +903,16 @@
   if: '$BOT_LABEL_DEPLOY || $CI_MERGE_REQUEST_LABELS =~ /^(?:[^,\n\r]+,)*deploy(?:,[^,\n\r]+)*$/i'
 
 # rules for examples
+.rules:build:example_ai_esp_dl_emotion_recognition:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_ai_esp_dl_emotion_recognition
+
 .rules:build:example_ai_esp_dl_human_activity_recognition:
   rules:
     - <<: *if-protected

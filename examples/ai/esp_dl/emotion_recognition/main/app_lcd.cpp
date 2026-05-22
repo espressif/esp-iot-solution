@@ -3,11 +3,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-#include "app_lcd.hpp"
-#include "esp_lcd_mipi_dsi.h"
-#include "ui.h"
 
-void app_lcd_init(void)
+#include "app_lcd.hpp"
+
+esp_lcd_panel_handle_t app_lcd_init(void)
 {
     bsp_display_cfg_t cfg = {
         .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
@@ -46,11 +45,10 @@ void app_lcd_init(void)
     cfg.lvgl_port_cfg.task_priority = 5;
     cfg.lvgl_port_cfg.task_affinity = 1;
 
-    bsp_display_start_with_config(&cfg);
-    bsp_display_brightness_set(100);
-    bsp_display_backlight_on();
-
-    bsp_display_lock(0);
-    ui_init();
-    bsp_display_unlock();
+    esp_lcd_panel_handle_t panel = nullptr;
+    esp_lcd_panel_io_handle_t io = nullptr;
+    ESP_ERROR_CHECK(bsp_display_new(&cfg.hw_cfg, &panel, &io));
+    ESP_ERROR_CHECK(bsp_display_brightness_set(100));
+    ESP_ERROR_CHECK(bsp_display_backlight_on());
+    return panel;
 }
