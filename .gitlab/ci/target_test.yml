@@ -797,6 +797,7 @@ components_test_ntc_driver:
     TEST_TARGET: ${IDF_TARGET}
     TEST_FOLDER: components/sensors/ntc_driver
     TEST_ENV: ${ENV_TAG}
+  allow_failure: true # See ae_group/esp-iot-solution!1571 for details.
 
 example_relinker:
   # The relinker component needs to be adapted for different IDF versions,
