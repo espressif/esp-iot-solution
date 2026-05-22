@@ -1371,7 +1371,7 @@ build_components_motor_esp_simplefoc_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_motor_esp_simplefoc_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_active_release_version_with_pre_release
   variables:
     EXAMPLE_DIR: components/motor/esp_simplefoc/test_apps
 

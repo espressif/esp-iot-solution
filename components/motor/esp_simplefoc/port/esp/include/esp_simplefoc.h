@@ -7,10 +7,13 @@
 
 #include "esp_platform.h"
 #include "BLDCMotor.h"
+#include "StepperMotor.h"
 #include "esp_hal_bldc_3pwm.h"
 #include "esp_hal_bldc_6pwm.h"
 #include "communication/SimpleFOCDebug.h"
 #include "communication/Commander.h"
+#include "drivers/StepperDriver2PWM.h"
+#include "drivers/StepperDriver4PWM.h"
 #include "sensors/GenericSensor.h"
 #include "current_sense/GenericCurrentSense.h"
 #include "current_sense/LowsideCurrentSense.h"
