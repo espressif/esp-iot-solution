@@ -7,6 +7,9 @@
 
 #ESP_DOCS_PATH = os.environ['ESP_DOCS_PATH']
 
+import os
+import re
+
 from esp_docs.conf_docs import *  # noqa: F403,F401
 
 # format: {tag needed to include: documents to included}, tags are parsed from sdkconfig and peripheral_caps.h headers
@@ -22,6 +25,22 @@ github_repo = 'espressif/esp-iot-solution'
 # context used by sphinx_idf_theme
 html_context['github_user'] = 'espressif'
 html_context['github_repo'] = 'esp-iot-solution'
+
+
+def _branch_to_doc_release(branch):
+    """Map a git branch name to the doc release key used in feedback doc_id_mapping."""
+    latest_branch_name = os.environ.get('ESP_DOCS_LATEST_BRANCH_NAME', 'master')
+    if branch == latest_branch_name:
+        return 'latest'
+    return re.sub(r'[^a-zA-Z0-9._-]', '-', branch)
+
+
+# In MR preview builds, CI_COMMIT_REF_NAME is the source branch; use the MR target
+# branch so feedback docId matches the document line the MR will merge into.
+_mr_target_branch = os.environ.get('CI_MERGE_REQUEST_TARGET_BRANCH_NAME')
+html_context['feedback_doc_release'] = (
+    _branch_to_doc_release(_mr_target_branch) if _mr_target_branch else None
+)
 
 languages = ['en', 'zh_CN']
 

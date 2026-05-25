@@ -1,4 +1,10 @@
 {% extends '!layout.html' %}
 {% block comments %}
-<p style="text-align:center"><a href="https://www.espressif.com/zh-hans/company/documents/documentation_feedback?docId=5603&sections={{ title|striptags|e }} ({{ pagename }})&version={{ release }} ({{ version }})">提供有关此文档的反馈</a></p>
+{% set doc_id_mapping = {
+  "latest": "9065",
+  "release-v2.0": "9067",
+} %}
+{% set doc_release = feedback_doc_release|default(release) %}
+{% set docid = doc_id_mapping.get(doc_release, doc_id_mapping['latest']) %}
+<p style="text-align:center"><a href="https://www.espressif.com/zh-hans/company/documents/documentation_feedback?docId={{ docid }}&sections={{ title|striptags|e }} ({{ pagename }})&version={{ release }} ({{ version }})">提供有关此文档的反馈</a></p>
 {% endblock %}
