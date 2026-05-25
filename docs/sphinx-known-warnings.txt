@@ -1,5 +1,6 @@
 esp_otp.inc:line: WARNING: Duplicate C++ declaration, also defined at bluetooth/ble_otp:line.
 Declaration is '.. cpp:member:: esp_ble_otp_olcp_rsp_t response'.
+dali.inc:line: WARNING: Inline literal start-string without end-string.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.

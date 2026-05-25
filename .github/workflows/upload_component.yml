@@ -50,6 +50,7 @@ jobs:
             components/bluetooth/ble_services;
             components/bootloader_support_plus;
             components/button;
+            components/dali;
             components/display/lcd/esp_lcd_axs15231b;
             components/display/lcd/esp_lcd_co5300;
             components/display/lcd/esp_lcd_ek79007;

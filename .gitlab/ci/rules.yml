@@ -80,6 +80,10 @@
   - "components/button/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_dali: &patterns-components_dali
+  - "components/dali/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_display_digital_tube_ch450: &patterns-components_display_digital_tube_ch450
   - "components/display/digital_tube/ch450/**/*"
 
@@ -694,6 +698,9 @@
 
 .patterns-example_lighting_lightbulb: &patterns-example_lighting_lightbulb
   - "examples/lighting/lightbulb/**/*"
+
+.patterns-example_lighting_dali: &patterns-example_lighting_dali
+  - "examples/lighting/dali/**/*"
 
 .patterns-example_motor_bldc_fan_rainmaker: &patterns-example_motor_bldc_fan_rainmaker
   - "examples/motor/bldc_fan_rainmaker/**/*"
@@ -1574,6 +1581,18 @@
     - <<: *if-dev-push
       changes: *patterns-example_lighting_lightbulb
 
+.rules:build:example_lighting_dali:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_dali
+    - <<: *if-dev-push
+      changes: *patterns-example_lighting_dali
+
 .rules:build:example_motor_bldc_fan_rainmaker:
   rules:
     - <<: *if-protected
@@ -2324,6 +2343,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_button
+
+.rules:build:components_dali_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_dali
 
 .rules:build:components_sensors_power_measure_test_apps:
   rules:
