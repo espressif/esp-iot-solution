@@ -1,4 +1,4 @@
-version: "1.5.1"
+version: "1.5.2"
 targets:
   - esp32s2
   - esp32s3
@@ -8,11 +8,9 @@ repository: https://github.com/espressif/esp-iot-solution.git
 documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/usb/usb_host/usb_stream.html
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=4.4.1,<=5.5"
   cmake_utilities: "0.5.*"
-examples:
-  - path: ../../../examples/usb/host/usb_camera_mic_spk
-  - path: ../../../examples/usb/host/usb_camera_lcd_display
+
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
   originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
