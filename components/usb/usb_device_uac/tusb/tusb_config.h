@@ -41,7 +41,11 @@ extern "C" {
 
 // RHPort number used for device can be defined by board.mk, default to port 0
 #ifdef CONFIG_TINYUSB_RHPORT_HS
+#if CONFIG_IDF_TARGET_ESP32P4
 #   define CFG_TUSB_RHPORT1_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#else
+#   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#endif
 #   define CONFIG_USB_HS            1
 #else
 #   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED

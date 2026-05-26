@@ -1,4 +1,5 @@
 targets:
+  - esp32s31
   - esp32p4
 dependencies:
   cmake_utilities: "*"
