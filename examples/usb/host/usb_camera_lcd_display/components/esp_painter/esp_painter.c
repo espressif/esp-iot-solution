@@ -28,6 +28,8 @@ typedef struct {
     uint8_t piexl_color_byte;
     const esp_painter_basic_font_t *default_font;
     esp_lcd_panel_handle_t lcd_panel;
+    uint8_t *buffer;
+    uint16_t buffer_stride;
 } esp_painter_t;
 
 static const char *TAG = "esp_painter";
@@ -44,7 +46,10 @@ esp_err_t esp_painter_new(esp_painter_config_t *config, esp_painter_handle_t *ha
         config->canvas.color == COLOR_CANVAS_TRANS_BG || config->canvas.color < BIT(config->piexl_color_byte * 8),
         ESP_ERR_INVALID_ARG, TAG, "Canvas color out of range"
     );
-    ESP_RETURN_ON_FALSE(config->lcd_panel, ESP_ERR_INVALID_ARG, TAG, "Lcd panel must be inited");
+    ESP_RETURN_ON_FALSE(config->lcd_panel || config->canvas.buffer, ESP_ERR_INVALID_ARG, TAG, "LCD panel or canvas buffer must be set");
+    if (config->canvas.buffer) {
+        ESP_RETURN_ON_FALSE(config->canvas.stride >= config->canvas.width, ESP_ERR_INVALID_ARG, TAG, "Invalid canvas stride");
+    }
     esp_painter_t *painter = (esp_painter_t *)malloc(sizeof(esp_painter_t));
     ESP_RETURN_ON_FALSE(painter, ESP_ERR_NO_MEM, TAG, "Malloc failed");
 
@@ -58,8 +63,58 @@ esp_err_t esp_painter_new(esp_painter_config_t *config, esp_painter_handle_t *ha
     painter->piexl_color_byte = config->piexl_color_byte;
     painter->default_font = config->default_font;
     painter->lcd_panel = config->lcd_panel;
+    painter->buffer = (uint8_t *)config->canvas.buffer;
+    painter->buffer_stride = config->canvas.stride;
     *handle = (void *)painter;
 
+    return ESP_OK;
+}
+
+esp_err_t esp_painter_set_buffer(esp_painter_handle_t handle, void *buffer, uint16_t stride)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
+    esp_painter_t *painter = (esp_painter_t *)handle;
+    ESP_RETURN_ON_FALSE(buffer, ESP_ERR_INVALID_ARG, TAG, "Invalid buffer");
+    ESP_RETURN_ON_FALSE(stride >= painter->canvas.x_max - painter->canvas.x_min + 1, ESP_ERR_INVALID_ARG, TAG, "Invalid buffer stride");
+    painter->buffer = (uint8_t *)buffer;
+    painter->buffer_stride = stride;
+    return ESP_OK;
+}
+
+esp_err_t esp_painter_fill_rect(esp_painter_handle_t handle, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
+    esp_painter_t *painter = (esp_painter_t *)handle;
+    ESP_RETURN_ON_FALSE(width > 0 && height > 0, ESP_ERR_INVALID_ARG, TAG, "Invalid rectangle size");
+
+    x += painter->canvas.x_min;
+    y += painter->canvas.y_min;
+    ESP_RETURN_ON_FALSE(x <= painter->canvas.x_max && y <= painter->canvas.y_max, ESP_ERR_INVALID_ARG, TAG, "Invalid rectangle origin");
+    color = (color == COLOR_BRUSH_DEFAULT) ? painter->brush.color : color;
+    ESP_RETURN_ON_FALSE(color < BIT(painter->piexl_color_byte * 8), ESP_ERR_INVALID_ARG, TAG, "Brush color out of range");
+
+    uint32_t x_end_calc = (uint32_t)x + width;
+    uint32_t y_end_calc = (uint32_t)y + height;
+    uint16_t x_end = x_end_calc > (uint32_t)painter->canvas.x_max + 1 ? painter->canvas.x_max + 1 : x_end_calc;
+    uint16_t y_end = y_end_calc > (uint32_t)painter->canvas.y_max + 1 ? painter->canvas.y_max + 1 : y_end_calc;
+
+    if (painter->buffer != NULL) {
+        // Fill the memory canvas directly to avoid per-pixel LCD transactions.
+        for (uint16_t row = y; row < y_end; row++) {
+            uint8_t *pixel = painter->buffer + ((size_t)row * painter->buffer_stride + x) * painter->piexl_color_byte;
+            for (uint16_t col = x; col < x_end; col++) {
+                memcpy(pixel, &color, painter->piexl_color_byte);
+                pixel += painter->piexl_color_byte;
+            }
+        }
+        return ESP_OK;
+    }
+
+    for (uint16_t row = y; row < y_end; row++) {
+        for (uint16_t col = x; col < x_end; col++) {
+            ESP_RETURN_ON_ERROR(draw_point(handle, col, row, color), TAG, "Draw pixel error");
+        }
+    }
     return ESP_OK;
 }
 
@@ -130,7 +185,8 @@ esp_err_t esp_painter_draw_string(esp_painter_handle_t handle, uint16_t x, uint1
     return ESP_OK;
 }
 
-esp_err_t esp_painter_draw_string_format(esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t* font, uint32_t color, const char* fmt, ...)
+esp_err_t esp_painter_draw_string_format(
+    esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t *font, uint32_t color, const char *fmt, ...)
 {
     char buffer[CONFIG_ESP_PAINTER_FORMAT_SIZE_MAX];
     va_list args;
@@ -146,5 +202,13 @@ esp_err_t esp_painter_draw_string_format(esp_painter_handle_t handle, uint16_t x
 
 static esp_err_t draw_point(esp_painter_handle_t handle, uint16_t x, uint16_t y, uint32_t color)
 {
-    return esp_lcd_panel_draw_bitmap((esp_lcd_panel_handle_t)((esp_painter_t *)handle)->lcd_panel, x, y, x + 1, y + 1, &color);
+    esp_painter_t *painter = (esp_painter_t *)handle;
+    if (painter->buffer != NULL) {
+        uint8_t *pixel = painter->buffer + ((size_t)y * painter->buffer_stride + x) * painter->piexl_color_byte;
+        memcpy(pixel, &color, painter->piexl_color_byte);
+        return ESP_OK;
+    }
+
+    ESP_RETURN_ON_FALSE(painter->lcd_panel, ESP_ERR_INVALID_STATE, TAG, "LCD panel not configured");
+    return esp_lcd_panel_draw_bitmap((esp_lcd_panel_handle_t)painter->lcd_panel, x, y, x + 1, y + 1, &color);
 }

@@ -62,6 +62,8 @@ typedef struct {
         uint16_t width;
         uint16_t height;
         uint32_t color;
+        void *buffer;
+        uint16_t stride;
     } canvas;
     uint8_t piexl_color_byte;
     const esp_painter_basic_font_t *default_font;
@@ -70,11 +72,22 @@ typedef struct {
 
 esp_err_t esp_painter_new(esp_painter_config_t *config, esp_painter_handle_t *handle);
 
+/**
+ * @brief Switch painter output to a memory canvas.
+ */
+esp_err_t esp_painter_set_buffer(esp_painter_handle_t handle, void *buffer, uint16_t stride);
+
+/**
+ * @brief Fill a rectangle on the current canvas.
+ */
+esp_err_t esp_painter_fill_rect(esp_painter_handle_t handle, uint16_t x, uint16_t y, uint16_t width, uint16_t height, uint32_t color);
+
 esp_err_t esp_painter_draw_char(esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t *font, uint32_t color, char c);
 
 esp_err_t esp_painter_draw_string(esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t* font, uint32_t color, const char* text);
 
-esp_err_t esp_painter_draw_string_format(esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t* font, uint32_t color, const char* fmt, ...);
+esp_err_t esp_painter_draw_string_format(
+    esp_painter_handle_t handle, uint16_t x, uint16_t y, const esp_painter_basic_font_t *font, uint32_t color, const char *fmt, ...);
 
 #ifdef __cplusplus
 }
