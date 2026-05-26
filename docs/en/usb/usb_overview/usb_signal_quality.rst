@@ -58,6 +58,10 @@ Test Procedure
 
 Download the ESP32-S2/S3/P4 USB test firmware from the `Launchpad <https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/usb_eye_diagram/config.toml>`_ platform. ESP32-P4 is used for High-Speed testing, and ESP32-S2/S3 is used for Full-Speed testing.
 
+.. note::
+
+   For chips that only support USB Serial/JTAG, please use the `usb_serial_jtag_echo <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb_serial_jtag/usb_serial_jtag_echo>`_ example for testing.
+
 2. Hardware Connection
 ^^^^^^^^^^^^^^^^^^^^^^^
 
