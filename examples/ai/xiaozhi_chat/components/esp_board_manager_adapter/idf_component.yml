@@ -1,5 +1,5 @@
 dependencies:
-  espressif/esp_board_manager: ^0.5.0
+  espressif/esp_board_manager: "0.5.10"
   espressif/esp_lcd_touch: ^1.1.2
   espressif/esp_lvgl_port: '*'
 description: Board support package manager for Espressif SOC

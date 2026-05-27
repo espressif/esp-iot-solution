@@ -45,5 +45,31 @@
 API 参考
 --------
 
+以下章节由 ``components/esp_xiaozhi/include/`` 下的公开头文件自动生成。
+
+对话（Chat）
+~~~~~~~~~~~~
+
 .. include-build-file:: inc/esp_xiaozhi_chat.inc
+
+设备信息
+~~~~~~~~
+
 .. include-build-file:: inc/esp_xiaozhi_info.inc
+
+NVS 操作
+~~~~~~~~
+
+可选的 NVS 访问钩子，用于将 keystore 的 NVS 读写重定向（例如在 SRAM 任务中执行）。参见 ``esp_xiaozhi_nvs_ops.h``。
+
+.. include-build-file:: inc/esp_xiaozhi_nvs_ops.inc
+
+相机解释
+~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_camera.inc
+
+视频解释
+~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_video.inc

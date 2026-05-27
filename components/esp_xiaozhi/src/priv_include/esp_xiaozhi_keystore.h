@@ -17,31 +17,6 @@ extern "C" {
 #endif  /* __cplusplus */
 
 /**
- * @brief  NVS operations callbacks for keystore.
- *         When set via esp_xiaozhi_keystore_register_nvs_ops(), all NVS access goes through these
- *         callbacks (e.g. to run NVS on an SRAM task and avoid PSRAM stack issues). NULL means use
- *         default direct nvs_* calls.
- */
-typedef struct esp_xiaozhi_keystore_nvs_ops_s {
-    esp_err_t (*nvs_open)(const char *name_space, bool read_write, nvs_handle_t *out_handle);
-    void (*nvs_close)(nvs_handle_t handle);
-    esp_err_t (*nvs_commit)(nvs_handle_t handle);
-    esp_err_t (*nvs_get_str)(nvs_handle_t handle, const char *key, char *out_value, size_t *length);
-    esp_err_t (*nvs_set_str)(nvs_handle_t handle, const char *key, const char *value);
-    esp_err_t (*nvs_get_i32)(nvs_handle_t handle, const char *key, int32_t *out_value);
-    esp_err_t (*nvs_set_i32)(nvs_handle_t handle, const char *key, int32_t value);
-    esp_err_t (*nvs_erase_key)(nvs_handle_t handle, const char *key);
-    esp_err_t (*nvs_erase_all)(nvs_handle_t handle);
-} esp_xiaozhi_keystore_nvs_ops_t;
-
-/**
- * @brief  Register NVS operations (e.g. to delegate to NVS service on SRAM task). Pass NULL to use default direct NVS.
- *
- * @param[in] ops  Pointer to ops struct, or NULL for default
- */
-void esp_xiaozhi_keystore_register_nvs_ops(const esp_xiaozhi_keystore_nvs_ops_t *ops);
-
-/**
  * @brief  Keystore handle structure
  */
 typedef struct esp_xiaozhi_chat_keystore_s {

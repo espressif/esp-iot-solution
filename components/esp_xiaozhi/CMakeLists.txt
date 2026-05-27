@@ -17,5 +17,5 @@ idf_component_register(
     SRCS "${srcs}"
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "src/priv_include"
-    PRIV_REQUIRES  esp_common nvs_flash app_update spi_flash json mbedtls mqtt esp_http_client mcp-c-sdk esp_websocket_client
+    PRIV_REQUIRES  esp_common nvs_flash app_update spi_flash cjson mbedtls mqtt esp_http_client mcp-c-sdk esp_websocket_client
 )

@@ -4,9 +4,10 @@ dependencies:
   78/xiaozhi-fonts: ~1.3.2
   protocol_examples_common:
     path: ${IDF_PATH}/examples/common_components/protocol_examples_common
+  # Registry 0.1.0 only supports IDF <6; use in-tree 0.1.1 for IDF 6.x until published.
   espressif/esp_xiaozhi:
-    override_path: ../../../../components/esp_xiaozhi
+    path: ../../../../components/esp_xiaozhi
 
   ## Required IDF version
   idf:
-    version: '>=5.4.0'
+    version: '>=5.5.0'
