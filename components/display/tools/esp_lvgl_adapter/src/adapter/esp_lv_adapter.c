@@ -176,7 +176,7 @@ static esp_err_t adapter_stop_tick_timer(void)
     esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
     esp_err_t ret;
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if ESP_IDF_VERSION > ESP_IDF_VERSION_VAL(6, 0, 0)
     ret = esp_timer_stop_blocking(timer, portMAX_DELAY);
     if (ret == ESP_ERR_NOT_FINISHED) {
         ret = ESP_OK;
