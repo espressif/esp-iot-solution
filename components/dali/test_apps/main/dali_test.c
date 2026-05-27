@@ -5,6 +5,7 @@
  */
 
 #include <inttypes.h>
+#include <stdbool.h>
 #include <string.h>
 #include "esp_err.h"
 #include "esp_event.h"
@@ -223,8 +224,8 @@ TEST_CASE("dali init", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -254,8 +255,8 @@ TEST_CASE("scan short addresses", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -311,8 +312,8 @@ TEST_CASE("dapc dimming sequence", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -361,8 +362,8 @@ TEST_CASE("query actual level", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -418,8 +419,8 @@ TEST_CASE("send twice reset command", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -457,8 +458,8 @@ TEST_CASE("query status", "[dali]")
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,
@@ -573,8 +574,8 @@ static void dali_light_test_task(void *arg)
     dali_master_config_t cfg = {
         .rx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_RX_GPIO,
         .tx_gpio = (gpio_num_t)CONFIG_DALI_STRESS_TX_GPIO,
-        .invert_tx = false,
-        .invert_rx = false,
+        .invert_tx = true,
+        .invert_rx = true,
     };
     dali_master_rmt_config_t rmt_cfg = {
         .mem_block_symbols = 64,

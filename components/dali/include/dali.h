@@ -156,8 +156,7 @@ typedef struct {
  *   - ESP_ERR_NO_MEM       if heap allocation fails
  *   - Other ESP_ERR codes  propagated from RMT driver
  */
-esp_err_t dali_new_master_rmt(const dali_master_config_t *config,
-                              const dali_master_rmt_config_t *rmt_config,
+esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_master_rmt_config_t *rmt_config,
                               dali_master_handle_t *handle);
 
 /**
@@ -243,8 +242,7 @@ typedef struct {
  *                          is out of range
  *   - Other ESP_ERR codes  propagated from RMT driver
  */
-esp_err_t dali_master_do_transaction(dali_master_handle_t handle,
-                                     const dali_master_transaction_config_t *config,
+esp_err_t dali_master_do_transaction(dali_master_handle_t handle, const dali_master_transaction_config_t *config,
                                      int *result);
 
 #ifdef __cplusplus
