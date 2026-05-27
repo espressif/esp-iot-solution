@@ -1,34 +1,22 @@
+| Supported Targets | ESP32-S3 |
+| ----------------- | -------- |
+
 ## USB Stream Lcd Display Example
 
-This routine demonstrates how to use the [usb_stream](https://components.espressif.com/components/espressif/usb_stream) component to get an image from a USB camera and display it dynamically on the RGB screen. 
+This routine demonstrates how to get an image from a USB camera and display it dynamically on the RGB screen. 
 
 * Pressing the boot button can switch the display resolution. 
-* For better performance, please use ESP-IDF release/v5.0 or above versions.
-* Currently only images with a resolution smaller than the screen resolution are displayed
-* When the image width is equal to the screen width, the refresh rate is at its highest.
-
-## Try the example through the esp-launchpad
-
-<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml">
-    <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
-</a>
-
-This example has been built for `ESP32-S3-LCD-EV-Board`, you can use `esp-launchpad` to flash the binary to your board directly.
-
-Please choose `lcd_ev_subboard3_800_480_usb_camera` or `lcd_ev_subboard2_480_480_usb_camera`, then click flash to quickly start
+* The example starts with the same resolution as the LCD first if the camera exposes it. If not, it uses the current camera resolution order.
+* Images smaller than the LCD are displayed in the center of the screen.
+* Images equal to the LCD resolution are decoded directly into the LCD frame buffer for the best refresh rate.
+* Images larger than the LCD are scaled down to fit inside the screen by the JPEG decoder.
+* The on-screen overlay shows the camera FPS and display resolution.
 
 ## Hardware
 
 * An [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) development board with 800\*480/480\*480 LCD.
 * A USB camera (Can be connected to USB port or Expansion Connector)
 * An USB Type-C cable for Power supply and programming (Please connect to UART port instead of USB port)
-
-Note:
-  Error message with `A fatal error occurred: Could not open /dev/ttyACM0, the port doesn't exist`: Please first make sure development board connected, then make board into "Download Boot" mode to upload by following steps:
-  1. keep pressing  "BOOT(SW2)" button
-  2. short press "RST(SW1)" button
-  3. release "BOOT(SW2)".
-  4. upload program and reset
 
 ## PSRAM 120M DDR
 

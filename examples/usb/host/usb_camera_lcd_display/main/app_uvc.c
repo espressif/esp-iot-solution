@@ -269,20 +269,23 @@ static size_t find_current_resolution(const app_uvc_frame_size_t *frame_size)
     }
 
     if (frame_size == NULL || frame_size->width == 0 || frame_size->height == 0) {
+        ESP_LOGI(TAG, "Use default UVC resolution %ux%u", s_uvc_dev.frame_info[0].h_res, s_uvc_dev.frame_info[0].v_res);
         return 0;
     }
 
-    size_t i = 0;
-    while (i < s_uvc_dev.frame_info_num) {
-        if (frame_size->width >= s_uvc_dev.frame_info[i].h_res && frame_size->height >= s_uvc_dev.frame_info[i].v_res) {
-            break;
-        } else if (i == s_uvc_dev.frame_info_num - 1) {
-            break;
+    // Prefer an exact display-sized frame to avoid scaling or extra copy when the camera supports it.
+    for (size_t i = 0; i < s_uvc_dev.frame_info_num; i++) {
+        if (frame_size->width == s_uvc_dev.frame_info[i].h_res && frame_size->height == s_uvc_dev.frame_info[i].v_res) {
+            ESP_LOGI(TAG, "Use preferred UVC resolution %ux%u", s_uvc_dev.frame_info[i].h_res, s_uvc_dev.frame_info[i].v_res);
+            return i;
         }
-        i++;
     }
-    ESP_LOGI(TAG, "Current resolution is %ux%u", s_uvc_dev.frame_info[i].h_res, s_uvc_dev.frame_info[i].v_res);
-    return i;
+
+    ESP_LOGI(
+        TAG, "Preferred UVC resolution %ux%u not found, use default %ux%u",
+        frame_size->width, frame_size->height, s_uvc_dev.frame_info[0].h_res, s_uvc_dev.frame_info[0].v_res
+    );
+    return 0;
 }
 
 static esp_err_t uvc_stream_start_with_index(size_t frame_index)
@@ -380,7 +383,10 @@ static void driver_event_cb(const uvc_host_driver_event_data_t *event, void *use
         for (size_t i = 0; i < frame_info_num; i++) {
             if (frame_info[i].format == UVC_VS_FORMAT_MJPEG && frame_info[i].h_res <= s_uvc_dev.max_width && frame_info[i].v_res <= s_uvc_dev.max_height) {
                 s_uvc_dev.frame_info[pick_frame_num++] = frame_info[i];
-                ESP_LOGI(TAG, "\tpick frame[%u] = %ux%u@%.1ffps", i, frame_info[i].h_res, frame_info[i].v_res, UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval));
+                ESP_LOGI(
+                    TAG, "\tpick frame[%u] = %ux%u@%.1ffps",
+                    i, frame_info[i].h_res, frame_info[i].v_res, UVC_DESC_DWFRAMEINTERVAL_TO_FPS(frame_info[i].default_interval)
+                );
             } else {
                 ESP_LOGI(TAG, "\tdrop frame[%u] = %ux%u format=%d", i, frame_info[i].h_res, frame_info[i].v_res, frame_info[i].format);
             }

@@ -213,9 +213,20 @@ static void camera_frame_cb(const uvc_host_frame_t *frame, void *user_ctx)
         copy_decoded_frame_to_back_buffer((uint16_t *)cur_frame_buf, (uint16_t *)decoded_frame_buf);
     }
 
+    // Draw transparent text inside the refreshed image area so the next frame clears old glyphs.
+    int overlay_x = display_need_copy ? (BSP_LCD_H_RES - display_width) / 2 : 0;
+    int overlay_y = (BSP_LCD_V_RES - display_height) / 2;
     ESP_ERROR_CHECK(esp_painter_set_buffer(painter, cur_frame_buf, BSP_LCD_H_RES));
-    ESP_ERROR_CHECK(esp_painter_fill_rect(painter, 0, 0, BSP_LCD_H_RES, esp_painter_basic_font_24.height, COLOR_RGB565_BLACK));
-    ESP_ERROR_CHECK(esp_painter_draw_string_format(painter, 0, 0, NULL, COLOR_RGB565_RED, "FPS:%d %dx%d", display_fps, display_width, display_height));
+    if (current_width != display_width || current_height != display_height) {
+        ESP_ERROR_CHECK(esp_painter_draw_string_format(
+                            painter, overlay_x, overlay_y, NULL, COLOR_RGB565_RED, "FPS:%d %dx%d>%dx%d",
+                            display_fps, current_width, current_height, display_width, display_height
+                        ));
+    } else {
+        ESP_ERROR_CHECK(esp_painter_draw_string_format(
+                            painter, overlay_x, overlay_y, NULL, COLOR_RGB565_RED, "FPS:%d %dx%d", display_fps, display_width, display_height
+                        ));
+    }
     esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, BSP_LCD_H_RES, BSP_LCD_V_RES, cur_frame_buf);
     cur_frame_buf = (cur_frame_buf == rgb_frame_buf1) ? rgb_frame_buf2 : rgb_frame_buf1;
 
@@ -307,6 +318,10 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(app_uvc_init(&uvc_config));
 
-    /* Start the camera with the default filtered resolution */
-    ESP_ERROR_CHECK(app_uvc_start(NULL, &camera_frame_size));
+    /* Start with the LCD-sized camera resolution first if the camera exposes one. */
+    const app_uvc_frame_size_t preferred_frame_size = {
+        .width = BSP_LCD_H_RES,
+        .height = BSP_LCD_V_RES,
+    };
+    ESP_ERROR_CHECK(app_uvc_start(&preferred_frame_size, &camera_frame_size));
 }
