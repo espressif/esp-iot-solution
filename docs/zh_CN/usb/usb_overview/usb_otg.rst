@@ -138,6 +138,9 @@ ESP32-S2/S3/P4 等内置 USB-OTG 外设的芯片，ROM Code 中内置了 USB DFU
 
    更多详细信息，请参考：\ `Device Firmware Upgrade via USB <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-guides/dfu.html>`_
 
+.. warning:: 
+
+   对于 ESP32-P4 v3.1 及以上的版本，DFU 下载功能存在缺陷，可能会导致 DFU 下载失败，建议使用 USB Serial/JTAG 下载方式进行固件下载。
 
 使用 USB-OTG 外设进行 USB Host 开发
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

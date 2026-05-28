@@ -60,7 +60,7 @@ Download the ESP32-S2/S3/P4 USB test firmware from the `Launchpad <https://espre
 
 .. note::
 
-   For chips that only support USB Serial/JTAG, please use the `usb_serial_jtag_echo <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb_serial_jtag/usb_serial_jtag_echo>`_ example for testing.
+   For the USB eye diagram test on the USB Serial/JTAG port, simply put the chip into download mode and ensure that the device enumerates successfully.
 
 2. Hardware Connection
 ^^^^^^^^^^^^^^^^^^^^^^^

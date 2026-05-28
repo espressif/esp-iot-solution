@@ -138,6 +138,9 @@ For chips like ESP32-S2/S3/P4 with built-in USB On-The-Go (USB-OTG) peripherals,
 
    For more detailed information, please refer to `Device Firmware Upgrade via USB <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-guides/dfu.html>`_\ .
 
+.. warning:: 
+
+   For ESP32-P4 v3.1 and later versions, there is a defect in the DFU download functionality that may cause DFU downloads to fail. It is recommended to use the USB Serial/JTAG method for firmware downloading.
 
 USB Host development using USB-OTG peripherals
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
