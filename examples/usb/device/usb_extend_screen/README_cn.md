@@ -2,15 +2,17 @@
 
 使用 [LaunchPad](https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml) 烧录该示例
 
-USB 扩展屏示例可以将 [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) / [ESP32_P4_FUNCTION_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) 开发板作为一块 windows 的副屏。支持以下功能。
+USB 扩展屏示例可以将 [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html)、[ESP32_P4_FUNCTION_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) 或 [ESP32-S31-Korvo](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp32-s31-korvo-1/index.html) 开发板作为一块 Windows 的副屏。支持以下功能。
 
 * P4: 支持 1024*576@60FPS 的屏幕刷新速率
 
 * S3: 支持 800*480@13FPS 的屏幕刷新速率
 
+* S31: 支持 800*480@60FPS 的屏幕刷新速率
+
 * 支持最多五点的屏幕触摸
 
-* 支持音频的输入和输出
+* 支持音频的输入和输出，P4/S31 默认 48 kHz，S3 默认 16 kHz
 
 ## 所需硬件
 
@@ -26,6 +28,12 @@ USB 扩展屏示例可以将 [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/
    2. 开发套件中的一块 800\*480 / 480\*480 的 RGB 屏幕
    3. 一个扬声器
 
+* S31 开发板
+
+   1. [ESP32-S31-Korvo](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp32-s31-korvo-1/user_guide.html#getting-started) 开发板
+   2. 开发套件中的一块 800\*480 RGB 屏幕
+   3. 一个扬声器
+
 ## 硬件连接
 
 * 连接
@@ -39,8 +47,7 @@ USB 扩展屏示例可以将 [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/
 构建项目并将其烧录到板子上，然后运行监控工具以查看串行输出：
 
 * 运行 `. ./export.sh` 以设置 IDF 环境
-* 运行 `idf.py set-target esp32p4` 以设置目标芯片
-* 如果上一步出现任何错误，请运行 `pip install "idf-component-manager~=1.1.4"` 来升级你的组件管理器
+* 运行 `idf.py set-target <target>` 以设置目标芯片，`<target>` 可选 `esp32p4`、`esp32s3` 或 `esp32s31`
 * 运行 `idf.py -p PORT flash monitor` 来构建、烧录并监控项目
 
 （要退出串行监视器，请按 `Ctrl-]`。）
@@ -67,7 +74,7 @@ USB 扩展屏示例可以将 [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/
 
 ### 调高/调低 JPEG 的图片质量
 
-* 修改 `CONFIG_USB_EXYEEND_SCREEN_JEPG_QUALITY`，数字越大质量越高，同样的一帧图像占用内存更多。
+* 修改 `CONFIG_USB_EXTEND_SCREEN_JPEG_QUALITY`，数字越大质量越高，同样的一帧图像占用内存更多。
 
 ### 修改副屏分辨率
 

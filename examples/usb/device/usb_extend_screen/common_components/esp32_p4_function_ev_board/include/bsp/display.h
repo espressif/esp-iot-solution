@@ -8,10 +8,7 @@
  * @file
  * @brief BSP LCD
  *
- * This file offers API for basic LCD control.
- * It is useful for users who want to use the LCD without the default Graphical Library LVGL.
- *
- * For standard LCD initialization with LVGL graphical library, you can call all-in-one function bsp_display_start().
+ * This file offers API for basic LCD control through esp_lcd.
  */
 
 #pragma once

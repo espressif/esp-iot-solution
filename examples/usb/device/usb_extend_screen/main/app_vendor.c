@@ -58,6 +58,13 @@ static bool buffer_skip(frame_info_t *frame_info, uint32_t len)
     return false;
 }
 
+static bool start_skip_frame(frame_info_t *frame_info, uint32_t total, uint32_t received)
+{
+    memset(frame_info, 0, sizeof(*frame_info));
+    frame_info->total = total;
+    return !buffer_skip(frame_info, received);
+}
+
 static bool buffer_fill(frame_t *frame, uint8_t *buf, uint32_t len)
 {
     if (0 == len) {
@@ -65,6 +72,10 @@ static bool buffer_fill(frame_t *frame, uint8_t *buf, uint32_t len)
     }
 
     if (frame_add_data(frame, buf, len) != ESP_OK) {
+        ESP_LOGW(TAG, "Drop frame: payload overflow, total=%"PRIu32", received=%"PRIu32", len=%"PRIu32,
+                 frame->info.total, frame->info.received, len);
+        frame_return_empty(frame);
+        return true;
     }
     frame->info.received += len;
 
@@ -82,16 +93,39 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
     static frame_info_t skip_frame_info = {0};
 
     while (tud_vendor_n_available(itf)) {
+        if (!current_frame && !skip_frame && tud_vendor_n_available(itf) < sizeof(udisp_frame_header_t)) {
+            break;
+        }
+
         int read_res = tud_vendor_n_read(itf, rx_buf, CONFIG_USB_VENDOR_RX_BUFSIZE);
         if (read_res > 0) {
             if (!current_frame && !skip_frame) {
+                if (read_res < sizeof(udisp_frame_header_t)) {
+                    ESP_LOGW(TAG, "Drop short frame header: %d", read_res);
+                    continue;
+                }
+
                 udisp_frame_header_t *pblt = (udisp_frame_header_t *)rx_buf;
+                uint32_t first_payload_len = read_res - sizeof(udisp_frame_header_t);
+
                 switch (pblt->type) {
                 case UDISP_TYPE_RGB565:
                 case UDISP_TYPE_RGB888:
                 case UDISP_TYPE_YUV420:
+                    ESP_LOGW(TAG, "Drop unsupported frame type: %u", pblt->type);
+                    skip_frame = start_skip_frame(&skip_frame_info, pblt->payload_total, first_payload_len);
+                    break;
                 case UDISP_TYPE_JPG: {
                     if (pblt->x != 0 || pblt->y != 0 || pblt->width != EXAMPLE_LCD_H_RES || pblt->height != EXAMPLE_LCD_V_RES) {
+                        ESP_LOGW(TAG, "Drop frame with unexpected area: x=%u y=%u w=%u h=%u",
+                                 pblt->x, pblt->y, pblt->width, pblt->height);
+                        skip_frame = start_skip_frame(&skip_frame_info, pblt->payload_total, first_payload_len);
+                        break;
+                    }
+                    if (pblt->payload_total == 0 || pblt->payload_total > CONFIG_USB_EXTEND_SCREEN_FRAME_LIMIT_B) {
+                        ESP_LOGW(TAG, "Drop frame: payload_total=%"PRIu32", limit=%u",
+                                 (uint32_t)pblt->payload_total, CONFIG_USB_EXTEND_SCREEN_FRAME_LIMIT_B);
+                        skip_frame = start_skip_frame(&skip_frame_info, pblt->payload_total, first_payload_len);
                         break;
                     }
 
@@ -112,14 +146,11 @@ void tud_vendor_rx_cb(uint8_t itf, uint8_t const* buffer, uint16_t bufsize)
                         current_frame->info.total = pblt->payload_total;
                         current_frame->info.received = 0;
                         ESP_LOGD(TAG, "read_res: %d, rx bblt x:%d y:%d w:%d h:%d total:%"PRIu32" (%d)", read_res, pblt->x, pblt->y, pblt->width, pblt->height, current_frame->info.total, (pblt->width) * (pblt->height) * 2);
-                        if (buffer_fill(current_frame, &rx_buf[sizeof(udisp_frame_header_t)], read_res - sizeof(udisp_frame_header_t))) {
+                        if (buffer_fill(current_frame, &rx_buf[sizeof(udisp_frame_header_t)], first_payload_len)) {
                             current_frame = NULL;
                         }
                     } else {
-                        memset(&skip_frame_info, 0, sizeof(skip_frame_info));
-                        skip_frame_info.total = pblt->payload_total;
-                        skip_frame = true;
-                        buffer_skip(&skip_frame_info, read_res - sizeof(udisp_frame_header_t));
+                        skip_frame = start_skip_frame(&skip_frame_info, pblt->payload_total, first_payload_len);
                         ESP_LOGE(TAG, "Get frame is null");
                         // Feed the task dog
                         vTaskDelay(1 / portTICK_PERIOD_MS);

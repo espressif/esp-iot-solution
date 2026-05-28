@@ -409,7 +409,8 @@ examples/usb/device/usb_webcam:
 
 examples/usb/device/usb_extend_screen:
   enable:
-    - if: IDF_TARGET in ["esp32p4"]
+    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
 
 examples/usb/device/usb_hid_device:
   enable:

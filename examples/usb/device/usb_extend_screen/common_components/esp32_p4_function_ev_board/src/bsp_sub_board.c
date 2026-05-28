@@ -103,17 +103,20 @@ esp_err_t bsp_display_new(const bsp_display_config_t *config, esp_lcd_panel_hand
     }
     ESP_ERROR_CHECK(esp_lcd_new_panel_dpi(mipi_dsi_bus, &dpi_config, &mipi_dpi_panel));
 #elif LCD_CONTROLLER_EK79007
-    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(MIPI_DPI_PX_FORMAT);
+    esp_lcd_dpi_panel_config_t dpi_config =
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+        EK79007_1024_600_PANEL_60HZ_CONFIG(MIPI_DPI_PX_FORMAT);
+#else
+        EK79007_1024_600_PANEL_60HZ_CONFIG_CF(MIPI_DPI_PX_FORMAT);
+#endif
     if (config != NULL) {
         dpi_config.num_fbs = config->dpi_fb_buf_num;
     }
     ek79007_vendor_config_t vendor_config = {
-        .flags = {
-            .use_mipi_interface = 1,
-        },
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
             .dpi_config = &dpi_config,
+            .lane_num = 2,
         },
     };
     const esp_lcd_panel_dev_config_t panel_config = {

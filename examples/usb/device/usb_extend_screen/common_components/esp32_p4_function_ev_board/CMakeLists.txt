@@ -3,11 +3,6 @@ list(APPEND SRCS
     "src/bsp_board_extra.c"
     "src/bsp_sub_board.c"
     "src/esp32_p4_function_ev_board.c")
-if(CONFIG_BSP_DISPLAY_LVGL_VERSION_V8)
-    list(APPEND SRCS "src/bsp_lvgl_port_v8.c")
-elseif(CONFIG_BSP_DISPLAY_LVGL_VERSION_V9)
-    list(APPEND SRCS "src/bsp_lvgl_port_v9.c" "src/lv_esp_freertos.c")
-endif()
 
 set(INCLUDE_DIRS "")
 list(APPEND INCLUDE_DIRS "include")
@@ -22,19 +17,17 @@ foreach(SRC_DIR IN LISTS SRC_DIRS)
     list(APPEND INCLUDE_DIRS ${SRC_DIR}/include)
 endforeach()
 
+set(requires driver esp_driver_cam esp_lcd esp_driver_ppa esp_driver_isp)
+if(${IDF_VERSION_MAJOR} GREATER_EQUAL 6)
+    list(APPEND requires esp_driver_gpio esp_driver_i2c esp_driver_i2s esp_driver_ledc esp_driver_sdmmc)
+endif()
+
 idf_component_register(
     SRCS ${SRCS}
     INCLUDE_DIRS ${INCLUDE_DIRS}
-    REQUIRES driver esp_driver_cam esp_lcd esp_driver_ppa esp_driver_isp
+    REQUIRES ${requires}
     PRIV_REQUIRES esp_timer spiffs fatfs esp_psram esp_mm
 )
-
-if(CONFIG_BSP_DISPLAY_LVGL_VERSION_V9)
-    if (CONFIG_LV_OS_CUSTOM)
-        idf_component_get_property(lvgl_lib lvgl__lvgl COMPONENT_LIB)
-        target_link_libraries(${lvgl_lib} PUBLIC ${COMPONENT_LIB})
-    endif()
-endif()
 
 target_compile_options(
     ${COMPONENT_LIB} PRIVATE

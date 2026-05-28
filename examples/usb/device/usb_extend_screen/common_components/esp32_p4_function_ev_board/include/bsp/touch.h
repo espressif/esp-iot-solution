@@ -8,10 +8,7 @@
  * @file
  * @brief BSP Touchscreen
  *
- * This file offers API for basic touchscreen initialization.
- * It is useful for users who want to use the touchscreen without the default Graphical Library LVGL.
- *
- * For standard LCD initialization with LVGL graphical library, you can call all-in-one function bsp_display_start().
+ * This file offers API for basic touchscreen initialization through esp_lcd_touch.
  */
 
 #pragma once

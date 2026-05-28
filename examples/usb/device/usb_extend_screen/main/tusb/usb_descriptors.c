@@ -153,7 +153,7 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
         STRINGIFY(CONFIG_USB_EXTEND_SCREEN_WIDTH) \
         "_" \
         "Ejpg" \
-        STRINGIFY(CONFIG_USB_EXYEEND_SCREEN_JEPG_QUALITY) \
+        STRINGIFY(CONFIG_USB_EXTEND_SCREEN_JPEG_QUALITY) \
         "_Fps" \
         STRINGIFY(CONFIG_USB_EXTEND_SCREEN_MAX_FPS) \
         "_Bl" \

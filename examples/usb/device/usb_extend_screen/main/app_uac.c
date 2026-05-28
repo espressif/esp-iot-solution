@@ -5,11 +5,12 @@
  */
 
 #include "app_usb.h"
+#include "esp_check.h"
 #include "esp_log.h"
 #include "usb_device_uac.h"
 #include "bsp/esp-bsp.h"
 #include "usb_descriptors.h"
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_IDF_TARGET_ESP32P4 || CONFIG_IDF_TARGET_ESP32S31
 #include "bsp/bsp_board_extra.h"
 #endif
 #if CONFIG_IDF_TARGET_ESP32S3
@@ -47,8 +48,11 @@ static void uac_device_set_volume_cb(uint32_t volume, void *arg)
 
 esp_err_t app_uac_init(void)
 {
-    bsp_extra_codec_init();
-    bsp_extra_codec_set_fs(CONFIG_UAC_SAMPLE_RATE, 16, CONFIG_UAC_SPEAKER_CHANNEL_NUM);
+    ESP_RETURN_ON_ERROR(bsp_extra_codec_init(), TAG, "codec init failed");
+    ESP_RETURN_ON_ERROR(bsp_extra_codec_set_fs(CONFIG_UAC_SAMPLE_RATE,
+                                               CONFIG_UAC_BYTES_PER_SAMPLE * 8,
+                                               CONFIG_UAC_SPEAKER_CHANNEL_NUM),
+                        TAG, "codec sample format config failed");
 
     uac_device_config_t config = {
         .skip_tinyusb_init = true,
@@ -65,7 +69,5 @@ esp_err_t app_uac_init(void)
 #endif
     };
 
-    uac_device_init(&config);
-
-    return ESP_OK;
+    return uac_device_init(&config);
 }

@@ -12,8 +12,6 @@
 #include "driver/spi_master.h"
 #include "driver/i2s_std.h"
 
-#include "file_iterator.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -110,17 +108,6 @@ esp_err_t bsp_extra_i2s_write(void *audio_buffer, size_t len, size_t *bytes_writ
 esp_err_t bsp_extra_codec_init();
 
 /**
- * @brief Initialize audio player task.
- *
- * @param path file path
- *
- * @return
- *      - ESP_OK: Success
- *      - Others: Fail
- */
-esp_err_t bsp_extra_player_init(char *path);
-
-/**
  * @brief Set RGB for a specific pixel.
  *
  * @param index: index of pixel to set
@@ -143,13 +130,6 @@ esp_err_t bsp_extra_led_set_rgb(uint8_t index, uint8_t red, uint8_t green, uint8
  *      - Others: Fail
  */
 esp_err_t bsp_extra_led_init();
-
-/**
- * @brief Get file_iterator instance.
- *
- * @return pointer of file_iterator_instance_t
- */
-file_iterator_instance_t *bsp_extra_get_file_instance(void);
 
 #ifdef __cplusplus
 }

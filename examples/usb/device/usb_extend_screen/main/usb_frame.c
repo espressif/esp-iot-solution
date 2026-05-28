@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,7 +13,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "usb_frame.h"
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_SOC_JPEG_DECODE_SUPPORTED
 #include "driver/jpeg_decode.h"
 #endif
 
@@ -23,8 +23,6 @@ static const char *TAG = "usb_frame";
 
 esp_err_t frame_allocate(int nb_of_fb, size_t fb_size)
 {
-    esp_err_t ret;
-
     // We will be passing the frame buffers by reference
     empty_fb_queue = xQueueCreate(nb_of_fb, sizeof(frame_t *));
     ESP_RETURN_ON_FALSE(empty_fb_queue, ESP_ERR_NO_MEM, TAG, "Not enough memory for empty_fb_queue %d", nb_of_fb);
@@ -34,19 +32,19 @@ esp_err_t frame_allocate(int nb_of_fb, size_t fb_size)
         // Allocate the frame buffer
         frame_t *this_fb = malloc(sizeof(frame_t));
         ESP_RETURN_ON_FALSE(this_fb, ESP_ERR_NO_MEM,  TAG, "Not enough memory for frame buffers %d", fb_size);
-#if CONFIG_IDF_TARGET_ESP32P4
+#if CONFIG_SOC_JPEG_DECODE_SUPPORTED
         size_t malloc_size = 0;
         jpeg_decode_memory_alloc_cfg_t tx_mem_cfg = {
             .buffer_direction = JPEG_DEC_ALLOC_INPUT_BUFFER,
         };
         uint8_t *this_data = (uint8_t*)jpeg_alloc_decoder_mem(fb_size, &tx_mem_cfg, &malloc_size);
-#elif CONFIG_IDF_TARGET_ESP32S3
+#else
         uint8_t *this_data = (uint8_t *)heap_caps_aligned_alloc(16, fb_size, MALLOC_CAP_SPIRAM);
 #endif
         if (!this_data) {
             free(this_fb);
-            ret = ESP_ERR_NO_MEM;
             ESP_LOGE(TAG, "Not enough memory for frame buffers %d", fb_size);
+            return ESP_ERR_NO_MEM;
         }
 
         // Set members to default
@@ -58,7 +56,7 @@ esp_err_t frame_allocate(int nb_of_fb, size_t fb_size)
         const BaseType_t result = xQueueSend(empty_fb_queue, &this_fb, 0);
         assert(pdPASS == result);
     }
-    return ret;
+    return ESP_OK;
 }
 
 void frame_reset(frame_t *frame)

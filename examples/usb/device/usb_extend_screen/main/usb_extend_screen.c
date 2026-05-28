@@ -6,8 +6,10 @@
 
 #include <stdio.h>
 #include "bsp/esp-bsp.h"
+#if CONFIG_HID_TOUCH_ENABLE
 #include "bsp/touch.h"
 #include "esp_lcd_touch.h"
+#endif
 #include "app_usb.h"
 #include "usb_descriptors.h"
 #include "esp_log.h"
