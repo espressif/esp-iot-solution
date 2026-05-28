@@ -88,8 +88,8 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_nv3052(io_handle, &panel_config, &panel_handle));    /**
                                                                                              * Only create RGB when `enable_io_multiplex` is set to 0,
-                                                                                             * or initialize ST77903 meanwhile
+                                                                                             * or initialize NV3052 meanwhile
                                                                                              */
-    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));     // Only reset RGB when `enable_io_multiplex` is set to 1, or reset ST77903 meanwhile
-    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));      // Only initialize RGB when `enable_io_multiplex` is set to 1, or initialize ST77903 meanwhile
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));     // Only reset RGB when `enable_io_multiplex` is set to 1, or reset NV3052 meanwhile
+    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));      // Only initialize RGB when `enable_io_multiplex` is set to 1, or initialize NV3052 meanwhile
 ```

@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.0~1 - 2026-05-28
+
+### Changes:
+
+* Add esp32s31 target support
+
 ## v2.0.0 - 2025-10-29
 
 ### Changes:
@@ -12,5 +18,4 @@
 
 * Implement the driver for the NV3052 LCD controller
 * Support RGB interface
-
 

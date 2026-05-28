@@ -120,6 +120,9 @@
 .patterns-components_display_lcd_esp_lcd_gc9d01: &patterns-components_display_lcd_esp_lcd_gc9d01
   - "components/display/lcd/esp_lcd_gc9d01/**/*"
 
+.patterns-components_display_lcd_esp_lcd_gc9503_mipi: &patterns-components_display_lcd_esp_lcd_gc9503_mipi
+  - "components/display/lcd/esp_lcd_gc9503_mipi/**/*"
+
 .patterns-components_display_lcd_esp_lcd_hx8399: &patterns-components_display_lcd_esp_lcd_hx8399
   - "components/display/lcd/esp_lcd_hx8399/**/*"
 
@@ -159,8 +162,14 @@
 .patterns-components_display_lcd_esp_lcd_st77922: &patterns-components_display_lcd_esp_lcd_st77922
   - "components/display/lcd/esp_lcd_st77922/**/*"
 
+.patterns-components_display_lcd_esp_lcd_st77926: &patterns-components_display_lcd_esp_lcd_st77926
+  - "components/display/lcd/esp_lcd_st77926/**/*"
+
 .patterns-components_display_lcd_esp_lcd_usb_display: &patterns-components_display_lcd_esp_lcd_usb_display
   - "components/display/lcd/esp_lcd_usb_display/**/*"
+
+.patterns-components_display_lcd_touch_esp_lcd_touch_ft6336u: &patterns-components_display_lcd_touch_esp_lcd_touch_ft6336u
+  - "components/display/lcd_touch/esp_lcd_touch_ft6336u/**/*"
 
 .patterns-components_display_lcd_touch_esp_lcd_touch_ili2118: &patterns-components_display_lcd_touch_esp_lcd_touch_ili2118
   - "components/display/lcd_touch/esp_lcd_touch_ili2118/**/*"
@@ -170,6 +179,9 @@
 
 .patterns-components_display_lcd_touch_esp_lcd_touch_st7123: &patterns-components_display_lcd_touch_esp_lcd_touch_st7123
   - "components/display/lcd_touch/esp_lcd_touch_st7123/**/*"
+
+.patterns-components_display_lcd_touch_esp_lcd_touch_st77926: &patterns-components_display_lcd_touch_esp_lcd_touch_st77926
+  - "components/display/lcd_touch/esp_lcd_touch_st77926/**/*"
 
 .patterns-components_display_tools_esp_lv_decoder: &patterns-components_display_tools_esp_lv_decoder
   - "components/display/tools/esp_lv_decoder/**/*"
@@ -2502,6 +2514,17 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_gc9d01
 
+.rules:build:components_display_lcd_esp_lcd_gc9503_mipi_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_gc9503_mipi
+
 .rules:build:components_display_lcd_esp_lcd_hx8399_test_apps:
   rules:
     - <<: *if-protected
@@ -2645,6 +2668,16 @@
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_st77922
 
+.rules:build:components_display_lcd_esp_lcd_st77926_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_st77926
+
 .rules:build:components_display_lcd_esp_lcd_usb_display_test_apps:
   rules:
     - <<: *if-protected
@@ -2655,6 +2688,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_usb_display
+
+.rules:build:components_display_lcd_touch_esp_lcd_touch_ft6336u_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_touch_esp_lcd_touch_ft6336u
 
 .rules:build:components_display_lcd_touch_esp_lcd_touch_ili2118_test_apps:
   rules:
@@ -2688,6 +2731,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_touch_esp_lcd_touch_st7123
+
+.rules:build:components_display_lcd_touch_esp_lcd_touch_st77926_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_touch_esp_lcd_touch_st77926
 
 .rules:build:components_display_tools_esp_lv_decoder_test_apps:
   rules:

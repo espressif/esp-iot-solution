@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.2~2 - 2026-05-28
+
+### Changes:
+
+* Add esp32s31 target support for RGB interface
+
 ## v2.0.2 - 2025-12-10
 
 ### Changes:

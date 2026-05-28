@@ -11,7 +11,7 @@ Implementation of the AXS15231B LCD & Touch controller with esp_lcd component.
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency esp_lcd_axs15231b==1.0.0
 ```
@@ -128,8 +128,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
-    const esp_lcd_panel_io_spi_config_t io_config = ILI9341_PANEL_IO_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, EXAMPLE_PIN_NUM_LCD_DC,
-                                                                                example_callback, &example_callback_ctx);
+    const esp_lcd_panel_io_i80_config_t io_config = AXS15231B_PANEL_IO_I80_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, EXAMPLE_PIN_NUM_LCD_DC,
+                                                                                   example_callback, &example_callback_ctx);
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &io_handle));
 
 /**
@@ -181,7 +181,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
 
     ESP_LOGI(TAG, "Install AXS15231B panel driver");
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     esp_lcd_dpi_panel_config_t dpi_config = AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB888);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG_CF(LCD_COLOR_PIXEL_FORMAT_RGB888);
+#endif
     axs15231b_vendor_config_t vendor_config = {
         .flags = {
             .use_mipi_interface = 1,
@@ -207,6 +211,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```
     esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG();
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus_handle, &io_config, &io_handle));
 
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = CONFIG_LCD_HRES,
@@ -225,7 +231,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     };
 
     esp_lcd_touch_handle_t tp;
-    esp_lcd_touch_new_i2c_axs15231b(io_config, &tp_cfg, &tp);
+    esp_lcd_touch_new_i2c_axs15231b(io_handle, &tp_cfg, &tp);
 ```
 
 Read data from the touch controller and store it in RAM memory. It should be called regularly in poll.
