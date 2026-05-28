@@ -22,8 +22,6 @@
 #include "sdmmc_cmd.h"
 
 #include "bsp/display.h"
-#include "bsp_lvgl_port.h"
-#include "bsp/touch.h"
 #include "bsp/esp32_p4_function_ev_board.h"
 #include "bsp_err_check.h"
 #include "driver/ledc.h"
@@ -66,7 +64,6 @@ static i2s_chan_handle_t i2s_tx_chan = NULL;
 static i2s_chan_handle_t i2s_rx_chan = NULL;
 #endif
 
-static lv_indev_t *disp_indev = NULL;
 static int lcd_brightness = 0;
 
 static sdmmc_card_t *bsp_sdcard = NULL;    // Global SD card handler
@@ -526,45 +523,6 @@ esp_err_t bsp_display_backlight_off(void)
 esp_err_t bsp_display_backlight_on(void)
 {
     return bsp_display_brightness_set(BSP_LCD_BACKLIGHT_BRIGHTNESS_MAX);
-}
-
-lv_disp_t *bsp_display_start(void)
-{
-    return bsp_display_start_with_config(NULL);
-}
-
-lv_disp_t *bsp_display_start_with_config(const bsp_display_cfg_t *cfg)
-{
-    (void)cfg;
-    bsp_display_config_t disp_config = {
-        .dpi_fb_buf_num = LVGL_PORT_LCD_DPI_BUFFER_NUMS,
-    };
-    lv_disp_t *disp = NULL;
-
-    esp_lcd_panel_handle_t lcd = NULL;           // LCD panel handle
-    esp_lcd_touch_handle_t tp = NULL;            // LCD touch panel handle
-
-    BSP_ERROR_CHECK_RETURN_NULL(bsp_display_new(&disp_config, &lcd, NULL));
-    bsp_touch_new(NULL, &tp);
-    BSP_ERROR_CHECK_RETURN_NULL(bsp_lvgl_port_init(lcd, tp, &disp, &disp_indev));
-    bsp_display_brightness_init();
-
-    return disp;
-}
-
-lv_indev_t *bsp_display_get_input_dev(void)
-{
-    return disp_indev;
-}
-
-bool bsp_display_lock(uint32_t timeout_ms)
-{
-    return bsp_lvgl_port_lock(timeout_ms);
-}
-
-void bsp_display_unlock(void)
-{
-    bsp_lvgl_port_unlock();
 }
 
 void bsp_ldo_power_on(void)

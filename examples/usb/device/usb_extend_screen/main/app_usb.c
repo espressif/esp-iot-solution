@@ -18,20 +18,34 @@
 #include "app_usb.h"
 
 static const char *TAG = "app_usb";
+static usb_phy_handle_t s_phy_hdl;
 
 //--------------------------------------------------------------------+
 // USB PHY config
 //--------------------------------------------------------------------+
-static void usb_phy_init(void)
+static esp_err_t usb_phy_init(void)
 {
-    usb_phy_handle_t phy_hdl;
+    if (s_phy_hdl) {
+        return ESP_OK;
+    }
+
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .otg_speed = USB_PHY_SPEED_UNDEFINED,
     };
+
+#if CONFIG_TINYUSB_RHPORT_HS
+    phy_conf.target = USB_PHY_TARGET_UTMI;
+    phy_conf.otg_speed = USB_PHY_SPEED_HIGH;
+#else
     phy_conf.target = USB_PHY_TARGET_INT;
-    usb_new_phy(&phy_conf, &phy_hdl);
+    phy_conf.otg_speed = USB_PHY_SPEED_FULL;
+#endif
+
+    ESP_RETURN_ON_ERROR(usb_new_phy(&phy_conf, &s_phy_hdl), TAG, "USB PHY init failed");
+    return ESP_OK;
 }
 
 static void tusb_device_task(void *arg)
@@ -45,7 +59,7 @@ esp_err_t app_usb_init(void)
 {
     esp_err_t ret = ESP_OK;
 
-    usb_phy_init();
+    ESP_RETURN_ON_ERROR(usb_phy_init(), TAG, "USB PHY init failed");
     bool usb_init = tusb_init();
     if (!usb_init) {
         ESP_LOGE(TAG, "USB Device Stack Init Fail");

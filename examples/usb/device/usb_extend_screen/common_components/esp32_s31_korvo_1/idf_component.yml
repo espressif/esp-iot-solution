@@ -1,0 +1,16 @@
+dependencies:
+  idf:
+    version: ">=5.5"
+
+  esp_codec_dev:
+    public: true
+    version: "^1.5.9"
+
+  esp_lcd_touch_gt1151:
+    public: true
+    version: "^1.1.0~1"
+
+description: Minimal LCD, touch and I2S BSP for ESP32-S31-Korvo-1
+targets:
+  - esp32s31
+version: 0.1.0

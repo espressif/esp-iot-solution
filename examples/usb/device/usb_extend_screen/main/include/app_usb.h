@@ -20,6 +20,7 @@ extern "C" {
 // #define JPEG_BUFFER_SIZE (100*1024)
 // #endif
 
+#if CONFIG_HID_TOUCH_ENABLE
 typedef struct {
     uint8_t press_down;
     uint8_t index;
@@ -39,6 +40,7 @@ typedef struct {
         uint8_t cnt;
     } touch_report;
 } __attribute__((packed)) hid_report_t;
+#endif
 
 /**
  * @brief Initialize tinyusb device.
@@ -49,7 +51,7 @@ typedef struct {
  */
 esp_err_t app_usb_init(void);
 
-#if CFG_TUD_HID
+#if CONFIG_HID_TOUCH_ENABLE
 /**
  * @brief Report key press in the keyboard, using array here
  *

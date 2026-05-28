@@ -17,7 +17,6 @@
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
-#include "lvgl.h"
 
 #include "sdkconfig.h"
 #include "esp_idf_version.h"
@@ -28,8 +27,12 @@
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 #define ESP_LCD_DPI_PANEL_DMA2D_FLAGS(en_dma2d) \
     .flags.use_dma2d = en_dma2d,
+#define ESP_LCD_DPI_PANEL_COLOR_FORMAT(format) \
+    .pixel_format = format,
 #else
 #define ESP_LCD_DPI_PANEL_DMA2D_FLAGS(en_dma2d)
+#define ESP_LCD_DPI_PANEL_COLOR_FORMAT(format) \
+    .in_color_format = format,
 #endif
 
 /**************************************************************************************************
@@ -129,14 +132,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/**
- * @brief BSP display configuration structure
- *
- */
-typedef struct {
-    void *dummy;    /*!< Prepared for future use. */
-} bsp_display_cfg_t;
 
 /**************************************************************************************************
  *
@@ -321,12 +316,22 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
 #define LCD_CONTROLLER_ILI9881      (CONFIG_BSP_LCD_CONTROLLER_ILI9881)
 #define LCD_CONTROLLER_EK79007      (CONFIG_BSP_LCD_CONTROLLER_EK79007)
 
-#if LV_COLOR_DEPTH == 16
+#if CONFIG_LCD_PIXEL_FORMAT_RGB565
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 #define  MIPI_DPI_PX_FORMAT         (LCD_COLOR_PIXEL_FORMAT_RGB565)
+#else
+#define  MIPI_DPI_PX_FORMAT         (LCD_COLOR_FMT_RGB565)
+#endif
 #define BSP_LCD_COLOR_DEPTH         (16)
-#elif LV_COLOR_DEPTH >= 24
+#elif CONFIG_LCD_PIXEL_FORMAT_RGB888
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 #define  MIPI_DPI_PX_FORMAT         (LCD_COLOR_PIXEL_FORMAT_RGB888)
+#else
+#define  MIPI_DPI_PX_FORMAT         (LCD_COLOR_FMT_RGB888)
+#endif
 #define BSP_LCD_COLOR_DEPTH         (24)
+#else
+#error "Unsupported LCD pixel format"
 #endif
 
 #define  BSP_LCD_DSI_USE_DMA2D          (CONFIG_BSP_LCD_DSI_USE_DMA2D)
@@ -356,7 +361,7 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,             \
         .dpi_clock_freq_mhz = 80,                                \
         .virtual_channel = 0,                                    \
-        .pixel_format = px_format,                               \
+        ESP_LCD_DPI_PANEL_COLOR_FORMAT(px_format)                \
         .num_fbs = 1,                                            \
         .video_timing = {                                        \
             .h_size = 800,                                      \
@@ -388,31 +393,9 @@ esp_codec_dev_handle_t bsp_audio_codec_microphone_init(void);
 #define BSP_LCD_BACKLIGHT_BRIGHTNESS_MIN    (0)
 
 /**
- * @brief Initialize display
- *
- * @note This function initializes display controller and starts LVGL handling task.
- * @note Users can get LCD panel handle from `user_data` in returned display.
- *
- * @return Pointer to LVGL display or NULL when error occurred
- */
-lv_disp_t *bsp_display_start(void);
-
-/**
- * @brief Initialize display
- *
- * This function initializes SPI, display controller and starts LVGL handling task.
- * LCD backlight must be enabled separately by calling `bsp_display_brightness_set()`
- *
- * @param cfg display configuration
- *
- * @return Pointer to LVGL display or NULL when error occurred
- */
-lv_disp_t *bsp_display_start_with_config(const bsp_display_cfg_t *cfg);
-
-/**
  * @brief Get display horizontal resolution
  *
- * @note  This function should be called after calling `bsp_display_new()` or `bsp_display_start()`
+ * @note  This function should be called after calling `bsp_display_new()`
  *
  * @return Horizontal resolution. Return 0 if error occurred.
  */
@@ -421,21 +404,11 @@ uint16_t bsp_display_get_h_res(void);
 /**
  * @brief Get display vertical resolution
  *
- * @note  This function should be called after calling `bsp_display_new()` or `bsp_display_start()`
+ * @note  This function should be called after calling `bsp_display_new()`
  *
  * @return Vertical resolution. Return 0 if error occurred.
  */
 uint16_t bsp_display_get_v_res(void);
-
-/**
- * @brief Get pointer to input device (touch, buttons, ...)
- *
- * @note  The LVGL input device is initialized in `bsp_display_start()` function.
- * @note  This function should be called after calling `bsp_display_start()`.
- *
- * @return Pointer to LVGL input device or NULL when not initialized
- */
-lv_indev_t *bsp_display_get_input_dev(void);
 
 /**
  * @brief Initialize display's brightness
@@ -477,27 +450,6 @@ esp_err_t bsp_display_backlight_on(void);
  *      - ESP_ERR_NOT_SUPPORTED: Always
  */
 esp_err_t bsp_display_backlight_off(void);
-
-/**
- * @brief Take LVGL mutex
- *
- * @note  Display must be already initialized by calling `bsp_display_start()`
- *
- * @param[in] timeout_ms: Timeout in [ms]. 0 will block indefinitely.
- *
- * @return
- *      - true:  Mutex was taken
- *      - false: Mutex was NOT taken
- */
-bool bsp_display_lock(uint32_t timeout_ms);
-
-/**
- * @brief Give LVGL mutex
- *
- * @note  Display must be already initialized by calling `bsp_display_start()`
- *
- */
-void bsp_display_unlock(void);
 
 /**
  * @brief Initialize ldo power

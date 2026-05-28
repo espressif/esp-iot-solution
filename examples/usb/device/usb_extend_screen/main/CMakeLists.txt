@@ -12,6 +12,8 @@ endif()
 
 if(CONFIG_IDF_TARGET_ESP32P4)
     list(APPEND srcs "app_lcd_p4.c")
+elseif(CONFIG_IDF_TARGET_ESP32S31)
+    list(APPEND srcs "app_lcd_s31.c")
 elseif(CONFIG_IDF_TARGET_ESP32S3)
     list(APPEND srcs "app_lcd_s3.c")
 endif()

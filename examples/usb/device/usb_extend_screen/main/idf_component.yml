@@ -1,7 +1,8 @@
-version: 0.1.0
+version: 0.2.0
 targets:
   - esp32p4
   - esp32s3
+  - esp32s31
 dependencies:
   idf: ">=5.3"
   espressif/tinyusb: "*"
@@ -13,8 +14,12 @@ dependencies:
     rules:
       - if: "target in [esp32p4]"
     override_path: "../common_components/esp32_p4_function_ev_board"
+  esp32_s31_korvo_1:
+    rules:
+      - if: "target in [esp32s31]"
+    override_path: "../common_components/esp32_s31_korvo_1"
   espressif/esp32_s3_lcd_ev_board:
-    version: "^3.*"
+    version: "^4.*"
     rules:
       - if: "target in [esp32s3]"
   bsp_extra:
@@ -22,9 +27,21 @@ dependencies:
       - if: "target in [esp32s3]"
     override_path: "../common_components/bsp_extra"
   espressif/esp_new_jpeg:
-    version: "^0.5.0"
+    version: "^1.0.1"
     rules:
       - if: "target in [esp32s3]"
   espressif/usb_device_uac:
-    version: "^1.1.0"
+    version: "*"
     override_path: "../../../../../components/usb/usb_device_uac"
+  espressif/esp_lcd_touch_ft5x06:
+    version: "^1.1.0~1"
+    rules:
+      - if: "target in [esp32p4, esp32s3]"
+  espressif/esp_lcd_touch_gt911:
+    version: "^1.2.0~2"
+    rules:
+      - if: "target in [esp32p4, esp32s3]"
+  espressif/esp_lcd_touch_gt1151:
+    version: "^1.1.0~1"
+    rules:
+      - if: "target in [esp32p4, esp32s3, esp32s31]"

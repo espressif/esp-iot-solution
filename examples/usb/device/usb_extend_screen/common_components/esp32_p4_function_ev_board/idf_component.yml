@@ -6,13 +6,9 @@ dependencies:
     public: true
     version: ^1
 
-  lvgl/lvgl:
-    version: ">=8"
-    public: true
-
   espressif/esp_lcd_ili9881c: "*"
 
-  espressif/esp_lcd_ek79007: "^0.1.0"
+  espressif/esp_lcd_ek79007: "^2.0.2~1"
 
   esp_lcd_touch_gt911:
     version: "^1"
@@ -22,15 +18,7 @@ dependencies:
     version: "^1"
     public: true
 
-  chmorgan/esp-audio-player:
-    version: "1.0.*"
-    public: true
-
-  chmorgan/esp-file-iterator:
-    version: "1.0.0"
-    public: true
-
 description: Board Support Package for ESP32-P4-Function-ev-board
 targets:
 - esp32p4
-version: 0.0.1
+version: 0.1.0

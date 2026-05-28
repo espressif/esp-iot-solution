@@ -11,14 +11,11 @@
 #include "driver/gpio.h"
 #include "driver/i2s_std.h"
 
-#include "audio_player.h"
-#include "file_iterator.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define CODEC_DEFAULT_SAMPLE_RATE          (16000)
+#define CODEC_DEFAULT_SAMPLE_RATE          (48000)
 #define CODEC_DEFAULT_BIT_WIDTH            (16)
 #define CODEC_DEFAULT_ADC_VOLUME           (24.0)
 #define CODEC_DEFAULT_CHANNEL              (2)
@@ -116,31 +113,6 @@ esp_err_t bsp_extra_i2s_write(void *audio_buffer, size_t len, size_t *bytes_writ
  *      - Others: Fail
  */
 esp_err_t bsp_extra_codec_init();
-
-/**
- * @brief Initialize audio player task.
- *
- * @param path file path
- *
- * @return
- *      - ESP_OK: Success
- *      - Others: Fail
- */
-esp_err_t bsp_extra_player_init(void);
-
-esp_err_t bsp_extra_player_del(void);
-
-esp_err_t bsp_extra_file_instance_init(const char *path, file_iterator_instance_t **ret_instance);
-
-esp_err_t bsp_extra_player_play_index(file_iterator_instance_t *instance, int index);
-
-esp_err_t bsp_extra_player_play_file(const char *file_path);
-
-void bsp_extra_player_register_callback(audio_player_cb_t cb, void *user_data);
-
-bool bsp_extra_player_is_playing_by_path(const char *file_path);
-
-bool bsp_extra_player_is_playing_by_index(file_iterator_instance_t *instance, int index);
 
 #ifdef __cplusplus
 }

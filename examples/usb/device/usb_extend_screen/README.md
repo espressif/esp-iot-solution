@@ -2,10 +2,11 @@
 
 Use [LaunchPad](https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml) to flash this example.
 
-The USB extended display example allows the [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) / [ESP32_P4_FUNCTION_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) development boards to function as a secondary display for Windows. It supports the following features:
+The USB extended display example allows the [ESP32_S3_LCD_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html), [ESP32_P4_FUNCTION_EV_BOARD](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html), or [ESP32-S31-Korvo](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp32-s31-korvo-1/index.html) development boards to function as a secondary display for Windows. It supports the following features:
 
 * **P4**: Supports a screen refresh rate of **1024×576@60FPS**.
 * **S3**: Supports a screen refresh rate of **800×480@13FPS**.
+* **S31**: Supports a screen refresh rate of **800×480@60FPS**.
 * Supports up to **five-point touch input**.
 * Supports **audio input and output**.
 
@@ -23,6 +24,12 @@ The USB extended display example allows the [ESP32_S3_LCD_EV_BOARD](https://docs
 2. A **800×480** or **480×480** RGB display from the development kit.
 3. A speaker.
 
+### S31 Development Board
+
+1. [ESP32-S31-Korvo](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp32-s31-korvo-1/user_guide.html#getting-started) development board.
+2. A **800×480** RGB display from the development kit.
+3. A speaker.
+
 ## Hardware Connection
 
 1. Connect the high-speed USB port on the development board to the PC.
@@ -34,9 +41,8 @@ The USB extended display example allows the [ESP32_S3_LCD_EV_BOARD](https://docs
 Build the project, flash it to the board, and run the monitor tool to check the serial output:
 
 1. Run `. ./export.sh` to set up the IDF environment.
-2. Run `idf.py set-target esp32p4` to set the target chip.
-3. If you encounter any errors in the previous step, run `pip install "idf-component-manager~=1.1.4"` to upgrade the component manager.
-4. Run `idf.py -p PORT flash monitor` to build, flash, and monitor the project.
+2. Run `idf.py set-target <target>` to set the target chip. `<target>` can be `esp32p4`, `esp32s3`, or `esp32s31`.
+3. Run `idf.py -p PORT flash monitor` to build, flash, and monitor the project.
 
 (To exit the serial monitor, press `Ctrl-]`.)
 
