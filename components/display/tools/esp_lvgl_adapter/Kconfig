@@ -27,12 +27,29 @@ config ESP_LVGL_ADAPTER_ENABLE_FREETYPE
         - Enable CONFIG_LV_USE_FREETYPE in LVGL configuration
 
         Stack Configuration:
-        - LVGL v8: Set CONFIG_ESP_MAIN_TASK_STACK_SIZE >= 32768
-        - LVGL v9: Set CONFIG_LV_DRAW_THREAD_STACK_SIZE >= 32768
+        - LVGL v8: FreeType font initialization runs in the caller task.
+        - LVGL v9: FreeType glyph rendering runs on LVGL draw threads.
 
         Limitations:
         - LVGL v8: Cannot use LVGL virtual filesystem (lv_fs) for fonts
         - LVGL v9: Can use virtual filesystem paths like "F:font.ttf"
+
+config ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL
+    bool "Reduce FreeType render pool stack usage"
+    depends on ESP_LVGL_ADAPTER_ENABLE_FREETYPE
+    default n
+    help
+        Reduce FreeType's render pool from 16KB to 4KB. On LVGL v9, this also
+        removes LVGL's conservative 32KB FreeType draw-stack build-time check.
+
+config ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM
+    bool "Allocate LVGL FreeRTOS thread stacks in PSRAM"
+    depends on SPIRAM
+    depends on FREERTOS_TASK_CREATE_ALLOW_EXT_MEM
+    default n
+    help
+        Experimental. Allocate LVGL-created FreeRTOS thread stacks, including
+        LVGL v9 draw threads, in PSRAM when the LVGL FreeRTOS backend is used.
 
 config ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
     bool "Enable FPS statistics"

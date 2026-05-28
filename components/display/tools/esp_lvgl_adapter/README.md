@@ -463,8 +463,12 @@ lv_obj_set_style_text_font(label, font30, 0);
 
 | LVGL Version | Required Setting | Explanation |
 |--------------|------------------|-------------|
-| v8 | `CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768` | Font initialization runs on calling thread |
-| v9 | `CONFIG_LV_DRAW_THREAD_STACK_SIZE=32768` | Font rendering runs on draw threads |
+| v8 | Ensure the caller task has enough stack | Font initialization runs on calling thread |
+| v9 | Ensure LVGL draw threads have enough stack | Font rendering runs on draw threads |
+
+Enable `ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL` to reduce FreeType's render pool from 16KB to 4KB. With LVGL v9, this also removes LVGL's conservative 32KB build-time diagnostic when a smaller draw-thread stack is configured.
+
+Enable `ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM` only after validating PSRAM stack safety for the target. This experimental option moves LVGL-created FreeRTOS thread stacks, including LVGL v9 draw threads, to PSRAM.
 
 **Limitations**:
 - LVGL v8: Does not support LVGL virtual filesystem (`lv_fs`), use direct file paths or memory buffers
@@ -757,8 +761,8 @@ ppa_ll_srm_bypass_mb_order(platform->hal.dev, true);
 
 **Solutions**:
 - Ensure LVGL FreeType is enabled (`CONFIG_LV_USE_FREETYPE=y`)
-- LVGL v8: Set `CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768`
-- LVGL v9: Set `CONFIG_LV_DRAW_THREAD_STACK_SIZE=32768`
+- If using a smaller LVGL v9 draw-thread stack, enable `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL`.
+- If crashes persist, increase the caller task stack on LVGL v8 or `CONFIG_LV_DRAW_THREAD_STACK_SIZE` on LVGL v9.
 
 ### Screen Tearing or Flicker
 

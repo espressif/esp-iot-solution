@@ -48,7 +48,7 @@ if(EXISTS "${assets_root}")
         IMPORT_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
     list(APPEND asset_targets assets_sjpg_bin)
 
-    if(target STREQUAL "esp32p4")
+    if(target STREQUAL "esp32p4" OR target STREQUAL "esp32s31")
         spiffs_create_partition_assets(pjpg "${assets_root}/png" FLASH_IN_PROJECT
             MMAP_FILE_SUPPORT_FORMAT ".png"
             MMAP_SUPPORT_PJPG
