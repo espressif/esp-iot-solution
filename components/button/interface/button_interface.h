@@ -22,6 +22,9 @@ struct button_driver_t {
     /*!< (necessary) Get key level */
     uint8_t (*get_key_level)(button_driver_t *button_driver);
 
+    /*!< (optional) Get hardware data */
+    int (*get_hardware_data)(button_driver_t *button_driver);
+
     /*!< (optional) Enter Power Save cb */
     esp_err_t (*enter_power_save)(button_driver_t *button_driver);
 

@@ -596,6 +596,16 @@ uint8_t iot_button_get_key_level(button_handle_t btn_handle)
     return level;
 }
 
+int iot_button_get_hardware_data(button_handle_t btn_handle)
+{
+    BTN_CHECK(NULL != btn_handle, "Pointer of handle is invalid", 0);
+    button_dev_t *btn = (button_dev_t *) btn_handle;
+    if (btn->driver->get_hardware_data) {
+        return btn->driver->get_hardware_data(btn->driver);
+    }
+    return -1;
+}
+
 esp_err_t iot_button_resume(void)
 {
     if (!g_button_timer_handle) {
