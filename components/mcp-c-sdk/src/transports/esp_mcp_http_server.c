@@ -339,7 +339,7 @@ static esp_err_t esp_mcp_http_apply_protocol_version(httpd_req_t *req,
                 xSemaphoreTake(mcp_http->sse_mutex, portMAX_DELAY) == pdTRUE) {
             esp_mcp_http_session_t *session = esp_mcp_http_session_find_locked(mcp_http, session_id);
             if (session && session->protocol_version[0]) {
-                strncpy(buf, session->protocol_version, sizeof(buf) - 1);
+                snprintf(buf, sizeof(buf), "%s", session->protocol_version);
                 buf[sizeof(buf) - 1] = '\0';
                 proto_to_use = buf;
             }
@@ -347,8 +347,7 @@ static esp_err_t esp_mcp_http_apply_protocol_version(httpd_req_t *req,
         }
     }
 
-    strncpy(out_proto, proto_to_use, out_proto_len - 1);
-    out_proto[out_proto_len - 1] = '\0';
+    snprintf(out_proto, out_proto_len, "%s", proto_to_use);
     return ESP_OK;
 }
 
@@ -373,8 +372,7 @@ static bool esp_mcp_http_parse_host_port(const char *authority,
         if (host_len >= out_host_sz) {
             return false;
         }
-        memcpy(out_host, authority, host_len);
-        out_host[host_len] = '\0';
+        snprintf(out_host, out_host_sz, "%.*s", (int)host_len, authority);
         if (rb[1] == ':' && rb[2] != '\0') {
             snprintf(out_port, out_port_sz, "%s", rb + 2);
         }
@@ -387,8 +385,7 @@ static bool esp_mcp_http_parse_host_port(const char *authority,
         if (host_len >= out_host_sz) {
             return false;
         }
-        memcpy(out_host, authority, host_len);
-        out_host[host_len] = '\0';
+        snprintf(out_host, out_host_sz, "%.*s", (int)host_len, authority);
         snprintf(out_port, out_port_sz, "%s", colon + 1);
     } else {
         snprintf(out_host, out_host_sz, "%s", authority);
@@ -451,8 +448,7 @@ static esp_err_t esp_mcp_http_origin_check(httpd_req_t *req, char *out_origin, s
         if (host_part_len > 0) {
             char authority[160] = {0};
             if (host_part_len < sizeof(authority)) {
-                memcpy(authority, origin_host, host_part_len);
-                authority[host_part_len] = '\0';
+                snprintf(authority, sizeof(authority), "%.*s", (int)host_part_len, origin_host);
 
                 char o_host[128] = {0};
                 char o_port[16] = {0};
@@ -468,7 +464,7 @@ static esp_err_t esp_mcp_http_origin_check(httpd_req_t *req, char *out_origin, s
     }
 
     if (valid && out_origin && out_len > origin_len) {
-        memcpy(out_origin, origin, origin_len + 1);
+        snprintf(out_origin, out_len, "%s", origin);
     }
 
     free(origin);
@@ -2690,7 +2686,7 @@ static esp_err_t esp_mcp_http_get_handler(httpd_req_t *req)
     }
     client->sockfd = -1;
     snprintf(client->session_id, sizeof(client->session_id), "%s", session_id);
-    strncpy(client->protocol_version, proto_hdr, sizeof(client->protocol_version) - 1);
+    snprintf(client->protocol_version, sizeof(client->protocol_version), "%s", proto_hdr);
     client->req = async_req;
     client->owner = mcp_http;
     client->sockfd = httpd_req_to_sockfd(async_req);
