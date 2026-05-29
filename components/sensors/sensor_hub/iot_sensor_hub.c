@@ -239,7 +239,7 @@ static void sensor_default_task(void *arg)
         xSemaphoreTake(s_sensor_node_mutex, portMAX_DELAY);
         SLIST_FOREACH(node, p_sensor_list_head, next) {
             if ((uxBits >> (node->p_sensor->event_bit)) & 0x01) {
-                node->p_sensor->impl->acquire(node->p_sensor->driver_handle, &sensor_data_group);
+                ESP_ERROR_CHECK_WITHOUT_ABORT(node->p_sensor->impl->acquire(node->p_sensor->driver_handle, &sensor_data_group));
                 acquire_time = sensor_get_timestamp_us();
                 for (uint8_t i = 0; i < sensor_data_group.number; i++) {
                     /*.event_id and .data assignment during acquire stage*/
@@ -248,7 +248,7 @@ static void sensor_default_task(void *arg)
                     sensor_data_group.sensor_data[i].sensor_name = node->p_sensor->name;
                     sensor_data_group.sensor_data[i].min_delay = node->p_sensor->min_delay;
                     sensor_data_group.sensor_data[i].sensor_addr = node->p_sensor->addr;
-                    sensors_event_post(node->p_sensor->event_base, sensor_data_group.sensor_data[i].event_id, &(sensor_data_group.sensor_data[i]), sizeof(sensor_data_t), 0);
+                    ESP_ERROR_CHECK_WITHOUT_ABORT(sensors_event_post(node->p_sensor->event_base, sensor_data_group.sensor_data[i].event_id, &(sensor_data_group.sensor_data[i]), sizeof(sensor_data_t), 0));
                 }
             }
         }

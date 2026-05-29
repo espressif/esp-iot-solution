@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.5 - 2026-5-29
+
+- Added error check to the task acquisition and event post
+- Propagated acquisition errors to the task
+
 ## 0.1.4 - 2026-1-23
 
 - Fix GPIO driver component requirement in CMake for newer ESP-IDF versions

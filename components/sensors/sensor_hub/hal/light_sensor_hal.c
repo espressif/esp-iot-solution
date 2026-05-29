@@ -173,18 +173,27 @@ esp_err_t light_sensor_acquire(sensor_light_handle_t sensor, sensor_data_group_t
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_LIGHT_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     ret = p_sensor->impl->acquire_rgbw(&data_group->sensor_data[i].rgbw.r, &data_group->sensor_data[i].rgbw.g,
                                        &data_group->sensor_data[i].rgbw.b, &data_group->sensor_data[i].rgbw.w);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_RGBW_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     ret = p_sensor->impl->acquire_uv(&data_group->sensor_data[i].uv.uv, &data_group->sensor_data[i].uv.uva,
                                      &data_group->sensor_data[i].uv.uvb);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_UV_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     data_group->number = i;
     return ESP_OK;

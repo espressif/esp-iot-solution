@@ -165,11 +165,17 @@ esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_grou
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_GYRO_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     ret = p_sensor->impl->acquire_acce(&data_group->sensor_data[i].acce.x, &data_group->sensor_data[i].acce.y, &data_group->sensor_data[i].acce.z);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_ACCE_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     data_group->number = i;
     return ESP_OK;
