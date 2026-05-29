@@ -1,0 +1,16 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.0"
+
+  espressif/cjson:
+    version: "*"
+
+  espressif2022/esp_emote_gen_player:
+    version: "*"
+
+  espressif/esp_vocat:
+    version: "*"
+
+  espressif/touch_slider_sensor: ^0.2.0
+
+  espressif/touch_button: ^0.1.0

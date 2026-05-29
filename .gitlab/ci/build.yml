@@ -41,8 +41,9 @@
     EXAMPLE_APPEND_ARGS: ""
     EXAMPLE_BOARD: "default"
     BUILD_RECURSIVE: "1"
+    EXAMPLE_PYTHON_DEPS: ""
   script:
-    - pip install idf_build_apps
+    - pip install idf_build_apps ${EXAMPLE_PYTHON_DEPS}
     - |
       python tools/build_apps.py ${EXAMPLE_DIR} \
               --config ${EXAMPLE_CONFIG} \
@@ -349,6 +350,16 @@ build_example_bluetooth_ble_remote_control:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_remote_control
+
+build_example_bluetooth_ble_uart_service:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_uart_service
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_uart_service
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+    EXAMPLE_PYTHON_DEPS: "numpy Pillow"
 
 build_example_camera_basic:
   extends:

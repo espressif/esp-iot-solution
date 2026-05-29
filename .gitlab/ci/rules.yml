@@ -586,6 +586,9 @@
 .patterns-example_bluetooth_ble_remote_control: &patterns-example_bluetooth_ble_remote_control
   - "examples/bluetooth/ble_remote_control/**/*"
 
+.patterns-example_bluetooth_ble_uart_service: &patterns-example_bluetooth_ble_uart_service
+  - "examples/bluetooth/ble_uart_service/**/*"
+
 .patterns-example_camera_basic: &patterns-example_camera_basic
   - "examples/camera/basic/**/*"
 
@@ -1093,6 +1096,16 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-example_bluetooth_ble_remote_control
+
+.rules:build:example_bluetooth_ble_uart_service:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_uart_service
 
 .rules:build:example_bluetooth_ble_l2cap_coc:
   rules:
