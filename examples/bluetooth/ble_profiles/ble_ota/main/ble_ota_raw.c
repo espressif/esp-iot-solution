@@ -28,65 +28,31 @@ static const char *TAG = "ble_ota_raw";
 static RingbufHandle_t s_ringbuf = NULL;
 static esp_ota_handle_t s_out_handle;
 static TaskHandle_t s_ota_task_handle = NULL;
+static esp_partition_t s_ota_update_partition;
+static bool s_ota_flash_session;
 
-static esp_err_t erase_partition_in_chunks(const esp_partition_t *partition)
+static esp_err_t ble_ota_raw_ota_begin_hook(uint32_t image_size)
 {
-    if (partition == NULL) {
-        return ESP_ERR_INVALID_ARG;
+    esp_err_t err = esp_ota_begin(&s_ota_update_partition, image_size, &s_out_handle);
+    if (err == ESP_OK) {
+        s_ota_flash_session = true;
     }
-
-    for (size_t offset = 0; offset < partition->size; offset += OTA_PRE_ERASE_CHUNK_SIZE) {
-        size_t erase_size = OTA_PRE_ERASE_CHUNK_SIZE;
-        if ((offset + erase_size) > partition->size) {
-            erase_size = partition->size - offset;
-        }
-
-        esp_err_t err = esp_partition_erase_range(partition, offset, erase_size);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "erase failed at 0x%zx, size=0x%zx (%s)",
-                     offset, erase_size, esp_err_to_name(err));
-            return err;
-        }
-
-        ESP_LOGI(TAG, "erase success at 0x%zx, size=0x%zx", offset, erase_size);
-        /* Yield between erase chunks so IDLE can run and feed TWDT. */
-        vTaskDelay(pdMS_TO_TICKS(2));
-    }
-
-    return ESP_OK;
+    return err;
 }
 
-static size_t write_to_ringbuf(const uint8_t *data, size_t size)
+static bool ble_ota_raw_resolve_update_partition(void)
 {
-    BaseType_t done = xRingbufferSend(s_ringbuf, (void *)data, size, (TickType_t)portMAX_DELAY);
-    if (done) {
-        return size;
-    }
-    return 0;
-}
-
-static void ota_task(void *arg)
-{
-    (void)arg;
-
-    esp_partition_t *partition_ptr = NULL;
-    esp_partition_t partition;
+    esp_partition_t *partition_ptr = (esp_partition_t *)esp_ota_get_boot_partition();
+    esp_partition_t partition = { 0 };
     const esp_partition_t *next_partition = NULL;
-    bool ota_in_progress = false;
 
-    uint32_t recv_len = 0, fw_length = 0;
-    uint8_t *data = NULL;
-    size_t item_size = 0;
-    ESP_LOGI(TAG, "ota_task start");
-
-    partition_ptr = (esp_partition_t *)esp_ota_get_boot_partition();
     if (partition_ptr == NULL) {
         ESP_LOGE(TAG, "boot partition NULL!");
-        goto OTA_ERROR;
+        return false;
     }
     if (partition_ptr->type != ESP_PARTITION_TYPE_APP) {
         ESP_LOGE(TAG, "esp_current_partition->type != ESP_PARTITION_TYPE_APP");
-        goto OTA_ERROR;
+        return false;
     }
 
     if (partition_ptr->subtype == ESP_PARTITION_SUBTYPE_APP_FACTORY) {
@@ -104,23 +70,31 @@ static void ota_task(void *arg)
     partition_ptr = (esp_partition_t *)esp_partition_find_first(partition.type, partition.subtype, NULL);
     if (partition_ptr == NULL) {
         ESP_LOGE(TAG, "partition NULL!");
-        goto OTA_ERROR;
+        return false;
     }
 
-    memcpy(&partition, partition_ptr, sizeof(esp_partition_t));
-    ESP_LOGI(TAG, "pre-erase OTA partition, size=%" PRIu32, (uint32_t)partition.size);
-    if (erase_partition_in_chunks(&partition) != ESP_OK) {
-        goto OTA_ERROR;
-    }
+    memcpy(&s_ota_update_partition, partition_ptr, sizeof(esp_partition_t));
+    return true;
+}
 
-    /* Partition has been erased up-front; avoid one-shot erase inside ota_begin. */
-    if (esp_ota_begin(&partition, OTA_WITH_SEQUENTIAL_WRITES, &s_out_handle) != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_begin failed!");
-        goto OTA_ERROR;
+static size_t write_to_ringbuf(const uint8_t *data, size_t size)
+{
+    BaseType_t done = xRingbufferSend(s_ringbuf, (void *)data, size, (TickType_t)portMAX_DELAY);
+    if (done) {
+        return size;
     }
-    ota_in_progress = true;
+    return 0;
+}
 
-    ESP_LOGI(TAG, "wait firmware data from ringbuf!");
+static void ota_task(void *arg)
+{
+    (void)arg;
+
+    uint32_t recv_len = 0, fw_length = 0;
+    uint8_t *data = NULL;
+    size_t item_size = 0;
+
+    ESP_LOGI(TAG, "ota_task start, wait firmware data from ringbuf");
 
     if (s_ringbuf == NULL) {
         ESP_LOGE(TAG, "Ring buffer not initialized");
@@ -154,13 +128,14 @@ static void ota_task(void *arg)
         }
     }
 
-    if (esp_ota_end(s_out_handle) != ESP_OK) {
+    esp_err_t end_err = esp_ota_end(s_out_handle);
+    s_ota_flash_session = false;
+    if (end_err != ESP_OK) {
         ESP_LOGE(TAG, "esp_ota_end failed!");
         goto OTA_ERROR;
     }
-    ota_in_progress = false;
 
-    if (esp_ota_set_boot_partition(&partition) != ESP_OK) {
+    if (esp_ota_set_boot_partition(&s_ota_update_partition) != ESP_OK) {
         ESP_LOGE(TAG, "esp_ota_set_boot_partition failed!");
         goto OTA_ERROR;
     }
@@ -170,9 +145,9 @@ static void ota_task(void *arg)
     esp_restart();
 
 OTA_ERROR:
-    if (ota_in_progress) {
+    if (s_ota_flash_session) {
         esp_ota_abort(s_out_handle);
-        ota_in_progress = false;
+        s_ota_flash_session = false;
     }
     s_ota_task_handle = NULL;
     ESP_LOGE(TAG, "OTA failed");
@@ -192,7 +167,12 @@ bool ble_ota_raw_ringbuf_init(uint32_t ringbuf_size)
         vRingbufferDelete(s_ringbuf);
     }
     s_ringbuf = xRingbufferCreate(ringbuf_size, RINGBUF_TYPE_BYTEBUF);
-    return s_ringbuf != NULL;
+    if (s_ringbuf == NULL) {
+        return false;
+    }
+    /* START ACK byte 6 send window (sectors) = ringbuf bytes / 4 KiB (same formula as default macro). */
+    esp_ble_ota_raw_set_sector_send_window_for_ringbuf(ringbuf_size);
+    return true;
 }
 
 bool ble_ota_raw_task_init(void)
@@ -206,6 +186,13 @@ bool ble_ota_raw_task_init(void)
         ESP_LOGW(TAG, "OTA task already created");
         return true;
     }
+
+    if (!ble_ota_raw_resolve_update_partition()) {
+        return false;
+    }
+    s_ota_flash_session = false;
+
+    esp_ble_ota_raw_set_ota_begin_cb(ble_ota_raw_ota_begin_hook);
 
     BaseType_t ret = xTaskCreate(&ota_task, "ota_task", OTA_TASK_STACK_SIZE, NULL, 5, &s_ota_task_handle);
     if (ret != pdPASS) {

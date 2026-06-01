@@ -27,6 +27,36 @@ extern "C" {
 typedef void (*esp_ble_ota_raw_recv_fw_cb_t)(uint8_t *buf, uint32_t length);
 
 /**
+ * @brief Optional hook to open the flash OTA session (e.g. @c esp_ota_begin) on START.
+ *
+ * Invoked with the firmware length from START after RAM is allocated, before @c start_ota
+ * is set and before START CMD ACK is sent. If this returns non-ESP_OK, START is rejected.
+ *
+ * @param[in] image_size_bytes  Total firmware size from START payload.
+ *
+ * @return ESP_OK on success, or an error from the application OTA begin path.
+ */
+typedef esp_err_t (*esp_ble_ota_raw_ota_begin_cb_t)(uint32_t image_size_bytes);
+
+/**
+ * @brief Register OTA flash begin hook (e.g. @c esp_ota_begin).
+ *
+ * Call from the application before the host may send START. May be NULL to skip.
+ */
+void esp_ble_ota_raw_set_ota_begin_cb(esp_ble_ota_raw_ota_begin_cb_t cb);
+
+/**
+ * @brief Derive sector send window from firmware ring buffer capacity.
+ *
+ * Window is @p ringbuf_capacity_bytes / 4096 (one sector), clamped to 1..64, and sent in START
+ * ACK byte 6 (byte 7 reserved). Call with the same capacity passed to @c xRingbufferCreate (e.g.
+ * example default @c BLE_OTA_RAW_RINGBUF_DEFAULT_SIZE gives window 3).
+ *
+ * @param ringbuf_capacity_bytes  Ring buffer size in bytes.
+ */
+void esp_ble_ota_raw_set_sector_send_window_for_ringbuf(uint32_t ringbuf_capacity_bytes);
+
+/**
  * @brief Initialize BLE OTA profile over ble_conn_mgr.
  *
  * Registers OTA service (0x8018) and DIS service.

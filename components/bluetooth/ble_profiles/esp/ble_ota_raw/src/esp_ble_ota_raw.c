@@ -23,6 +23,7 @@
 static const char *TAG = "esp_ble_ota_raw";
 
 static esp_ble_ota_raw_recv_fw_cb_t s_recv_fw_cb;
+static esp_ble_ota_raw_ota_begin_cb_t s_ota_begin_cb;
 static bool s_dis_inited_by_ota_raw = false;
 typedef struct {
     bool start_ota;
@@ -37,6 +38,9 @@ typedef struct {
 static ble_ota_context_t s_ota_ctx = {
     .ota_total_len = UINT32_MAX,
 };
+
+/** START ACK byte 6 (send window sectors); byte 7 reserved. Set by esp_ble_ota_raw_set_sector_send_window_for_ringbuf(). */
+static uint8_t s_sector_send_window = 1;
 
 #define BLE_OTA_CMD_START                     0x0001
 #define BLE_OTA_CMD_STOP                      0x0002
@@ -130,6 +134,27 @@ static esp_err_t send_cmd_ack(uint16_t cmd_id, ble_ota_cmd_ack_status_t ack_stat
     put_u16_le(&ack[0], BLE_OTA_CMD_ACK);
     put_u16_le(&ack[2], cmd_id);
     put_u16_le(&ack[4], (uint16_t)ack_status);
+    crc16 = crc16_ccitt(ack, BLE_OTA_CMD_CRC_DATA_LEN);
+    put_u16_le(&ack[18], crc16);
+
+    return esp_ble_ota_notify_command_raw(ack, sizeof(ack));
+}
+
+/**
+ * START command ACK may carry extra fields after ack_status (still covered by CRC bytes 0–17).
+ * Byte 6: recommended sector send window (central pipelines at most this many sectors). Byte 7: reserved (0).
+ */
+static esp_err_t send_start_cmd_ack(ble_ota_cmd_ack_status_t ack_status)
+{
+    uint8_t ack[BLE_OTA_CMD_PACKET_LEN] = {0};
+    uint16_t crc16;
+
+    put_u16_le(&ack[0], BLE_OTA_CMD_ACK);
+    put_u16_le(&ack[2], BLE_OTA_CMD_START);
+    put_u16_le(&ack[4], (uint16_t)ack_status);
+    if (ack_status == BLE_OTA_CMD_ACK_ACCEPT && s_sector_send_window != 0) {
+        ack[6] = s_sector_send_window;
+    }
     crc16 = crc16_ccitt(ack, BLE_OTA_CMD_CRC_DATA_LEN);
     put_u16_le(&ack[18], crc16);
 
@@ -236,7 +261,7 @@ static void handle_start_cmd(const uint8_t *data)
 {
     if (s_ota_ctx.start_ota) {
         ESP_LOGW(TAG, "start cmd while ota running");
-        (void)send_cmd_ack(BLE_OTA_CMD_START, BLE_OTA_CMD_ACK_REJECT);
+        (void)send_start_cmd_ack(BLE_OTA_CMD_ACK_REJECT);
         return;
     }
 
@@ -245,7 +270,7 @@ static void handle_start_cmd(const uint8_t *data)
     if (s_ota_ctx.ota_total_len == 0) {
         ESP_LOGW(TAG, "reject start cmd with zero firmware length");
         reset_ota_state(false);
-        (void)send_cmd_ack(BLE_OTA_CMD_START, BLE_OTA_CMD_ACK_REJECT);
+        (void)send_start_cmd_ack(BLE_OTA_CMD_ACK_REJECT);
         return;
     }
 
@@ -253,19 +278,31 @@ static void handle_start_cmd(const uint8_t *data)
     if (!s_ota_ctx.fw_sector_buf) {
         ESP_LOGE(TAG, "alloc sector buffer failed");
         reset_ota_state(true);
-        (void)send_cmd_ack(BLE_OTA_CMD_START, BLE_OTA_CMD_ACK_REJECT);
+        (void)send_start_cmd_ack(BLE_OTA_CMD_ACK_REJECT);
         return;
     }
 
     memset(s_ota_ctx.fw_sector_buf, 0, BLE_OTA_SECTOR_SIZE);
-    s_ota_ctx.start_ota = true;
     s_ota_ctx.recv_total_len = 0;
     s_ota_ctx.cur_sector = 0;
     s_ota_ctx.cur_packet = 0;
     s_ota_ctx.fw_sector_offset = 0;
 
     ESP_LOGI(TAG, "ota start, fw_len=%lu", (unsigned long)s_ota_ctx.ota_total_len);
-    (void)send_cmd_ack(BLE_OTA_CMD_START, BLE_OTA_CMD_ACK_ACCEPT);
+
+    if (s_ota_begin_cb) {
+        esp_err_t ota_err = s_ota_begin_cb(s_ota_ctx.ota_total_len);
+        if (ota_err != ESP_OK) {
+            ESP_LOGE(TAG, "ota begin hook failed: %s", esp_err_to_name(ota_err));
+            reset_ota_state(true);
+            (void)send_start_cmd_ack(BLE_OTA_CMD_ACK_REJECT);
+            return;
+        }
+    }
+
+    s_ota_ctx.start_ota = true;
+    ESP_LOGI(TAG, "START accept, sector_send_window=%u", (unsigned int)s_sector_send_window);
+    (void)send_start_cmd_ack(BLE_OTA_CMD_ACK_ACCEPT);
 }
 
 uint32_t esp_ble_ota_raw_get_fw_length(void)
@@ -335,6 +372,23 @@ esp_err_t esp_ble_ota_raw_recv_fw_data_callback(esp_ble_ota_raw_recv_fw_cb_t cal
     return ESP_OK;
 }
 
+void esp_ble_ota_raw_set_ota_begin_cb(esp_ble_ota_raw_ota_begin_cb_t cb)
+{
+    s_ota_begin_cb = cb;
+}
+
+void esp_ble_ota_raw_set_sector_send_window_for_ringbuf(uint32_t ringbuf_capacity_bytes)
+{
+    uint32_t w = ringbuf_capacity_bytes / (uint32_t)BLE_OTA_SECTOR_SIZE;
+    if (w < 1) {
+        w = 1;
+    }
+    if (w > 64) {
+        w = 64;
+    }
+    s_sector_send_window = (uint8_t)w;
+}
+
 esp_err_t esp_ble_ota_raw_init(void)
 {
     esp_err_t ret;
@@ -361,6 +415,8 @@ esp_err_t esp_ble_ota_raw_deinit(void)
     esp_err_t ret_dis = ESP_OK;
     esp_err_t ret_ota_svc;
 
+    s_recv_fw_cb = NULL;
+    s_ota_begin_cb = NULL;
     reset_ota_state(true);
 
     if (s_dis_inited_by_ota_raw) {

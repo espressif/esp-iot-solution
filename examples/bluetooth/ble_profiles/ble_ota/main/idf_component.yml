@@ -4,7 +4,7 @@ dependencies:
     version: "~1.*"
     override_path: "../../../../../components/bluetooth/ble_conn_mgr"
   ble_ota_raw:
-    version: "~0.1.*"
+    version: "~0.2.*"
     override_path: "../../../../../components/bluetooth/ble_profiles/esp/ble_ota_raw"
   ble_services:
     version: "~1.*"
