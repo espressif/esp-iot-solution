@@ -4,13 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "app_usb_host.h"
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "usb/usb_host.h"
+#include "app_usb_host.h"
 
 static const char *TAG = "app_usb_host";
 
@@ -49,7 +48,7 @@ static void usb_host_task(void *arg)
     const usb_host_config_t host_config = {
         .skip_phy_setup = false,
         .intr_flags = ESP_INTR_FLAG_LOWMED,
-#if CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3
+#if (CONFIG_IDF_TARGET_ESP32S2 || CONFIG_IDF_TARGET_ESP32S3) &&  (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0))
         //default: (RX: 104, NPTX: 64, PTX: 32), fifo_size = 200
         .fifo_settings_custom = {
             .nptx_fifo_lines = 56,

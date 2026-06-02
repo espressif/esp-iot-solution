@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "app_uac_manager.h"
-
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,15 +18,16 @@
 #include "esp_timer.h"
 #include "usb/uac_host.h"
 #include "app_web.h"
+#include "app_uac_manager.h"
 
 #define APP_UAC_MAX_ALT_NUM              8
-#define APP_UAC_EVENT_QUEUE_LEN          24
+#define APP_UAC_EVENT_QUEUE_LEN          12
 #define APP_UAC_MIC_FRAME_MS             50
 #define APP_UAC_MIC_MAX_FRAME_BYTES      49152
 #define APP_UAC_RX_BUFFER_SIZE           16*1024
 #define APP_UAC_RX_THRESHOLD             APP_UAC_RX_BUFFER_SIZE/6
 #define APP_UAC_TX_BUFFER_SIZE           96*1024
-#define APP_UAC_TX_THRESHOLD             (APP_UAC_TX_BUFFER_SIZE*2/3)
+#define APP_UAC_TX_THRESHOLD             (APP_UAC_TX_BUFFER_SIZE/2)
 #define APP_UAC_PCM_MAX_PAYLOAD          4096
 #define APP_UAC_SPK_REFILL_BYTES         (APP_UAC_TX_BUFFER_SIZE - APP_UAC_TX_THRESHOLD)
 #define APP_UAC_SPK_REFILL_MIN_SLOW_MS   80
@@ -77,21 +76,20 @@ static QueueHandle_t s_event_queue;
 static SemaphoreHandle_t s_lock;
 static app_uac_stream_ctx_t s_mic;
 static app_uac_stream_ctx_t s_spk;
-static uint32_t s_mic_send_count;
 static uint32_t s_spk_write_count;
 static uint32_t s_spk_defer_count;
 static uint32_t s_spk_refill_budget_outstanding;
 static uint32_t s_spk_refill_budget_seq;
 static uint32_t s_spk_refill_budget_packets;
-static uint32_t s_spk_refill_budget_send_fail_count;
 static int64_t s_spk_refill_budget_grant_us;
 static bool s_spk_waiting_first_packet;
-static uint8_t s_mic_frame_buf[APP_UAC_MIC_MAX_FRAME_BYTES];
+static uint8_t *s_mic_rx_buf;
+static size_t s_mic_rx_buf_size;
+static uint8_t *s_mic_frame_buf;
+static size_t s_mic_frame_buf_size;
 static size_t s_mic_frame_len;
 
-static esp_err_t send_spk_refill_budget_locked(void);
-static void spk_refill_budget_reset_locked(void);
-static esp_err_t grant_spk_refill_budget_locked(uint32_t *bytes);
+static esp_err_t mic_buffers_reserve(void);
 
 static app_uac_stream_ctx_t *stream_ctx(app_uac_stream_id_t stream)
 {
@@ -182,7 +180,7 @@ static uint32_t stream_bytes_to_ms_locked(const app_uac_stream_ctx_t *ctx, size_
 static uint32_t spk_refill_slow_ms_locked(void)
 {
     const uint32_t refill_budget_ms = stream_bytes_to_ms_locked(&s_spk, APP_UAC_SPK_REFILL_BYTES);
-    const uint32_t slow_ms = refill_budget_ms / 3;
+    const uint32_t slow_ms = refill_budget_ms / 2;
     return slow_ms > APP_UAC_SPK_REFILL_MIN_SLOW_MS ? slow_ms : APP_UAC_SPK_REFILL_MIN_SLOW_MS;
 }
 
@@ -200,7 +198,22 @@ static esp_err_t stream_start_locked(app_uac_stream_id_t stream)
         return ESP_ERR_INVALID_STATE;
     }
     if (ctx->started) {
+        if (stream == APP_UAC_STREAM_MIC) {
+            esp_err_t reserve_ret = mic_buffers_reserve();
+            if (reserve_ret != ESP_OK) {
+                ESP_LOGE(TAG, "MIC resume failed, RX buffer is unavailable: %s", esp_err_to_name(reserve_ret));
+                return reserve_ret;
+            }
+        }
         return uac_host_device_resume(ctx->handle);
+    }
+
+    if (stream == APP_UAC_STREAM_MIC) {
+        esp_err_t reserve_ret = mic_buffers_reserve();
+        if (reserve_ret != ESP_OK) {
+            ESP_LOGE(TAG, "MIC start failed, RX buffer is unavailable: %s", esp_err_to_name(reserve_ret));
+            return reserve_ret;
+        }
     }
 
     const uac_host_dev_alt_param_t *alt = &ctx->alt[ctx->selected_alt - 1];
@@ -239,6 +252,14 @@ static esp_err_t stream_start_locked(app_uac_stream_id_t stream)
     return ESP_OK;
 }
 
+static void spk_refill_budget_reset_locked(void)
+{
+    s_spk_refill_budget_outstanding = 0;
+    s_spk_refill_budget_packets = 0;
+    s_spk_refill_budget_grant_us = 0;
+    s_spk_waiting_first_packet = false;
+}
+
 static void stream_close_locked(app_uac_stream_ctx_t *ctx)
 {
     if (ctx == &s_spk) {
@@ -261,12 +282,56 @@ static void mic_frame_reset(void)
     s_mic_frame_len = 0;
 }
 
-static void spk_refill_budget_reset_locked(void)
+static void mic_buffers_free(void)
 {
-    s_spk_refill_budget_outstanding = 0;
-    s_spk_refill_budget_packets = 0;
-    s_spk_refill_budget_grant_us = 0;
-    s_spk_waiting_first_packet = false;
+    free(s_mic_rx_buf);
+    s_mic_rx_buf = NULL;
+    s_mic_rx_buf_size = 0;
+
+    free(s_mic_frame_buf);
+    s_mic_frame_buf = NULL;
+    s_mic_frame_buf_size = 0;
+    s_mic_frame_len = 0;
+}
+
+static esp_err_t mic_frame_reserve(size_t target_len)
+{
+    if (target_len == 0 || target_len > APP_UAC_MIC_MAX_FRAME_BYTES || target_len > UINT16_MAX) {
+        ESP_LOGW(TAG, "Invalid MIC frame length: %u", (unsigned)target_len);
+        mic_frame_reset();
+        return ESP_ERR_INVALID_SIZE;
+    }
+    if (s_mic_frame_buf_size >= target_len) {
+        return ESP_OK;
+    }
+
+    uint8_t *buf = realloc(s_mic_frame_buf, target_len);
+    if (!buf) {
+        ESP_LOGE(TAG, "Allocate MIC frame buffer failed len=%u", (unsigned)target_len);
+        mic_buffers_free();
+        return ESP_ERR_NO_MEM;
+    }
+    s_mic_frame_buf = buf;
+    s_mic_frame_buf_size = target_len;
+    s_mic_frame_len = 0;
+    return ESP_OK;
+}
+
+static esp_err_t mic_buffers_reserve(void)
+{
+    if (s_mic_rx_buf_size >= APP_UAC_RX_THRESHOLD) {
+        return ESP_OK;
+    }
+
+    uint8_t *buf = realloc(s_mic_rx_buf, APP_UAC_RX_THRESHOLD);
+    if (!buf) {
+        ESP_LOGE(TAG, "Allocate MIC RX buffer failed len=%u", (unsigned)APP_UAC_RX_THRESHOLD);
+        mic_buffers_free();
+        return ESP_ERR_NO_MEM;
+    }
+    s_mic_rx_buf = buf;
+    s_mic_rx_buf_size = APP_UAC_RX_THRESHOLD;
+    return ESP_OK;
 }
 
 static void uac_device_callback(uac_host_device_handle_t handle, const uac_host_device_event_t event, void *arg)
@@ -373,7 +438,7 @@ static esp_err_t grant_spk_refill_budget_locked(uint32_t *bytes)
     s_spk_refill_budget_grant_us = esp_timer_get_time();
     s_spk_waiting_first_packet = true;
     *bytes = APP_UAC_SPK_REFILL_BYTES;
-    ESP_LOGI(TAG, "SPK refill budget granted seq=%"PRIu32" bytes=%u", s_spk_refill_budget_seq, APP_UAC_SPK_REFILL_BYTES);
+    ESP_LOGI(TAG, "SPK refill budget granted seq=%"PRIu32" bytes=%u outstanding=%"PRIu32, s_spk_refill_budget_seq, APP_UAC_SPK_REFILL_BYTES, s_spk_refill_budget_outstanding);
     return ESP_OK;
 }
 
@@ -388,12 +453,7 @@ static esp_err_t send_spk_refill_budget_locked(void)
     if (ret != ESP_OK) {
         // The browser did not receive this refill budget window, so release it and let the next TX_DONE retry.
         spk_refill_budget_reset_locked();
-        s_spk_refill_budget_send_fail_count++;
-        if (s_spk_refill_budget_send_fail_count == 1 || (s_spk_refill_budget_send_fail_count % 32) == 0) {
-            ESP_LOGW(TAG, "Queue SPK refill budget failed count=%"PRIu32", refill budget reset: %s", s_spk_refill_budget_send_fail_count, esp_err_to_name(ret));
-        }
-    } else {
-        s_spk_refill_budget_send_fail_count = 0;
+        ESP_LOGW(TAG, "Queue SPK refill budget failed, refill budget reset: %s", esp_err_to_name(ret));
     }
     return ret;
 }
@@ -406,10 +466,9 @@ static void send_mic_frames(const uint8_t *data, size_t len)
 
     xSemaphoreTake(s_lock, portMAX_DELAY);
     size_t target_len = stream_frame_bytes_locked(&s_mic, APP_UAC_MIC_FRAME_MS);
+    esp_err_t reserve_ret = mic_frame_reserve(target_len);
     xSemaphoreGive(s_lock);
-    if (target_len == 0 || target_len > APP_UAC_MIC_MAX_FRAME_BYTES || target_len > UINT16_MAX) {
-        ESP_LOGW(TAG, "Invalid MIC frame length: %u", (unsigned)target_len);
-        mic_frame_reset();
+    if (reserve_ret != ESP_OK) {
         return;
     }
 
@@ -422,9 +481,7 @@ static void send_mic_frames(const uint8_t *data, size_t len)
         off += copy_len;
         if (s_mic_frame_len == target_len) {
             esp_err_t ret = app_web_send_mic_pcm(s_mic_frame_buf, s_mic_frame_len);
-            if (ret == ESP_OK) {
-                s_mic_send_count++;
-            } else {
+            if (ret != ESP_OK) {
                 ESP_LOGW(TAG, "MIC PCM send failed: %s", esp_err_to_name(ret));
             }
             mic_frame_reset();
@@ -439,7 +496,7 @@ static void handle_device_event(uac_host_device_handle_t handle, uac_host_device
         app_uac_stream_id_t stream = stream_from_handle(handle);
         stream_close_locked(stream_ctx(stream));
         if (stream == APP_UAC_STREAM_MIC) {
-            mic_frame_reset();
+            mic_buffers_free();
         }
         xSemaphoreGive(s_lock);
         ESP_LOGI(TAG, "UAC device disconnected");
@@ -457,20 +514,31 @@ static void handle_device_event(uac_host_device_handle_t handle, uac_host_device
 
     if (stream == APP_UAC_STREAM_MIC && event == UAC_HOST_DEVICE_EVENT_RX_DONE) {
         // Read all available microphone data and drop it when no browser is listening.
-        uint8_t *rx_buffer = malloc(APP_UAC_RX_THRESHOLD);
-        if (!rx_buffer) {
-            ESP_LOGE(TAG, "MIC rx buffer alloc failed");
+        uint32_t rx_size = 0;
+        uint8_t *rx_buf = NULL;
+        size_t rx_buf_size = 0;
+        bool can_read = false;
+        bool enabled = false;
+        bool handle_match = false;
+        bool has_rx_buf = false;
+        bool has_client = app_web_has_client();
+        xSemaphoreTake(s_lock, portMAX_DELAY);
+        enabled = ctx->enabled;
+        handle_match = ctx->handle == handle;
+        has_rx_buf = s_mic_rx_buf && s_mic_rx_buf_size > 0;
+        can_read = enabled && handle_match && has_rx_buf && has_client;
+        if (can_read) {
+            rx_buf = s_mic_rx_buf;
+            rx_buf_size = s_mic_rx_buf_size;
+        }
+        xSemaphoreGive(s_lock);
+        if (!can_read) {
+            ESP_LOGD(TAG, "Skip MIC RX read: enabled=%d handle_match=%d rx_buf=%d client=%d", enabled, handle_match, has_rx_buf, has_client);
             return;
         }
-        uint32_t rx_size = 0;
-        bool can_read = false;
-        xSemaphoreTake(s_lock, portMAX_DELAY);
-        can_read = ctx->enabled && ctx->handle == handle && app_web_has_client();
-        xSemaphoreGive(s_lock);
-        while (can_read && uac_host_device_read(handle, rx_buffer, APP_UAC_RX_THRESHOLD, &rx_size, 0) == ESP_OK && rx_size > 0) {
-            send_mic_frames(rx_buffer, rx_size);
+        while (uac_host_device_read(handle, rx_buf, rx_buf_size, &rx_size, 0) == ESP_OK && rx_size > 0) {
+            send_mic_frames(rx_buf, rx_size);
         }
-        free(rx_buffer);
         return;
     }
 
@@ -738,7 +806,7 @@ esp_err_t app_uac_set_format(app_uac_stream_id_t stream, uint8_t alt, uint32_t s
         ctx->selected_alt = alt;
         ctx->selected_sample_freq = sample_freq;
         if (stream == APP_UAC_STREAM_MIC) {
-            mic_frame_reset();
+            mic_buffers_free();
         } else {
             spk_refill_budget_reset_locked();
         }
@@ -765,7 +833,7 @@ esp_err_t app_uac_queue_spk_pcm(const uint8_t *data, size_t len)
     }
 
     // uac_host_device_write copies PCM into the UAC TX ring buffer before returning.
-    esp_err_t ret = uac_host_device_write(s_spk.handle, (uint8_t *)data, len, 0);
+    esp_err_t ret = uac_host_device_write(s_spk.handle, (uint8_t *)data, len, pdMS_TO_TICKS(50));
     if (ret == ESP_OK) {
         const int64_t now_us = esp_timer_get_time();
         s_spk_refill_budget_packets++;
@@ -773,7 +841,7 @@ esp_err_t app_uac_queue_spk_pcm(const uint8_t *data, size_t len)
             const int64_t delay_ms = s_spk_refill_budget_grant_us > 0 ? (now_us - s_spk_refill_budget_grant_us) / 1000 : 0;
             const uint32_t slow_ms = spk_refill_slow_ms_locked();
             if (slow_ms > 0 && delay_ms > slow_ms) {
-                ESP_LOGW(TAG, "SPK refill slow seq=%"PRIu32" first_packet_delay=%lldms threshold=%ums refill budget=%u written=%"PRIu32,
+                ESP_LOGW(TAG, "SPK refill slow seq=%"PRIu32" first_packet_delay=%lldms threshold=%"PRIu32"ms refill budget=%d written=%"PRIu32,
                          s_spk_refill_budget_seq, (long long)delay_ms, slow_ms, APP_UAC_SPK_REFILL_BYTES, s_spk_write_count);
             }
             s_spk_waiting_first_packet = false;
@@ -787,7 +855,7 @@ esp_err_t app_uac_queue_spk_pcm(const uint8_t *data, size_t len)
             const int64_t duration_ms = (now_us - s_spk_refill_budget_grant_us) / 1000;
             const uint32_t slow_ms = spk_refill_budget_slow_ms_locked();
             if (slow_ms > 0 && duration_ms > slow_ms) {
-                ESP_LOGW(TAG, "SPK refill budget slow consume seq=%"PRIu32" duration=%lldms threshold=%ums packets=%"PRIu32" refill budget=%u",
+                ESP_LOGW(TAG, "SPK refill budget slow consume seq=%"PRIu32" duration=%lldms threshold=%"PRIu32"ms packets=%"PRIu32" refill budget=%d",
                          s_spk_refill_budget_seq, (long long)duration_ms, slow_ms, s_spk_refill_budget_packets, APP_UAC_SPK_REFILL_BYTES);
             }
             s_spk_refill_budget_packets = 0;
@@ -795,6 +863,8 @@ esp_err_t app_uac_queue_spk_pcm(const uint8_t *data, size_t len)
             s_spk_waiting_first_packet = false;
         }
     } else {
+        ESP_LOGW(TAG, "SPK write failed len=%u seq=%"PRIu32" outstanding=%"PRIu32" packets=%"PRIu32": %s",
+                 (unsigned)len, s_spk_refill_budget_seq, s_spk_refill_budget_outstanding, s_spk_refill_budget_packets, esp_err_to_name(ret));
         spk_refill_budget_reset_locked();
     }
     xSemaphoreGive(s_lock);
@@ -817,12 +887,25 @@ esp_err_t app_uac_request_spk_refill_budget(uint32_t *bytes)
         return ESP_ERR_INVALID_ARG;
     }
     xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (!s_spk.opened || !s_spk.enabled || !s_spk.started || !s_spk.handle) {
+        xSemaphoreGive(s_lock);
+        ESP_LOGW(TAG, "Request SPK refill budget failed, speaker is not ready");
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t ret = uac_host_device_resume(s_spk.handle);
+    if (ret != ESP_OK) {
+        xSemaphoreGive(s_lock);
+        ESP_LOGE(TAG, "Resume SPK for refill budget failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
     // Playback requests are the start of a new browser-side refill budget window.
     spk_refill_budget_reset_locked();
-    esp_err_t ret = grant_spk_refill_budget_locked(bytes);
+    ret = grant_spk_refill_budget_locked(bytes);
     xSemaphoreGive(s_lock);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Request SPK refill budget failed: %s", esp_err_to_name(ret));
+    } else {
+        ESP_LOGI(TAG, "Request SPK refill budget result bytes=%"PRIu32, *bytes);
     }
     return ret;
 }
@@ -841,17 +924,16 @@ esp_err_t app_uac_clear_spk_queue(void)
         xSemaphoreGive(s_lock);
         return ESP_ERR_INVALID_STATE;
     }
-    // With direct writes, stopping playback means flushing the UAC TX ring buffer by suspend/resume.
+    // Stop playback by suspending the OUT stream; the next refill request resumes it.
+    int64_t start_us = esp_timer_get_time();
     spk_refill_budget_reset_locked();
     esp_err_t ret = uac_host_device_suspend(s_spk.handle);
-    if (ret == ESP_OK && s_spk.enabled) {
-        ret = uac_host_device_resume(s_spk.handle);
-    }
     xSemaphoreGive(s_lock);
+    int64_t duration_ms = (esp_timer_get_time() - start_us) / 1000;
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Flush SPK TX ring buffer failed: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Flush SPK TX ring buffer failed after %lldms: %s", (long long)duration_ms, esp_err_to_name(ret));
         return ret;
     }
-    ESP_LOGI(TAG, "SPK TX ring buffer flushed");
+    ESP_LOGI(TAG, "SPK TX ring buffer flushed and suspended in %lldms", (long long)duration_ms);
     return ESP_OK;
 }

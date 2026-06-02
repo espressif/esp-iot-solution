@@ -30,6 +30,8 @@ jobs:
           cp -r examples/common_components/web_wifi examples/common_components/network_test examples/usb/host/usb_ecm_4g_module/components/
           mkdir -p examples/usb/host/usb_rndis_4g_module/components/
           cp -r examples/common_components/web_wifi examples/common_components/network_test examples/usb/host/usb_rndis_4g_module/components/
+          mkdir -p examples/usb/host/usb_camera_mic_spk/components/
+          cp -r examples/common_components/captive_dns examples/usb/host/usb_camera_mic_spk/components/
       - name: Upload components to component service
         uses: espressif/upload-components-ci-action@v1
         with:

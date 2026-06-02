@@ -1,11 +1,9 @@
 | Supported Targets | ESP32-P4 | ESP32-S2 | ESP32-S3 | ESP32-S31 |
 | ----------------- | -------- | -------- | -------- | --------- |
 
-# USB UAC Demo
+# USB Host AV Demo
 
-This example runs a USB Audio Class device from a browser-based audio console.
-
-![Web Console](./_static/web-console.png)
+This example runs USB Audio Class and USB Video Class devices from a browser-based AV console.
 
 ## Features
 
@@ -14,13 +12,15 @@ This example runs a USB Audio Class device from a browser-based audio console.
 - Live microphone playback in the browser with a level meter.
 - Speaker test tone playback.
 - Local audio file playback from the browser to the USB speaker.
+- USB UVC camera detection.
+- MJPEG camera resolution selection and live preview in the browser.
 
 ## Hardware
 
 Required hardware:
 
 - An ESP32 board with USB OTG host capability.
-- A USB Audio Class device with microphone and/or speaker interfaces.
+- A USB Audio Class device with microphone and/or speaker interfaces, and/or a USB Video Class camera with MJPEG support.
 - A proper USB connection and 5 V power for the USB device when required.
 
 Connection example:
@@ -28,7 +28,7 @@ Connection example:
 ```text
 ┌─────────────────┐          ┌─────────────────┐
 │                 │          │                 │
-│ USB UAC Device  ┼──────────┼ 5V              │
+│ USB Device      ┼──────────┼ 5V              │
 │                 ┼──────────┼ GND             │
 │                 │          │    ESP32-xx     │
 │                 ┼──────────┼ USB D+          │
@@ -41,7 +41,7 @@ Connection example:
 Default SoftAP settings:
 
 ```text
-SSID: usb-uac-demo
+SSID: USB-AV-DEMO
 Password: none
 Address: http://192.168.4.1
 ```
@@ -61,14 +61,19 @@ Replace `PORT` and `TARGET` with the serial port of your board.
 
 ## Usage
 
-1. Connect the USB UAC device to the ESP board.
+**Web Console:**
+
+![Web Console](./_static/web-console.png)
+
+1. Connect the USB audio device or USB camera to the ESP board.
 2. Flash the firmware.
-3. Connect a computer or phone to the `usb-uac-demo` SoftAP.
+3. Connect a computer or phone to the `USB-AV-DEMO` SoftAP.
 4. Open `http://192.168.4.1` or use the captive portal pop-up.
 5. Select the microphone and speaker formats.
-6. Enable the microphone or speaker and start testing.
+6. Open the microphone or speaker and start testing.
+7. Select a camera resolution, then open the camera panel to preview MJPEG video.
 
-Keep the browser tab active during audio playback. Browsers may throttle background tabs, which can cause choppy audio.
+Keep the browser tab active during audio playback and camera preview. Browsers may throttle background tabs, which can cause choppy audio or video.
 
 ## Troubleshooting
 

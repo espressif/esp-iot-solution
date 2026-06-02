@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>USB UAC Demo</title>
-    <link rel="stylesheet" href="/assets/style.css?v=20260528f">
+    <title>USB Host AV Console</title>
+    <link rel="stylesheet" href="/assets/style.css?v=20260603a">
   </head>
   <body>
     <main class="shell">
@@ -13,14 +13,14 @@
           <span class="mark"></span>
           <div>
             <div class="title-row">
-              <h1>USB UAC Demo</h1>
+              <h1>USB Host AV Console</h1>
             </div>
             <p class="brand-meta">Espressif Systems</p>
           </div>
         </div>
         <div class="topbar-side">
           <div class="status">
-            <span id="wsStatus" class="pill warn">WS offline</span>
+            <span id="audioWsStatus" class="pill warn">Audio WS offline</span>
             <span id="usbStatus" class="pill">USB idle</span>
           </div>
           <p id="deviceSummary" class="status-summary">Waiting for USB audio device</p>
@@ -58,12 +58,12 @@
             </div>
           </div>
           <div class="controls">
-            <div class="switch-row">
-              <label class="switch"><input id="micEnabled" type="checkbox"><span>Enable</span></label>
+            <label class="field">Format <select id="micFormat"></select></label>
+            <div class="volume-row">
+              <label class="field">Volume <input id="micVolume" type="range" min="0" max="100" value="80"></label>
               <label class="switch"><input id="micMute" type="checkbox"><span>Mute</span></label>
             </div>
-            <label class="field">Volume <input id="micVolume" type="range" min="0" max="100" value="80"></label>
-            <label class="field">Format <select id="micFormat"></select></label>
+            <button id="micEnabled" class="device-power" type="button">Open</button>
           </div>
         </article>
 
@@ -76,12 +76,12 @@
             <span id="spkState" class="pill">Disconnected</span>
           </header>
           <div class="controls">
-            <div class="switch-row">
-              <label class="switch"><input id="spkEnabled" type="checkbox"><span>Enable</span></label>
+            <label class="field">Format <select id="spkFormat"></select></label>
+            <div class="volume-row">
+              <label class="field">Volume <input id="spkVolume" type="range" min="0" max="100" value="80"></label>
               <label class="switch"><input id="spkMute" type="checkbox"><span>Mute</span></label>
             </div>
-            <label class="field">Volume <input id="spkVolume" type="range" min="0" max="100" value="80"></label>
-            <label class="field">Format <select id="spkFormat"></select></label>
+            <button id="spkEnabled" class="device-power" type="button">Open</button>
 
             <div class="tool-group" id="toneGroup">
               <div class="group-title">Tone</div>
@@ -108,6 +108,28 @@
         </article>
       </section>
 
+      <section class="panel camera-panel" id="cameraPanel">
+        <header>
+          <div>
+            <span class="eyebrow">Video Monitor</span>
+            <h2>Camera</h2>
+          </div>
+          <span id="cameraState" class="pill">Disconnected</span>
+        </header>
+        <div class="camera-grid">
+          <div class="controls camera-controls">
+            <label class="field">Format <select id="cameraFormat"></select></label>
+            <label class="field">Resolution <select id="cameraResolution"></select></label>
+            <button id="cameraEnabled" class="device-power" type="button">Open</button>
+          </div>
+          <div class="camera-view" id="cameraView">
+            <img id="cameraStream" alt="Camera stream">
+            <canvas id="cameraCanvas"></canvas>
+            <div id="cameraPlaceholder" class="camera-placeholder">Camera disconnected</div>
+          </div>
+        </div>
+      </section>
+
       <section class="log">
         <header>
           <span class="eyebrow">Runtime</span>
@@ -116,6 +138,6 @@
         <pre id="log"></pre>
       </section>
     </main>
-    <script src="/assets/app.js?v=20260529f"></script>
+    <script src="/assets/app.js?v=20260603b"></script>
   </body>
 </html>

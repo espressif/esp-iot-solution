@@ -17,7 +17,7 @@ menu "Example Configuration"
     menu "WiFi Settings"
         config ESP_WIFI_SOFTAP_SSID
             string "WiFi SoftAP SSID"
-            default "usb-uac-demo"
+            default "USB-AV-DEMO"
             help
                 SoftAP SSID created by this example.
 
@@ -29,14 +29,14 @@ menu "Example Configuration"
 
         config ESP_WIFI_SOFTAP_MAX_STA
             int "Maximal STA connections"
-            default 4
+            default 1
             range 1 10
             help
                 Maximum number of stations that can connect to the SoftAP.
 
         config ESP_WIFI_AP_CHANNEL
             int "WiFi SoftAP Channel"
-            default 1
+            default 6
             range 1 13
             help
                 SoftAP Wi-Fi channel.

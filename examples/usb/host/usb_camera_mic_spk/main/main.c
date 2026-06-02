@@ -9,6 +9,7 @@
 #include "nvs_flash.h"
 #include "app_usb_host.h"
 #include "app_uac_manager.h"
+#include "app_uvc_manager.h"
 #include "app_wifi.h"
 #include "app_web.h"
 
@@ -29,6 +30,7 @@ void app_main(void)
     }
 
     ESP_ERROR_CHECK(app_usb_host_start());
+    ESP_ERROR_CHECK(app_uvc_manager_start());
     ESP_ERROR_CHECK(app_uac_manager_start());
     ESP_ERROR_CHECK(app_wifi_start());
     ESP_ERROR_CHECK(app_web_start());

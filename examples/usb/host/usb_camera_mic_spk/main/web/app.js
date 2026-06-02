@@ -1,21 +1,38 @@
 const $ = (id) => document.getElementById(id);
 const state = {
-  ws: null,
+  audioWs: null,
   devices: null,
   audioCtx: null,
-  nextMicTime: 0,
+  micWorkletNode: null,
+  micPlayer: null,
+  micScriptPlayer: null,
+  micWorkletReady: null,
+  micWorkletFailed: false,
+  micWorkletFormatKey: "",
   toneSending: false,
   filePlaying: false,
   fileStop: false,
   fileTx: null,
+  spkResetting: false,
   spkRefillBudget: 0,
+  spkBudgetWaitSince: 0,
+  spkBufferWaitSince: 0,
+  spkLastBudgetWaitLog: 0,
+  spkLastBufferWaitLog: 0,
   micFrames: 0,
   micLevel: 0,
+  cameraWs: null,
+  cameraObjectUrl: null,
+  cameraStreamActive: false,
+  cameraStopRequested: false,
+  cameraFirstFrameLogged: false,
+  cameraLastConnected: false,
+  cameraLastEnabled: false,
 };
-const MIC_PLAYBACK_TARGET_LATENCY = 0.08;
-const MIC_PLAYBACK_MAX_QUEUE = 0.20;
 const SPK_MAX_PAYLOAD = 4092;
 const SPK_WS_BUFFER_LIMIT = 65536;
+const CAMERA_HEADER_SIZE = 16;
+const CAMERA_FORMAT_MJPEG = 1;
 
 function log(message) {
   const el = $("log");
@@ -31,9 +48,9 @@ window.addEventListener("unhandledrejection", (event) => {
   log(`Promise error: ${event.reason && event.reason.message ? event.reason.message : event.reason}`);
 });
 
-function sendJson(obj) {
-  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify(obj));
+function sendAudioJson(obj) {
+  if (state.audioWs && state.audioWs.readyState === WebSocket.OPEN) {
+    state.audioWs.send(JSON.stringify(obj));
   }
 }
 
@@ -72,10 +89,212 @@ function updateControls(streamName, stream) {
   mute.disabled = !connected || !stream.mute_supported;
   volume.disabled = !connected || !stream.volume_supported;
   format.disabled = !connected || stream.enabled;
-  enabled.checked = !!stream.enabled;
+  enabled.textContent = stream.enabled ? "Close" : "Open";
+  enabled.dataset.enabled = stream.enabled ? "1" : "0";
+  enabled.classList.toggle("is-open-action", connected && !stream.enabled);
+  enabled.classList.toggle("is-close-action", connected && stream.enabled);
   mute.checked = !!stream.mute;
   volume.value = stream.volume || 80;
   fillFormats(format, stream);
+}
+
+function cameraFormatByName(camera, name) {
+  if (!camera || !Array.isArray(camera.formats)) return null;
+  return camera.formats.find((item) => item.format === name) || null;
+}
+
+function currentCameraFormat(camera) {
+  return cameraFormatByName(camera, camera && camera.selected_format) || cameraFormatByName(camera, "mjpeg");
+}
+
+function fillCameraFormats(camera) {
+  const select = $("cameraFormat");
+  select.innerHTML = "";
+  const formats = camera && Array.isArray(camera.formats) ? camera.formats : [];
+  for (const item of formats) {
+    const option = document.createElement("option");
+    option.value = item.format;
+    option.textContent = item.format.toUpperCase();
+    option.selected = item.format === camera.selected_format;
+    select.appendChild(option);
+  }
+  const h264 = document.createElement("option");
+  h264.value = "h264";
+  h264.textContent = "H.264 (unsupported)";
+  h264.disabled = true;
+  if (!formats.some((item) => item.format === "h264")) select.appendChild(h264);
+}
+
+function fillCameraResolutions(camera) {
+  const select = $("cameraResolution");
+  select.innerHTML = "";
+  const format = currentCameraFormat(camera);
+  const resolutions = format && Array.isArray(format.resolutions) ? format.resolutions : [];
+  for (const item of resolutions) {
+    const option = document.createElement("option");
+    option.value = String(item.index);
+    option.textContent = `${item.width}x${item.height}@${Math.round(item.fps || 0)}fps`;
+    option.selected = item.index === camera.selected_resolution;
+    select.appendChild(option);
+  }
+}
+
+function stopCameraStream(text) {
+  state.cameraStopRequested = true;
+  if (state.cameraWs) {
+    state.cameraWs.close();
+    state.cameraWs = null;
+  }
+  if (state.cameraObjectUrl) {
+    URL.revokeObjectURL(state.cameraObjectUrl);
+    state.cameraObjectUrl = null;
+  }
+  const img = $("cameraStream");
+  img.removeAttribute("src");
+  img.classList.remove("active");
+  $("cameraPlaceholder").textContent = text || "Camera disabled";
+  $("cameraPlaceholder").classList.remove("hidden");
+  state.cameraStreamActive = false;
+  state.cameraFirstFrameLogged = false;
+}
+
+function showCameraJpeg(payload) {
+  const oldUrl = state.cameraObjectUrl;
+  const blob = new Blob([payload], { type: "image/jpeg" });
+  const url = URL.createObjectURL(blob);
+  state.cameraObjectUrl = url;
+  const img = $("cameraStream");
+  img.src = url;
+  img.classList.add("active");
+  $("cameraPlaceholder").classList.add("hidden");
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+}
+
+function handleCameraBinary(buf) {
+  if (buf.byteLength < CAMERA_HEADER_SIZE) {
+    log(`Camera WS short packet: len=${buf.byteLength}`);
+    return;
+  }
+  const dv = new DataView(buf);
+  if (dv.getUint8(0) !== 0x43 || dv.getUint8(1) !== 1) {
+    log(`Camera WS bad header: magic=${dv.getUint8(0)} version=${dv.getUint8(1)} len=${buf.byteLength}`);
+    return;
+  }
+  const format = dv.getUint8(2);
+  const payloadLen = dv.getUint32(4, true);
+  if (payloadLen + CAMERA_HEADER_SIZE !== buf.byteLength) {
+    log(`Camera WS bad length: payload=${payloadLen} packet=${buf.byteLength}`);
+    return;
+  }
+  if (format === CAMERA_FORMAT_MJPEG) {
+    if (!state.cameraFirstFrameLogged) {
+      log(`Camera first MJPEG frame: ${dv.getUint16(12, true)}x${dv.getUint16(14, true)} len=${payloadLen}`);
+      state.cameraFirstFrameLogged = true;
+    }
+    showCameraJpeg(new Uint8Array(buf, CAMERA_HEADER_SIZE, payloadLen));
+  } else {
+    log(`Camera WS unsupported frame format: ${format}`);
+  }
+}
+
+function startCameraStream() {
+  if (state.cameraStreamActive) return;
+  state.cameraStopRequested = false;
+  state.cameraStreamActive = true;
+  const url = `ws://${location.host}/camera_ws`;
+  log(`Camera WebSocket opening: ${url}`);
+  try {
+    state.cameraWs = new WebSocket(url);
+  } catch (err) {
+    state.cameraStreamActive = false;
+    log(`Camera WebSocket constructor failed: ${err.message}`);
+    return;
+  }
+  state.cameraWs.binaryType = "arraybuffer";
+  state.cameraWs.onopen = () => {
+    log("Camera WebSocket connected");
+    const camera = state.devices && state.devices.camera;
+    if (camera && camera.enabled && camera.selected_format === "mjpeg") {
+      state.cameraWs.send(JSON.stringify({ type: "set_camera_enabled", enabled: true }));
+    }
+  };
+  state.cameraWs.onmessage = (event) => {
+    if (event.data instanceof ArrayBuffer) {
+      handleCameraBinary(event.data);
+    } else {
+      log(`Camera WS non-binary message: ${typeof event.data}`);
+    }
+  };
+  state.cameraWs.onerror = () => log(`Camera WebSocket error: ${url} state=${state.cameraWs ? state.cameraWs.readyState : "-"}`);
+  state.cameraWs.onclose = (event) => {
+    log(`Camera WebSocket disconnected: code=${event.code} reason=${event.reason || "-"} clean=${event.wasClean}`);
+    state.cameraWs = null;
+    state.cameraStreamActive = false;
+    const camera = state.devices && state.devices.camera;
+    if (!state.cameraStopRequested && camera && camera.connected && camera.enabled && camera.streaming) {
+      setTimeout(startCameraStream, 500);
+    }
+  };
+}
+
+function sendCameraJson(obj) {
+  startCameraStream();
+  const payload = JSON.stringify(obj);
+  const send = (retry = 0) => {
+    if (state.cameraWs && state.cameraWs.readyState === WebSocket.OPEN) {
+      state.cameraWs.send(payload);
+    } else if (retry < 10) {
+      setTimeout(() => send(retry + 1), 100);
+    } else {
+      log(`Camera WS command dropped: ${obj.type}`);
+    }
+  };
+  send();
+}
+
+function sendCameraFormat() {
+  sendCameraJson({
+    type: "set_camera_format",
+    format: $("cameraFormat").value,
+    resolution: Number($("cameraResolution").value),
+  });
+}
+
+function updateCamera(camera) {
+  const connected = camera && camera.connected;
+  const format = currentCameraFormat(camera);
+  const resolutions = format && Array.isArray(format.resolutions) ? format.resolutions : [];
+  const enabled = connected && camera.enabled;
+  const streaming = enabled && camera.streaming && camera.selected_format === "mjpeg";
+  const shouldOpenCameraWs = enabled && camera.selected_format === "mjpeg";
+  setPill($("cameraState"), connected ? (enabled ? "Enabled" : "Ready") : "Disconnected", connected ? "ok" : "");
+  $("cameraEnabled").disabled = !connected || !cameraFormatByName(camera, "mjpeg") || !resolutions.length;
+  $("cameraEnabled").textContent = enabled ? "Close" : "Open";
+  $("cameraEnabled").dataset.enabled = enabled ? "1" : "0";
+  $("cameraEnabled").classList.toggle("is-open-action", connected && !enabled && !!cameraFormatByName(camera, "mjpeg") && !!resolutions.length);
+  $("cameraEnabled").classList.toggle("is-close-action", connected && enabled);
+  fillCameraFormats(camera);
+  fillCameraResolutions(camera);
+  $("cameraFormat").disabled = !connected || enabled;
+  $("cameraResolution").disabled = !connected || enabled || !resolutions.length;
+  if (!connected) {
+    stopCameraStream("Camera disconnected");
+  } else if (!enabled) {
+    stopCameraStream("Camera disabled");
+  } else if (!shouldOpenCameraWs) {
+    stopCameraStream("Camera stream unavailable");
+  } else {
+    if (!streaming) $("cameraPlaceholder").textContent = "Camera starting";
+    startCameraStream();
+  }
+  if (connected !== state.cameraLastConnected) {
+    log(connected ? "Camera connected" : "Camera disconnected");
+    state.cameraLastConnected = connected;
+  }
+  if (enabled !== state.cameraLastEnabled) {
+    log(enabled ? "Camera enabled" : "Camera disabled");
+    state.cameraLastEnabled = enabled;
+  }
 }
 
 function setToolGroupDisabled(groupId, disabled) {
@@ -109,24 +328,31 @@ function render(data) {
   state.devices = data;
   const mic = data.mic;
   const spk = data.spk;
-  log(`State updated: mic=${mic.connected ? (mic.enabled ? "enabled" : "ready") : "off"} spk=${spk.connected ? (spk.enabled ? "enabled" : "ready") : "off"}`);
+  const camera = data.camera || { connected: false, enabled: false, formats: [] };
+  const micState = mic.connected ? (mic.enabled ? "enabled" : "ready") : "off";
+  const spkState = spk.connected ? (spk.enabled ? "enabled" : "ready") : "off";
+  const cameraState = camera.connected ? (camera.enabled ? "enabled" : "ready") : "off";
+  log(`State updated: mic=${micState} spk=${spkState} camera=${cameraState}`);
   if (!spk.connected) resetFilePlaybackState("device_disconnected");
-  const any = mic.connected || spk.connected;
+  const any = mic.connected || spk.connected || camera.connected;
   setPill($("usbStatus"), any ? "USB connected" : "USB idle", any ? "ok" : "");
   setPill($("micState"), mic.connected ? (mic.enabled ? "Enabled" : "Ready") : "Disconnected", mic.connected ? "ok" : "");
   setPill($("spkState"), spk.connected ? (spk.enabled ? "Enabled" : "Ready") : "Disconnected", spk.connected ? "ok" : "");
-  $("deviceSummary").textContent = any ? "USB audio device ready" : "Waiting for USB audio device";
-  $("vidPid").textContent = any ? `${(mic.vid || spk.vid).toString(16)}:${(mic.pid || spk.pid).toString(16)}` : "--";
+  $("deviceSummary").textContent = any ? "USB device ready" : "Waiting for USB device";
+  const audioVid = mic.vid || spk.vid;
+  const audioPid = mic.pid || spk.pid;
+  $("vidPid").textContent = audioVid && audioPid ? `${audioVid.toString(16)}:${audioPid.toString(16)}` : "--";
   $("product").textContent = mic.product || spk.product || "--";
-  $("interfaces").textContent = `MIC ${mic.iface_num || "--"} / SPK ${spk.iface_num || "--"}`;
+  $("interfaces").textContent = `MIC ${mic.iface_num || "--"} / SPK ${spk.iface_num || "--"} / CAM ${camera.connected ? "yes" : "--"}`;
   updateControls("mic", mic);
   updateControls("spk", spk);
+  updateCamera(camera);
   const spkReady = spk.connected && spk.enabled;
   setToolGroupDisabled("toneGroup", !spkReady || state.filePlaying || state.toneSending);
   setToolGroupDisabled("fileGroup", !spkReady);
   if (spkReady) {
     $("audioFile").disabled = state.filePlaying;
-    $("playFile").disabled = state.filePlaying || !$("audioFile").files.length;
+    $("playFile").disabled = state.filePlaying || state.spkResetting || !$("audioFile").files.length;
     $("stopFile").disabled = !state.filePlaying;
   }
   if (!mic.connected || !mic.enabled) updateMicMeter(0);
@@ -144,10 +370,51 @@ async function refreshDevices() {
 function ensureAudio() {
   if (!state.audioCtx) {
     state.audioCtx = new AudioContext();
-    state.nextMicTime = state.audioCtx.currentTime;
   }
   if (state.audioCtx.state === "suspended") state.audioCtx.resume();
   return state.audioCtx;
+}
+
+async function ensureMicPlayer(format) {
+  const ctx = ensureAudio();
+  if (!ctx.audioWorklet || state.micWorkletFailed) return ensureScriptMicPlayer(ctx, format);
+  try {
+    if (!state.micWorkletReady) state.micWorkletReady = ctx.audioWorklet.addModule("/assets/mic-player-worklet.js");
+    await state.micWorkletReady;
+  } catch (err) {
+    state.micWorkletReady = null;
+    state.micWorkletFailed = true;
+    log(`MIC worklet unavailable, fallback to script player: ${err.message}`);
+    return ensureScriptMicPlayer(ctx, format);
+  }
+
+  const channels = Math.max(1, Number(format.channels) || 1);
+  const formatKey = `${format.sampleRate}:${channels}:${format.bitDepth}:${format.subframeSize}`;
+  if (state.micPlayer && state.micWorkletNode && state.micWorkletFormatKey === formatKey) return state.micPlayer;
+  if (state.micWorkletNode) state.micWorkletNode.disconnect();
+  if (state.micScriptPlayer) {
+    state.micScriptPlayer.node.disconnect();
+    state.micScriptPlayer = null;
+  }
+
+  let node = null;
+  try {
+    node = new AudioWorkletNode(ctx, "mic-player", { outputChannelCount: [channels] });
+  } catch (err) {
+    state.micWorkletFailed = true;
+    log(`MIC worklet node failed, fallback to script player: ${err.message}`);
+    return ensureScriptMicPlayer(ctx, format);
+  }
+  node.port.onmessage = (event) => {
+    if (event.data && event.data.type === "level") updateMicMeter(Math.max(event.data.level || 0, state.micLevel * 0.72));
+  };
+  node.connect(ctx.destination);
+  node.port.postMessage({ type: "format", sampleRate: format.sampleRate, channels, bitDepth: format.bitDepth, subframeSize: format.subframeSize });
+  state.micWorkletNode = node;
+  state.micWorkletFormatKey = formatKey;
+  state.micPlayer = { send: (pcmBuffer) => node.port.postMessage({ type: "pcm", pcm: pcmBuffer }, [pcmBuffer]) };
+  log(`MIC worklet ready: ${format.sampleRate}Hz ${channels}ch ${format.bitDepth}bit`);
+  return state.micPlayer;
 }
 
 function currentMicFormat() {
@@ -177,6 +444,91 @@ function readPcmSample(dv, bytes, offset, bitDepth, subframeSize) {
   return 0;
 }
 
+function ensureScriptMicPlayer(ctx, format) {
+  const channels = Math.max(1, Number(format.channels) || 1);
+  const formatKey = `script:${format.sampleRate}:${channels}:${format.bitDepth}:${format.subframeSize}`;
+  if (state.micPlayer && state.micScriptPlayer && state.micWorkletFormatKey === formatKey) return state.micPlayer;
+  if (state.micWorkletNode) {
+    state.micWorkletNode.disconnect();
+    state.micWorkletNode = null;
+  }
+  if (state.micScriptPlayer) state.micScriptPlayer.node.disconnect();
+
+  const capacityFrames = Math.max(1024, Math.ceil(format.sampleRate * 0.6));
+  const player = {
+    node: ctx.createScriptProcessor(1024, 0, channels),
+    channels,
+    capacityFrames,
+    buffer: new Float32Array(capacityFrames * channels),
+    readFrame: 0,
+    writeFrame: 0,
+    availableFrames: 0,
+    readFrac: 0,
+  };
+  player.node.onaudioprocess = (event) => processScriptMicPlayer(event, player, format);
+  player.node.connect(ctx.destination);
+  state.micScriptPlayer = player;
+  state.micWorkletFormatKey = formatKey;
+  state.micPlayer = { send: (pcmBuffer) => pushScriptMicPcm(player, format, new Uint8Array(pcmBuffer)) };
+  log(`MIC script ring player ready: ${format.sampleRate}Hz ${channels}ch ${format.bitDepth}bit`);
+  return state.micPlayer;
+}
+
+function pushScriptMicPcm(player, format, bytes) {
+  const frameBytes = player.channels * format.subframeSize;
+  const frames = Math.floor(bytes.byteLength / frameBytes);
+  if (frames <= 0) return;
+  if (frames >= player.capacityFrames) bytes = bytes.subarray((frames - player.capacityFrames + 1) * frameBytes);
+  const usableFrames = Math.floor(bytes.byteLength / frameBytes);
+  const overflow = Math.max(0, player.availableFrames + usableFrames - player.capacityFrames);
+  if (overflow > 0) {
+    player.readFrame = (player.readFrame + overflow) % player.capacityFrames;
+    player.availableFrames -= overflow;
+    player.readFrac = 0;
+  }
+
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let sumSquares = 0;
+  let peak = 0;
+  for (let i = 0; i < usableFrames; i++) {
+    for (let ch = 0; ch < player.channels; ch++) {
+      const sample = readPcmSample(dv, bytes, i * frameBytes + ch * format.subframeSize, format.bitDepth, format.subframeSize);
+      player.buffer[(player.writeFrame * player.channels) + ch] = sample;
+      sumSquares += sample * sample;
+      peak = Math.max(peak, Math.abs(sample));
+    }
+    player.writeFrame = (player.writeFrame + 1) % player.capacityFrames;
+  }
+  player.availableFrames += usableFrames;
+  const rms = Math.sqrt(sumSquares / Math.max(1, usableFrames * player.channels));
+  updateMicMeter(Math.max(Math.min(1, Math.max(rms * 4, peak * 0.8)), state.micLevel * 0.72));
+}
+
+function processScriptMicPlayer(event, player, format) {
+  const output = event.outputBuffer;
+  const frames = output.length;
+  const step = format.sampleRate / output.sampleRate;
+  for (let i = 0; i < frames; i++) {
+    if (player.availableFrames <= Math.ceil(player.readFrac)) {
+      for (let ch = 0; ch < output.numberOfChannels; ch++) output.getChannelData(ch)[i] = 0;
+      continue;
+    }
+    const sourceOffset = Math.floor(player.readFrac);
+    const sourceFrame = (player.readFrame + sourceOffset) % player.capacityFrames;
+    for (let ch = 0; ch < output.numberOfChannels; ch++) {
+      const sourceCh = Math.min(ch, player.channels - 1);
+      output.getChannelData(ch)[i] = player.buffer[(sourceFrame * player.channels) + sourceCh];
+    }
+    player.readFrac += step;
+    const consumeFrames = Math.floor(player.readFrac);
+    if (consumeFrames > 0) {
+      player.readFrame = (player.readFrame + consumeFrames) % player.capacityFrames;
+      player.availableFrames = Math.max(0, player.availableFrames - consumeFrames);
+      player.readFrac -= consumeFrames;
+    }
+  }
+}
+
 function updateMicMeter(level) {
   state.micLevel = Math.max(0, Math.min(1, level));
   const percent = Math.round(state.micLevel * 100);
@@ -186,41 +538,21 @@ function updateMicMeter(level) {
   $("micLevelText").textContent = `${percent}%`;
 }
 
-function playMicPcm(payload) {
+async function playMicPcm(pcmBuffer) {
   const format = currentMicFormat();
   if (!format) return;
   const { sampleRate, channels, bitDepth, subframeSize } = format;
-  const ctx = ensureAudio();
   const frameBytes = channels * subframeSize;
-  const frames = Math.floor(payload.byteLength / frameBytes);
+  const frames = Math.floor(pcmBuffer.byteLength / frameBytes);
   if (frames <= 0) return;
-  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  const buffer = ctx.createBuffer(channels, frames, sampleRate);
-  let sumSquares = 0;
-  let peak = 0;
-  for (let ch = 0; ch < channels; ch++) {
-    const out = buffer.getChannelData(ch);
-    for (let i = 0; i < frames; i++) {
-      const sample = readPcmSample(dv, payload, i * frameBytes + ch * subframeSize, bitDepth, subframeSize);
-      out[i] = sample;
-      sumSquares += sample * sample;
-      peak = Math.max(peak, Math.abs(sample));
-    }
+  try {
+    const player = await ensureMicPlayer(format);
+    player.send(pcmBuffer);
+    state.micFrames++;
+    if (state.micFrames === 1) log(`MIC playback started: ${sampleRate}Hz ${channels}ch ${bitDepth}bit`);
+  } catch (err) {
+    log(`MIC playback failed: ${err.message}`);
   }
-  // Use RMS for stable visual volume and blend in peak so short sounds are visible.
-  const rms = Math.sqrt(sumSquares / Math.max(1, frames * channels));
-  const level = Math.min(1, Math.max(rms * 4, peak * 0.8));
-  updateMicMeter(Math.max(level, state.micLevel * 0.72));
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
-  const queued = state.nextMicTime - ctx.currentTime;
-  if (queued > MIC_PLAYBACK_MAX_QUEUE) state.nextMicTime = ctx.currentTime + MIC_PLAYBACK_TARGET_LATENCY;
-  const start = Math.max(ctx.currentTime + MIC_PLAYBACK_TARGET_LATENCY, state.nextMicTime);
-  source.start(start);
-  state.nextMicTime = start + buffer.duration;
-  state.micFrames++;
-  if (state.micFrames === 1) log(`MIC playback started: ${sampleRate}Hz ${channels}ch ${bitDepth}bit`);
 }
 
 function handleBinary(buf) {
@@ -228,39 +560,40 @@ function handleBinary(buf) {
   if (view.length <= 4 || view[0] !== 0x01) return;
   const len = view[2] | (view[3] << 8);
   if (len !== view.length - 4) return;
-  playMicPcm(view.subarray(4));
+  playMicPcm(buf.slice(4));
 }
 
-function connectWs() {
+function connectAudioWs() {
   const url = `ws://${location.host}/ws`;
-  let ws = null;
+  let audioWs = null;
   try {
-    ws = new WebSocket(url);
+    audioWs = new WebSocket(url);
   } catch (err) {
-    log(`WebSocket constructor failed: ${err.message}`);
+    log(`Audio WebSocket constructor failed: ${err.message}`);
     return;
   }
-  ws.binaryType = "arraybuffer";
-  state.ws = ws;
-  ws.onopen = () => {
-    setPill($("wsStatus"), "WS online", "ok");
-    log("WebSocket connected");
-    sendJson({ type: "get_state" });
+  audioWs.binaryType = "arraybuffer";
+  state.audioWs = audioWs;
+  audioWs.onopen = () => {
+    setPill($("audioWsStatus"), "Audio WS online", "ok");
+    log("Audio WebSocket connected");
+    sendAudioJson({ type: "get_state" });
     refreshDevices();
   };
-  ws.onclose = (event) => {
-    setPill($("wsStatus"), "WS offline", "warn");
-    log(`WebSocket disconnected: code=${event.code} reason=${event.reason || "-"} clean=${event.wasClean}`);
-    setTimeout(connectWs, 1000);
+  audioWs.onclose = (event) => {
+    setPill($("audioWsStatus"), "Audio WS offline", "warn");
+    log(`Audio WebSocket disconnected: code=${event.code} reason=${event.reason || "-"} clean=${event.wasClean}`);
+    setTimeout(connectAudioWs, 1000);
   };
-  ws.onerror = () => log(`WebSocket error: ${url} state=${ws.readyState}`);
-  ws.onmessage = (event) => {
+  audioWs.onerror = () => log(`Audio WebSocket error: ${url} state=${audioWs.readyState}`);
+  audioWs.onmessage = (event) => {
     if (typeof event.data === "string") {
       const msg = JSON.parse(event.data);
       if (msg.type === "state") {
         render(msg);
       }
       if (msg.type === "error") log(`${msg.code}: ${msg.message}`);
+      if (msg.type === "spk_reset_done") handleSpkResetDone();
       if (msg.type === "spk_refill_budget") handleSpkRefillBudget(msg.bytes || 0);
     } else {
       handleBinary(event.data);
@@ -311,7 +644,7 @@ function sendSpkPacket(part) {
   packet[2] = part.length & 0xff;
   packet[3] = (part.length >> 8) & 0xff;
   packet.set(part, 4);
-  state.ws.send(packet);
+  state.audioWs.send(packet);
 }
 
 function refillBudgetPayloadBytes(frameBytes, remainingBytes) {
@@ -340,7 +673,7 @@ function sleep(ms) {
 }
 
 async function sendTone() {
-  if (state.toneSending || state.filePlaying || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+  if (state.toneSending || state.filePlaying || !state.audioWs || state.audioWs.readyState !== WebSocket.OPEN) return;
   state.toneSending = true;
   $("playTone").disabled = true;
   try {
@@ -407,13 +740,19 @@ function pumpFileTx() {
   try {
     while (tx.off < tx.pcm.length) {
       if (state.fileStop) throw new Error("stopped");
-      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket disconnected");
+      if (!state.audioWs || state.audioWs.readyState !== WebSocket.OPEN) throw new Error("Audio WebSocket disconnected");
       const partLen = refillBudgetPayloadBytes(tx.frameBytes, tx.pcm.length - tx.off);
-      if (partLen <= 0) return;
-      if (state.ws.bufferedAmount > SPK_WS_BUFFER_LIMIT) {
+      if (partLen <= 0) {
+        logSpkBudgetWait("pcm", tx.pcm.length - tx.off);
+        return;
+      }
+      clearSpkBudgetWait();
+      if (state.audioWs.bufferedAmount > SPK_WS_BUFFER_LIMIT) {
+        logSpkBufferWait("pcm");
         setTimeout(pumpFileTx, 5);
         return;
       }
+      clearSpkBufferWait();
       const part = tx.pcm.subarray(tx.off, tx.off + partLen);
       sendSpkPacket(part);
       tx.off += part.length;
@@ -440,14 +779,20 @@ function pumpBufferTx() {
   try {
     while (tx.frameOff < tx.buffer.length) {
       if (state.fileStop) throw new Error("stopped");
-      if (!state.ws || state.ws.readyState !== WebSocket.OPEN) throw new Error("WebSocket disconnected");
+      if (!state.audioWs || state.audioWs.readyState !== WebSocket.OPEN) throw new Error("Audio WebSocket disconnected");
       const partLen = refillBudgetPayloadBytes(tx.frameBytes, (tx.buffer.length - tx.frameOff) * tx.frameBytes);
-      if (partLen <= 0) return;
+      if (partLen <= 0) {
+        logSpkBudgetWait("buffer", (tx.buffer.length - tx.frameOff) * tx.frameBytes);
+        return;
+      }
+      clearSpkBudgetWait();
       const frames = Math.min(Math.floor(partLen / tx.frameBytes), tx.buffer.length - tx.frameOff);
-      if (state.ws.bufferedAmount > SPK_WS_BUFFER_LIMIT) {
+      if (state.audioWs.bufferedAmount > SPK_WS_BUFFER_LIMIT) {
+        logSpkBufferWait("buffer");
         setTimeout(pumpBufferTx, 5);
         return;
       }
+      clearSpkBufferWait();
       const part = audioBufferChunkToSpkPcm(tx.buffer, tx.format, tx.frameOff, frames);
       sendSpkPacket(part);
       tx.frameOff += frames;
@@ -469,7 +814,13 @@ function pumpBufferTx() {
 }
 
 function handleSpkRefillBudget(bytes) {
+  if (state.spkResetting || !state.fileTx) {
+    log(`Drop stale SPK refill budget: bytes=${bytes} resetting=${state.spkResetting}`);
+    return;
+  }
   state.spkRefillBudget = Math.max(state.spkRefillBudget, Math.max(0, Number(bytes) || 0));
+  clearSpkBudgetWait();
+  log(`SPK refill budget received: bytes=${bytes} budget=${state.spkRefillBudget}`);
   if (state.fileTx && state.fileTx.buffer) {
     pumpBufferTx();
   } else {
@@ -477,13 +828,50 @@ function handleSpkRefillBudget(bytes) {
   }
 }
 
+function handleSpkResetDone() {
+  state.spkRefillBudget = 0;
+  state.spkResetting = false;
+  clearSpkBudgetWait();
+  clearSpkBufferWait();
+  log("SPK reset done");
+  if (state.devices) render(state.devices);
+}
+
+function logSpkBudgetWait(kind, remainingBytes) {
+  const now = performance.now();
+  if (!state.spkBudgetWaitSince) state.spkBudgetWaitSince = now;
+  if (now - state.spkBudgetWaitSince >= 100 && now - state.spkLastBudgetWaitLog >= 500) {
+    state.spkLastBudgetWaitLog = now;
+    log(`SPK waiting refill budget: mode=${kind} wait=${Math.round(now - state.spkBudgetWaitSince)}ms remaining=${remainingBytes} budget=${state.spkRefillBudget}`);
+  }
+}
+
+function clearSpkBudgetWait() {
+  state.spkBudgetWaitSince = 0;
+}
+
+function logSpkBufferWait(kind) {
+  const now = performance.now();
+  if (!state.spkBufferWaitSince) state.spkBufferWaitSince = now;
+  if (now - state.spkBufferWaitSince >= 100 && now - state.spkLastBufferWaitLog >= 500) {
+    state.spkLastBufferWaitLog = now;
+    log(`SPK WebSocket buffered wait: mode=${kind} wait=${Math.round(now - state.spkBufferWaitSince)}ms buffered=${state.audioWs ? state.audioWs.bufferedAmount : 0}`);
+  }
+}
+
+function clearSpkBufferWait() {
+  state.spkBufferWaitSince = 0;
+}
+
 function sendPcmByRefillBudget(pcm, format, onProgress) {
   const { channels, subframeSize } = format;
   const frameBytes = channels * subframeSize;
   return new Promise((resolve, reject) => {
     state.spkRefillBudget = 0;
+    clearSpkBudgetWait();
+    clearSpkBufferWait();
     state.fileTx = { pcm, frameBytes, off: 0, onProgress, resolve, reject, done: false };
-    sendJson({ type: "request_spk_refill_budget" });
+    sendAudioJson({ type: "request_spk_refill_budget" });
   });
 }
 
@@ -492,14 +880,16 @@ function sendAudioBufferByRefillBudget(buffer, format, onProgress) {
   const frameBytes = channels * subframeSize;
   return new Promise((resolve, reject) => {
     state.spkRefillBudget = 0;
+    clearSpkBudgetWait();
+    clearSpkBufferWait();
     state.fileTx = { buffer, format, frameBytes, frameOff: 0, onProgress, resolve, reject, done: false };
-    sendJson({ type: "request_spk_refill_budget" });
+    sendAudioJson({ type: "request_spk_refill_budget" });
   });
 }
 
 async function playSelectedFile() {
   const file = $("audioFile").files[0];
-  if (!file || state.filePlaying || !state.ws || state.ws.readyState !== WebSocket.OPEN) return;
+  if (!file || state.filePlaying || state.spkResetting || !state.audioWs || state.audioWs.readyState !== WebSocket.OPEN) return;
   state.filePlaying = true;
   state.fileStop = false;
   render(state.devices);
@@ -538,27 +928,59 @@ async function playSelectedFile() {
 function stopFilePlayback() {
   if (!state.filePlaying) return;
   state.fileStop = true;
+  state.spkResetting = true;
+  state.spkRefillBudget = 0;
+  clearSpkBudgetWait();
+  clearSpkBufferWait();
   if (state.fileTx && !state.fileTx.done) {
     const reject = state.fileTx.reject;
     state.fileTx.done = true;
     state.fileTx = null;
     reject(new Error("stopped"));
   }
-  sendJson({ type: "stop_spk_playback" });
+  sendAudioJson({ type: "stop_spk_playback" });
+  log("SPK stop command sent");
+  if (state.devices) render(state.devices);
 }
 
 function bindControls() {
-  $("micEnabled").onchange = (e) => {
-    if (e.target.checked) ensureAudio();
-    sendJson({ type: "set_mic_enabled", enabled: e.target.checked });
+  $("micEnabled").onclick = (e) => {
+    const enabled = e.currentTarget.dataset.enabled !== "1";
+    if (enabled) ensureAudio();
+    sendAudioJson({ type: "set_mic_enabled", enabled });
   };
-  $("spkEnabled").onchange = (e) => sendJson({ type: "set_spk_enabled", enabled: e.target.checked });
-  $("micMute").onchange = (e) => sendJson({ type: "set_mic_mute", mute: e.target.checked });
-  $("spkMute").onchange = (e) => sendJson({ type: "set_spk_mute", mute: e.target.checked });
-  $("micVolume").onchange = (e) => sendJson({ type: "set_mic_volume", volume: Number(e.target.value) });
-  $("spkVolume").onchange = (e) => sendJson({ type: "set_spk_volume", volume: Number(e.target.value) });
-  $("micFormat").onchange = () => sendJson({ type: "set_mic_format", ...selectedFormat("mic") });
-  $("spkFormat").onchange = () => sendJson({ type: "set_spk_format", ...selectedFormat("spk") });
+  $("spkEnabled").onclick = (e) => {
+    const enabled = e.currentTarget.dataset.enabled !== "1";
+    sendAudioJson({ type: "set_spk_enabled", enabled });
+  };
+  $("micMute").onchange = (e) => sendAudioJson({ type: "set_mic_mute", mute: e.target.checked });
+  $("spkMute").onchange = (e) => sendAudioJson({ type: "set_spk_mute", mute: e.target.checked });
+  $("micVolume").onchange = (e) => sendAudioJson({ type: "set_mic_volume", volume: Number(e.target.value) });
+  $("spkVolume").onchange = (e) => sendAudioJson({ type: "set_spk_volume", volume: Number(e.target.value) });
+  $("micFormat").onchange = () => sendAudioJson({ type: "set_mic_format", ...selectedFormat("mic") });
+  $("spkFormat").onchange = () => sendAudioJson({ type: "set_spk_format", ...selectedFormat("spk") });
+  $("cameraEnabled").onclick = (e) => {
+    const enabled = e.currentTarget.dataset.enabled !== "1";
+    if (enabled) {
+      $("cameraPlaceholder").textContent = "Camera starting";
+    }
+    sendCameraJson({ type: "set_camera_enabled", enabled });
+    if (!enabled) {
+      setTimeout(() => stopCameraStream("Camera disabled"), 50);
+    }
+  };
+  $("cameraFormat").onchange = (e) => {
+    log(`Camera format selected: ${e.target.value}`);
+    sendCameraFormat();
+  };
+  $("cameraResolution").onchange = (e) => {
+    log(`Camera resolution selected: ${e.target.options[e.target.selectedIndex].textContent}`);
+    sendCameraFormat();
+  };
+  $("cameraStream").onerror = () => {
+    log("Camera stream load error");
+    stopCameraStream("Camera stream error");
+  };
   $("playTone").onclick = sendTone;
   $("audioFile").onchange = () => {
     const file = $("audioFile").files[0];
@@ -573,7 +995,7 @@ function bindControls() {
 try {
   bindControls();
   refreshDevices();
-  connectWs();
+  connectAudioWs();
 } catch (err) {
   log(`Startup failed: ${err.message}`);
 }

@@ -12,7 +12,8 @@
   --bad: #b4233a;
   --accent: #2563eb;
   --accent-2: #0f766e;
-  --shadow: 0 14px 34px rgba(30, 41, 59, 0.10);
+  --shadow: 0 16px 34px rgba(30, 41, 59, 0.10);
+  --shadow-soft: 0 8px 22px rgba(30, 41, 59, 0.07);
 }
 
 * {
@@ -21,7 +22,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #e8eef6 0%, var(--bg) 320px);
+  background: linear-gradient(180deg, #f6f8fb 0%, #eef3f8 300px, #e9eef4 100%);
   color: var(--text);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -29,11 +30,11 @@ body {
 .shell {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 20px;
+  padding: 22px;
 }
 
 .topbar, .device, .panel, .log {
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-shadow: var(--shadow);
@@ -44,7 +45,8 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 18px;
-  padding: 18px;
+  padding: 18px 20px;
+  backdrop-filter: blur(4px);
 }
 
 .brand {
@@ -55,8 +57,8 @@ body {
 }
 
 .mark {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border: 1px solid #9fb4d8;
   border-radius: 8px;
   background:
@@ -74,6 +76,7 @@ body {
     ),
     linear-gradient(135deg, #2563eb, #0f766e);
   flex: 0 0 auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 8px 18px rgba(37, 99, 235, 0.18);
 }
 
 .topbar-side {
@@ -90,11 +93,11 @@ body {
 }
 
 .brand-meta {
-  margin-top: 3px;
-  color: rgb(221, 65, 51);
-  font-size: 16px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -109,7 +112,7 @@ h1, h2, p {
 }
 
 h1 {
-  font-size: 25px;
+  font-size: 26px;
   letter-spacing: 0;
 }
 
@@ -137,7 +140,7 @@ p {
   text-transform: uppercase;
 }
 
-.status, .panel header, .inline, .file-actions, .switch-row {
+.status, .panel header, .inline, .file-actions, .switch-row, .volume-row {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -152,7 +155,7 @@ p {
   display: inline-flex;
   align-items: center;
   min-height: 30px;
-  padding: 0 11px;
+  padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #f3f6fa;
@@ -183,14 +186,14 @@ p {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1px;
-  margin-top: 14px;
+  margin-top: 16px;
   overflow: hidden;
   background: var(--line);
 }
 
 .device div {
   min-width: 0;
-  padding: 15px 16px;
+  padding: 16px 18px;
   background: var(--panel);
 }
 
@@ -207,31 +210,74 @@ p {
   margin-top: 5px;
   overflow-wrap: anywhere;
   font-size: 15px;
+  line-height: 1.35;
 }
 
 .panels {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 14px;
-  margin-top: 14px;
+  gap: 16px;
+  margin-top: 16px;
 }
 
 .panel {
-  padding: 17px;
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.panel::before {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  content: "";
+  background: var(--accent);
+}
+
+.mic-panel::before {
+  background: linear-gradient(90deg, var(--accent-2), #22a46b);
+}
+
+.spk-panel::before {
+  background: linear-gradient(90deg, var(--accent), #0ea5e9);
+}
+
+.camera-panel::before {
+  background: linear-gradient(90deg, #a76505, #dc2626);
 }
 
 .panel header {
   justify-content: space-between;
-  margin-bottom: 16px;
+  padding-bottom: 13px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #edf1f6;
 }
 
 .controls {
   display: grid;
-  gap: 13px;
+  gap: 14px;
 }
 
 .switch-row {
   flex-wrap: wrap;
+}
+
+.volume-row {
+  align-items: end;
+  padding: 10px;
+  border: 1px solid #e3e9f1;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+
+.volume-row .field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.volume-row .switch {
+  flex: 0 0 auto;
 }
 
 label {
@@ -255,6 +301,7 @@ label {
   background: var(--panel-soft);
   color: var(--text);
   font-weight: 800;
+  user-select: none;
 }
 
 .switch input {
@@ -270,6 +317,7 @@ input, select, button {
   border-radius: 8px;
   background: #fff;
   color: var(--text);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease, transform 80ms ease;
 }
 
 input, select {
@@ -279,6 +327,12 @@ input, select {
 input[type="range"] {
   padding: 0;
   accent-color: var(--accent);
+}
+
+input:focus, select:focus, button:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 input[type="file"] {
@@ -293,6 +347,29 @@ button {
   color: #fff;
   font-weight: 800;
   cursor: pointer;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.02);
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.20);
+}
+
+.device-power.is-open-action {
+  border-color: var(--ok);
+  background: var(--ok);
+  box-shadow: 0 8px 18px rgba(21, 127, 87, 0.18);
+}
+
+.device-power.is-close-action {
+  border-color: var(--bad);
+  background: var(--bad);
+  box-shadow: 0 8px 18px rgba(180, 35, 58, 0.18);
+}
+
+.device-power:disabled {
+  border-color: var(--line-strong);
+  background: #8b98a9;
 }
 
 button:active {
@@ -309,7 +386,7 @@ button:disabled, input:disabled, select:disabled {
   margin-bottom: 16px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(180deg, #fbfdff, #f4f7fb);
+  background: linear-gradient(180deg, #fbfdff, #f5f8fb);
 }
 
 .level-row {
@@ -326,7 +403,7 @@ button:disabled, input:disabled, select:disabled {
 }
 
 .meter {
-  height: 14px;
+  height: 15px;
   overflow: hidden;
   border: 1px solid #cfdae8;
   border-radius: 999px;
@@ -348,10 +425,10 @@ button:disabled, input:disabled, select:disabled {
 .tool-group {
   display: grid;
   gap: 10px;
-  padding: 13px;
+  padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel-soft);
+  background: linear-gradient(180deg, #fbfcfe, #f6f8fb);
 }
 
 .tool-group.disabled {
@@ -401,6 +478,64 @@ button:disabled, input:disabled, select:disabled {
   overflow-wrap: anywhere;
 }
 
+.camera-panel {
+  margin-top: 16px;
+}
+
+.camera-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.camera-controls {
+  align-content: start;
+}
+
+.camera-view {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  max-height: 560px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid #263244;
+  border-radius: 8px;
+  background: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.camera-view img,
+.camera-view canvas {
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.camera-view img.active,
+.camera-view canvas.active {
+  display: block;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  color: #dbe7f5;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(30, 41, 59, 0.92));
+}
+
+.camera-placeholder.hidden {
+  display: none;
+}
+
 progress {
   width: 100%;
   height: 10px;
@@ -408,8 +543,8 @@ progress {
 }
 
 .log {
-  margin-top: 14px;
-  padding: 16px;
+  margin-top: 16px;
+  padding: 17px;
 }
 
 .log header {
@@ -422,9 +557,9 @@ pre {
   margin: 0;
   padding: 12px;
   overflow: auto;
-  border: 1px solid var(--line);
+  border: 1px solid #263244;
   border-radius: 8px;
-  background: #101827;
+  background: #0f172a;
   color: #d7e0ee;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
@@ -450,11 +585,39 @@ pre {
     text-align: left;
   }
 
-  .device, .panels {
+  .device, .panels, .camera-grid {
     grid-template-columns: 1fr;
   }
 
   .inline, .file-actions {
     flex-direction: column;
+  }
+}
+
+@media (max-width: 560px) {
+  .brand {
+    align-items: flex-start;
+  }
+
+  .mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .panel {
+    padding: 15px;
+  }
+
+  .volume-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .volume-row .switch {
+    justify-content: center;
   }
 }

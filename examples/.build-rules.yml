@@ -477,8 +477,7 @@ examples/usb/host/usb_camera_lcd_display:
 
 examples/usb/host/usb_camera_mic_spk:
   enable:
-    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
-    - if: IDF_TARGET in ["esp32s31"] and (IDF_VERSION_MAJOR >= 6 and IDF_VERSION_MINOR >= 1)
+    - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4", "esp32s31"]
 
 examples/usb/host/usb_audio_player:
   enable:
