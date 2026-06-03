@@ -171,6 +171,10 @@ components/display/lcd/esp_lcd_gc9d01/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_gc9503_mipi/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32p4"]
+
 components/display/lcd/esp_lcd_er88577/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
@@ -227,9 +231,17 @@ components/display/lcd/esp_lcd_st77922/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 
+components/display/lcd/esp_lcd_st77926/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/display/lcd/esp_lcd_usb_display/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
+
+components/display/lcd_touch/esp_lcd_touch_ft6336u/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
 
 components/display/lcd_touch/esp_lcd_touch_ili2118/test_apps:
   enable:
@@ -240,6 +252,10 @@ components/display/lcd_touch/esp_lcd_touch_spd2010/test_apps:
     - if: INCLUDE_DEFAULT == 1
 
 components/display/lcd_touch/esp_lcd_touch_st7123/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/display/lcd_touch/esp_lcd_touch_st77926/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
 

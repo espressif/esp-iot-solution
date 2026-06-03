@@ -15,7 +15,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency "espressif/esp_lcd_st77916"
 ```
@@ -149,7 +149,11 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install ST77916 panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     esp_lcd_dpi_panel_config_t dpi_config = ST77916_360_360_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = ST77916_360_360_PANEL_60HZ_DPI_CONFIG_CF(LCD_COLOR_PIXEL_FORMAT_RGB565);
+#endif
     st77916_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,      // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77916_lcd_init_cmd_t),

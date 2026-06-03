@@ -11,7 +11,7 @@ Implementation of the ILI2118 touch controller with [esp_lcd_touch](https://gith
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency "espressif/esp_lcd_touch_ili2118==*"
 ```
@@ -23,7 +23,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 I2C initialization of the touch component.
 
 ```
-    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_ILI2118_CONFIG();
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_ILI2118A_CONFIG();
 
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = CONFIG_LCD_HRES,
