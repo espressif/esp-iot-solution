@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v4.1.7 - 2026-06-03
+
+### Fix:
+
+* Improved ADC button compatibility across targets with different attenuation, bitwidth, and channel capabilities.
+* Fixed ADC button voltage handling when software calibration is unavailable.
+
 ## v4.1.6 - 2026-02-09
 
 ### Fix:
