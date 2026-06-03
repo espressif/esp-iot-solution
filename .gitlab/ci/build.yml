@@ -85,6 +85,14 @@
     matrix:
       - IMAGE: espressif/idf:release-v5.5
 
+.build_idf_ge_than_v5_4_to_v6_2:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:latest
+
 # ESP-IDF 6.0 is currently in pre-release stage.
 
 .build_idf_active_release_version_with_pre_release:
@@ -1027,7 +1035,7 @@ build_components_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_button_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: components/button/test_apps
 

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,10 +22,19 @@ static const char *TAG = "adc_button";
 #define NO_OF_SAMPLES   CONFIG_ADC_BUTTON_SAMPLE_TIMES     //Multisampling
 
 /*!< Using atten bigger than 6db by default, it will be 11db or 12db in different target */
+#if SOC_ADC_ATTEN_NUM >= 4
 #define DEFAULT_ADC_ATTEN         (ADC_ATTEN_DB_6 + 1)
+#else
+#define DEFAULT_ADC_ATTEN         ADC_ATTEN_DB_0
+#endif
 
+#ifdef SOC_ADC_RTC_MAX_BITWIDTH
 #define ADC_BUTTON_WIDTH          SOC_ADC_RTC_MAX_BITWIDTH
-#define ADC_BUTTON_CHANNEL_MAX    SOC_ADC_MAX_CHANNEL_NUM
+#else
+#define ADC_BUTTON_WIDTH          SOC_ADC_DIGI_MAX_BITWIDTH
+#endif
+
+#define ADC_BUTTON_CHANNEL_MAX(adc_unit)    SOC_ADC_CHANNEL_NUM(adc_unit)
 #define ADC_BUTTON_ATTEN          DEFAULT_ADC_ATTEN
 
 #define ADC_BUTTON_MAX_CHANNEL  CONFIG_ADC_BUTTON_MAX_CHANNEL
@@ -95,7 +104,6 @@ static int find_channel(adc_unit_t unit_id, uint8_t channel)
     }
     return -1;
 }
-
 static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
 {
     adc_cali_handle_t handle = NULL;
@@ -135,12 +143,10 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
     *out_handle = handle;
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "Calibration Success");
-    } else if (ret == ESP_ERR_NOT_SUPPORTED || !calibrated) {
-        ESP_LOGW(TAG, "eFuse not burnt, skip software calibration");
     } else if (ret == ESP_ERR_NOT_SUPPORTED) {
-        ESP_LOGW(TAG, "Calibration not supported");
+        ESP_LOGW(TAG, "ADC calibration is not supported, skip software calibration");
     } else {
-        ESP_LOGE(TAG, "Invalid arg or no memory");
+        ESP_LOGE(TAG, "ADC calibration init failed: %s", esp_err_to_name(ret));
     }
 
     return calibrated;
@@ -148,6 +154,10 @@ static bool adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_ha
 
 static bool adc_calibration_deinit(adc_cali_handle_t handle)
 {
+    if (handle == NULL) {
+        return true;
+    }
+
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
     if (adc_cali_delete_scheme_curve_fitting(handle) == ESP_OK) {
         return true;
@@ -166,7 +176,7 @@ static bool adc_calibration_deinit(adc_cali_handle_t handle)
 esp_err_t button_adc_del(button_driver_t *button_driver)
 {
     button_adc_obj *adc_btn = __containerof(button_driver, button_adc_obj, base);
-    ESP_RETURN_ON_FALSE(adc_btn->ch < ADC_BUTTON_CHANNEL_MAX, ESP_ERR_INVALID_ARG, TAG, "channel out of range");
+    ESP_RETURN_ON_FALSE(adc_btn->ch < ADC_BUTTON_CHANNEL_MAX(adc_btn->unit_id), ESP_ERR_INVALID_ARG, TAG, "channel out of range");
     ESP_RETURN_ON_FALSE(adc_btn->index < ADC_BUTTON_MAX_BUTTON, ESP_ERR_INVALID_ARG, TAG, "button_index out of range");
 
     int ch_index = find_channel(adc_btn->unit_id, adc_btn->ch);
@@ -184,7 +194,7 @@ esp_err_t button_adc_del(button_driver_t *button_driver)
     }
     if (unused_button == ADC_BUTTON_MAX_BUTTON && g_button.unit[adc_btn->unit_id].ch[ch_index].is_init) {  /**< if all button is unused, deinit the channel */
         g_button.unit[adc_btn->unit_id].ch[ch_index].is_init = 0;
-        g_button.unit[adc_btn->unit_id].ch[ch_index].channel = ADC_BUTTON_CHANNEL_MAX;
+        g_button.unit[adc_btn->unit_id].ch[ch_index].channel = ADC_BUTTON_CHANNEL_MAX(adc_btn->unit_id);
         ESP_LOGD(TAG, "all button is unused on channel%d, deinit the channel", g_button.unit[adc_btn->unit_id].ch[ch_index].channel);
     }
 
@@ -222,9 +232,27 @@ static uint32_t get_adc_voltage(adc_unit_t unit_id, uint8_t channel)
     adc_reading /= NO_OF_SAMPLES;
     //Convert adc_reading to voltage in mV
     int voltage = 0;
-    adc_cali_raw_to_voltage(g_button.unit[unit_id].adc_cali_handle, adc_reading, &voltage);
-    ESP_LOGV(TAG, "Raw: %"PRIu32"\tVoltage: %dmV", adc_reading, voltage);
-    return voltage;
+    if (g_button.unit[unit_id].adc_cali_handle != NULL) {
+        esp_err_t ret = adc_cali_raw_to_voltage(g_button.unit[unit_id].adc_cali_handle, adc_reading, &voltage);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "ADC calibration conversion failed: %s", esp_err_to_name(ret));
+            return 0;
+        }
+    } else {
+#if CONFIG_IDF_TARGET_ESP32S31
+        // Keep the offset correction in signed arithmetic to avoid unsigned underflow near zero.
+        voltage = (int32_t)adc_reading * 4 * 1000 / 4393 - 2;
+        if (voltage < 0) {
+            voltage = 0;
+        }
+#else
+        // No calibration handle means the chip does not support software calibration; return 0 to indicate that the voltage value is not available.
+        voltage = 0;
+#endif
+    }
+
+    ESP_LOGD(TAG, "Raw: %"PRIu32"\tVoltage: %dmV", adc_reading, voltage);
+    return (uint32_t)voltage;
 }
 
 uint8_t button_adc_get_key_level(button_driver_t *button_driver)
@@ -233,7 +261,7 @@ uint8_t button_adc_get_key_level(button_driver_t *button_driver)
     static uint16_t vol = 0;
     uint32_t ch = adc_btn->ch;
     uint32_t index = adc_btn->index;
-    ESP_RETURN_ON_FALSE(ch < ADC_BUTTON_CHANNEL_MAX, 0, TAG, "channel out of range");
+    ESP_RETURN_ON_FALSE(ch < ADC_BUTTON_CHANNEL_MAX(adc_btn->unit_id), 0, TAG, "channel out of range");
     ESP_RETURN_ON_FALSE(index < ADC_BUTTON_MAX_BUTTON, 0, TAG, "button_index out of range");
 
     int ch_index = find_channel(adc_btn->unit_id, ch);
@@ -257,7 +285,7 @@ esp_err_t iot_button_new_adc_device(const button_config_t *button_config, const 
     esp_err_t ret = ESP_OK;
     ESP_RETURN_ON_FALSE(button_config && adc_config && ret_button, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
     ESP_RETURN_ON_FALSE(adc_config->unit_id < ADC_UNIT_NUM, ESP_ERR_INVALID_ARG, TAG, "adc_handle out of range");
-    ESP_RETURN_ON_FALSE(adc_config->adc_channel < ADC_BUTTON_CHANNEL_MAX, ESP_ERR_INVALID_ARG, TAG, "channel out of range");
+    ESP_RETURN_ON_FALSE(adc_config->adc_channel < ADC_BUTTON_CHANNEL_MAX(adc_config->unit_id), ESP_ERR_INVALID_ARG, TAG, "channel out of range");
     ESP_RETURN_ON_FALSE(adc_config->button_index < ADC_BUTTON_MAX_BUTTON, ESP_ERR_INVALID_ARG, TAG, "button_index out of range");
     ESP_RETURN_ON_FALSE(adc_config->max > 0, ESP_ERR_INVALID_ARG, TAG, "key max voltage invalid");
     button_adc_obj *adc_btn = calloc(1, sizeof(button_adc_obj));
