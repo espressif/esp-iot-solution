@@ -5,6 +5,7 @@ components/esp_weaver/tools/apply_patches.py
 components/gprof/scripts/gprof.py
 components/mcp-c-sdk/test_apps/run_test_apps.sh
 components/usb/esp_tinyuf2/utils/uf2conv.py
+components/usb/usb_stream/examples/usb_stream_mic_spk/components/xfer_http/www/compress_pages.sh
 components/utilities/xz/xz-embedded/linux/scripts/xz_wrap.sh
 docs/check_lang_folder_sync.sh
 docs/zh_CN/conf.py
@@ -21,7 +22,6 @@ examples/mcp/mcp_server/gen_es256_test_materials.sh
 examples/usb/device/bootloader_uf2/utils/redirect.sh
 examples/usb/device/usb_msc_wireless_disk/tools/analyze_upload_log_en.py
 examples/usb/device/usb_msc_wireless_disk/tools/upload_speed_test.py
-examples/usb/host/usb_camera_mic_spk/components/xfer_http/www/compress_pages.sh
 examples/usb/host/usb_hub_dual_camera/scripts/gzip_webserver_files.sh
 tools/ci/check_components.py
 tools/ci/check_executables.py

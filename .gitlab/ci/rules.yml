@@ -2006,8 +2006,6 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-components_usb_usb_stream
-    - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_camera_lcd_display
 
 .rules:build:example_usb_host_usb_camera_mic_spk:
@@ -2017,8 +2015,6 @@
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-components_usb_usb_stream
     - <<: *if-dev-push
       changes: *patterns-example_usb_host_usb_camera_mic_spk
 
@@ -3316,6 +3312,26 @@
     - <<: *if-protected
     - <<: *if-label-build
     - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+
+.rules:build:components_usb_host_usb_stream_lcd_display:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_usb_usb_stream
+
+.rules:build:components_usb_host_usb_stream_mic_spk:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-build_system

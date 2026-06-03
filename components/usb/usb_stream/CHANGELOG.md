@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.2 - 2026-5-26
+
+### Improvements:
+
+* Add example `usb_stream_lcd_display` and `usb_stream_mic_spk` for demonstration of UVC and UAC functionality.
+
 ## v1.5.1 - 2025-7-15
 
 ### Bug Fixes:
