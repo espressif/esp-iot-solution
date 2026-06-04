@@ -198,14 +198,14 @@ def main():
         print('compressed data len: {}'.format(f_len))
         # The MD5 for the compressed data
         if (header_version[header_ver] < 3):
-            bin_data += struct.pack('32s', hashlib.md5(data).digest())
+            bin_data += struct.pack('32s', hashlib.sha256(data).digest())
             if (header_version[header_ver] == 2):
                 # Todo, if it's diff OTA, write base app check data len
                 bin_data += struct.pack('<I', 0)
                 # Todo, if it's diff OTA, write base app crc32 checksum
                 bin_data += struct.pack('<I', 0)
         else:
-            bin_data += struct.pack('16s', hashlib.md5(data).digest())
+            bin_data += struct.pack('16s', hashlib.sha256(data).digest()[:16])
         # The CRC32 for the header
         bin_data += struct.pack('<I', binascii.crc32(bin_data, 0x0))
 
