@@ -1,0 +1,29 @@
+menu "ESP LV Decoder"
+
+config ESP_LV_DECODER_PJPG_HW_ALPHA_BLEND
+    bool "PPA hardware alpha blending for transparent PJPG images (RGB888 displays)"
+    default n
+    help
+        Offload alpha blending of transparent PJPG images to the PPA hardware on
+        RGB888/XRGB8888 displays, instead of blending on the CPU. This frees the
+        CPU during rendering of images with per-pixel transparency.
+
+        It works by decoding such PJPG images to interleaved ARGB8888 (the format
+        the PPA blend engine can composite in a single hardware op).
+
+        When enabled (y):
+        - Transparent PJPG images blend via PPA hardware (CPU offloaded).
+        - Costs ~33% more image memory (4 B/px vs 3 B/px) and a one-time CPU
+          interleave per decode, and increases PSRAM read bandwidth during blend.
+
+        When disabled (n):
+        - PJPG decodes to planar RGB565A8 (3 B/px); on RGB888 displays the blend
+          is done on the CPU.
+
+        RGB565 displays are unaffected (always RGB565A8). LVGL v9 only.
+
+        Recommendation: keep enabled when the CPU is the bottleneck; disable on
+        PSRAM-bandwidth-constrained panels where the extra read traffic hurts more
+        than the freed CPU helps. Measure both.
+
+endmenu

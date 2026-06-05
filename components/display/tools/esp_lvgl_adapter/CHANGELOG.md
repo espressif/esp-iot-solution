@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.2 (2026-06-05)
+
+* Add LVGL v9 PPA acceleration for RGB888 displays: ARGB8888 per-pixel alpha blend and opaque fill paths; opaque RGB565/RGB888 images fall back to CPU to preserve tiled image rendering
+* Fix framebuffer cache sync to use the destination pixel size (2 for RGB565, 3 for RGB888) instead of `sizeof(lv_color_t)`
+* Guard PPA source bounds on the custom-handler path to avoid reads outside the source image
+
 ## v0.5.1 (2026-05-21)
 
 * Add optional FreeType render pool reduction for lower stack usage
