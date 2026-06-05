@@ -43,6 +43,7 @@
 #endif
 
 #define SP_TAG_SPNG        "_SPNG__"
+#define SP_TAG_SQOI        "_SQOI__"
 #define SP_TAG_SJPG        "_SJPG__"
 #define SP_TAG_LEN         7
 #define SP_META_OFFSET     14
@@ -65,9 +66,15 @@ static size_t s_pjpg_rx_a_size = 0;
 static SemaphoreHandle_t s_pjpg_mutex = NULL;  // Protect PJPG global buffers from concurrent access
 #endif
 
+typedef enum {
+    SP_IMAGE_TYPE_PNG,
+    SP_IMAGE_TYPE_QOI,
+    SP_IMAGE_TYPE_JPG,
+} sp_image_type_t;
+
 typedef struct {
     bool is_file;
-    bool is_sjpg;
+    sp_image_type_t type;
     uint16_t w;
     uint16_t h;
     uint16_t splits;
@@ -180,7 +187,7 @@ static void * buf_align(void * buf, lv_color_format_t color_format);
 static uint32_t width_to_stride(uint32_t w, lv_color_format_t color_format);
 
 static inline uint32_t read_be32(const uint8_t *p);
-static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg);
+static inline bool sp_is_sp_tag(const uint8_t *hdr8, sp_image_type_t *type);
 static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, uint16_t *splits, uint16_t *split_h);
 
 static const char *TAG = "lv_decoder_v9";
@@ -395,13 +402,13 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
         uint8_t png_magic[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
         uint8_t qoi_magic[4] = {0x71, 0x6F, 0x69, 0x66};
         bool is_sp = false;
-        bool is_sjpg = false;
+        sp_image_type_t sp_type = SP_IMAGE_TYPE_PNG;
         if (src_type == LV_IMAGE_SRC_FILE) {
             uint8_t hdr8[8];
             uint32_t rn;
             lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
             if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
-                if (sp_is_sp_tag(hdr8, &is_sjpg)) {
+                if (sp_is_sp_tag(hdr8, &sp_type)) {
                     is_sp = true;
                 }
             }
@@ -409,7 +416,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
         } else {
             const lv_image_dsc_t *img = dsc->src;
             if (img->data_size >= 8) {
-                if (sp_is_sp_tag(img->data, &is_sjpg)) {
+                if (sp_is_sp_tag(img->data, &sp_type)) {
                     is_sp = true;
                 }
             }
@@ -436,7 +443,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             if (w == 0 || h == 0) {
                 return LV_RESULT_INVALID;
             }
-            if (is_sjpg) {
+            if (sp_type == SP_IMAGE_TYPE_JPG) {
                 lv_color_format_t tgt = get_target_rgb_format();
                 header->cf = (tgt == LV_COLOR_FORMAT_RGB565) ? LV_COLOR_FORMAT_RGB565 : LV_COLOR_FORMAT_RGB888;
                 header->stride = (tgt == LV_COLOR_FORMAT_RGB565) ? (w * 2) : (w * 3);
@@ -696,7 +703,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
         // First, try to detect by file extension (more reliable with mmap_assets)
         if (dsc->src_type == LV_IMAGE_SRC_FILE) {
             const char *ext = lv_fs_get_ext(dsc->src);
-            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
+            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sqoi") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
                 is_sp = true;
             }
         }
@@ -708,7 +715,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
                 uint32_t rn;
                 lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
                 if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
-                    bool dummy = false;
+                    sp_image_type_t dummy = SP_IMAGE_TYPE_PNG;
                     if (sp_is_sp_tag(hdr8, &dummy)) {
                         is_sp = true;
                     }
@@ -717,7 +724,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
             } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
                 const lv_image_dsc_t * img = dsc->src;
                 if (img->data_size >= 8) {
-                    bool dummy = false;
+                    sp_image_type_t dummy = SP_IMAGE_TYPE_PNG;
                     if (sp_is_sp_tag(img->data, &dummy)) {
                         is_sp = true;
                     }
@@ -862,8 +869,8 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
     } else {
         return LV_RESULT_INVALID;
     }
-    bool is_sjpg = false;
-    if (!sp_is_sp_tag(hdr8, &is_sjpg)) {
+    sp_image_type_t sp_type = SP_IMAGE_TYPE_PNG;
+    if (!sp_is_sp_tag(hdr8, &sp_type)) {
         if (is_file) {
             lv_fs_close(&f);
         }
@@ -901,7 +908,7 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
         return LV_RESULT_INVALID;
     }
     ctx->is_file = is_file;
-    ctx->is_sjpg = is_sjpg;
+    ctx->type = sp_type;
     ctx->w = w;
     ctx->h = h;
     ctx->splits = splits;
@@ -915,7 +922,7 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
     ctx->base_size = base_size;
     ctx->tile = NULL;
     ctx->slice_buf = NULL;
-    ctx->out_cf = is_sjpg ? get_target_rgb_format() : LV_COLOR_FORMAT_ARGB8888;
+    ctx->out_cf = (sp_type == SP_IMAGE_TYPE_JPG) ? get_target_rgb_format() : LV_COLOR_FORMAT_ARGB8888;
     ctx->bpp = (ctx->out_cf == LV_COLOR_FORMAT_RGB565) ? 2 : (ctx->out_cf == LV_COLOR_FORMAT_RGB888 ? 3 : 4);
     ctx->tile_width = 0;
     if (is_file) {
@@ -990,7 +997,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         ESP_LOGD(TAG, "Allocated aligned slice_buf: %lu bytes (requested: %lu)",
                  (unsigned long)alloc_size, (unsigned long)max_slice_bytes);
     }
-    if (!ctx->is_sjpg) {
+    if (ctx->type == SP_IMAGE_TYPE_PNG) {
         png_image im;
         memset(&im, 0, sizeof(im));
         im.version = PNG_IMAGE_VERSION;
@@ -1017,6 +1024,37 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
             return LV_RESULT_INVALID;
         }
         png_image_free(&im);
+    } else if (ctx->type == SP_IMAGE_TYPE_QOI) {
+        qoi_desc desc;
+        memset(&desc, 0, sizeof(desc));
+        unsigned char *pixels = qoi_decode(encoded, len_i, &desc, 4);
+        if (!pixels) {
+            if (ctx->is_file) {
+                free(encoded);
+            }
+            return LV_RESULT_INVALID;
+        }
+        if (desc.width != ctx->w || desc.height != cur_h) {
+            ESP_LOGE(TAG, "SQOI dimension mismatch: expected %" PRIu32 "x%" PRIu32 ", got %u x %u",
+                     (uint32_t)ctx->w, cur_h, desc.width, desc.height);
+            free(pixels);
+            if (ctx->is_file) {
+                free(encoded);
+            }
+            return LV_RESULT_INVALID;
+        }
+        uint32_t pixels_count = desc.width * desc.height;
+        uint8_t *dst = ctx->slice_buf;
+        uint8_t *src = pixels;
+        for (uint32_t i = 0; i < pixels_count; i++) {
+            dst[0] = src[2];
+            dst[1] = src[1];
+            dst[2] = src[0];
+            dst[3] = src[3];
+            src += 4;
+            dst += 4;
+        }
+        free(pixels);
     } else {
         uint32_t jw = 0, jh = 0;
         jpeg_dec_handle_t jdec = NULL;
@@ -1987,17 +2025,23 @@ static inline uint32_t read_be32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
 
-static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg)
+static inline bool sp_is_sp_tag(const uint8_t *hdr8, sp_image_type_t *type)
 {
     if (memcmp(hdr8, SP_TAG_SPNG, SP_TAG_LEN) == 0) {
-        if (is_sjpg) {
-            *is_sjpg = false;
+        if (type) {
+            *type = SP_IMAGE_TYPE_PNG;
+        }
+        return true;
+    }
+    if (memcmp(hdr8, SP_TAG_SQOI, SP_TAG_LEN) == 0) {
+        if (type) {
+            *type = SP_IMAGE_TYPE_QOI;
         }
         return true;
     }
     if (memcmp(hdr8, SP_TAG_SJPG, SP_TAG_LEN) == 0) {
-        if (is_sjpg) {
-            *is_sjpg = true;
+        if (type) {
+            *type = SP_IMAGE_TYPE_JPG;
         }
         return true;
     }

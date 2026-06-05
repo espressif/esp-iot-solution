@@ -3,6 +3,7 @@
 ## v0.4.1 (2026-06-05)
 
 * Add `CONFIG_ESP_LV_DECODER_PJPG_HW_ALPHA_BLEND` (LVGL v9): decode transparent PJPG images to ARGB8888 on RGB888 displays so per-pixel alpha blending can run on the PPA hardware instead of the CPU. RGB565 displays keep using RGB565A8.
+* Fixed LVGL v9 split QOI (SQOI) decoding support.
 
 ## v0.4.0 (2026-05-06)
 

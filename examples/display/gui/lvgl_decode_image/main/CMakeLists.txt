@@ -41,6 +41,14 @@ if(EXISTS "${assets_root}")
         IMPORT_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
     list(APPEND asset_targets assets_spng_bin)
 
+    spiffs_create_partition_assets(sqoi "${assets_root}/png" FLASH_IN_PROJECT
+        MMAP_FILE_SUPPORT_FORMAT ".png"
+        MMAP_SUPPORT_QOI
+        MMAP_SUPPORT_SQOI
+        MMAP_SPLIT_HEIGHT 16
+        IMPORT_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
+    list(APPEND asset_targets assets_sqoi_bin)
+
     spiffs_create_partition_assets(sjpg "${assets_root}/jpg" FLASH_IN_PROJECT
         MMAP_FILE_SUPPORT_FORMAT ".jpg"
         MMAP_SUPPORT_SJPG

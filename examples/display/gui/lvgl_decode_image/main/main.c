@@ -24,6 +24,7 @@
 #include "esp_mmap_assets.h"
 
 #include "mmap_generate_spng.h"
+#include "mmap_generate_sqoi.h"
 #include "mmap_generate_sjpg.h"
 
 #if !CONFIG_IDF_TARGET_ESP32C3
@@ -72,6 +73,7 @@ static image_format_ctx_t s_formats[] = {
     { .label = "QOI",  .partition = "qoi",  .drive = 'Q', .max_files = MMAP_QOI_FILES,  .checksum = MMAP_QOI_CHECKSUM },
 #endif
     { .label = "SPNG", .partition = "spng", .drive = 'S', .max_files = MMAP_SPNG_FILES, .checksum = MMAP_SPNG_CHECKSUM },
+    { .label = "SQOI", .partition = "sqoi", .drive = 'O', .max_files = MMAP_SQOI_FILES, .checksum = MMAP_SQOI_CHECKSUM },
     { .label = "SJPG", .partition = "sjpg", .drive = 'T', .max_files = MMAP_SJPG_FILES, .checksum = MMAP_SJPG_CHECKSUM },
 #if CONFIG_IDF_TARGET_ESP32P4
     { .label = "PJPG", .partition = "pjpg", .drive = 'U', .max_files = MMAP_PJPG_FILES, .checksum = MMAP_PJPG_CHECKSUM },
