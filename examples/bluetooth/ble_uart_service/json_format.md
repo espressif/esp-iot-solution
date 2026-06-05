@@ -22,9 +22,9 @@ Fields used by the device:
 | `data.payload.title` | Displayed (e.g. `"Run command"`) |
 | `data.payload.metadata` | Compact metadata; prefers `command`, `path`, then `url`, with first string child as fallback |
 
-### Hardware mapping
+### Hardware mapping (ESP-VoCat touch key)
 
-With the current single-key default:
+The touch key uses a capacitive touch pad (IO7 on v1.0, IO6 or IO7 on v1.2):
 
 | Action | Decision sent |
 |--------|---------------|
@@ -32,7 +32,7 @@ With the current single-key default:
 | Long press (first threshold) | `"reject"` |
 | 30s timeout | `"reject"` (not `"timeout"`) |
 
-`"always"` is not exposed because the device has only one touch key. This is a hardware limitation.
+`"always"` is not exposed because this firmware exposes only one touch key.
 
 ---
 

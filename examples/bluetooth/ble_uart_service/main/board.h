@@ -17,7 +17,7 @@ extern "C" {
 /**
  * @brief First capacitive touch pad channel.
  *
- * V1_2 boards use pad 7 and pad 6. V1_0 boards use only pad 7.
+ * ESP-VoCat v1.2 boards use pad 7 and pad 6. ESP-VoCat v1.0 boards use only pad 7.
  */
 #define BOARD_TOUCH_PAD_0 7u
 
