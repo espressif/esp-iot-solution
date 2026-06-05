@@ -1,13 +1,41 @@
 | Supported Targets | ESP32-S3 |
 | ----------------- | -------- |
 
-# Emote BLE UART OpenCode Device
+# Emote BLE UART OpenCode Device (ESP-VoCat)
 
-This example is the **ESP32-S3 device-side adaptation** for the OpenCode BLE
+This example is the **ESP-VoCat (ESP32-S3) device-side adaptation** for the OpenCode BLE
 UART bridge. It adapts the host-side OpenCode plugin protocol to the Emote
 device UI: the device receives JSONL messages from the BLE UART daemon, mirrors
 OpenCode session state on the display, and lets the user approve or reject
 OpenCode permission requests from the touch key.
+
+## Supported Hardware
+
+This example is designed for the **ESP-VoCat** intelligent AI development kit.
+Key ESP-VoCat v1.2 features:
+
+- **ESP32-S3-WROOM-1-N16R16VA**: 2.4 GHz Wi-Fi + Bluetooth 5 (LE), 16 MB Flash,
+  16 MB PSRAM.
+- **1.85-inch QSPI circular touch screen** (360 × 360) for displaying OpenCode
+  session status and permission prompts.
+- **Capacitive touch pads** (GPIO IO6 / IO7) — used as the touch key for
+  single-click (approve) and long-press (reject) permission decisions.
+- **Built-in 3 W speaker and dual microphone array** (not used by this BLE UART
+  example; available for voice interaction in other firmware).
+- **USB-C interface** for power supply, firmware download, and debugging.
+
+> ESP-VoCat v1.0 uses a different module (ESP32-S3-WROOM-2-N32R16V, 32 MB Flash)
+> and a single touch pad (IO7 only). The board layer handles both revisions.
+
+For full hardware details, schematics, and revision history, see the
+[ESP-VoCat Documentation](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html).
+
+> **Note:** This is not a generic ESP32-S3 example; it requires the ESP-VoCat
+> hardware and BSP (`espressif/esp_vocat`). The firmware will not work on other
+> ESP32-S3 boards unless the board layer (`board.c` / `board.h`) is ported.
+
+The board support package is pulled in automatically via the component registry
+manifest ([idf_component.yml](main/idf_component.yml)).
 
 ## Compatibility
 
@@ -261,6 +289,8 @@ These commands are for local maintenance and are not part of the OpenCode flow:
 ## Related Documentation
 
 - [json_format.md](json_format.md): device JSONL protocol.
+- [ESP-VoCat Documentation](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html):
+  hardware overview, user guide, and revision details for the target board.
 - `$IDF_PATH/tools/ble/ble_uart_bridge/README.md`: BLE UART Bridge overview.
 - `$IDF_PATH/tools/ble/ble_uart_bridge/demos/opencode/README.md`: OpenCode
   plugin-side guide.

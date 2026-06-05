@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * Board support: QSPI display, I2C panel touch, capacitive key pads, emote_gen_player.
+ * ESP-VoCat board support: QSPI display, I2C panel touch, capacitive key pads, emote_gen_player.
  */
 
 #include <inttypes.h>
