@@ -53,6 +53,10 @@ IGNORE_WARNINGS = [
     r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panther/follower
     r'WARNING: The following Kconfig variables were used in "if" clauses, but not',  # Due to the introduction of Kconfig and package manager dependencies, compilation warnings are generated
     r'.+MultiCommand.+',
+    r'warning: \'ISP_AWB_SAMPLE_POINT_BEFORE_CCM\' is deprecated: Use ISP_AWB_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
+    r'warning: \'ISP_AE_SAMPLE_POINT_AFTER_DEMOSAIC\' is deprecated: Use ISP_AE_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
+    r'warning: \'touch_cst816s_read_id\' declared \'static\' but never defined \[-Wunused-function\]',
+    r'warning: \'on_refresh_done\' is deprecated: Deprecated, use on_frame_buf_complete instead \[-Wdeprecated-declarations\]',
 ]
 
 class CustomApp(CMakeApp):
@@ -209,7 +213,7 @@ class CustomApp(CMakeApp):
         subprocess.run(
             [
                 sys.executable,
-                f"{IDF_PATH}/tools/idf.py",
+                f'{IDF_PATH}/tools/idf.py',
                 'gen-bmgr-config',
                 '-c',
                 str(Path(self.work_dir).absolute() / 'boards'),
