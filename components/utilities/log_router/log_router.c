@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -122,8 +122,14 @@ int esp_log_router_flash_vprintf(const char *format, va_list args)
 
     // Write to all files that match the log level
     esp_log_router_slist_t *item;
-    int len = vsnprintf(vprintf_buffer, sizeof(vprintf_buffer) - 1, format, args);
+    int len = vsnprintf(vprintf_buffer, sizeof(vprintf_buffer), format, args);
     if (len > 0) {
+        if (len > (sizeof(vprintf_buffer) - 1)) {
+            int trunc_b = len - (sizeof(vprintf_buffer) - 1);
+            log_router_debug_printf("Buffer too small, lost %d bytes\n", trunc_b);
+            len = sizeof(vprintf_buffer) - 1;
+        }
+
         vprintf_buffer[len] = '\0';
         uint32_t now = (uint32_t)(esp_timer_get_time() / 1000);
 
