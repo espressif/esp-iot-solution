@@ -23,7 +23,7 @@
 
 typedef struct {
     char id[9];
-    uvc_dev_info_t info;
+    uvc_dev_info_t *info;
 } camera_t;
 
 typedef struct {
@@ -34,21 +34,44 @@ typedef struct {
 static camera_system_t camera_system = {0};
 static httpd_handle_t s_server = NULL;
 
+static void clear_camera_system(void)
+{
+    if (camera_system.cameras == NULL) {
+        camera_system.camera_count = 0;
+        return;
+    }
+
+    // Release dynamically allocated per-camera resolution lists before rebuilding the snapshot.
+    for (int i = 0; i < camera_system.camera_count; ++i) {
+        app_uvc_free_dev_frame_info(camera_system.cameras[i].info);
+    }
+    free(camera_system.cameras);
+    camera_system.cameras = NULL;
+    camera_system.camera_count = 0;
+}
+
 static void update_camera_system(void)
 {
     int connected_num = 0;
     app_uvc_get_connect_dev_num(&connected_num);
-    if (camera_system.cameras == NULL) {
-        camera_system.cameras = calloc(connected_num, sizeof(camera_t));
-        if (camera_system.cameras == NULL) {
-            ESP_LOGE(TAG, "Failed to allocate memory for camera system");
-            return;
-        }
+
+    clear_camera_system();
+    if (connected_num <= 0) {
+        return;
     }
+
+    camera_system.cameras = calloc(connected_num, sizeof(camera_t));
+    if (camera_system.cameras == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for camera system");
+        return;
+    }
+
     camera_system.camera_count = connected_num;
     for (int i = 0; i < connected_num; ++i) {
         if (app_uvc_get_dev_frame_info(i, &camera_system.cameras[i].info) == ESP_OK) {
-            snprintf(camera_system.cameras[i].id, sizeof(camera_system.cameras[i].id), "%d", camera_system.cameras[i].info.index);
+            snprintf(camera_system.cameras[i].id, sizeof(camera_system.cameras[i].id), "%d", camera_system.cameras[i].info->index);
+        } else {
+            ESP_LOGE(TAG, "Failed to get camera info for index %d", i);
         }
     }
 }
@@ -129,48 +152,67 @@ static esp_err_t get_404_handler(httpd_req_t *req)
 static esp_err_t get_cameras_handler(httpd_req_t *req)
 {
     update_camera_system();
-    char response[1024];
-    int len = snprintf(response, sizeof(response),
-                       "{\"limit\":%d,\"cameras\":[", camera_system.camera_count);
+    size_t resolution_count = 0;
+    for (int i = 0; i < camera_system.camera_count; ++i) {
+        if (camera_system.cameras[i].info != NULL) {
+            resolution_count += camera_system.cameras[i].info->resolution_count;
+        }
+    }
+
+    size_t response_size = 128 + camera_system.camera_count * 128 + resolution_count * 80;
+    char *response = (char *)calloc(1, response_size);
+    if (response == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate camera response");
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No memory");
+        return ESP_ERR_NO_MEM;
+    }
+
+    int len = snprintf(response, response_size, "{\"limit\":%d,\"cameras\":[", camera_system.camera_count);
 
     for (int i = 0; i < camera_system.camera_count; ++i) {
         camera_t *cam = &camera_system.cameras[i];
-        len += snprintf(response + len, sizeof(response) - len,
-                        "{\"id\":\"%s\",\"resolutions\":[",
-                        cam->id);
-        for (int j = 0; j < cam->info.resolution_count; ++j) {
-            len += snprintf(response + len, sizeof(response) - len,
-                            "{\"width\":%d,\"height\":%d,\"index\":%d}%s",
-                            cam->info.resolution[j].width, cam->info.resolution[j].height, j,
-                            (j < cam->info.resolution_count - 1) ? "," : "");
+        uvc_dev_info_t *info = cam->info;
+        if (info == NULL) {
+            len += snprintf(response + len, response_size - len, "{\"id\":\"%s\",\"resolutions\":[]}%s", cam->id,
+                            (i < camera_system.camera_count - 1) ? "," : "");
+            continue;
         }
-        len += snprintf(response + len, sizeof(response) - len, "]}%s",
+
+        len += snprintf(response + len, response_size - len, "{\"id\":\"%s\",\"resolutions\":[", cam->id);
+        for (int j = 0; j < info->resolution_count; ++j) {
+            len += snprintf(response + len, response_size - len,
+                            "{\"width\":%d,\"height\":%d,\"index\":%d}%s",
+                            info->resolution[j].width, info->resolution[j].height, j,
+                            (j < info->resolution_count - 1) ? "," : "");
+        }
+        len += snprintf(response + len, response_size - len, "]}%s",
                         (i < camera_system.camera_count - 1) ? "," : "");
     }
-    len += snprintf(response + len, sizeof(response) - len,
-                    "],\"activated\":[");
+    len += snprintf(response + len, response_size - len, "],\"activated\":[");
 
     bool first_activated = true;
     for (int i = 0; i < camera_system.camera_count; ++i) {
-        if (camera_system.cameras[i].info.if_streaming) {
-            camera_t *cam = &camera_system.cameras[i];
+        camera_t *cam = &camera_system.cameras[i];
+        uvc_dev_info_t *info = cam->info;
+        if (info != NULL && info->if_streaming && info->active_resolution >= 0 && info->active_resolution < info->resolution_count) {
             if (!first_activated) {
-                len += snprintf(response + len, sizeof(response) - len, ",");
+                len += snprintf(response + len, response_size - len, ",");
             }
 
-            len += snprintf(response + len, sizeof(response) - len,
+            len += snprintf(response + len, response_size - len,
                             "{\"id\":\"%s\",\"resolution\":{\"width\":%d,\"height\":%d, \"index\":%d}}",
                             cam->id,
-                            cam->info.resolution[cam->info.active_resolution].width,
-                            cam->info.resolution[cam->info.active_resolution].height,
-                            cam->info.active_resolution);
+                            info->resolution[info->active_resolution].width,
+                            info->resolution[info->active_resolution].height,
+                            info->active_resolution);
             first_activated = false;
         }
     }
-    len += snprintf(response + len, sizeof(response) - len, "]}");
+    len += snprintf(response + len, response_size - len, "]}");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     httpd_resp_set_type(req, "application/json");
     httpd_resp_send(req, response, strlen(response));
+    free(response);
     return ESP_OK;
 }
 
