@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.2 - 2026-06-08
+
+### Bug Fix:
+
+- Fix a compilation error when using software I2C with IDF v6.
+
 ## v1.5.1 - 2026-3-18
 
 ### Bug Fix:

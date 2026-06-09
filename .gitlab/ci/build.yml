@@ -110,6 +110,7 @@
       - IMAGE: espressif/idf:release-v5.4
       - IMAGE: espressif/idf:release-v5.5
       - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
 
 build_example_ai_esp_dl_emotion_recognition:
   extends:
@@ -1844,7 +1845,7 @@ build_components_i2c_bus_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_i2c_bus_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_active_release_version_with_pre_release
   variables:
     EXAMPLE_DIR: components/i2c_bus/test_apps
 

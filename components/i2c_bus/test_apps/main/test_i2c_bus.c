@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,7 @@
 #include <string.h>
 #include "unity.h"
 #include "unity_config.h"
+#include "esp_idf_version.h"
 #include "i2c_bus.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -46,6 +47,7 @@ static QueueHandle_t s_receive_queue;
 
 static IRAM_ATTR bool test_i2c_rx_done_callback(i2c_slave_dev_handle_t channel, const i2c_slave_rx_done_event_data_t *edata, void *user_data)
 {
+    (void)channel;
     BaseType_t high_task_wakeup = pdFALSE;
     QueueHandle_t receive_queue = (QueueHandle_t)user_data;
     xQueueSendFromISR(receive_queue, edata, &high_task_wakeup);
@@ -202,6 +204,9 @@ static void i2c_slave_read_test(void)
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = I2C_SLAVE_NUM,
         .send_buf_depth = 256,
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+        .receive_buf_depth = DATA_LENGTH,
+#endif
         .scl_io_num = I2C_SLAVE_SCL_IO,
         .sda_io_num = I2C_SLAVE_SDA_IO,
         .slave_addr = ESP_SLAVE_ADDR,
@@ -211,14 +216,24 @@ static void i2c_slave_read_test(void)
 
     s_receive_queue = xQueueCreate(1, sizeof(i2c_slave_rx_done_event_data_t));
     i2c_slave_event_callbacks_t cbs = {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+        .on_receive = test_i2c_rx_done_callback,
+#else
         .on_recv_done = test_i2c_rx_done_callback,
+#endif
     };
     ESP_ERROR_CHECK(i2c_slave_register_event_callbacks(slave_handle, &cbs, s_receive_queue));
     i2c_slave_rx_done_event_data_t rx_data;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     TEST_ESP_OK(i2c_slave_receive(slave_handle, data_rd, DATA_LENGTH / 2));
+#endif
     unity_send_signal("i2c slave init finish");
     unity_wait_for_signal("master write");
-    xQueueReceive(s_receive_queue, &rx_data, pdMS_TO_TICKS(1000));
+    TEST_ASSERT_EQUAL(pdTRUE, xQueueReceive(s_receive_queue, &rx_data, pdMS_TO_TICKS(1000)));
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    TEST_ASSERT_EQUAL(DATA_LENGTH / 2, rx_data.length);
+    memcpy(data_rd, rx_data.buffer, DATA_LENGTH / 2);
+#endif
     disp_buf(data_rd, DATA_LENGTH / 2);
     for (int i = 0; i < DATA_LENGTH / 2; i++) {
         TEST_ASSERT(data_rd[i] == i);
@@ -300,6 +315,9 @@ static void slave_write_buffer_test(void)
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = I2C_SLAVE_NUM,
         .send_buf_depth = 256,
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+        .receive_buf_depth = DATA_LENGTH,
+#endif
         .scl_io_num = I2C_SLAVE_SCL_IO,
         .sda_io_num = I2C_SLAVE_SDA_IO,
         .slave_addr = ESP_SLAVE_ADDR,
@@ -314,7 +332,13 @@ static void slave_write_buffer_test(void)
     unity_wait_for_signal("i2c master init finish");
     unity_send_signal("slave write");
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    uint32_t write_len = 0;
+    TEST_ESP_OK(i2c_slave_write(slave_handle, data_wr, RW_TEST_LENGTH, &write_len, 100));
+    TEST_ASSERT_EQUAL(RW_TEST_LENGTH, write_len);
+#else
     i2c_slave_transmit(slave_handle, data_wr, RW_TEST_LENGTH, 100 / portTICK_PERIOD_MS);
+#endif
 #endif
 
     disp_buf(data_wr, RW_TEST_LENGTH);
