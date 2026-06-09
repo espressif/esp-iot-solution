@@ -462,6 +462,10 @@ lv_obj_set_style_text_font(label, font30, 0);
 | v8 | `CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768` | 字体初始化在调用线程执行 |
 | v9 | `CONFIG_LV_DRAW_THREAD_STACK_SIZE=32768` | 字体渲染在绘图线程执行 |
 
+启用 `ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL` 可将 FreeType 的 render pool 从 16KB 降到 4KB；在 LVGL v9 下，这也会去掉 LVGL 对较小绘图线程栈的保守 32KB 构建期提示。
+
+启用 `ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD` 可在 LVGL v8 和 v9 下减少 FreeType 的 flash 占用。该模式仅保留 LVGL 常见运行时字体路径所需的 `TTF/OTF`、`sfnt`、平滑渲染器以及 CFF/OpenType 相关依赖，并从最终链接结果中裁掉 legacy 字体驱动及可选压缩流/渲染辅助。如果项目依赖 Type1/CID/PFR/Type42/BDF/PCF/FNT、压缩字体流或 SVG/SDF 渲染，请保持关闭。
+
 **限制**：
 - LVGL v8：不支持 LVGL 虚拟文件系统（`lv_fs`），需使用直接文件路径或内存缓冲区
 - LVGL v9：支持虚拟文件系统路径（如 `"F:font.ttf"`）
@@ -753,6 +757,8 @@ ppa_ll_srm_bypass_mb_order(platform->hal.dev, true);
 
 **解决方法**：
 - 确认 LVGL 配置中已启用 FreeType（`CONFIG_LV_USE_FREETYPE=y`）
+- 如果使用较小的 LVGL v9 绘图线程栈，启用 `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL`
+- 如果启用了 `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD`，确认所用字体格式仍在保留的 TTF/OTF 常见子集内
 - LVGL v8：设置 `CONFIG_ESP_MAIN_TASK_STACK_SIZE=32768`
 - LVGL v9：设置 `CONFIG_LV_DRAW_THREAD_STACK_SIZE=32768`
 

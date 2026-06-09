@@ -303,10 +303,16 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
             FT2_BUILD_LIBRARY)
     endif()
 
-    if(CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL AND TARGET freetype)
+    if((CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL OR
+        CONFIG_ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD) AND TARGET freetype)
         target_include_directories(freetype PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/freetype")
         target_compile_definitions(freetype PRIVATE
             "FT_CONFIG_OPTIONS_H=<esp_lv_adapter_freetype_ftoption.h>")
+    endif()
+
+    if(CONFIG_ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD AND TARGET freetype)
+        target_compile_definitions(freetype PRIVATE
+            "FT_CONFIG_MODULES_H=<esp_lv_adapter_freetype_ftmodule.h>")
     endif()
 
     if(CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL AND

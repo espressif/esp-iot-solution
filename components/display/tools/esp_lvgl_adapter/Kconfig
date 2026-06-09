@@ -42,6 +42,25 @@ config ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL
         Reduce FreeType's render pool from 16KB to 4KB. On LVGL v9, this also
         removes LVGL's conservative 32KB FreeType draw-stack build-time check.
 
+config ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD
+    bool "Reduce FreeType flash usage with a minimal module set"
+    depends on ESP_LVGL_ADAPTER_ENABLE_FREETYPE
+    default n
+    help
+        Build the freetype component with a reduced module set and config
+        tailored for LVGL runtime fonts. This keeps the default dependency
+        model but removes legacy font drivers and compressed stream helpers
+        from the final linked image when they are not needed by LVGL.
+
+        Intended to preserve common TTF/OTF usage while reducing flash usage.
+        Applies to both LVGL v8 and v9 FreeType integration paths.
+        When enabled, these formats/features are removed:
+        - Type1/CID/PFR/Type42/BDF/PCF/FNT font drivers
+        - gzip/lzw/bzip2 compressed font stream helpers
+        - SDF/SVG/monochrome raster backends
+
+        Keep this disabled if your project depends on those formats/features.
+
 config ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM
     bool "Allocate LVGL FreeRTOS thread stacks in PSRAM"
     depends on SPIRAM

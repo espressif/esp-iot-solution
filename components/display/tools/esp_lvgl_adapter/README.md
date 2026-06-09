@@ -468,6 +468,8 @@ lv_obj_set_style_text_font(label, font30, 0);
 
 Enable `ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL` to reduce FreeType's render pool from 16KB to 4KB. With LVGL v9, this also removes LVGL's conservative 32KB build-time diagnostic when a smaller draw-thread stack is configured.
 
+Enable `ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD` to reduce FreeType flash usage on both LVGL v8 and v9 by keeping only the common LVGL runtime font path (`TTF/OTF`, `sfnt`, `smooth` renderer, CFF/OpenType helpers) and dropping legacy font drivers plus optional compressed stream/renderer helpers from the final linked image. Keep this disabled if your project depends on Type1/CID/PFR/Type42/BDF/PCF/FNT fonts, compressed font streams, or SVG/SDF rendering.
+
 Enable `ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM` only after validating PSRAM stack safety for the target. This experimental option moves LVGL-created FreeRTOS thread stacks, including LVGL v9 draw threads, to PSRAM.
 
 **Limitations**:
@@ -762,6 +764,7 @@ ppa_ll_srm_bypass_mb_order(platform->hal.dev, true);
 **Solutions**:
 - Ensure LVGL FreeType is enabled (`CONFIG_LV_USE_FREETYPE=y`)
 - If using a smaller LVGL v9 draw-thread stack, enable `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_SMALL_RENDER_POOL`.
+- If using `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD`, verify the font format is still within the retained TTF/OTF-focused subset.
 - If crashes persist, increase the caller task stack on LVGL v8 or `CONFIG_LV_DRAW_THREAD_STACK_SIZE` on LVGL v9.
 
 ### Screen Tearing or Flicker

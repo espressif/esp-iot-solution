@@ -300,8 +300,8 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
 static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
 static bool display_bridge_v9_handle_color_trans_done(esp_lv_adapter_display_bridge_v9_t *impl);
 static bool display_bridge_v9_handle_frame_done(esp_lv_adapter_display_bridge_v9_t *impl);
-static bool IRAM_ATTR display_bridge_v9_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
-static bool IRAM_ATTR display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
+static bool display_bridge_v9_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
+static bool display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
 static inline void display_bridge_v9_signal_dummy_draw_event(esp_lv_adapter_display_bridge_v9_t *impl,
                                                              uint32_t event_bit,
                                                              BaseType_t *need_yield);
