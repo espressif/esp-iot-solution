@@ -885,7 +885,7 @@ esp_err_t esp_lv_adapter_set_default_display_idf_callback_registration_enabled(b
     return ESP_OK;
 }
 
-bool esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp)
+bool IRAM_ATTR esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp)
 {
     if (!s_ctx.inited || !disp) {
         return false;
@@ -894,7 +894,7 @@ bool esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp)
     return display_manager_notify_color_trans_done_from_isr(disp);
 }
 
-bool esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp)
+bool IRAM_ATTR esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp)
 {
     if (!s_ctx.inited || !disp) {
         return false;
@@ -1072,7 +1072,7 @@ esp_err_t esp_lv_adapter_deinit(void)
     return first_err;
 }
 
-esp_lv_adapter_context_t *esp_lv_adapter_get_context(void)
+esp_lv_adapter_context_t *IRAM_ATTR esp_lv_adapter_get_context(void)
 {
     return &s_ctx;
 }

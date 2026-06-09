@@ -825,7 +825,7 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
 
 #endif /* LVGL_VERSION_MAJOR >= 9 */
 
-static esp_lv_adapter_touch_ctx_t *get_touch_ctx(lv_indev_t *touch)
+static IRAM_ATTR esp_lv_adapter_touch_ctx_t *get_touch_ctx(lv_indev_t *touch)
 {
     if (!touch) {
         return NULL;

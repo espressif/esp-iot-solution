@@ -96,7 +96,7 @@ void display_manager_flush_ready(lv_disp_drv_t *drv)
 }
 #endif
 
-bool display_manager_notify_color_trans_done_from_isr(lv_display_t *disp)
+bool IRAM_ATTR display_manager_notify_color_trans_done_from_isr(lv_display_t *disp)
 {
     if (!disp) {
         return false;
@@ -110,7 +110,7 @@ bool display_manager_notify_color_trans_done_from_isr(lv_display_t *disp)
     return node->bridge->notify_color_trans_done_from_isr(node->bridge);
 }
 
-bool display_manager_notify_frame_done_from_isr(lv_display_t *disp)
+bool IRAM_ATTR display_manager_notify_frame_done_from_isr(lv_display_t *disp)
 {
     if (!disp) {
         return false;
@@ -845,7 +845,7 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 /**
  * @brief Find display node by LVGL display handle
  */
-static esp_lv_adapter_display_node_t *display_manager_find_node(lv_display_t *disp)
+static IRAM_ATTR esp_lv_adapter_display_node_t *display_manager_find_node(lv_display_t *disp)
 {
     esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
     esp_lv_adapter_display_node_t *node = ctx->display_list;
