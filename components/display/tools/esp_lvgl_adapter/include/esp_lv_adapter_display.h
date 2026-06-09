@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_io.h"
 #include "driver/gpio.h"
@@ -408,6 +409,37 @@ typedef struct {
 esp_err_t esp_lv_adapter_set_draw_bitmap_callbacks(lv_display_t *disp,
                                                    const esp_lv_adapter_draw_bitmap_callbacks_t *cbs,
                                                    void *user_ctx);
+
+/**
+ * @brief Set the default adapter-managed ESP-IDF LCD callback registration mode for new displays.
+ *
+ * This affects displays registered after the call. The default is enabled.
+ *
+ * @param[in] enable Whether newly registered displays should let the adapter register ESP-IDF LCD callbacks.
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_set_default_display_idf_callback_registration_enabled(bool enable);
+
+/**
+ * @brief Notify adapter-side display logic that LCD color transfer completed from an ISR.
+ *
+ * This is useful when an external owner registers LCD panel callbacks and wants to reuse the adapter's default
+ * color-transfer-done handling without letting the adapter register the ESP-IDF callbacks itself.
+ *
+ * @param[in] disp LVGL display handle.
+ * @return Whether a high-priority task should yield.
+ */
+bool esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp);
+
+/**
+ * @brief Notify adapter-side display logic that LCD frame refresh completed from an ISR.
+ *
+ * @param[in] disp LVGL display handle.
+ * @return Whether a high-priority task should yield.
+ */
+bool esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp);
 
 #ifdef __cplusplus
 }

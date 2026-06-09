@@ -65,6 +65,7 @@ static esp_lv_adapter_display_render_mode_t display_manager_pick_render_mode(con
 
 /* Display node lifecycle */
 static void display_manager_destroy_node(esp_lv_adapter_display_node_t *node);
+static esp_lv_adapter_display_node_t *display_manager_find_node(lv_display_t *disp);
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
 /* FPS statistics */
@@ -94,6 +95,34 @@ void display_manager_flush_ready(lv_disp_drv_t *drv)
     lv_disp_flush_ready(drv);
 }
 #endif
+
+bool display_manager_notify_color_trans_done_from_isr(lv_display_t *disp)
+{
+    if (!disp) {
+        return false;
+    }
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    if (!node || !node->bridge || !node->bridge->notify_color_trans_done_from_isr) {
+        return false;
+    }
+
+    return node->bridge->notify_color_trans_done_from_isr(node->bridge);
+}
+
+bool display_manager_notify_frame_done_from_isr(lv_display_t *disp)
+{
+    if (!disp) {
+        return false;
+    }
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    if (!node || !node->bridge || !node->bridge->notify_frame_done_from_isr) {
+        return false;
+    }
+
+    return node->bridge->notify_frame_done_from_isr(node->bridge);
+}
 
 /* Buffer management */
 #if LVGL_VERSION_MAJOR >= 9
@@ -129,7 +158,6 @@ static void display_manager_configure_te_timing(esp_lv_adapter_display_runtime_c
 
 /* Internal node management */
 static bool display_manager_init_node(esp_lv_adapter_display_node_t *node);
-static esp_lv_adapter_display_node_t *display_manager_find_node(lv_display_t *disp);
 
 /* LVGL callbacks */
 #if LVGL_VERSION_MAJOR >= 9
@@ -155,6 +183,12 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
         return NULL;
     }
 
+    esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
+    if (!ctx || !ctx->inited) {
+        ESP_LOGE(TAG, "Adapter not initialized");
+        return NULL;
+    }
+
     if (!display_manager_validate_tearing_mode(cfg)) {
         return NULL;
     }
@@ -173,15 +207,9 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
     }
 
     node->cfg.base = *cfg;
+    node->cfg.idf_callback_registration_enabled = ctx->default_display_idf_callback_registration_enabled;
 
     if (!display_manager_init_node(node)) {
-        display_manager_destroy_node(node);
-        return NULL;
-    }
-
-    esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
-    if (!ctx || !ctx->inited) {
-        ESP_LOGE(TAG, "Adapter not initialized");
         display_manager_destroy_node(node);
         return NULL;
     }

@@ -92,6 +92,7 @@ typedef struct {
     struct esp_lv_adapter_te_sync_context *te_ctx; /*!< TE sync runtime context */
     gpio_int_type_t te_intr_type;           /*!< Computed TE interrupt type */
     bool te_prefer_refresh_end;             /*!< Prefer TE falling edge (end of VBlank) */
+    bool idf_callback_registration_enabled; /*!< Initial adapter-owned ESP-IDF callback registration mode */
 
 } esp_lv_adapter_display_runtime_config_t;
 
@@ -213,6 +214,8 @@ typedef struct {
     esp_lv_adapter_display_node_t *display_list;  /*!< Linked list of registered displays */
     esp_lv_adapter_input_node_t *input_list;      /*!< Linked list of registered input devices */
     esp_lv_adapter_sleep_state_t sleep_state;     /*!< Sleep state tracking */
+    bool default_display_idf_callback_registration_enabled; /*!< Initial display callback ownership for new displays */
+    bool default_touch_idf_interrupt_callback_registration_enabled; /*!< Initial touch IRQ callback ownership */
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER
     esp_lv_decoder_handle_t decoder_handle; /*!< Image decoder handle */
 #endif

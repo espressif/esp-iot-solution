@@ -108,6 +108,8 @@ typedef struct esp_lv_adapter_display_bridge_v8 {
     int block_size_large;
     size_t cache_line_size;
     esp_lv_adapter_vsync_timing_t vsync_timing;   /*!< Standardized VSYNC timing context */
+    bool idf_callbacks_registered;
+    bool idf_callback_registration_enabled;
 
     /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
     esp_lv_adapter_display_pipeline_t pipeline;
@@ -470,6 +472,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
     impl->notify_task = NULL;
     impl->dummy_draw_wait_task = NULL;
     impl->dummy_draw_wait_mask = 0;
+    impl->idf_callback_registration_enabled = cfg->idf_callback_registration_enabled;
     impl->cache_line_size = display_bridge_get_cache_line_size();
     display_bridge_get_block_sizes(&impl->block_size_small, &impl->block_size_large);
     if (impl->block_size_small <= 0) {
@@ -1112,6 +1115,11 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         return;
     }
 
+    if (impl->idf_callbacks_registered || !impl->idf_callback_registration_enabled) {
+        return;
+    }
+
+    bool registered = false;
     switch (impl->cfg.base.profile.interface) {
     case ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI:
 #if CONFIG_SOC_MIPI_DSI_SUPPORTED
@@ -1124,6 +1132,8 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel callbacks failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
@@ -1141,6 +1151,8 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         esp_err_t ret = esp_lcd_rgb_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel callbacks failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
@@ -1160,15 +1172,23 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         esp_err_t ret = esp_lcd_panel_io_register_event_callbacks(panel_io, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel IO callbacks failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
     }
+
+    impl->idf_callbacks_registered = registered;
 }
 
 static void display_bridge_v8_unregister_vsync(esp_lv_adapter_display_bridge_v8_t *impl)
 {
     if (!impl) {
+        return;
+    }
+
+    if (!impl->idf_callbacks_registered) {
         return;
     }
 
@@ -1221,6 +1241,8 @@ static void display_bridge_v8_unregister_vsync(esp_lv_adapter_display_bridge_v8_
         break;
     }
     }
+
+    impl->idf_callbacks_registered = false;
 }
 
 /**********************
@@ -1246,7 +1268,11 @@ static void display_bridge_v8_flush_default(esp_lv_adapter_display_bridge_v8_t *
                                                                      offsetx1, offsety1, offsetx2 + 1, offsety2 + 1,
                                                                      color_map, impl->cfg.draw_bitmap_user_ctx);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Custom draw bitmap failed: %s", esp_err_to_name(ret));
+            if (ret == ESP_ERR_NOT_ALLOWED) {
+                ESP_LOGD(TAG, "Custom draw bitmap not allowed, skipping");
+            } else {
+                ESP_LOGE(TAG, "Custom draw bitmap failed: %s", esp_err_to_name(ret));
+            }
             display_manager_flush_ready(drv);
         }
     } else {

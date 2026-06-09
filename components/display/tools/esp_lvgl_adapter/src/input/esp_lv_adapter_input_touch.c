@@ -64,6 +64,8 @@ typedef struct {
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
+    bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
     lv_point_t last_point;              /*!< Last touch point coordinates */
@@ -83,6 +85,8 @@ typedef struct {
 /* Forward declarations */
 static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data);
 static void lvgl_touch_isr(esp_lcd_touch_handle_t tp);
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
 #if LV_USE_GESTURE_RECOGNITION
 static bool contains_id(const uint8_t *ids, uint8_t count, uint8_t id);
 static bool is_valid_lv_id(uint8_t id);
@@ -134,6 +138,10 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    touch_ctx->idf_interrupt_callback_registration_enabled =
+        (adapter_ctx == NULL) || adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled;
+    touch_ctx->idf_interrupt_callback_registered = false;
     touch_ctx->cbs = config->callbacks;
 #if LV_USE_GESTURE_RECOGNITION
     touch_ctx->prev_count = 0;
@@ -174,11 +182,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         touch_ctx->isr_ctx->touch_ctx = touch_ctx;
         touch_ctx->isr_ctx->unregistering = false;
 
-        esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
-                            touch_ctx->handle,
-                            lvgl_touch_isr,
-                            touch_ctx->isr_ctx
-                        );
+        esp_err_t err = register_idf_interrupt_callback(touch_ctx);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register interrupt callback: 0x%x", err);
             free(touch_ctx->isr_ctx);
@@ -232,7 +236,7 @@ cleanup_on_error:
         if (touch_ctx->isr_ctx) {
             /* Restore original user_data before cleanup */
             touch_ctx->handle->config.user_data = touch_ctx->isr_ctx->original_user_data;
-            esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+            unregister_idf_interrupt_callback(touch_ctx);
             free(touch_ctx->isr_ctx);
         }
         if (touch_ctx->touch_sem) {
@@ -251,13 +255,7 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
     ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
 
     if (touch_ctx->with_irq) {
-        if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
-            gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
-            ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
-        }
-
-        esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
-        ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+        (void)unregister_idf_interrupt_callback(touch_ctx);
 
         if (touch_ctx->isr_ctx) {
             touch_ctx->isr_ctx->unregistering = true;
@@ -574,6 +572,8 @@ typedef struct {
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
+    bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
     lv_point_t last_point;              /*!< Last touch point coordinates */
@@ -584,6 +584,8 @@ typedef struct {
 /* Forward declarations */
 static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
 static void lvgl_touch_isr(esp_lcd_touch_handle_t tp);
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
 
 lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *config)
 {
@@ -609,6 +611,10 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    touch_ctx->idf_interrupt_callback_registration_enabled =
+        (adapter_ctx == NULL) || adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled;
+    touch_ctx->idf_interrupt_callback_registered = false;
     touch_ctx->cbs = config->callbacks;
 
     bool with_irq = touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC;
@@ -636,11 +642,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         touch_ctx->isr_ctx->touch_ctx = touch_ctx;
         touch_ctx->isr_ctx->unregistering = false;
 
-        esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
-                            touch_ctx->handle,
-                            lvgl_touch_isr,
-                            touch_ctx->isr_ctx
-                        );
+        esp_err_t err = register_idf_interrupt_callback(touch_ctx);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register interrupt callback: 0x%x", err);
             free(touch_ctx->isr_ctx);
@@ -689,7 +691,7 @@ cleanup_on_error:
         if (touch_ctx->isr_ctx) {
             /* Restore original user_data before cleanup */
             touch_ctx->handle->config.user_data = touch_ctx->isr_ctx->original_user_data;
-            esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+            unregister_idf_interrupt_callback(touch_ctx);
             free(touch_ctx->isr_ctx);
         }
         if (touch_ctx->touch_sem) {
@@ -711,13 +713,7 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
     ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
 
     if (touch_ctx->with_irq) {
-        if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
-            gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
-            ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
-        }
-
-        esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
-        ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+        (void)unregister_idf_interrupt_callback(touch_ctx);
 
         if (touch_ctx->isr_ctx) {
             touch_ctx->isr_ctx->unregistering = true;
@@ -829,19 +825,69 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
 
 #endif /* LVGL_VERSION_MAJOR >= 9 */
 
+static esp_lv_adapter_touch_ctx_t *get_touch_ctx(lv_indev_t *touch)
+{
+    if (!touch) {
+        return NULL;
+    }
+
+#if LVGL_VERSION_MAJOR >= 9
+    return (esp_lv_adapter_touch_ctx_t *)lv_indev_get_driver_data(touch);
+#else
+    lv_indev_drv_t *drv = touch->driver;
+    if (!drv) {
+        return NULL;
+    }
+    return (esp_lv_adapter_touch_ctx_t *)drv->user_data;
+#endif
+}
+
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_ARG, TAG, "Touch context is NULL");
+    if (!touch_ctx->with_irq || !touch_ctx->idf_interrupt_callback_registration_enabled ||
+            touch_ctx->idf_interrupt_callback_registered) {
+        return ESP_OK;
+    }
+    ESP_RETURN_ON_FALSE(touch_ctx->handle, ESP_ERR_INVALID_STATE, TAG, "Touch handle is NULL");
+    ESP_RETURN_ON_FALSE(touch_ctx->isr_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch ISR context is NULL");
+
+    esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
+                        touch_ctx->handle,
+                        lvgl_touch_isr,
+                        touch_ctx->isr_ctx
+                    );
+    ESP_RETURN_ON_ERROR(err, TAG, "Failed to register touch interrupt callback: 0x%x", err);
+    touch_ctx->idf_interrupt_callback_registered = true;
+    ESP_LOGD(TAG, "Registered touch interrupt callback");
+    return ESP_OK;
+}
+
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_ARG, TAG, "Touch context is NULL");
+    if (!touch_ctx->with_irq || !touch_ctx->idf_interrupt_callback_registered) {
+        return ESP_OK;
+    }
+    ESP_RETURN_ON_FALSE(touch_ctx->handle, ESP_ERR_INVALID_STATE, TAG, "Touch handle is NULL");
+
+    if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
+        gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
+        ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
+    }
+    esp_err_t err = esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+    ESP_RETURN_ON_ERROR(err, TAG, "Failed to unregister touch interrupt callback: 0x%x", err);
+    touch_ctx->idf_interrupt_callback_registered = false;
+    ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+    return ESP_OK;
+}
+
 esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
                                              const esp_lv_adapter_touch_callbacks_t *cbs)
 {
     ESP_RETURN_ON_FALSE(touch, ESP_ERR_INVALID_ARG, TAG, "Touch handle cannot be NULL");
 
-#if LVGL_VERSION_MAJOR >= 9
-    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)lv_indev_get_driver_data(touch);
-#else
-    lv_indev_drv_t *drv = touch->driver;
-    ESP_RETURN_ON_FALSE(drv, ESP_ERR_INVALID_STATE, TAG, "Touch driver not initialized");
-    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)drv->user_data;
-#endif
-
+    esp_lv_adapter_touch_ctx_t *touch_ctx = get_touch_ctx(touch);
     ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
 
     if (cbs) {
@@ -851,4 +897,33 @@ esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
     }
 
     return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_touch_set_default_idf_interrupt_callback_registration_enabled(bool enable)
+{
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    ESP_RETURN_ON_FALSE(adapter_ctx && adapter_ctx->inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled = enable;
+    return ESP_OK;
+}
+
+bool esp_lv_adapter_touch_notify_interrupt(lv_indev_t *touch)
+{
+    esp_lv_adapter_touch_ctx_t *touch_ctx = get_touch_ctx(touch);
+    if (!touch_ctx || !touch_ctx->with_irq || !touch_ctx->touch_sem) {
+        return false;
+    }
+    return xSemaphoreGive(touch_ctx->touch_sem) == pdTRUE;
+}
+
+bool IRAM_ATTR esp_lv_adapter_touch_notify_interrupt_from_isr(lv_indev_t *touch)
+{
+    esp_lv_adapter_touch_ctx_t *touch_ctx = get_touch_ctx(touch);
+    if (!touch_ctx || !touch_ctx->with_irq || !touch_ctx->touch_sem) {
+        return false;
+    }
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(touch_ctx->touch_sem, &xHigherPriorityTaskWoken);
+    return xHigherPriorityTaskWoken == pdTRUE;
 }

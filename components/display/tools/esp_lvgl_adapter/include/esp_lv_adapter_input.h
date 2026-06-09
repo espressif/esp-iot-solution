@@ -145,6 +145,38 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch);
 esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
                                              const esp_lv_adapter_touch_callbacks_t *cbs);
 
+/**
+ * @brief Set the default internal ESP-IDF touch interrupt callback registration mode for new touch devices.
+ *
+ * This affects touch input devices registered after the call. The default is enabled.
+ *
+ * @param[in] enable Whether newly registered touch devices should let the adapter own the touch IRQ callback.
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_touch_set_default_idf_interrupt_callback_registration_enabled(bool enable);
+
+/**
+ * @brief Notify a registered touch input device that new touch data is available.
+ *
+ * This wakes the adapter's normal IRQ-mode read path from task context. It is useful when
+ * an external owner handles hardware interrupts and provides data through custom_touch_read.
+ *
+ * @param[in] touch LVGL touch input device handle
+ * @return true if the touch read path was notified
+ */
+bool esp_lv_adapter_touch_notify_interrupt(lv_indev_t *touch);
+
+/**
+ * @brief ISR-safe variant of @c esp_lv_adapter_touch_notify_interrupt.
+ *
+ * @param[in] touch LVGL touch input device handle
+ * @return true when a higher-priority task should yield
+ */
+bool esp_lv_adapter_touch_notify_interrupt_from_isr(lv_indev_t *touch);
+
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON
 /*****************************************************************************
  *                       Button Input Structures                             *

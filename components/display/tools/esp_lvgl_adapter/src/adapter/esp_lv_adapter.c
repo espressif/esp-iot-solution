@@ -227,6 +227,8 @@ esp_err_t esp_lv_adapter_init(const esp_lv_adapter_config_t *config)
     s_ctx.task_exit_requested = false;
     s_ctx.paused = false;
     s_ctx.pause_ack = false;
+    s_ctx.default_display_idf_callback_registration_enabled = true;
+    s_ctx.default_touch_idf_interrupt_callback_registration_enabled = true;
 
     /* Initialize LVGL library */
     lv_init();
@@ -874,6 +876,31 @@ esp_err_t esp_lv_adapter_set_draw_bitmap_callbacks(lv_display_t *disp,
     ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
     ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
     return display_manager_set_draw_bitmap_callbacks(disp, cbs, user_ctx);
+}
+
+esp_err_t esp_lv_adapter_set_default_display_idf_callback_registration_enabled(bool enable)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    s_ctx.default_display_idf_callback_registration_enabled = enable;
+    return ESP_OK;
+}
+
+bool esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp)
+{
+    if (!s_ctx.inited || !disp) {
+        return false;
+    }
+
+    return display_manager_notify_color_trans_done_from_isr(disp);
+}
+
+bool esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp)
+{
+    if (!s_ctx.inited || !disp) {
+        return false;
+    }
+
+    return display_manager_notify_frame_done_from_isr(disp);
 }
 
 esp_err_t esp_lv_adapter_deinit(void)
