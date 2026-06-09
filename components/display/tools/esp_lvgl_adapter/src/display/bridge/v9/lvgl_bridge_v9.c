@@ -1363,15 +1363,17 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
     }
 
-    /* Wait for TE signal to avoid tearing */
+    /* Wait for TE signal to avoid tearing; on timeout, proceed without sync to avoid deadlock */
     if (impl->cfg.te_ctx) {
-        esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
+        (void)esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
     }
 
     if (impl->cfg.te_ctx) {
         esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
     }
 
+    /* Clear stale completion notifications before kicking off a new transfer. */
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
@@ -1380,7 +1382,6 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     }
 
     /* Wait for transmission to complete */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     display_manager_flush_ready(disp);
@@ -1399,6 +1400,7 @@ static void display_bridge_v9_flush_double_full(esp_lv_adapter_display_bridge_v9
 
     /* Switch the current LCD frame buffer to `color_map` */
     display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
@@ -1407,7 +1409,6 @@ static void display_bridge_v9_flush_double_full(esp_lv_adapter_display_bridge_v9
     }
 
     /* Waiting for the last frame buffer to complete transmission */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     display_manager_flush_ready(disp);
@@ -1460,6 +1461,7 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
     /* Action after last area refresh */
     if (lv_display_flush_is_last(disp)) {
         display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+        ulTaskNotifyValueClear(NULL, ULONG_MAX);
         esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
@@ -1468,7 +1470,6 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
         }
 
         /* Waiting for the last frame buffer to complete transmission */
-        ulTaskNotifyValueClear(NULL, ULONG_MAX);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 

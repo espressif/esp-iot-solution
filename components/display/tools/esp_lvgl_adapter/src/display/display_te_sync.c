@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <stdlib.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -34,6 +35,9 @@ struct esp_lv_adapter_te_sync_context {
 
 static const char *TAG = "esp_lvgl:te";
 static const uint8_t TE_WINDOW_MAX_DEFER = 1;
+static const uint32_t TE_WAIT_TIMEOUT_MIN_MS = 20;
+static const uint32_t TE_WAIT_TIMEOUT_MAX_MS = 1000;
+static const uint32_t TE_WAIT_TIMEOUT_PERIODS = 6;
 
 static inline bool te_tick_after(uint32_t a, uint32_t b)
 {
@@ -75,6 +79,46 @@ static uint8_t te_window_expand_percent(uint8_t current_percent, int64_t duratio
         expanded = 100U;
     }
     return (uint8_t)expanded;
+}
+
+static uint32_t te_wait_timeout_ms(esp_lv_adapter_te_sync_context_t *ctx, int64_t te_period_us)
+{
+    uint64_t period_us = 0;
+
+    if (te_period_us > 0) {
+        period_us = (uint64_t)te_period_us;
+    } else {
+        uint32_t tvdl_ms = ctx->cfg.time_tvdl_ms ? ctx->cfg.time_tvdl_ms : ESP_LV_ADAPTER_TE_TVDL_DEFAULT_MS;
+        uint32_t tvdh_ms = ctx->cfg.time_tvdh_ms ? ctx->cfg.time_tvdh_ms : ESP_LV_ADAPTER_TE_TVDH_DEFAULT_MS;
+        period_us = (uint64_t)(tvdl_ms + tvdh_ms) * 1000ULL;
+    }
+
+    uint64_t timeout_ms = (period_us * TE_WAIT_TIMEOUT_PERIODS + 999ULL) / 1000ULL;
+    if (timeout_ms < TE_WAIT_TIMEOUT_MIN_MS) {
+        timeout_ms = TE_WAIT_TIMEOUT_MIN_MS;
+    }
+    if (timeout_ms > TE_WAIT_TIMEOUT_MAX_MS) {
+        timeout_ms = TE_WAIT_TIMEOUT_MAX_MS;
+    }
+
+    return (uint32_t)timeout_ms;
+}
+
+static TickType_t te_wait_timeout_ticks_from_us(int64_t wait_us)
+{
+    uint64_t wait_ms = (uint64_t)(wait_us + 999LL) / 1000ULL;
+    TickType_t wait_ticks = pdMS_TO_TICKS(wait_ms);
+
+    return (wait_ticks > 0) ? wait_ticks : 1;
+}
+
+static void te_reset_wait_state(esp_lv_adapter_te_sync_context_t *ctx)
+{
+    portENTER_CRITICAL(&ctx->lock);
+    ctx->frame_request_ticks = 0;
+    ctx->window_defer_count = 0;
+    ctx->window_violation_logged = false;
+    portEXIT_CRITICAL(&ctx->lock);
 }
 
 /**
@@ -271,8 +315,16 @@ esp_err_t esp_lv_adapter_te_sync_wait_for_vsync(esp_lv_adapter_te_sync_context_t
         return ESP_OK;
     }
 
+    uint32_t timeout_ms = te_wait_timeout_ms(ctx, ctx->te_period_us);
+    int64_t deadline_us = esp_timer_get_time() + (int64_t)timeout_ms * 1000LL;
+
     while (true) {
-        if (xSemaphoreTake(ctx->te_vsync_sem, portMAX_DELAY) != pdTRUE) {
+        int64_t remaining_us = deadline_us - esp_timer_get_time();
+        TickType_t wait_ticks = (remaining_us > 0) ? te_wait_timeout_ticks_from_us(remaining_us) : 0;
+
+        if (xSemaphoreTake(ctx->te_vsync_sem, wait_ticks) != pdTRUE) {
+            ESP_LOGW(TAG, "TE wait timed out (%" PRIu32 " ms), flushing without sync", timeout_ms);
+            te_reset_wait_state(ctx);
             return ESP_ERR_TIMEOUT;
         }
 
