@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.4.1 - 2026-06-10
+
+### Fix:
+
+- Support the new CMake build system (cmakev2) by removing the unsupported BUILD_COMPONENTS build property usage.
+- Add esp_hal_wdt dependency for IDF v6.0 and newer, where the watchdog HAL was moved out of the hal component.
+
 ## v0.4.0 - 2025-09-08
 
 ### Improve:
