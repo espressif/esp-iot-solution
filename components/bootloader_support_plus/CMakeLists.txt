@@ -49,13 +49,7 @@ else()
 
     # Force app_update to also appear later than bootloader_support_plus in link line
     idf_component_get_property(app_update app_update COMPONENT_LIB)
-    idf_build_get_property(build_components BUILD_COMPONENTS)
-    if("espressif__bootloader_support_plus" IN_LIST build_components)
-        idf_component_get_property(bootloader_support_plus espressif__bootloader_support_plus COMPONENT_LIB)
-    else()
-        idf_component_get_property(bootloader_support_plus bootloader_support_plus COMPONENT_LIB)
-    endif()
-    target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${app_update}> $<TARGET_FILE:${bootloader_support_plus}>)
+    target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${app_update}> $<TARGET_FILE:${COMPONENT_LIB}>)
 
 endif()
 
