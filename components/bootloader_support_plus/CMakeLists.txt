@@ -5,6 +5,13 @@ set(srcs "src/bootloader_custom_image_format.c"
 
 set(requires "bootloader" "bootloader_support" "spi_flash")
 
+# Since IDF v6.0 the watchdog HAL has graduated into its own component
+# (esp_hal_wdt). In earlier IDF versions hal/wdt_hal.h is provided by the
+# hal component, which is reachable through the existing requirements.
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "6.0")
+    list(APPEND requires "esp_hal_wdt")
+endif()
+
 if(BOOTLOADER_BUILD)
     list(APPEND srcs "src/bootloader_custom_malloc.c"
                      "src/bootloader_decompressor_common.c"
