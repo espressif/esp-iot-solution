@@ -381,6 +381,15 @@ assert(touch != NULL);
 - `touch_handle`: Touch handle created via `esp_lcd_touch` API
 - Default scale factors: x = 1.0, y = 1.0
 
+To enable independent multi-touch control for discrete widgets on LVGL v9:
+
+```c
+touch_cfg.multi_touch.mode = ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL;
+touch_cfg.multi_touch.pointers = 2;
+```
+
+`pointers` must be at least `2`, must not exceed `CONFIG_ESP_LCD_TOUCH_MAX_POINTS`, and is also limited by the remaining display input slots managed by the adapter.
+
 #### Encoder/Knob
 
 Requires Kconfig option `ESP_LV_ADAPTER_ENABLE_KNOB`. See `esp_lv_adapter_input.h` for `esp_lv_adapter_encoder_config_t`.

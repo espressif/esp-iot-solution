@@ -377,6 +377,15 @@ assert(touch != NULL);
 - `touch_handle`：通过 `esp_lcd_touch` API 创建的触摸句柄
 - 默认缩放比例：x = 1.0, y = 1.0
 
+如需在 LVGL v9 下为离散控件启用独立多点控制，可额外设置：
+
+```c
+touch_cfg.multi_touch.mode = ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL;
+touch_cfg.multi_touch.pointers = 2;
+```
+
+`pointers` 至少为 `2`，不能超过 `CONFIG_ESP_LCD_TOUCH_MAX_POINTS`，同时还会受到适配器当前可用 display input slot 数量限制。
+
 #### 旋钮/编码器
 
 需要启用 Kconfig 选项 `ESP_LV_ADAPTER_ENABLE_KNOB`。详见 `esp_lv_adapter_input.h`。

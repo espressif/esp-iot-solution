@@ -76,6 +76,14 @@ typedef struct {
 } esp_lv_adapter_touch_callbacks_t;
 
 /**
+ * @brief Touch input operating mode
+ */
+typedef enum {
+    ESP_LV_ADAPTER_TOUCH_MODE_SINGLE = 0,      /*!< Single LVGL pointer device */
+    ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL,   /*!< Multiple LVGL pointer devices for independent control */
+} esp_lv_adapter_touch_mode_t;
+
+/**
  * @brief Touch input device configuration structure
  */
 typedef struct {
@@ -85,6 +93,10 @@ typedef struct {
         float x;                        /*!< Horizontal scale factor */
         float y;                        /*!< Vertical scale factor */
     } scale;                            /*!< Touch coordinate scaling */
+    struct {
+        esp_lv_adapter_touch_mode_t mode; /*!< Touch operating mode */
+        uint8_t pointers;               /*!< Number of virtual pointers to expose when @c mode is multi-control; must be >= 2 */
+    } multi_touch;                      /*!< Optional multi-touch configuration */
     esp_lv_adapter_touch_callbacks_t callbacks; /*!< Optional event callbacks (all fields may be NULL) */
 } esp_lv_adapter_touch_config_t;
 
@@ -101,12 +113,23 @@ typedef struct {
         .x = 1.0f,                                              \
         .y = 1.0f,                                              \
     },                                                          \
+    .multi_touch = {                                            \
+        .mode = ESP_LV_ADAPTER_TOUCH_MODE_SINGLE,               \
+        .pointers = 1,                                          \
+    },                                                          \
 }
 
 /**
  * @brief Register a touch input device to LVGL
  *
  * Registers a touch device with LVGL and associates it with a display.
+ *
+ * In the default mode a single LVGL pointer device is created.
+ * When @c config->multi_touch.mode is set to @c ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL,
+ * the adapter creates multiple virtual pointer devices backed by the same
+ * physical touch controller so discrete widgets can be pressed independently.
+ * In that mode the return value is the primary virtual pointer; the additional
+ * pointers are managed internally and are unregistered together with the returned handle.
  *
  * @param[in] config Pointer to touch input device configuration
  *
