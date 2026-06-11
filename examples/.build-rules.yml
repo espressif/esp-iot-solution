@@ -462,7 +462,7 @@ examples/usb/device/usb_uf2_ota:
 
 examples/usb/host/usb_camera_lcd_display:
   enable:
-    - if: IDF_TARGET == "esp32s3" and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 0)
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
 
 examples/usb/host/usb_camera_mic_spk:
   enable:
