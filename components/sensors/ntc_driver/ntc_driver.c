@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -35,6 +35,7 @@ static bool if_init_adc_unit = false;
 
 static esp_err_t adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_cali_handle_t *out_handle)
 {
+    adc_cali_handle_t handle = NULL;
     esp_err_t ret = ESP_FAIL;
 
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
@@ -44,19 +45,22 @@ static esp_err_t adc_calibration_init(adc_unit_t unit, adc_atten_t atten, adc_ca
         .atten = atten,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
-    ret = adc_cali_create_scheme_curve_fitting(&cali_config, out_handle);
+    ret = adc_cali_create_scheme_curve_fitting(&cali_config, &handle);
 #endif
 
 #if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
-    ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
-    adc_cali_line_fitting_config_t cali_config = {
-        .unit_id = unit,
-        .atten = atten,
-        .bitwidth = ADC_BITWIDTH_DEFAULT,
-    };
-    ret = adc_cali_create_scheme_line_fitting(&cali_config, out_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGI(TAG, "calibration scheme version is %s", "Line Fitting");
+        adc_cali_line_fitting_config_t cali_config = {
+            .unit_id = unit,
+            .atten = atten,
+            .bitwidth = ADC_BITWIDTH_DEFAULT,
+        };
+        ret = adc_cali_create_scheme_line_fitting(&cali_config, &handle);
+    }
 #endif
 
+    *out_handle = handle;
     if (ret == ESP_OK) {
         ESP_LOGI(TAG, "Calibration Success");
     } else if (ret == ESP_ERR_NOT_SUPPORTED) {
@@ -116,6 +120,7 @@ esp_err_t ntc_dev_create(ntc_config_t *config, ntc_device_handle_t *ntc_handle, 
 init_fail:
     if (if_init_adc_unit) {
         adc_oneshot_del_unit(ndd->adc_handle);
+        if_init_adc_unit = false;
     }
     free(ndd);
     ndd = NULL;
@@ -150,9 +155,7 @@ esp_err_t ntc_dev_delete(ntc_device_handle_t ntc_handle)
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
     ret = adc_cali_delete_scheme_curve_fitting(ndd->adc_cali_handle);
     NTC_DRIVER_CHECK(ret == ESP_OK, "adc curve calibration deinit fail", ESP_FAIL);
-#endif
-
-#if ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+#elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
     ret = adc_cali_delete_scheme_line_fitting(ndd->adc_cali_handle);
     NTC_DRIVER_CHECK(ret == ESP_OK, "adc line calibration deinit fail", ESP_FAIL);
 #endif
@@ -160,6 +163,7 @@ esp_err_t ntc_dev_delete(ntc_device_handle_t ntc_handle)
     if (if_init_adc_unit) {
         ret = adc_oneshot_del_unit(ndd->adc_handle);
         NTC_DRIVER_CHECK(ret == ESP_OK, "adc oneshot deinit fail", ESP_FAIL);
+        if_init_adc_unit = false;
     }
     free(ndd);
     ndd = NULL;
@@ -246,7 +250,8 @@ esp_err_t ntc_dev_get_temperature(ntc_device_handle_t ntc_handle, float *tempera
 #endif
     NTC_DRIVER_CHECK(ret == ESP_OK, "adc calibration raw to voltage fail", ESP_FAIL);
     NTC_DRIVER_CHECK(voltage != 0, "voltage equal to 0", ESP_FAIL);
-    ntc_voltage_to_temperature(ndd, voltage, temperature);
+    ret = ntc_voltage_to_temperature(ndd, voltage, temperature);
+    NTC_DRIVER_CHECK(ret == ESP_OK, "ntc voltage to temperature fail", ESP_FAIL);
 
     return ESP_OK;
 }
