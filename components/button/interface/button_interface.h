@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +24,12 @@ struct button_driver_t {
 
     /*!< (optional) Enter Power Save cb */
     esp_err_t (*enter_power_save)(button_driver_t *button_driver);
+
+    /*!< (optional) Exit Power Save cb, disable wakeup after ISR notification */
+    esp_err_t (*exit_power_save)(button_driver_t *button_driver);
+
+    /*!< (optional) Get GPIO number for power save wakeup coordination */
+    int32_t (*get_gpio_num)(button_driver_t *button_driver);
 
     /*!< (optional) Del the hardware driver and cleanup */
     esp_err_t (*del)(button_driver_t *button_driver);

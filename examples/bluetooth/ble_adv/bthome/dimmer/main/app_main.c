@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +20,12 @@
 #include "bthome_v2.h"
 #include "iot_button.h"
 #include "iot_knob.h"
+#if CONFIG_EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+#include "button_rtc.h"
+#include "knob_rtc.h"
+#else
+#include "button_gpio.h"
+#endif
 
 #define GPIO_OUTPUT_PIN_SEL  (1ULL << CONFIG_EXAMPLE_POWER_CTRL_IO_NUM)
 
@@ -113,7 +119,7 @@ static void dimmer_task(void *arg)
     uint32_t ulNotificationValue;
 
     while (1) {
-        if (xTaskNotifyWait(0x00, 0xFFFFFFFF, &ulNotificationValue, pdMS_TO_TICKS(3000)) == pdTRUE) {
+        if (xTaskNotifyWait(0x00, 0xFFFFFFFF, &ulNotificationValue, portMAX_DELAY) == pdTRUE) {
             payload_length = 0;
             if (ulNotificationValue == TASK_EVENT_BTN) {
                 if (s_dimmer->button_event == BUTTON_SINGLE_CLICK) {
@@ -136,6 +142,10 @@ static void dimmer_task(void *arg)
             payload_length = bthome_payload_adv_add_evt_data(payload_data, payload_length, BTHOME_EVENT_ID_BUTTON, &btn_evt_id, 1);
             payload_length = bthome_payload_adv_add_evt_data(payload_data, payload_length, BTHOME_EVENT_ID_DIMMER, dim_evt, 2);
             adv_len = bthome_make_adv_data(s_dimmer->bthome, advertisement_data, name, sizeof(name), info, payload_data, payload_length);
+            if (adv_len == 0) {
+                ESP_LOGE(TAG, "Failed to build adv data");
+                continue;
+            }
             ESP_LOGI(TAG, "adv_len %d", adv_len);
             ESP_LOG_BUFFER_HEX_LEVEL("advertisement_data", advertisement_data, adv_len, ESP_LOG_WARN);
             ble_hci_set_adv_data(adv_len, advertisement_data);
@@ -145,18 +155,8 @@ static void dimmer_task(void *arg)
             } else {
                 xTimerReset(s_dimmer->timer_handle, 0);
             }
-        } else {
-            continue;
         }
     }
-    vTaskDelay(pdMS_TO_TICKS(10));
-    gpio_hold_dis(CONFIG_EXAMPLE_POWER_CTRL_IO_NUM);
-    gpio_set_level(CONFIG_EXAMPLE_POWER_CTRL_IO_NUM, 0);
-    if (s_dimmer != NULL) {
-        free(s_dimmer);
-        s_dimmer = NULL;
-    }
-    vTaskDelete(NULL);
 }
 
 static void power_ctrl_io_init(void)
@@ -180,8 +180,20 @@ static void power_ctrl_io_init(void)
     gpio_hold_en(CONFIG_EXAMPLE_POWER_CTRL_IO_NUM);
 }
 
-static void knob_init(void)
+#if CONFIG_PM_ENABLE && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP && !CONFIG_EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+static esp_err_t validate_wakeup_gpio(int gpio_num, const char *name)
 {
+    if (!esp_sleep_is_valid_wakeup_gpio(gpio_num)) {
+        ESP_LOGE(TAG, "%s GPIO %d is not a valid light sleep wakeup pin on this target", name, gpio_num);
+        return ESP_ERR_INVALID_ARG;
+    }
+    return ESP_OK;
+}
+#endif
+
+static esp_err_t knob_init(void)
+{
+    esp_err_t err;
     knob_config_t cfg = {
         .default_direction = 0,
         .gpio_encoder_a = CONFIG_EXAMPLE_GPIO_KNOB_A,
@@ -190,26 +202,66 @@ static void knob_init(void)
         .enable_power_save = true,
 #endif
     };
+
+#if CONFIG_PM_ENABLE && CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP && !CONFIG_EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+    err = validate_wakeup_gpio(CONFIG_EXAMPLE_GPIO_KNOB_A, "Knob A");
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = validate_wakeup_gpio(CONFIG_EXAMPLE_GPIO_KNOB_B, "Knob B");
+    if (err != ESP_OK) {
+        return err;
+    }
+#endif
+
+#if CONFIG_EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+    s_dimmer->knob = iot_knob_create_rtc(&cfg);
+#else
     s_dimmer->knob = iot_knob_create(&cfg);
-    iot_knob_register_cb(s_dimmer->knob, KNOB_LEFT, knob_event_cb, NULL);
-    iot_knob_register_cb(s_dimmer->knob, KNOB_RIGHT, knob_event_cb, NULL);
+#endif
+    if (s_dimmer->knob == NULL) {
+        ESP_LOGE(TAG, "Knob init failed");
+        return ESP_FAIL;
+    }
+    err = iot_knob_register_cb(s_dimmer->knob, KNOB_LEFT, knob_event_cb, NULL);
+    err |= iot_knob_register_cb(s_dimmer->knob, KNOB_RIGHT, knob_event_cb, NULL);
+    return err;
 }
 
 static esp_err_t button_init(void)
 {
-    button_config_t btn_cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .gpio_num = CONFIG_EXAMPLE_BUTTON_IO_NUM,
-            .active_level = CONFIG_EXAMPLE_BUTTON_ACTIVE_LEVEL,
-#if CONFIG_GPIO_BUTTON_SUPPORT_POWER_SAVE
-            .enable_power_save = true,
-#endif
-        },
+    const button_config_t btn_cfg = {0};
+    esp_err_t err;
+
+#if CONFIG_EXAMPLE_BUTTON_KNOB_USE_RTC_IO
+    const button_rtc_config_t rtc_cfg = {
+        .gpio_num = CONFIG_EXAMPLE_BUTTON_IO_NUM,
+        .active_level = CONFIG_EXAMPLE_BUTTON_ACTIVE_LEVEL,
+        .enable_power_save = true,
     };
-    s_dimmer->btn = iot_button_create(&btn_cfg);
-    assert(s_dimmer->btn);
-    esp_err_t err = iot_button_register_cb(s_dimmer->btn, BUTTON_PRESS_DOWN, button_event_cb, (void *)BUTTON_SINGLE_CLICK);
+
+    err = iot_button_new_rtc_device(&btn_cfg, &rtc_cfg, &s_dimmer->btn);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "RTC button init failed: %s", esp_err_to_name(err));
+        return err;
+    }
+#else
+    const button_gpio_config_t gpio_cfg = {
+        .gpio_num = CONFIG_EXAMPLE_BUTTON_IO_NUM,
+        .active_level = CONFIG_EXAMPLE_BUTTON_ACTIVE_LEVEL,
+#if CONFIG_PM_ENABLE
+        .enable_power_save = true,
+#endif
+    };
+
+    err = iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &s_dimmer->btn);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "GPIO button init failed: %s", esp_err_to_name(err));
+        return err;
+    }
+#endif
+
+    err = iot_button_register_cb(s_dimmer->btn, BUTTON_PRESS_DOWN, NULL, button_event_cb, (void *)BUTTON_SINGLE_CLICK);
     return err;
 }
 
@@ -304,8 +356,8 @@ void app_main(void)
     }
     s_dimmer->timer_handle = xTimerCreate("cutsom adv timer", pdMS_TO_TICKS(300), pdFALSE, (void *)0, timer_callback);
 
-    knob_init();
-    button_init();
+    ESP_ERROR_CHECK(knob_init());
+    ESP_ERROR_CHECK(button_init());
 
     xTaskNotify(s_dimmer->task_handle, TASK_EVENT_BTN, eSetValueWithOverwrite);
 }

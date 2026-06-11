@@ -3,9 +3,11 @@ menu "BTHome Bulb Configuration"
     config EXAMPLE_LED_STRIP_BLINK_GPIO
         int "LED Strip GPIO Pin"
         range 0 48
+        default 37 if IDF_TARGET_ESP32H4
         default 8
         help
             GPIO number for LED strip data line.
+            ESP32-H4 defaults to 37 (typical EV wiring); other targets default to 8.
 
     config EXAMPLE_LED_STRIP_LED_NUMBERS
         int "Number of LEDs in Strip"

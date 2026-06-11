@@ -1,7 +1,11 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/button: "^3.2.2"
-  espressif/knob: "^0.1.4"
+  button:
+    version: "*"
+    override_path: "../../../../../../components/button"
+  knob:
+    version: "*"
+    override_path: "../../../../../../components/knob"
   ## Required IDF version
   idf:
     version: ">=5.0"

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -259,6 +259,14 @@ esp_err_t iot_button_resume(void);
  *     - ESP_ERR_INVALID_STATE   timer state is invalid
  */
 esp_err_t iot_button_stop(void);
+
+/**
+ * @brief Notify button core from power-save GPIO ISR: mark wakeup disable pending,
+ *        resume periodic timer, and disable GPIO interrupt.
+ *
+ * @param gpio_num GPIO number that triggered the ISR
+ */
+void iot_button_power_save_wakeup_isr(uint32_t gpio_num);
 
 /**
  * @brief Register a callback function for power saving.

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.1.0 - 2026-05-25
+
+* Modify knob to support RTC power domain I/O and improve power saving.
+
 ## v1.0.2 - 2025-11-26
 
 * Fixed incorrect gpio and timer deinit when deleting the knob.

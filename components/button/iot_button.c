@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,7 @@
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_attr.h"
 #include "iot_button.h"
 #include "sdkconfig.h"
 #include "button_interface.h"
@@ -88,6 +89,8 @@ static button_dev_t *g_head_handle = NULL;
 static esp_timer_handle_t g_button_timer_handle = NULL;
 static bool g_is_timer_running = false;
 static button_power_save_config_t power_save_usr_cfg = {0};
+static uint64_t s_pending_wake_disable_gpios = 0;
+static portMUX_TYPE s_pending_wake_mux = portMUX_INITIALIZER_UNLOCKED;
 
 #define TICKS_INTERVAL    CONFIG_BUTTON_PERIOD_TIME_MS
 #define DEBOUNCE_TICKS    CONFIG_BUTTON_DEBOUNCE_TICKS //MAX 8
@@ -310,11 +313,35 @@ static void button_handler(button_dev_t *btn)
     }
 }
 
+static void button_process_pending_wake_disable(void)
+{
+    uint64_t pending_wake_disable;
+
+    portENTER_CRITICAL(&s_pending_wake_mux);
+    pending_wake_disable = s_pending_wake_disable_gpios;
+    s_pending_wake_disable_gpios = 0;
+    portEXIT_CRITICAL(&s_pending_wake_mux);
+
+    for (button_dev_t *target = g_head_handle; target; target = target->next) {
+        if (!target->driver->enable_power_save || !target->driver->get_gpio_num || !target->driver->exit_power_save) {
+            continue;
+        }
+        int32_t gpio = target->driver->get_gpio_num(target->driver);
+        if (pending_wake_disable & (1ULL << gpio)) {
+            target->driver->exit_power_save(target->driver);
+            pending_wake_disable &= ~(1ULL << gpio);
+        }
+    }
+}
+
 static void button_cb(void *args)
 {
     button_dev_t *target;
     /*!< When all buttons enter the BUTTON_NONE_PRESS state, the system enters low-power mode */
     bool enter_power_save_flag = true;
+
+    button_process_pending_wake_disable();
+
     for (target = g_head_handle; target; target = target->next) {
         button_handler(target);
         if (!(target->driver->enable_power_save && target->debounce_cnt == 0 && target->event == BUTTON_NONE_PRESS)) {
@@ -617,6 +644,18 @@ esp_err_t iot_button_stop(void)
     BTN_CHECK(ESP_OK == err, "Button timer stop failed", ESP_FAIL);
     g_is_timer_running = false;
     return ESP_OK;
+}
+
+void IRAM_ATTR iot_button_power_save_wakeup_isr(uint32_t gpio_num)
+{
+    portENTER_CRITICAL_ISR(&s_pending_wake_mux);
+    s_pending_wake_disable_gpios |= (1ULL << gpio_num);
+    portEXIT_CRITICAL_ISR(&s_pending_wake_mux);
+    if (!g_is_timer_running && g_button_timer_handle) {
+        esp_timer_start_periodic(g_button_timer_handle, TICKS_INTERVAL * 1000U);
+        g_is_timer_running = true;
+    }
+    gpio_intr_disable(gpio_num);
 }
 
 esp_err_t iot_button_register_power_save_cb(const button_power_save_config_t *config)

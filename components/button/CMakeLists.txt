@@ -4,7 +4,7 @@ if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
 else()
     set(REQ driver)
 endif()
-set(SRC_FILES "button_gpio.c" "iot_button.c" "button_matrix.c")
+set(SRC_FILES "button_gpio.c" "iot_button.c" "button_matrix.c" "button_rtc.c")
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")
     list(APPEND REQ esp_adc)

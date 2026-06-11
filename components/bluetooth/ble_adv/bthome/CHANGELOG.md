@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.1.1 - 2026/05/25
+
+Bug Fixes:
+- Fixed compile error with mbedTLS. Use PSA instead of mbedTLS.
+
 ## v0.1.0 - 2025/04/29
 
 This is the first version for BTHome component in Espressif Component Registry.

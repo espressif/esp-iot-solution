@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -324,11 +324,39 @@ TEST_CASE("bthome_adv_data_creation", "[bthome]")
                                            device_info, payload, payload_len);
 
     ESP_LOGI(TAG, "Advertisement data length: %d bytes", adv_len);
+    TEST_ASSERT_GREATER_THAN(0, adv_len);
 
     // Verify advertisement data structure
     TEST_ASSERT_EQUAL(0x02, adv_data[0]); // Length of flags
     TEST_ASSERT_EQUAL(0x01, adv_data[1]); // Flags type
     TEST_ASSERT_EQUAL(0x06, adv_data[2]); // Flags value
+
+    ret = bthome_delete(handle);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+
+    teardown_test();
+}
+
+TEST_CASE("bthome_encrypted_adv_without_key", "[bthome]")
+{
+    setup_test();
+
+    bthome_handle_t handle = NULL;
+    esp_err_t ret = bthome_create(&handle);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+
+    uint8_t payload[4] = {0x01, 0x02, 0x03, 0x04};
+    uint8_t adv_data[100];
+    bthome_device_info_t device_info = {
+        .bit = {
+            .encryption_flag = 1,
+            .trigger_based_flag = 0,
+            .bthome_version = 2
+        }
+    };
+
+    uint8_t adv_len = bthome_make_adv_data(handle, adv_data, NULL, 0, device_info, payload, sizeof(payload));
+    TEST_ASSERT_EQUAL(0, adv_len);
 
     ret = bthome_delete(handle);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
