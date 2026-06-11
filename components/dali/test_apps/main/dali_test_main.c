@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "nvs_flash.h"
 #include "unity.h"
 #include "unity_test_runner.h"
@@ -22,6 +24,12 @@ void setUp(void)
 void tearDown(void)
 {
     unity_utils_evaluate_leaks_direct(LEAKS);
+}
+
+static void unity_menu_task(void *arg)
+{
+    unity_run_menu();
+    vTaskDelete(NULL);
 }
 
 void app_main(void)
@@ -53,5 +61,12 @@ void app_main(void)
 #else
     printf("Wi-Fi is not supported on this SoC, skipping Wi-Fi initialization.\n");
 #endif
-    unity_run_menu();
+
+    BaseType_t ret = xTaskCreate(unity_menu_task, "unity_menu", 8192, NULL, tskIDLE_PRIORITY + 1, NULL);
+    assert(ret == pdPASS);
+
+    /* Keep app_main alive but yield continuously so IDLE can run. */
+    while (1) {
+        vTaskDelay(portMAX_DELAY);
+    }
 }

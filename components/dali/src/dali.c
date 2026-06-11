@@ -32,7 +32,7 @@ static const char *TAG = "dali";
 /** Delay between the first and second transmission of a send-twice command (ms). */
 #define DALI_SEND_TWICE_DELAY_MS    40
 
-#define DALI_BF_TIMEOUT_MS          50
+#define DALI_BF_TIMEOUT_MS          25
 
 /** Minimum inter-frame gap inserted automatically after every transaction (ms).
  *  IEC 62386 requires > 22 Te ≈ 9.2 ms; 20 ms gives comfortable margin. */
@@ -324,8 +324,8 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
     };
     ESP_GOTO_ON_ERROR(rmt_new_simple_encoder(&enc_cfg, &dev->tx_encoder), err, TAG, "Failed to create TX encoder");
 
-    ESP_GOTO_ON_ERROR(rmt_enable(dev->tx_channel), err, TAG, "Failed to enable TX channel");
-    ESP_GOTO_ON_ERROR(rmt_enable(dev->rx_channel), err, TAG, "Failed to enable RX channel");
+    /* Both TX and RX channels are kept disabled at init and enabled on-demand
+     * inside dali_master_do_transaction(), saving power between transactions. */
 
     ESP_LOGI(TAG, "DALI driver initialized (RX GPIO %d%s, TX GPIO %d%s, mem_block=%"PRIu32")",
              config->rx_gpio, config->invert_rx ? " inv" : "",
@@ -348,7 +348,6 @@ esp_err_t dali_del_master(dali_master_handle_t handle)
     struct dali_master_t *dev = handle;
 
     if (dev->tx_channel) {
-        rmt_disable(dev->tx_channel);
         rmt_del_channel(dev->tx_channel);
         dev->tx_channel = NULL;
     }
@@ -357,7 +356,6 @@ esp_err_t dali_del_master(dali_master_handle_t handle)
         dev->tx_encoder = NULL;
     }
     if (dev->rx_channel) {
-        rmt_disable(dev->rx_channel);
         rmt_del_channel(dev->rx_channel);
         dev->rx_channel = NULL;
     }
@@ -370,8 +368,7 @@ esp_err_t dali_del_master(dali_master_handle_t handle)
     return ESP_OK;
 }
 
-esp_err_t dali_master_do_transaction(dali_master_handle_t handle,
-                                     const dali_master_transaction_config_t *config,
+esp_err_t dali_master_do_transaction(dali_master_handle_t handle, const dali_master_transaction_config_t *config,
                                      int *result)
 {
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle must not be NULL");
@@ -418,40 +415,51 @@ esp_err_t dali_master_do_transaction(dali_master_handle_t handle,
 
     xQueueReset(dev->rx_queue);
 
+    /* Enable both channels at the start of each transaction; both are
+     * disabled together at the end, keeping the enable/disable symmetrical. */
+    esp_err_t ret = ESP_OK;
+    bool tx_enabled = false;
+    bool rx_enabled = false;
+    ESP_GOTO_ON_ERROR(rmt_enable(dev->tx_channel), done, TAG, "Failed to enable TX channel");
+    tx_enabled = true;
+    ESP_GOTO_ON_ERROR(rmt_enable(dev->rx_channel), done, TAG, "Failed to enable RX channel");
+    rx_enabled = true;
+
+    /* --- TX ------------------------------------------------------------ */
+    esp_err_t tx_err;
+    tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg);
+    if (tx_err == ESP_OK) {
+        tx_err = rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms);
+    }
+    if (tx_err == ESP_OK && send_twice) {
+        vTaskDelay(pdMS_TO_TICKS(DALI_SEND_TWICE_DELAY_MS));
+        tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg);
+        if (tx_err == ESP_OK) {
+            tx_err = rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms);
+        }
+    }
+    if (tx_err != ESP_OK) {
+        ESP_LOGE(TAG, "TX failed: %s", esp_err_to_name(tx_err));
+        ret = tx_err;
+        goto done;
+    }
+
     /* --- No backward frame expected: TX only --------------------------- */
     if (result == NULL) {
-        ESP_RETURN_ON_ERROR(rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg), TAG,
-                            "TX transmit failed");
-        ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms), TAG, "TX wait timeout");
-
-        if (send_twice) {
-            vTaskDelay(pdMS_TO_TICKS(DALI_SEND_TWICE_DELAY_MS));
-            ESP_RETURN_ON_ERROR(rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg), TAG,
-                                "TX retransmit failed");
-            ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms), TAG, "TX retransmit wait timeout");
-        }
-
-        /* IEC 62386: next FF must be sent > 22 Te after this FF ends. */
-        vTaskDelay(pdMS_TO_TICKS(DALI_IFG_MS));
-        return ESP_OK;
+        goto done;
     }
 
-    /* --- Backward frame expected: TX then RX --------------------------- */
-    ESP_RETURN_ON_ERROR(rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg), TAG,
-                        "TX transmit failed");
-    ESP_RETURN_ON_ERROR(rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms), TAG, "TX wait timeout");
-
-    esp_err_t rx_err = rmt_receive(dev->rx_channel, dev->rx_raw, sizeof(dev->rx_raw), &dev->rx_cfg);
-    if (rx_err != ESP_OK) {
-        ESP_LOGE(TAG, "rmt_receive failed: %s", esp_err_to_name(rx_err));
-        vTaskDelay(pdMS_TO_TICKS(DALI_IFG_MS));
-        return rx_err;
-    }
-
-    /* --- Wait for backward frame reception ----------------------------- */
+    /* --- Backward frame expected: RX ----------------------------------- */
     /* The RX channel also sees the FF itself, but the decoder discards it
      * (a 17-symbol FF is not a valid 8-bit BF).  We keep reading events
      * until one decodes successfully or the deadline expires.              */
+    esp_err_t rx_err = rmt_receive(dev->rx_channel, dev->rx_raw, sizeof(dev->rx_raw), &dev->rx_cfg);
+    if (rx_err != ESP_OK) {
+        ESP_LOGE(TAG, "rmt_receive failed: %s", esp_err_to_name(rx_err));
+        ret = rx_err;
+        goto done;
+    }
+
     rmt_rx_done_event_data_t rx_data;
     TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(DALI_BF_TIMEOUT_MS);
     bool bf_found = false;
@@ -492,7 +500,15 @@ esp_err_t dali_master_do_transaction(dali_master_handle_t handle,
         ESP_LOGD(TAG, "BF timeout — no reply");
     }
 
-    /* IEC 62386: next FF must be sent > 22 Te after BF ends (or after FF if no reply). */
+done:
+    if (rx_enabled) {
+        rmt_disable(dev->rx_channel);
+    }
+    if (tx_enabled) {
+        rmt_disable(dev->tx_channel);
+    }
+
+    /* IEC 62386: next FF must be sent > 22 Te after this FF ends. */
     vTaskDelay(pdMS_TO_TICKS(DALI_IFG_MS));
-    return ESP_OK;
+    return ret;
 }
