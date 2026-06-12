@@ -1,10 +1,9 @@
 esp_otp.inc:line: WARNING: Duplicate C++ declaration, also defined at bluetooth/ble_otp:line.
 Declaration is '.. cpp:member:: esp_ble_otp_olcp_rsp_t response'.
-dali.inc:line: WARNING: Inline literal start-string without end-string.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: struct lightbulb_config_t::@72::@76 precise'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@73::@77 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
@@ -55,3 +54,4 @@ If the function has a return type:
         SLIST_ENTRY (ir_learn_list_t) next
         ----------------------------^
 
+        

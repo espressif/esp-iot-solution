@@ -66,6 +66,7 @@ jobs:
             components/display/lcd/esp_lcd_panel_io_additions;
             components/display/lcd/esp_lcd_sh8601;
             components/display/lcd/esp_lcd_spd2010;
+            components/display/lcd/esp_lcd_st7121;
             components/display/lcd/esp_lcd_st7123;
             components/display/lcd/esp_lcd_st7701;
             components/display/lcd/esp_lcd_st7703;

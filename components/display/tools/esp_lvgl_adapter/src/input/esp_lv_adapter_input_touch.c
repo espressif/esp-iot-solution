@@ -254,7 +254,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         return touch_ctx->indev;
     }
 
-    if (esp_lv_adapter_lock((uint32_t)-1) != ESP_OK) {
+    if (esp_lv_adapter_lock((uint32_t) -1) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to acquire LVGL lock");
         goto cleanup_on_error;
     }
@@ -349,7 +349,7 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
         esp_lv_adapter_unregister_input_device(touch);
 
         /* Step 5: Acquire LVGL lock and delete input device */
-        esp_err_t ret = esp_lv_adapter_lock((uint32_t)-1);
+        esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
         ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock: 0x%x", ret);
 
         lv_indev_delete(touch);
@@ -388,9 +388,9 @@ static void lvgl_multi_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
     esp_lv_adapter_touch_ctx_t *touch_ctx = slot_ctx->touch_ctx;
 
     if (touch_ctx->multi.snapshot_generation == 0 ||
-        slot_ctx->last_generation_seen == touch_ctx->multi.snapshot_generation) {
+            slot_ctx->last_generation_seen == touch_ctx->multi.snapshot_generation) {
         if (!touch_ctx->with_irq || xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE ||
-            touch_ctx->multi.snapshot_generation == 0) {
+                touch_ctx->multi.snapshot_generation == 0) {
             multi_touch_refresh_snapshot(touch_ctx);
         }
     }
@@ -546,13 +546,13 @@ static esp_err_t register_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ct
 {
     esp_lv_adapter_display_node_t *display_node = display_manager_get_node(disp);
     if (display_node &&
-        display_node->sleep.input_count + touch_ctx->multi.slot_count > ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS) {
+            display_node->sleep.input_count + touch_ctx->multi.slot_count > ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS) {
         ESP_LOGE(TAG, "Not enough display input slots for %u virtual pointers",
                  touch_ctx->multi.slot_count);
         return ESP_ERR_NO_MEM;
     }
 
-    esp_err_t ret = esp_lv_adapter_lock((uint32_t)-1);
+    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock");
 
     for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
@@ -599,7 +599,7 @@ static esp_err_t cleanup_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ctx
         return ESP_OK;
     }
 
-    esp_err_t ret = esp_lv_adapter_lock((uint32_t)-1);
+    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to acquire LVGL lock during multi-touch cleanup: %s",
                  esp_err_to_name(ret));
@@ -1187,7 +1187,6 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
 }
 
 #endif /* LVGL_VERSION_MAJOR >= 9 */
-
 
 static IRAM_ATTR esp_lv_adapter_touch_ctx_t *get_touch_ctx(lv_indev_t *touch)
 {
