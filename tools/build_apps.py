@@ -57,6 +57,8 @@ IGNORE_WARNINGS = [
     r'warning: \'ISP_AE_SAMPLE_POINT_AFTER_DEMOSAIC\' is deprecated: Use ISP_AE_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
     r'warning: \'touch_cst816s_read_id\' declared \'static\' but never defined \[-Wunused-function\]',
     r'warning: \'on_refresh_done\' is deprecated: Deprecated, use on_frame_buf_complete instead \[-Wdeprecated-declarations\]',
+    r'WARNING: Component "espressif/esp_gmf_audio" not found',
+    r'WARNING: Component "espressif/esp_gmf_io" not found',
 ]
 
 class CustomApp(CMakeApp):
