@@ -3,6 +3,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+
+/**
+ * @file dali_system_components.c
+ * @brief DALI Part 101 — Physical Layer & RMT Driver Core.
+ *
+ * Implements the RMT-backed DALI master driver: hardware initialisation,
+ * Manchester-encoded forward-frame TX, backward-frame RX/decode,
+ * and the raw transaction dispatcher (dali_master_do_raw_transaction /
+ * dali_master_do_transaction).
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include <inttypes.h>
@@ -13,28 +24,34 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
-#include "dali.h"
+#include "dali_system_components.h"
 
 static const char *TAG = "dali";
 
-/** RMT clock resolution used by this driver (1 MHz → 1 µs per tick). */
+/* -------------------------------------------------------------------------
+ * RMT timing constants
+ * ------------------------------------------------------------------------- */
+
+/** RMT clock resolution (1 MHz → 1 µs per tick). */
 #define DALI_RMT_RESOLUTION_HZ      1000000U
 
 /** Convert microseconds to RMT ticks. */
 #define DALI_US_TO_RMT_TICKS(us)    ((us) * (DALI_RMT_RESOLUTION_HZ / 1000000U))
 
-/** Convert microseconds to nanoseconds (used for RMT filter/idle config). */
+/** Convert microseconds to nanoseconds. */
 #define DALI_US_TO_NS(us)           ((us) * 1000U)
 
 /** DALI half-period Te in microseconds (nominal 416.67 µs). */
 #define DALI_TE_US                  416U
 
-/** Delay between the first and second transmission of a send-twice command (ms). */
+/** Delay between first and second TX of a send-twice command (ms). */
 #define DALI_SEND_TWICE_DELAY_MS    40
 
+/** Backward-frame receive window timeout (ms).
+ *  IEC 62386: response window 7–22 Te + BF frame 22 Te = max ~18.3 ms; 25 ms gives margin. */
 #define DALI_BF_TIMEOUT_MS          25
 
-/** Minimum inter-frame gap inserted automatically after every transaction (ms).
+/** Minimum inter-frame gap inserted after every transaction (ms).
  *  IEC 62386 requires > 22 Te ≈ 9.2 ms; 20 ms gives comfortable margin. */
 #define DALI_IFG_MS                 20
 
@@ -43,9 +60,10 @@ static const char *TAG = "dali";
 #define DALI_ADDR_MASK_GROUP        0x80U
 #define DALI_ADDR_MASK_BROADCAST    0xFEU
 
-/**
- * @brief Internal driver context.  One instance per dali_new_master_rmt() call.
- */
+/* -------------------------------------------------------------------------
+ * Internal driver context
+ * ------------------------------------------------------------------------- */
+
 struct dali_master_t {
     rmt_channel_handle_t rx_channel;
     rmt_channel_handle_t tx_channel;
@@ -60,7 +78,11 @@ struct dali_master_t {
     const rmt_symbol_word_t *symbol_stop;
 };
 
-/* --- Non-inverting TX symbols (invert_tx = false, default) --- */
+/* -------------------------------------------------------------------------
+ * Static TX symbol tables
+ * ------------------------------------------------------------------------- */
+
+/* --- Non-inverting (invert_tx = false, default) --- */
 static const rmt_symbol_word_t s_sym_one_normal = {
     .level0    = 0,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
@@ -74,16 +96,13 @@ static const rmt_symbol_word_t s_sym_zero_normal = {
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
 };
 static const rmt_symbol_word_t s_sym_stop_normal = {
-    /* Bus idle = high.  With HW inversion: GPIO must be LOW during idle.
-     * RMT transmits this stop symbol and then the GPIO returns to its
-     * natural idle low level — both produce the correct bus-high idle. */
     .level0    = 0,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
     .level1    = 0,
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
 };
 
-/* --- Inverting TX symbols (invert_tx = true) --- */
+/* --- Inverting (invert_tx = true) --- */
 static const rmt_symbol_word_t s_sym_one_invert = {
     .level0    = 1,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
@@ -103,17 +122,19 @@ static const rmt_symbol_word_t s_sym_stop_invert = {
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
 };
 
+/* -------------------------------------------------------------------------
+ * Private helpers
+ * ------------------------------------------------------------------------- */
+
 /**
- * @brief Expand received (duration, level) RMT segments into a Te-sampled sequence
- *        and decode the Manchester-encoded backward frame byte.
- *
- * Each backward frame is 22 Te max: start(2) + data(16) + stop(4) = 22 Te.
+ * @brief Expand received RMT segments into a Te-sampled sequence and decode
+ *        the Manchester-encoded backward frame byte.
  */
 static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbols, size_t num_symbols,
                                                  uint8_t *out_byte, uint8_t *out_bits_decoded)
 {
     const uint32_t te_ticks = DALI_US_TO_RMT_TICKS(DALI_TE_US);
-    const size_t   max_te   = 40; /* generous cap to avoid runaway expansion */
+    const size_t   max_te   = 40;
 
     uint8_t te_levels[max_te];
     memset(te_levels, 0, max_te * sizeof(uint8_t));
@@ -125,7 +146,6 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
         const uint16_t dur1 = symbols[i].duration1;
         const uint16_t lvl1 = symbols[i].level1;
 
-        /* Round duration to nearest Te count, clamp to [1..8]. */
         uint32_t n0 = (dur0 + (te_ticks / 2)) / te_ticks;
         uint32_t n1 = (dur1 + (te_ticks / 2)) / te_ticks;
         if (n0 == 0) {
@@ -147,6 +167,12 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
         }
     }
 
+    /* Reject forward-frame echoes (longer than a valid backward frame). */
+    if (te_len > 26) {
+        *out_bits_decoded = 0;
+        return ESP_ERR_INVALID_STATE;
+    }
+
     /* Find the first Manchester half-bit pair (levels differ). */
     size_t start = 0;
     while (start + 1 < te_len && te_levels[start] == te_levels[start + 1]) {
@@ -157,8 +183,6 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
         return ESP_ERR_INVALID_STATE;
     }
 
-    /* Treat the first valid pair as the START bit (which is always '1').
-     * Use its pattern to decode following bits. */
     const uint8_t one_a = te_levels[start];
     const uint8_t one_b = te_levels[start + 1];
     if (one_a == one_b) {
@@ -169,7 +193,6 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
     uint8_t frame = 0;
     uint8_t bits  = 0;
 
-    /* Data bits follow immediately after the start bit: 8 bits, MSB first. */
     size_t idx = start + 2;
     while (bits < 8 && (idx + 1) < te_len) {
         const uint8_t a = te_levels[idx];
@@ -181,7 +204,6 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
             frame = (uint8_t)(frame << 1);
             bits++;
         } else {
-            /* Invalid Manchester pair (not a transition). */
             break;
         }
         idx += 2;
@@ -194,20 +216,13 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
 
 /**
  * @brief RMT simple-encoder callback for DALI forward frames.
- *
- * Encodes a 2-byte DALI command (address + data) as:
- *   1 start bit (logic 1) + 16 data bits (MSB first) + 1 stop symbol (2 Te)
- *
- * The RMT simple encoder calls this repeatedly until *done is set.
- * @p arg points to the dali_master_t context so the callback can access the
- * correct symbol table for this instance.
  */
 static size_t dali_tx_encode_cb(const void *data, size_t data_size, size_t symbols_written, size_t symbols_free,
                                 rmt_symbol_word_t *symbols, bool *done, void *arg)
 {
     struct dali_master_t *dev = (struct dali_master_t *)arg;
 
-    if (symbols_free < 18) {
+    if (symbols_free < 10) {
         return 0;
     }
     if (symbols_written == 0) {
@@ -221,7 +236,7 @@ static size_t dali_tx_encode_cb(const void *data, size_t data_size, size_t symbo
         for (int mask = 0x80; mask != 0; mask >>= 1) {
             symbols[out++] = (bytes[byte_idx] & mask) ? *dev->symbol_one : *dev->symbol_zero;
         }
-        return out; /* 8 symbols per byte */
+        return out;
     }
     symbols[0] = *dev->symbol_stop;
     *done = true;
@@ -236,14 +251,18 @@ static bool IRAM_ATTR dali_rx_done_cb(rmt_channel_handle_t channel, const rmt_rx
     return hp_woken == pdTRUE;
 }
 
+/* -------------------------------------------------------------------------
+ * Public API — driver lifecycle
+ * ------------------------------------------------------------------------- */
+
 esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_master_rmt_config_t *rmt_config,
                               dali_master_handle_t *handle)
 {
-    ESP_RETURN_ON_FALSE(config != NULL && handle != NULL, ESP_ERR_INVALID_ARG, TAG, "config and handle must not be NULL");
+    ESP_RETURN_ON_FALSE(config != NULL && handle != NULL, ESP_ERR_INVALID_ARG, TAG,
+                        "config and handle must not be NULL");
     ESP_RETURN_ON_FALSE(config->rx_gpio >= 0 && config->tx_gpio >= 0, ESP_ERR_INVALID_ARG, TAG,
                         "Invalid GPIO number: rx=%d tx=%d", config->rx_gpio, config->tx_gpio);
 
-    /* Use caller-supplied config or fall back to built-in defaults. */
     const dali_master_rmt_config_t default_rmt_cfg = {
         .mem_block_symbols = 64,
     };
@@ -255,13 +274,12 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
              config->invert_tx ? "inverting" : "normal",
              config->invert_rx ? "inverting" : "normal");
 
-    /* Resolve mem_block_symbols: 0 means auto-detect from SOC capability. */
     uint32_t mem_block = rmt_config->mem_block_symbols;
     if (mem_block == 0) {
 #if defined(SOC_RMT_MEM_WORDS_PER_CHANNEL)
-        mem_block = SOC_RMT_MEM_WORDS_PER_CHANNEL; /* e.g. 48 on C3/S3 */
+        mem_block = SOC_RMT_MEM_WORDS_PER_CHANNEL;
 #else
-        mem_block = 64; /* ESP32 / ESP32-S2 */
+        mem_block = 64;
 #endif
     }
 
@@ -270,7 +288,6 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
     struct dali_master_t *dev = calloc(1, sizeof(struct dali_master_t));
     ESP_RETURN_ON_FALSE(dev != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate DALI context");
 
-    /* Select TX symbol table at runtime based on polarity configuration. */
     if (config->invert_tx) {
         dev->symbol_one  = &s_sym_one_invert;
         dev->symbol_zero = &s_sym_zero_invert;
@@ -299,10 +316,6 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
     ESP_GOTO_ON_ERROR(rmt_rx_register_event_callbacks(dev->rx_channel, &rx_cbs, dev->rx_queue), err, TAG,
                       "Failed to register RX callbacks");
 
-    /* RMT filter: ignore glitches shorter than 2 µs.
-     * Idle threshold: 2 ms — longer than the BF stop-bits high (833 µs) so
-     * reception ends cleanly after the BF, but shorter than the minimum IFG
-     * between two FFs (9.2 ms) so we never accidentally merge frames. */
     dev->rx_cfg = (rmt_receive_config_t) {
         .signal_range_min_ns = DALI_US_TO_NS(2),
         .signal_range_max_ns = DALI_US_TO_NS(2000),
@@ -320,12 +333,12 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
 
     const rmt_simple_encoder_config_t enc_cfg = {
         .callback = dali_tx_encode_cb,
-        .arg      = dev,  /* pass context so callback can access symbol table */
+        .arg      = dev,
     };
     ESP_GOTO_ON_ERROR(rmt_new_simple_encoder(&enc_cfg, &dev->tx_encoder), err, TAG, "Failed to create TX encoder");
 
     /* Both TX and RX channels are kept disabled at init and enabled on-demand
-     * inside dali_master_do_transaction(), saving power between transactions. */
+     * inside dali_master_do_raw_transaction(), saving power between transactions. */
 
     ESP_LOGI(TAG, "DALI driver initialized (RX GPIO %d%s, TX GPIO %d%s, mem_block=%"PRIu32")",
              config->rx_gpio, config->invert_rx ? " inv" : "",
@@ -368,49 +381,17 @@ esp_err_t dali_del_master(dali_master_handle_t handle)
     return ESP_OK;
 }
 
-esp_err_t dali_master_do_transaction(dali_master_handle_t handle, const dali_master_transaction_config_t *config,
-                                     int *result)
+/* -------------------------------------------------------------------------
+ * Public API — transactions
+ * ------------------------------------------------------------------------- */
+
+esp_err_t dali_master_do_raw_transaction(dali_master_handle_t handle, const uint8_t *tx_buf, size_t tx_len,
+                                         bool send_twice, int tx_timeout_ms, int *result)
 {
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle must not be NULL");
-    ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config must not be NULL");
+    ESP_RETURN_ON_FALSE(tx_buf != NULL && tx_len > 0, ESP_ERR_INVALID_ARG, TAG, "tx buffer must not be empty");
 
     struct dali_master_t *dev = handle;
-    dali_addr_type_t addr_type = config->addr_type;
-    uint8_t addr = config->addr;
-    bool is_cmd = config->is_cmd;
-    uint8_t command = config->command;
-    bool send_twice = config->send_twice;
-    int tx_timeout_ms = config->tx_timeout_ms;
-
-    /* Validate address range. */
-    if (addr_type == DALI_ADDR_SHORT && addr > 63) {
-        ESP_LOGE(TAG, "Short address out of range: %d", addr);
-        return ESP_ERR_INVALID_ARG;
-    }
-    if (addr_type == DALI_ADDR_GROUP && addr > 15) {
-        ESP_LOGE(TAG, "Group address out of range: %d", addr);
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    uint8_t addr_byte;
-    switch (addr_type) {
-    case DALI_ADDR_SPECIAL:
-        addr_byte = addr;
-        break;
-    case DALI_ADDR_BROADCAST:
-        addr_byte = DALI_ADDR_MASK_BROADCAST | (is_cmd ? 0x01U : 0x00U);
-        break;
-    case DALI_ADDR_SHORT:
-        addr_byte = DALI_ADDR_MASK_SHORT | (uint8_t)(addr << 1) | (is_cmd ? 0x01U : 0x00U);
-        break;
-    case DALI_ADDR_GROUP:
-        addr_byte = DALI_ADDR_MASK_GROUP | (uint8_t)(addr << 1) | (is_cmd ? 0x01U : 0x00U);
-        break;
-    default:
-        return ESP_ERR_INVALID_ARG;
-    }
-
-    const uint8_t tx_buf[2] = {addr_byte, command};
     const rmt_transmit_config_t tx_cfg = {.loop_count = 0};
 
     xQueueReset(dev->rx_queue);
@@ -427,13 +408,13 @@ esp_err_t dali_master_do_transaction(dali_master_handle_t handle, const dali_mas
 
     /* --- TX ------------------------------------------------------------ */
     esp_err_t tx_err;
-    tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg);
+    tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, tx_len, &tx_cfg);
     if (tx_err == ESP_OK) {
         tx_err = rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms);
     }
     if (tx_err == ESP_OK && send_twice) {
         vTaskDelay(pdMS_TO_TICKS(DALI_SEND_TWICE_DELAY_MS));
-        tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, sizeof(tx_buf), &tx_cfg);
+        tx_err = rmt_transmit(dev->tx_channel, dev->tx_encoder, tx_buf, tx_len, &tx_cfg);
         if (tx_err == ESP_OK) {
             tx_err = rmt_tx_wait_all_done(dev->tx_channel, tx_timeout_ms);
         }
@@ -511,4 +492,46 @@ done:
     /* IEC 62386: next FF must be sent > 22 Te after this FF ends. */
     vTaskDelay(pdMS_TO_TICKS(DALI_IFG_MS));
     return ret;
+}
+
+esp_err_t dali_master_do_transaction(dali_master_handle_t handle, const dali_master_transaction_config_t *config,
+                                     int *result)
+{
+    ESP_RETURN_ON_FALSE(config != NULL, ESP_ERR_INVALID_ARG, TAG, "config must not be NULL");
+
+    dali_addr_type_t addr_type = config->addr_type;
+    uint8_t addr = config->addr;
+    bool is_cmd = config->is_cmd;
+    uint8_t command = config->command;
+
+    if (addr_type == DALI_ADDR_SHORT && addr > 63) {
+        ESP_LOGE(TAG, "Short address out of range: %d", addr);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (addr_type == DALI_ADDR_GROUP && addr > 15) {
+        ESP_LOGE(TAG, "Group address out of range: %d", addr);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    uint8_t addr_byte;
+    switch (addr_type) {
+    case DALI_ADDR_SPECIAL:
+        addr_byte = addr;
+        break;
+    case DALI_ADDR_BROADCAST:
+        addr_byte = DALI_ADDR_MASK_BROADCAST | (is_cmd ? 0x01U : 0x00U);
+        break;
+    case DALI_ADDR_SHORT:
+        addr_byte = DALI_ADDR_MASK_SHORT | (uint8_t)(addr << 1) | (is_cmd ? 0x01U : 0x00U);
+        break;
+    case DALI_ADDR_GROUP:
+        addr_byte = DALI_ADDR_MASK_GROUP | (uint8_t)(addr << 1) | (is_cmd ? 0x01U : 0x00U);
+        break;
+    default:
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    const uint8_t tx_buf[2] = {addr_byte, command};
+    return dali_master_do_raw_transaction(handle, tx_buf, sizeof(tx_buf), config->send_twice,
+                                          config->tx_timeout_ms, result);
 }

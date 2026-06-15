@@ -300,7 +300,7 @@ extern "C" {
 #define DALI_SPECIAL_TERMINATE              0xA1U
 /** Load a value into the Data Transfer Register (DTR); data in second byte. */
 #define DALI_SPECIAL_DATA_TRANSFER_REG      0xA3U
-/** [2x] Enter addressing mode; second byte: 0xFF = all, 0x00 = unaddressed. */
+/** [2x] Enter addressing mode; second byte: 0x00 = all, 0xFF = unaddressed. */
 #define DALI_SPECIAL_INITIALIZE             0xA5U
 /** [2x] Generate a new 24-bit random address for all devices in INIT mode. */
 #define DALI_SPECIAL_RANDOMIZE              0xA7U
@@ -331,6 +331,416 @@ extern "C" {
 /** [2x] Write a byte to the memory bank at the current address pointer. */
 #define DALI_SPECIAL_WRITE_MEMORY_LOCATION  0xC7U
 /** @} */ /* dali_special_cmd */
+
+/* -------------------------------------------------------------------------
+ * Part 209 Commands  (IEC 62386 Part 209 — Color Control, DT8)
+ *
+ * Usage prerequisite:
+ *   1. Load DTR0/DTR1/DTR2 via DALI_SPECIAL_DATA_TRANSFER_REG / REG1 / REG2
+ *      before any set-color command.
+ *   2. Send DALI_SPECIAL_ENABLE_DEVICE_TYPE (0xC1) with data=8 immediately
+ *      before each Part 209 application-extended command.
+ *   3. Call DALI_209_ACTIVATE (0xE2) after loading DTRs to latch the new color.
+ *
+ * Color modes (IEC 62386-209 §8.1):
+ *   - XY chromaticity : load X/Y into DTR0/DTR1 and use SET_TEMPORARY_X/Y.
+ *   - Color temperature: load Tc in Mirek (DTR0=lo, DTR1=hi);
+ *                         Mirek = 1 000 000 / Kelvin  (153 ≈ 6500 K, 370 ≈ 2700 K)
+ *   - RGB             : load R→DTR0, G→DTR1, B→DTR2.
+ *   - RGBWAF          : load R/G/B first, then W/A/F, then ACTIVATE.
+ *
+ * All command bytes below are the second byte of a forward frame
+ * (is_cmd = true).  Query commands return an 8-bit backward frame unless
+ * otherwise noted.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * @defgroup dali_part209_cmd DALI Part 209 – Color Control command codes (DT8)
+ * @{
+ */
+
+/* --- Immediate color control commands ------------------------------------ */
+
+/**
+ * Set temporary X coordinate from DTR0 (low byte) and DTR1 (high byte).
+ * Call DALI_209_ACTIVATE afterwards to latch the new XY value.
+ */
+#define DALI_209_SET_TEMPORARY_X_COORDINATE         0xE0U
+/**
+ * Set temporary Y coordinate from DTR0 (low byte) and DTR1 (high byte).
+ * Call DALI_209_ACTIVATE afterwards to latch the new XY value.
+ */
+#define DALI_209_SET_TEMPORARY_Y_COORDINATE         0xE1U
+
+/**
+ * Activate the color value previously loaded into the temporary registers.
+ * Must be sent after pre-loading DTRs for any color mode.
+ */
+#define DALI_209_ACTIVATE                           0xE2U
+
+/* --- XY chromaticity step commands --------------------------------------- */
+
+/** Increase X-coordinate by one step (no DTR pre-load needed). */
+#define DALI_209_X_COORD_STEP_UP                    0xE3U
+/** Decrease X-coordinate by one step. */
+#define DALI_209_X_COORD_STEP_DOWN                  0xE4U
+/** Increase Y-coordinate by one step. */
+#define DALI_209_Y_COORD_STEP_UP                    0xE5U
+/** Decrease Y-coordinate by one step. */
+#define DALI_209_Y_COORD_STEP_DOWN                  0xE6U
+
+/**
+ * Set temporary color temperature from DTR0 (low byte) and DTR1 (high byte).
+ * Unit: Mirek (= 1 000 000 / Kelvin).  Range: 1–65534 (0x0000 and 0xFFFF reserved).
+ * Call DALI_209_ACTIVATE afterwards to latch the new Tc.
+ */
+#define DALI_209_SET_COLOR_TEMPERATURE             0xE7U
+
+/* --- Color temperature step commands ------------------------------------ */
+
+/** Increase color temperature (Tc) by one step toward cooler (lower Mirek). */
+#define DALI_209_COLOR_TEMPERATURE_STEP_COOLER     0xE8U
+/** Increase color temperature (Tc) by one step toward warmer (higher Mirek). */
+#define DALI_209_COLOR_TEMPERATURE_STEP_WARMER     0xE9U
+
+/**
+ * Set temporary primary-N dimlevel for primary channel N (0–5).
+ * DTR0 = dimlevel (0x00–0xFE), DTR1 = primary index N.
+ * Call DALI_209_ACTIVATE afterwards.
+ */
+#define DALI_209_SET_PRIMARY_N_DIMLEVEL             0xEAU
+
+/**
+ * Set temporary RGB dimlevel.
+ * Load: DTR0 = R, DTR1 = G, DTR2 = B (each 0x00–0xFE, 0xFF = no change).
+ * Call DALI_209_ACTIVATE afterwards.
+ */
+#define DALI_209_SET_TEMPORARY_RGB_DIMLEVEL         0xEBU
+
+/**
+ * Set temporary WAF dimlevel.
+ * Load: DTR0 = W, DTR1 = A, DTR2 = F (each 0x00–0xFE, 0xFF = no change).
+ * Call DALI_209_ACTIVATE afterwards.
+ */
+#define DALI_209_SET_TEMPORARY_WAF_DIMLEVEL         0xECU
+
+/**
+ * Select which RGBWAF channels are controlled by the RGB/WAF temporary values.
+ */
+#define DALI_209_SET_TEMPORARY_RGBWAF_CONTROL       0xEDU
+
+/** Copy the reported color value into the temporary color registers. */
+#define DALI_209_COPY_REPORT_TO_TEMPORARY           0xEEU
+
+/* --- Stored color configuration commands [2x] --------------------------- */
+
+/** [2x] Store DTR0/DTR1 as the physical cool-white color temperature limit (Tc_coolest). */
+#define DALI_209_STORE_COLOR_TEMPERATURE_LIMIT_COOL    0xF0U
+/** [2x] Store DTR0/DTR1 as the physical warm-white color temperature limit (Tc_warmest). */
+#define DALI_209_STORE_COLOR_TEMPERATURE_LIMIT_WARM    0xF1U
+
+/* --- Query commands (return 8-bit backward frame) ------------------------- */
+
+/**
+ * Query the device color status byte (IEC 62386-209 §8.3.1).
+ * Bit fields:
+ *   [0]   Color mode active (1 = active)
+ *   [1]   Color temperature free running
+ *   [2]   Automatic activation enabled
+ *   [3]   Color temperature step active
+ *   [4]   XY-coordinate supported
+ *   [5]   Color temperature supported
+ *   [6]   Primary N supported
+ *   [7]   RGBWAF supported
+ */
+#define DALI_209_QUERY_COLOR_STATUS                0xF8U
+
+/**
+ * Query the color capabilities bitmask.
+ * Indicates which color modes the device supports (same bit layout as status byte [4:7]).
+ */
+#define DALI_209_QUERY_COLOR_CAPABILITIES          0xF9U
+
+/**
+ * Query a color value by index (placed in DTR0 before issuing this command).
+ * Returns the low byte; repeat with incremented index for high byte.
+ *
+ * DTR0 index map (IEC 62386-209 Table 4):
+ *   0x00 = X-coordinate (lo byte)    0x01 = X-coordinate (hi byte)
+ *   0x02 = Y-coordinate (lo byte)    0x03 = Y-coordinate (hi byte)
+ *   0x04 = Tc (lo byte)              0x05 = Tc (hi byte)
+ *   0x06 = primary-0 dimlevel        …
+ *   0x10 = R dimlevel                0x11 = G dimlevel  0x12 = B dimlevel
+ *   0x13 = W dimlevel                0x14 = A dimlevel  0x15 = F dimlevel
+ *
+ * To read color temperature (Tc):
+ *   1. SET DTR0 = 0x04 (DALI_SPECIAL_DATA_TRANSFER_REG, data=0x04)
+ *   2. Issue DALI_209_QUERY_COLOR_VALUE → returns Tc low byte
+ *   3. SET DTR0 = 0x05
+ *   4. Issue DALI_209_QUERY_COLOR_VALUE → returns Tc high byte
+ *   Tc_mirek = (hi << 8) | lo
+ */
+#define DALI_209_QUERY_COLOR_VALUE                 0xFAU
+
+/** Query the cool-white color temperature limit (Tc_coolest) low byte (pre-load DTR0=index). */
+#define DALI_209_QUERY_COLOR_TEMPERATURE_LIMIT_COOL    0xFBU
+/** Query the warm-white color temperature limit (Tc_warmest) low byte. */
+#define DALI_209_QUERY_COLOR_TEMPERATURE_LIMIT_WARM    0xFCU
+
+/** Query the extended version number for Part 209. */
+#define DALI_209_QUERY_EXTENDED_VERSION             0xFFU
+
+/** @} */ /* dali_part209_cmd */
+
+/* -------------------------------------------------------------------------
+ * Part 103 Commands  (IEC 62386 Part 103 — Input Devices)
+ *
+ * Input devices (sensors, push-buttons, etc.) use a separate address space
+ * from control gear.  Their forward frames are constructed identically to
+ * Part 102 but the command byte range and the special command set differ.
+ *
+ * Address byte construction for input devices:
+ *   Short:     0AAAAAAS  (A = 0–63, S = 1 for command, 0 for instance addressing)
+ *   Group:     100AAAAS  (A = 0–15)
+ *   Broadcast: 1111111S
+ *   Instance:  the second byte carries the instance number (0–31)
+ *
+ * Device-level query commands (second byte, is_cmd = true, BF expected):
+ * -------------------------------------------------------------------------*/
+
+/**
+ * @defgroup dali_part103_cmd DALI Part 103 – Input Device command codes
+ * @{
+ */
+
+/* --- Part 103 device-level configuration commands [2x] ------------------- */
+
+/** [2x] Start quiescent mode: suppress input-device/application-controller activity. */
+#define DALI_103_START_QUIESCENT_MODE               0x1DU
+/** [2x] Stop quiescent mode. */
+#define DALI_103_STOP_QUIESCENT_MODE                0x1EU
+/** [2x] Reset all device parameters to factory defaults (Part 103). */
+#define DALI_103_RESET                              0x10U
+/** [2x] Set input device short address from DTR0. */
+#define DALI_103_SET_SHORT_ADDRESS                  0x14U
+/** [2x] Enable write to memory bank. */
+#define DALI_103_ENABLE_WRITE_MEMORY                0x15U
+/** [2x] Set event priority: DTR0 = priority. */
+#define DALI_103_SET_EVENT_PRIORITY                 0x61U
+/** [2x] Enable instance. */
+#define DALI_103_ENABLE_INSTANCE                    0x62U
+/** [2x] Disable instance. */
+#define DALI_103_DISABLE_INSTANCE                   0x63U
+/** [2x] Set primary instance group. */
+#define DALI_103_SET_PRIMARY_INSTANCE_GROUP         0x64U
+/** [2x] Set instance group 1. */
+#define DALI_103_SET_INSTANCE_GROUP_1               0x65U
+/** [2x] Set instance group 2. */
+#define DALI_103_SET_INSTANCE_GROUP_2               0x66U
+/** [2x] Set event scheme. */
+#define DALI_103_SET_EVENT_SCHEME                   0x67U
+/** [2x] Set event filter. */
+#define DALI_103_SET_EVENT_FILTER                   0x68U
+
+/* --- Part 103 device-level query commands (BF expected) ------------------ */
+
+/** Query: input device status byte. */
+#define DALI_103_QUERY_DEVICE_STATUS                0x30U
+/** Query: application controller error. */
+#define DALI_103_QUERY_APPLICATION_CONTROLLER_ERROR 0x31U
+/** Query: input device error. */
+#define DALI_103_QUERY_INPUT_DEVICE_ERROR           0x32U
+/** Query: missing short address. */
+#define DALI_103_QUERY_MISSING_SHORT_ADDRESS        0x33U
+/** Query: version number. */
+#define DALI_103_QUERY_VERSION_NUMBER               0x34U
+/** Query: number of instances. */
+#define DALI_103_QUERY_NUMBER_OF_INSTANCES          0x35U
+/** Query: content of DTR0. */
+#define DALI_103_QUERY_CONTENT_DTR0                 0x36U
+/** Query: content of DTR1. */
+#define DALI_103_QUERY_CONTENT_DTR1                 0x37U
+/** Query: content of DTR2. */
+#define DALI_103_QUERY_CONTENT_DTR2                 0x38U
+/** Query: high byte of the device random address. */
+#define DALI_103_QUERY_RANDOM_ADDRESS_H             0x39U
+/** Query: middle byte of the device random address. */
+#define DALI_103_QUERY_RANDOM_ADDRESS_M             0x3AU
+/** Query: low byte of the device random address. */
+#define DALI_103_QUERY_RANDOM_ADDRESS_L             0x3BU
+/** Query: device groups 0–7 membership mask. */
+#define DALI_103_QUERY_GROUPS_0_7                   0x41U
+/** Query: device groups 8–15 membership mask. */
+#define DALI_103_QUERY_GROUPS_8_15                  0x42U
+/** Query: device groups 16–23 membership mask. */
+#define DALI_103_QUERY_GROUPS_16_23                 0x43U
+/** Query: device groups 24–31 membership mask. */
+#define DALI_103_QUERY_GROUPS_24_31                 0x44U
+/** Query: input device capabilities. */
+#define DALI_103_QUERY_INPUT_DEVICE_CAPABILITIES    0x46U
+/** Query: short address is not a standard device-level command; use special QUERY_SHORT_ADDRESS during commissioning. */
+#define DALI_103_QUERY_SHORT_ADDRESS                0x3FU
+
+/* --- Part 103 instance-level commands ------------------------------------ */
+
+/** Query: input value of the addressed instance. */
+#define DALI_103_QUERY_INSTANCE_TYPE                0x80U
+/** Query: resolution of the instance sensor value. */
+#define DALI_103_QUERY_RESOLUTION                   0x81U
+/** Query: current input value. */
+#define DALI_103_QUERY_INPUT_INST_VALUE             0x8CU
+/** Query: latched input value. */
+#define DALI_103_QUERY_INPUT_INST_VALUE_LATCH       0x8DU
+/** Query: whether the instance is enabled. */
+#define DALI_103_QUERY_INSTANCE_ENABLED             0x86U
+/** Query: primary instance group. */
+#define DALI_103_QUERY_PRIMARY_INSTANCE_GROUP       0x88U
+/** Query: event scheme for this instance. */
+#define DALI_103_QUERY_INSTANCE_SCHEME              0x8BU
+/** Query event filter bits 0-7 */
+#define DALI_103_QUERY_EVENT_FILTER_ZERO_TO_SEVEN   0x90U
+/** Query event filter bits 8-15 */
+#define DALI_103_QUERY_EVENT_FILTER_EIGHT_TO_FIFTEEN    0x91U
+/** Query event filter bits 16-23 */
+#define DALI_103_QUERY_EVENT_FILTER_SIXTEEN_TO_TWENTYTHREE 0x92U
+
+/* --- Part 103 special commands (input device addressing) ----------------- */
+
+/**
+ * @defgroup dali_103_special Part 103 special command instance-byte values
+ *
+ * IEC 62386-103 control-device special commands are 24-bit frames:
+ * [0xC1][special-command-id][parameter].
+ * @{
+ */
+/**< Special address for Part 103 */
+#define DALI_103_SPECIAL_ADDR                   0xC1U
+/** Terminate an ongoing input device commissioning sequence. */
+#define DALI_103_SPECIAL_TERMINATE              0x00U
+/** [2x] Enter input device addressing mode; 0xFF = all, 0x00 = unaddressed. */
+#define DALI_103_SPECIAL_INITIALIZE             0x01U
+/** [2x] Generate new 24-bit random address for all input devices in INIT mode. */
+#define DALI_103_SPECIAL_RANDOMIZE              0x02U
+/** Query: return YES (0xFF) if any device random address ≤ search address. */
+#define DALI_103_SPECIAL_COMPARE                0x03U
+/** Withdraw the selected input device from the addressing process. */
+#define DALI_103_SPECIAL_WITHDRAW               0x04U
+/** Set the high byte of the search address. */
+#define DALI_103_SPECIAL_SEARCH_ADDR_H          0x05U
+/** Set the middle byte of the search address. */
+#define DALI_103_SPECIAL_SEARCH_ADDR_M          0x06U
+/** Set the low byte of the search address. */
+#define DALI_103_SPECIAL_SEARCH_ADDR_L          0x07U
+/** [2x] Program a raw 6-bit short address (0..63) into the selected input device. */
+#define DALI_103_SPECIAL_PROGRAM_SHORT_ADDR     0x08U
+/** Verify that the device matching the search address has the given short address. */
+#define DALI_103_SPECIAL_VERIFY_SHORT_ADDR      0x09U
+/** Query: return the short address of the device matching the search address. */
+#define DALI_103_SPECIAL_QUERY_SHORT_ADDR       0x0AU
+/** Write enable for instance configuration commands. */
+#define DALI_103_SPECIAL_WRITE_MEMORY_LOCATION  0x20U
+/** Load a value into DTR0. */
+#define DALI_103_SPECIAL_DTR0                   0x30U
+/** Load a value into DTR1. */
+#define DALI_103_SPECIAL_DTR1                   0x31U
+/** Load a value into DTR2. */
+#define DALI_103_SPECIAL_DTR2                   0x32U
+
+/** @} */ /* dali_103_special */
+/** @} */ /* dali_part103_cmd */
+
+/* -------------------------------------------------------------------------
+ * Part 303 Commands  (IEC 62386 Part 303 — Occupancy Sensor, instance type 3)
+ *
+ * The DLS-203-P PIR sensor implements instance type 3 (occupancy) on
+ * at least instance 0.  Configuration commands use DALI_103 instance-level
+ * addressing: send DALI_103_SPECIAL_SET_INSTANCE first to select the
+ * occupancy instance, then issue the Part 303 command.
+ *
+ * All command bytes below are the second byte of a forward frame
+ * (is_cmd = true, addr_type = DALI_ADDR_SHORT/GROUP/BROADCAST).
+ * -------------------------------------------------------------------------*/
+
+/**
+ * @defgroup dali_part303_cmd DALI Part 303 – Occupancy Sensor command codes
+ * @{
+ */
+
+/* --- Part 303 configuration commands [2x] -------------------------------- */
+
+/** [2x] Set hold timer: DTR0 = value (unit: 10 s). */
+#define DALI_303_SET_HOLD_TIMER                     0x21U
+/** [2x] Set report timer: DTR0 = timer value. */
+#define DALI_303_SET_REPORT_TIMER                   0x22U
+/** [2x] Set deadtime timer: DTR0 = value. */
+#define DALI_303_SET_DEADTIME_TIMER                 0x23U
+/** Cancel hold timer. */
+#define DALI_303_CANCEL_HOLD_TIMER                  0x24U
+
+/* --- Part 303 query commands (BF expected) ------------------------------- */
+
+/** Query: current deadtime timer value. */
+#define DALI_303_QUERY_DEADTIME_TIMER               0x2CU
+/** Query: current hold timer value. */
+#define DALI_303_QUERY_HOLD_TIMER                   0x2DU
+/** Query: current report timer value. */
+#define DALI_303_QUERY_REPORT_TIMER                 0x2EU
+/** Query: whether movement catching is enabled. */
+#define DALI_303_QUERY_CATCHING                     0x2FU
+/**
+ * Query: occupancy state.
+ * Returns 0xFF = occupied, 0x00 = unoccupied (no reply = device absent).
+ */
+#define DALI_303_QUERY_OCCUPANCY                    0xF1U
+/**
+ * Query: occupancy state latch (reads and clears the latched occupancy event).
+ * Returns 0xFF if an occupancy event was latched since the last read.
+ */
+#define DALI_303_QUERY_OCCUPANCY_LATCH              0xF2U
+
+/** @} */ /* dali_part303_cmd */
+
+/* -------------------------------------------------------------------------
+ * Part 304 Commands  (IEC 62386 Part 304 — Light Sensor, instance type 4)
+ *
+ * The DLS-203-P includes a daylight sensor (2–65000 Lux) that maps to
+ * Part 304 (illuminance input device instance).  Use
+ * DALI_103_SPECIAL_SET_INSTANCE to select the illuminance instance (typically
+ * instance 1 on devices that combine PIR + daylight), then issue Part 304
+ * commands.
+ *
+ * Illuminance is reported via DALI event messages (push model).  The device
+ * autonomously transmits readings when the value changes beyond the configured
+ * hysteresis; direct polling of the current value is not standardised.
+ * -------------------------------------------------------------------------*/
+
+/**
+ * @defgroup dali_part304_cmd DALI Part 304 – Light Sensor command codes
+ * @{
+ */
+
+/* --- Part 304 configuration commands [2x] -------------------------------- */
+
+/** [2x] Set report timer: DTR0 = value. */
+#define DALI_304_SET_REPORT_TIMER                   0x30U
+/** [2x] Set hysteresis: DTR0 = value. */
+#define DALI_304_SET_HYSTERESIS                     0x31U
+/** [2x] Set deadtime timer: DTR0 = value. */
+#define DALI_304_SET_DEADTIME_TIMER                 0x32U
+/** [2x] Set minimum hysteresis: DTR0 = value. */
+#define DALI_304_SET_HYSTERESIS_MIN                 0x33U
+
+/* --- Part 304 query commands (BF expected) ------------------------------- */
+
+/** Query: minimum hysteresis value. */
+#define DALI_304_QUERY_HYSTERESIS_MIN                   0x3CU
+/** Query: deadtime timer value. */
+#define DALI_304_QUERY_DEADTIME_TIMER                   0x3DU
+/** Query: report timer value. */
+#define DALI_304_QUERY_REPORT_TIMER                     0x3EU
+/** Query: hysteresis value. */
+#define DALI_304_QUERY_HYSTERESIS                       0x3FU
+/** @} */ /* dali_part304_cmd */
 
 #ifdef __cplusplus
 }

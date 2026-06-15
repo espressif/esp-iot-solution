@@ -1,5 +1,5 @@
 dependencies:
   idf: ">=5.5.0"
   dali:
-    version: "~1.0.0"
+    version: "~1.1.0"
     override_path: "../../../../components/dali"

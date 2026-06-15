@@ -11,12 +11,14 @@ control and query DALI control gear directly.
 Features
 --------
 
-* RMT-based Manchester TX/RX implementation for DALI physical layer timing.
-* Supports :term:`short address <Short Address>`, :term:`group address <Group Address>`, broadcast, and special command modes.
-* Supports direct arc power control (DAPC), control/configuration commands, and query commands.
-* Built-in send-twice support for commands that must be issued twice within 100 ms.
-* Configurable TX/RX polarity adaptation for different hardware interface circuits.
-* Includes a test app and a runnable lighting example.
+* Physical Layer — RMT-based Manchester TX/RX (Te = 416.67 µs, ±10 % tolerance).
+* Addressing — Short address (0–63), group address (0–15), broadcast, and special commands.
+* Part 102 (Control Gear) — DAPC dimming, indirect/configuration commands, and queries for lamps.
+* Part 103 (Control Device) — Event reporting and device/instance-level commands for input devices.
+* Part 303/304 (Sensors) — Occupancy (303) and light (304) sensor support.
+* Part 209 (DT8 Color) — RGB, CCT (Tc), and XY chromaticity control.
+* Commissioning — Automatic short address assignment for Part 102 and Part 103 devices.
+* Send-twice — Built-in double transmission within 100 ms for configuration commands.
 
 Supported Targets
 -----------------
@@ -91,6 +93,42 @@ Quick Start
           ESP_LOGI("dali", "QUERY_STATUS = 0x%02X", (unsigned)reply);
       }
 
+5. Commissioning (auto-assign short addresses):
+
+   .. code-block:: c
+
+      /* Part 102 — Control Gear (lamps) */
+      uint8_t count102 = 0;
+      esp_err_t err = dali_commission(dali, DALI_COMMISSION_ALL, 0, 64, &count102,
+                                      DALI_TX_TIMEOUT_MS);
+      if (err == ESP_OK) {
+          ESP_LOGI("dali", "Part 102 commissioned: %u gear", count102);
+      }
+
+      /* Part 103 — Control Devices (sensors) */
+      uint8_t count103 = 0;
+      err = dali_103_commission(dali, DALI_COMMISSION_ALL, 10, 64, &count103,
+                                DALI_TX_TIMEOUT_MS);
+      if (err == ESP_OK) {
+          ESP_LOGI("dali", "Part 103 commissioned: %u devices", count103);
+      }
+
+6. Set DT8 color (Part 209):
+
+   .. code-block:: c
+
+      /* RGB mode — set address 4 to red */
+      dali_color_val_t color = { .rgb = { .r = 254, .g = 0, .b = 0 } };
+      ESP_ERROR_CHECK(dali_master_set_color(dali, DALI_ADDR_SHORT, 4,
+                                             DALI_COLOR_RGB, color,
+                                             DALI_TX_TIMEOUT_MS));
+
+      /* CCT mode — set address 4 to 2700 K (370 Mirek) */
+      dali_color_val_t cct = { .cct = { .mirek = 370 } };
+      ESP_ERROR_CHECK(dali_master_set_color(dali, DALI_ADDR_SHORT, 4,
+                                             DALI_COLOR_CCT, cct,
+                                             DALI_TX_TIMEOUT_MS));
+
 Configuration
 -------------
 
@@ -144,10 +182,12 @@ Example and Test
 
 The example demonstrates:
 
-* DAPC dimming sequence
-* Normal command transmission
-* Query transactions with reply parsing
-* Send-twice configuration command flow
+* Commissioning — Automatic short address assignment for Part 102 (lamps) and Part 103 (sensors)
+* Dynamic Device Detection — Scan and identify DT6 (dimming) vs DT8 (color) gear by device type
+* DAPC Dimming — Brightness control sequence on all discovered lamps
+* Part 103 Sensor — Occupancy polling and event-triggered actions
+* Simultaneous Blink — When occupied: DT6 lamps blink together, DT8 lamp alternates Red/Blue
+* Query Commands — Status, actual level, and device type queries
 
 API Reference
 -------------
@@ -179,6 +219,8 @@ Glossary
       A unique address assigned to a single DALI control gear, in the range
       0-63. Encoded in the forward frame as ``0AAAAAAS`` (A = address bits,
       S = selector bit).
+      Short addresses for Part 102 and Part 103 devices are independent;
+      no address conflicts during commissioning.
 
    Group Address
       An address shared by up to 16 control gear units, in the range 0-15.
