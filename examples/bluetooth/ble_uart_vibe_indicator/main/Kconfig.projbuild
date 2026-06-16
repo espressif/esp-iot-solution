@@ -1,0 +1,177 @@
+menu "ESP-BLE-UART Vibe Indicator Example"
+
+    config VIBE_INDICATOR_CHANNEL_COUNT
+        int "Number of signal-light channels"
+        range 1 8
+        default 3
+        help
+            How many independent R/Y/G lamp groups this firmware exposes.
+            Each channel has three GPIO outputs (red, yellow, green).
+
+    config VIBE_INDICATOR_SLOW_BLINK_HALF_MS
+        int "Slow blink half-period (milliseconds, ~1 Hz)"
+        range 50 5000
+        default 500
+        help
+            GPIO toggle interval for light_action=2 (slow blink).
+
+    config VIBE_INDICATOR_FAST_BLINK_HALF_MS
+        int "Fast blink half-period (milliseconds, ~3 Hz)"
+        range 20 2000
+        default 167
+        help
+            GPIO toggle interval for light_action=3 (fast blink).
+            Also drives the shared blink timer tick rate.
+
+    config VIBE_INDICATOR_DEVICE_NAME_PREFIX
+        string "BLE device name prefix"
+        default "Vibe-Indicator"
+        help
+            Advertised as "<prefix>-XXXX" where XXXX is the last two BT MAC
+            bytes in hex. Keep the full name within 31 bytes.
+
+    config VIBE_INDICATOR_CH0_GPIO_R
+        int "Channel 0 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 1
+
+    config VIBE_INDICATOR_CH0_GPIO_Y
+        int "Channel 0 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 1
+
+    config VIBE_INDICATOR_CH0_GPIO_G
+        int "Channel 0 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 1
+
+    config VIBE_INDICATOR_CH1_GPIO_R
+        int "Channel 1 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 2
+
+    config VIBE_INDICATOR_CH1_GPIO_Y
+        int "Channel 1 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 2
+
+    config VIBE_INDICATOR_CH1_GPIO_G
+        int "Channel 1 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 2
+
+    config VIBE_INDICATOR_CH2_GPIO_R
+        int "Channel 2 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 3
+
+    config VIBE_INDICATOR_CH2_GPIO_Y
+        int "Channel 2 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 3
+
+    config VIBE_INDICATOR_CH2_GPIO_G
+        int "Channel 2 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 3
+
+    config VIBE_INDICATOR_CH3_GPIO_R
+        int "Channel 3 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 4
+
+    config VIBE_INDICATOR_CH3_GPIO_Y
+        int "Channel 3 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 4
+
+    config VIBE_INDICATOR_CH3_GPIO_G
+        int "Channel 3 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 4
+
+    config VIBE_INDICATOR_CH4_GPIO_R
+        int "Channel 4 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 5
+
+    config VIBE_INDICATOR_CH4_GPIO_Y
+        int "Channel 4 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 5
+
+    config VIBE_INDICATOR_CH4_GPIO_G
+        int "Channel 4 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 5
+
+    config VIBE_INDICATOR_CH5_GPIO_R
+        int "Channel 5 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 6
+
+    config VIBE_INDICATOR_CH5_GPIO_Y
+        int "Channel 5 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 6
+
+    config VIBE_INDICATOR_CH5_GPIO_G
+        int "Channel 5 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 6
+
+    config VIBE_INDICATOR_CH6_GPIO_R
+        int "Channel 6 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 7
+
+    config VIBE_INDICATOR_CH6_GPIO_Y
+        int "Channel 6 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 7
+
+    config VIBE_INDICATOR_CH6_GPIO_G
+        int "Channel 6 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 7
+
+    config VIBE_INDICATOR_CH7_GPIO_R
+        int "Channel 7 red GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 8
+
+    config VIBE_INDICATOR_CH7_GPIO_Y
+        int "Channel 7 yellow GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 8
+
+    config VIBE_INDICATOR_CH7_GPIO_G
+        int "Channel 7 green GPIO (-1 = unconnected)"
+        range -1 54
+        default -1
+        depends on VIBE_INDICATOR_CHANNEL_COUNT >= 8
+
+endmenu
