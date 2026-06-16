@@ -59,6 +59,14 @@ bool ble_protocol_permission_is_pending(void);
  */
 void ble_protocol_submit_permission(const char *behavior);
 
+/**
+ * @brief Reset protocol state after the BLE link drops.
+ *
+ * Bumps the connection generation, cancels any pending permission prompt, and
+ * discards a partially received JSONL line.
+ */
+void ble_protocol_on_ble_disconnected(void);
+
 #ifdef __cplusplus
 }
 #endif

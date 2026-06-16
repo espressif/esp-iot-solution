@@ -22,6 +22,7 @@
 
 #include "board.h"
 #include "ble_protocol.h"
+#include "ble_uart.h"
 #include "emote_gen_player.h"
 #include "gfx.h"
 #include "iot_button.h"
@@ -35,6 +36,9 @@ static const char *TAG = "emote_demo";
 #define DEMO_MSG_QUEUE_LEN               8
 #define DEMO_WORKER_TASK_STACK           8192
 #define DEMO_WORKER_TASK_PRIORITY        5
+#define DEMO_LINK_MONITOR_TASK_STACK     2048
+#define DEMO_LINK_MONITOR_TASK_PRIORITY  4
+#define DEMO_LINK_MONITOR_POLL_MS        300
 #define DEMO_SESSION_STATUS_BUSY         "busy"
 #define DEMO_SESSION_STATUS_IDLE         "idle"
 #define DEMO_SESSION_STATUS_RETRY        "retry"
@@ -72,6 +76,10 @@ static const char *TAG = "emote_demo";
 #ifndef DEMO_QUESTION_NAME
 #define DEMO_QUESTION_NAME               "question_05s"
 #endif
+/** Emote `name` while BLE is disconnected and waiting for a central. */
+#ifndef DEMO_WAITING_NAME
+#define DEMO_WAITING_NAME                DEMO_DECISION_NAME_ALLOW
+#endif
 
 typedef enum {
     DEMO_MSG_ANIM_NAME = 0,
@@ -84,6 +92,7 @@ typedef struct {
      * enqueue UI work without owning the emote_gen_player timing directly. */
     demo_msg_kind_t kind;
     emote_gen_player_handle_t player;
+    bool anim_repeat;
     union {
         char anim_name[EMOTE_GEN_PLAYER_STR_MAX];
         char tip_text[DEMO_TIP_BUF_SIZE];
@@ -94,7 +103,10 @@ static emote_gen_player_handle_t s_player;
 static QueueHandle_t s_msg_queue;
 static TaskHandle_t s_worker_task;
 
-static void emote_demo_post_animation_fade(const char *name);
+#define DEMO_ANIM_LOOP                   true
+#define DEMO_ANIM_ONCE                   false
+
+static void emote_demo_post_animation_fade(const char *name, bool repeat);
 static void emote_demo_post_clear_tip(const char *log_context);
 static void emote_demo_permission_key_event_cb(const board_touch_event_t *ev);
 static void emote_demo_ui_worker_task(void *arg);
@@ -102,15 +114,18 @@ static void emote_demo_ui_worker_start_once(void);
 static void emote_demo_board_touch_cb(void *user_data, const board_touch_event_t *ev);
 static void emote_demo_log_animation_index(emote_gen_player_handle_t player);
 static bool emote_demo_runtime_start(emote_gen_player_handle_t player);
+static void emote_demo_link_monitor_task(void *arg);
+static void emote_demo_link_monitor_start_once(void);
+static const char *emote_demo_resolved_idle_anim(void);
 
-static void emote_demo_post_animation_fade(const char *name)
+static void emote_demo_post_animation_fade(const char *name, bool repeat)
 {
     /* Request an animation transition asynchronously. Dropping the request on a
      * full queue is preferable to blocking the BLE/parser path. */
     if (name == NULL || s_msg_queue == NULL || s_player == NULL) {
         return;
     }
-    demo_msg_t msg = { .kind = DEMO_MSG_ANIM_NAME, .player = s_player };
+    demo_msg_t msg = { .kind = DEMO_MSG_ANIM_NAME, .player = s_player, .anim_repeat = repeat };
     (void)strncpy(msg.u.anim_name, name, sizeof(msg.u.anim_name) - 1);
     msg.u.anim_name[sizeof(msg.u.anim_name) - 1] = '\0';
     if (xQueueSend(s_msg_queue, &msg, 0) != pdTRUE) {
@@ -150,7 +165,7 @@ static void emote_demo_permission_key_event_cb(const board_touch_event_t *ev)
     }
     const bool once = (be == BUTTON_SINGLE_CLICK);
     ble_protocol_submit_permission(once ? DEMO_PERMISSION_DECISION_ONCE : DEMO_PERMISSION_DECISION_REJECT);
-    emote_demo_post_animation_fade(once ? DEMO_DECISION_NAME_ALLOW : DEMO_DECISION_NAME_DENY);
+    emote_demo_post_animation_fade(once ? DEMO_DECISION_NAME_ALLOW : DEMO_DECISION_NAME_DENY, DEMO_ANIM_ONCE);
     emote_demo_post_clear_tip("hook decision");
 }
 
@@ -171,8 +186,8 @@ static void emote_demo_ui_worker_task(void *arg)
         }
         switch (msg.kind) {
         case DEMO_MSG_ANIM_NAME:
-            ESP_LOGI(TAG, "anim: %s", msg.u.anim_name);
-            (void)emote_gen_player_anim_fade_name(msg.player, msg.u.anim_name);
+            ESP_LOGI(TAG, "anim: %s (repeat=%d)", msg.u.anim_name, (int)msg.anim_repeat);
+            (void)emote_gen_player_anim_fade_name(msg.player, msg.u.anim_name, msg.anim_repeat);
             break;
         case DEMO_MSG_TIP_TEXT:
             ESP_LOGI(TAG, "tip: %s", msg.u.tip_text);
@@ -207,7 +222,42 @@ void emote_demo_show_permission_timeout(void)
         return;
     }
     emote_demo_post_clear_tip("hook timeout");
-    emote_demo_post_animation_fade(DEMO_DECISION_NAME_TIMEOUT);
+    emote_demo_post_animation_fade(DEMO_DECISION_NAME_TIMEOUT, DEMO_ANIM_ONCE);
+}
+
+static const char *emote_demo_resolved_idle_anim(void)
+{
+    return ble_uart_is_connected() ? DEMO_IDLE_NAME : DEMO_WAITING_NAME;
+}
+
+static bool emote_demo_idle_anim_is_loop(void)
+{
+    return ble_uart_is_connected();
+}
+
+void emote_demo_show_waiting(void)
+{
+    if (s_msg_queue == NULL || s_player == NULL) {
+        return;
+    }
+    emote_demo_post_clear_tip("ble disconnected");
+    emote_demo_post_animation_fade(DEMO_WAITING_NAME, DEMO_ANIM_ONCE);
+}
+
+void emote_demo_on_ble_link_changed(bool connected)
+{
+    if (s_msg_queue == NULL || s_player == NULL) {
+        return;
+    }
+    if (!connected) {
+        ble_protocol_on_ble_disconnected();
+        emote_demo_show_waiting();
+        return;
+    }
+    if (!ble_protocol_permission_is_pending()) {
+        emote_demo_post_clear_tip("ble connected");
+        emote_demo_post_animation_fade(DEMO_IDLE_NAME, DEMO_ANIM_LOOP);
+    }
 }
 
 void emote_demo_clear_permission(void)
@@ -218,7 +268,7 @@ void emote_demo_clear_permission(void)
         return;
     }
     emote_demo_post_clear_tip("hook clear");
-    emote_demo_post_animation_fade(DEMO_IDLE_NAME);
+    emote_demo_post_animation_fade(emote_demo_resolved_idle_anim(), emote_demo_idle_anim_is_loop());
 }
 
 void emote_demo_show_permission(const char *perm_type, const char *title, const char *meta_compact)
@@ -234,7 +284,7 @@ void emote_demo_show_permission(const char *perm_type, const char *title, const 
     const char *mc = (meta_compact && meta_compact[0] != '\0') ? meta_compact : NULL;
     const char *detail = (mc != NULL) ? mc : tl;
 
-    emote_demo_post_animation_fade(DEMO_QUESTION_NAME);
+    emote_demo_post_animation_fade(DEMO_QUESTION_NAME, DEMO_ANIM_LOOP);
     demo_msg_t msg = { .kind = DEMO_MSG_TIP_TEXT, .player = s_player };
     (void)snprintf(msg.u.tip_text, sizeof(msg.u.tip_text), "%s:%s", pt, detail);
     msg.u.tip_text[sizeof(msg.u.tip_text) - 1] = '\0';
@@ -251,17 +301,23 @@ void emote_demo_show_session_status(const char *status_type)
     if (status_type == NULL || s_msg_queue == NULL || s_player == NULL) {
         return;
     }
+    if (!ble_uart_is_connected()) {
+        if (strcmp(status_type, DEMO_SESSION_STATUS_IDLE) == 0) {
+            emote_demo_show_waiting();
+        }
+        return;
+    }
     demo_msg_t msg = { .kind = DEMO_MSG_TIP_TEXT, .player = s_player };
     if (strcmp(status_type, DEMO_SESSION_STATUS_BUSY) == 0) {
         (void)snprintf(msg.u.tip_text, sizeof(msg.u.tip_text), DEMO_TIP_TEXT_WORKING);
-        emote_demo_post_animation_fade(DEMO_BUSY_NAME);
+        emote_demo_post_animation_fade(DEMO_BUSY_NAME, DEMO_ANIM_LOOP);
     } else if (strcmp(status_type, DEMO_SESSION_STATUS_IDLE) == 0) {
         emote_demo_post_clear_tip("session idle");
-        emote_demo_post_animation_fade(DEMO_IDLE_NAME);
+        emote_demo_post_animation_fade(emote_demo_resolved_idle_anim(), emote_demo_idle_anim_is_loop());
         return;
     } else if (strcmp(status_type, DEMO_SESSION_STATUS_RETRY) == 0) {
         (void)snprintf(msg.u.tip_text, sizeof(msg.u.tip_text), DEMO_TIP_TEXT_RETRY);
-        emote_demo_post_animation_fade(DEMO_QUESTION_NAME);
+        emote_demo_post_animation_fade(DEMO_QUESTION_NAME, DEMO_ANIM_LOOP);
     } else {
         return; /* unknown status type – ignore */
     }
@@ -283,6 +339,41 @@ static void emote_demo_board_touch_cb(void *user_data, const board_touch_event_t
     if (ev->src == BOARD_TOUCH_SOURCE_KEY) {
         emote_demo_permission_key_event_cb(ev);
     }
+}
+
+static void emote_demo_link_monitor_task(void *arg)
+{
+    bool last_connected = ble_uart_is_connected();
+
+    (void)arg;
+    /* runtime_start already shows waiting; only sync if already connected at boot. */
+    if (last_connected) {
+        emote_demo_on_ble_link_changed(true);
+    }
+
+    for (;;) {
+        bool connected = ble_uart_is_connected();
+        if (connected != last_connected) {
+            last_connected = connected;
+            emote_demo_on_ble_link_changed(connected);
+        }
+        vTaskDelay(pdMS_TO_TICKS(DEMO_LINK_MONITOR_POLL_MS));
+    }
+}
+
+static void emote_demo_link_monitor_start_once(void)
+{
+    static bool started;
+
+    if (started) {
+        return;
+    }
+    if (xTaskCreate(emote_demo_link_monitor_task, "ble_link", DEMO_LINK_MONITOR_TASK_STACK, NULL,
+                    DEMO_LINK_MONITOR_TASK_PRIORITY, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "ble link monitor task create failed");
+        return;
+    }
+    started = true;
 }
 
 static void emote_demo_log_animation_index(emote_gen_player_handle_t player)
@@ -336,8 +427,9 @@ static bool emote_demo_runtime_start(emote_gen_player_handle_t player)
             gfx_emote_unlock(gh);
         }
     }
-    (void)emote_gen_player_anim_now_name(player, DEMO_IDLE_NAME);
+    (void)emote_gen_player_anim_now_name(player, DEMO_WAITING_NAME, DEMO_ANIM_ONCE);
     board_set_touch_callback(emote_demo_board_touch_cb, player);
+    emote_demo_link_monitor_start_once();
 
     return true;
 }

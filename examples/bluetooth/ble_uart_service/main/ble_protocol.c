@@ -389,6 +389,20 @@ void ble_protocol_submit_permission(const char *behavior)
     ble_protocol_permission_unlock();
 }
 
+void ble_protocol_on_ble_disconnected(void)
+{
+    s_connection_generation++;
+
+    if (s_rx_queue != NULL) {
+        ble_protocol_rx_chunk_t reset = { 0 };
+        if (xQueueSend(s_rx_queue, &reset, 0) != pdTRUE) {
+            ESP_LOGW(TAG, "rx reset queue full on disconnect");
+        }
+    }
+
+    (void)ble_protocol_permission_cancel_pending();
+}
+
 static void ble_protocol_pending_request_clear_locked(void)
 {
     /* Caller must hold s_permission_mutex. Clear all fields together so readers never
