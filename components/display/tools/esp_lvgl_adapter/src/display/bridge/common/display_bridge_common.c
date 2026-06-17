@@ -629,7 +629,9 @@ size_t display_bridge_get_cache_line_size(void)
 static inline esp_err_t s_dma2d_install(void **out_handle)
 {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
-    async_color_convert_config_t cfg = {};
+    async_color_convert_config_t cfg = {
+        .dma_burst_size = 128,
+    };
     return esp_async_color_convert_install_dma2d(&cfg, (async_color_convert_handle_t *)out_handle);
 #else
     esp_async_fbcpy_config_t cfg = {};
