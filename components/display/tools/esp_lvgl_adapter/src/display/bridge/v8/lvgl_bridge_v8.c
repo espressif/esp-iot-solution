@@ -857,8 +857,15 @@ static void rounder_cb_wrapper(lv_disp_drv_t *drv, lv_area_t *area)
     }
 
     esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)node->bridge;
+    const uint8_t color_bytes = bridge_color_bytes(impl);
     if (impl->cfg.rounder_cb) {
         impl->cfg.rounder_cb(area, impl->cfg.rounder_user_data);
+    }
+    /* Apply last so the flushed area stays aligned for DMA to encrypted
+     * external RAM, regardless of what the user rounder did. */
+    if (display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
+            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb, drv->hor_res, color_bytes)) {
+        display_bridge_align_area_for_enc_dma(area, drv->hor_res, color_bytes);
     }
 }
 
@@ -879,7 +886,15 @@ static void display_bridge_v8_set_area_rounder(esp_lv_adapter_display_bridge_t *
 
     lv_disp_drv_t *drv = impl->cfg.lv_disp ? impl->cfg.lv_disp->driver : NULL;
     if (drv) {
-        drv->rounder_cb = rounder_cb ? rounder_cb_wrapper : NULL;
+        const bool need_dma2d_rounder =
+            display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
+            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb,
+                                                       bridge_h_res(impl),
+                                                       bridge_color_bytes(impl));
+        /* Keep the wrapper installed when encrypted external-memory DMA needs a
+         * final X-axis alignment pass, even without a user rounder. */
+        drv->rounder_cb = (rounder_cb || need_dma2d_rounder)
+                          ? rounder_cb_wrapper : NULL;
     }
 }
 
@@ -1441,75 +1456,88 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
     size_t rect_h = area->y2 - area->y1 + 1;
     size_t src_stride_px = rect_w;
     size_t src_offset_x = 0;
+    const bool can_use_dma2d =
+        display_bridge_dma2d_window_is_compatible(color_map,
+                                                  src_stride_px,
+                                                  src_offset_x,
+                                                  rect_w,
+                                                  lvgl_color_format_bytes) &&
+        display_bridge_dma2d_window_is_compatible(impl->draw_fb,
+                                                  lvgl_port_h_res,
+                                                  area->x1,
+                                                  rect_w,
+                                                  lvgl_color_format_bytes);
 
-    size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
-    display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
+    if (can_use_dma2d) {
+        size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
+        display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
 
-    esp_async_fbcpy_trans_desc_t blit = {
-        .src_buffer        = color_map,
-        .dst_buffer        = impl->draw_fb,
-        .src_buffer_size_x = src_stride_px,
-        .src_buffer_size_y = rect_h,
-        .src_offset_x      = src_offset_x,
-        .src_offset_y      = 0,
-        .dst_buffer_size_x = lvgl_port_h_res,
-        .dst_buffer_size_y = lvgl_port_v_res,
-        .dst_offset_x      = area->x1,
-        .dst_offset_y      = area->y1,
-        .copy_size_x       = rect_w,
-        .copy_size_y       = rect_h,
-        DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
-    };
+        esp_async_fbcpy_trans_desc_t blit = {
+            .src_buffer        = color_map,
+            .dst_buffer        = impl->draw_fb,
+            .src_buffer_size_x = src_stride_px,
+            .src_buffer_size_y = rect_h,
+            .src_offset_x      = src_offset_x,
+            .src_offset_y      = 0,
+            .dst_buffer_size_x = lvgl_port_h_res,
+            .dst_buffer_size_y = lvgl_port_v_res,
+            .dst_offset_x      = area->x1,
+            .dst_offset_y      = area->y1,
+            .copy_size_x       = rect_w,
+            .copy_size_y       = rect_h,
+            DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
+        };
 
-    ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
+        ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
+    } else {
+#endif
+        const int bytes_per_pixel = lvgl_color_format_bytes;
+        const int bytes_per_line = lvgl_port_h_res * bytes_per_pixel;
+        const int copy_bytes = (area->x2 - area->x1 + 1) * bytes_per_pixel;
+        uint8_t *src = (uint8_t *)color_map;
+        uint8_t *dst = (uint8_t *)impl->draw_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
 
-#else
-    const int bytes_per_pixel = lvgl_color_format_bytes;
-    const int bytes_per_line = lvgl_port_h_res * bytes_per_pixel;
-    const int copy_bytes = (area->x2 - area->x1 + 1) * bytes_per_pixel;
-    uint8_t *src = (uint8_t *)color_map;
-    uint8_t *dst = (uint8_t *)impl->draw_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
+        int num_rows = area->y2 - area->y1 + 1;
+        bool is_full_width = (copy_bytes == bytes_per_line);
 
-    int num_rows = area->y2 - area->y1 + 1;
-    bool is_full_width = (copy_bytes == bytes_per_line);
+        if (is_full_width && num_rows > 4) {
+            size_t total_bytes = (size_t)num_rows * bytes_per_line;
+            memcpy(dst, src, total_bytes);
+        } else if (num_rows > 16 && copy_bytes > 64) {
+            const int batch_rows = 8;
+            int full_batches = num_rows / batch_rows;
+            int remaining_rows = num_rows % batch_rows;
 
-    if (is_full_width && num_rows > 4) {
-        size_t total_bytes = (size_t)num_rows * bytes_per_line;
-        memcpy(dst, src, total_bytes);
-    } else if (num_rows > 16 && copy_bytes > 64) {
-        const int batch_rows = 8;
-        int full_batches = num_rows / batch_rows;
-        int remaining_rows = num_rows % batch_rows;
+            for (int batch = 0; batch < full_batches; batch++) {
+                for (int r = 0; r < batch_rows; r++) {
+                    memcpy(dst, src, copy_bytes);
+                    dst += bytes_per_line;
+                    src += copy_bytes;
+                }
+            }
 
-        for (int batch = 0; batch < full_batches; batch++) {
-            for (int r = 0; r < batch_rows; r++) {
+            for (int r = 0; r < remaining_rows; r++) {
+                memcpy(dst, src, copy_bytes);
+                dst += bytes_per_line;
+                src += copy_bytes;
+            }
+        } else if (copy_bytes == 2 && num_rows <= 8) {
+            uint16_t *dst16 = (uint16_t *)dst;
+            uint16_t *src16 = (uint16_t *)src;
+            for (int y = 0; y < num_rows; y++) {
+                *dst16 = *src16;
+                dst16 += lvgl_port_h_res;
+                src16++;
+            }
+        } else {
+            for (int y = area->y1; y <= area->y2; y++) {
                 memcpy(dst, src, copy_bytes);
                 dst += bytes_per_line;
                 src += copy_bytes;
             }
         }
-
-        for (int r = 0; r < remaining_rows; r++) {
-            memcpy(dst, src, copy_bytes);
-            dst += bytes_per_line;
-            src += copy_bytes;
-        }
-    } else if (copy_bytes == 2 && num_rows <= 8) {
-        uint16_t *dst16 = (uint16_t *)dst;
-        uint16_t *src16 = (uint16_t *)src;
-        for (int y = 0; y < num_rows; y++) {
-            *dst16 = *src16;
-            dst16 += lvgl_port_h_res;
-            src16++;
-        }
-    } else {
-        for (int y = area->y1; y <= area->y2; y++) {
-            memcpy(dst, src, copy_bytes);
-            dst += bytes_per_line;
-            src += copy_bytes;
-        }
+#if SOC_DMA2D_SUPPORTED
     }
-
 #endif
 
     if (lv_disp_flush_is_last(drv)) {
@@ -2031,25 +2059,38 @@ MERGE_RESTART:;
         size_t copy_h_px = r.y2 - r.y1 + 1;
 
         int offset_x = r.x1;
+        if (display_bridge_dma2d_window_is_compatible(impl->disp_fb, hor_res, offset_x, copy_w_px, color_bytes) &&
+                display_bridge_dma2d_window_is_compatible(impl->draw_fb, hor_res, offset_x, copy_w_px, color_bytes)) {
+            esp_async_fbcpy_trans_desc_t tr = {
+                .src_buffer        = impl->disp_fb,
+                .dst_buffer        = impl->draw_fb,
+                .src_buffer_size_x = hor_res,
+                .src_buffer_size_y = ver_res,
+                .dst_buffer_size_x = hor_res,
+                .dst_buffer_size_y = ver_res,
+                .src_offset_x      = offset_x,
+                .src_offset_y      = r.y1,
+                .dst_offset_x      = offset_x,
+                .dst_offset_y      = r.y1,
+                .copy_size_x       = copy_w_px,
+                .copy_size_y       = copy_h_px,
+                DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
+            };
 
-        esp_async_fbcpy_trans_desc_t tr = {
-            .src_buffer        = impl->disp_fb,
-            .dst_buffer        = impl->draw_fb,
-            .src_buffer_size_x = hor_res,
-            .src_buffer_size_y = ver_res,
-            .dst_buffer_size_x = hor_res,
-            .dst_buffer_size_y = ver_res,
-            .src_offset_x      = offset_x,
-            .src_offset_y      = r.y1,
-            .dst_offset_x      = offset_x,
-            .dst_offset_y      = r.y1,
-            .copy_size_x       = copy_w_px,
-            .copy_size_y       = copy_h_px,
-            DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
-        };
+            /* submit and wait */
+            ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&tr, portMAX_DELAY));
+        } else {
+            const int bytes_per_pixel = color_bytes;
+            int bytes_per_line  = copy_w_px * bytes_per_pixel;
+            uint8_t *src_line = (uint8_t *)impl->disp_fb + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
+            uint8_t *dst_line = (uint8_t *)impl->draw_fb  + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
 
-        /* submit and wait */
-        ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&tr, portMAX_DELAY));
+            for (int y = r.y1; y <= r.y2; y++) {
+                memcpy(dst_line, src_line, bytes_per_line);
+                src_line += hor_res * bytes_per_pixel;
+                dst_line += hor_res * bytes_per_pixel;
+            }
+        }
     }
 #else /* !SOC_DMA2D_SUPPORTED */
 

@@ -16,17 +16,143 @@
 
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
+#include "esp_efuse.h"
 #include "esp_heap_caps.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_memory_utils.h"
+#include "esp_psram.h"
 #include "esp_timer.h"
+#include "soc/soc_caps.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "freertos/task.h"
 
 static const char *TAG = "esp_lvgl:bridge";
+
+/**********************
+ *  FLASH ENC DMA ALIGN
+ **********************/
+
+#if defined(SOC_GDMA_EXT_MEM_ENC_ALIGNMENT)
+#define DISPLAY_BRIDGE_ENC_DMA_ALIGN  SOC_GDMA_EXT_MEM_ENC_ALIGNMENT
+#else
+#define DISPLAY_BRIDGE_ENC_DMA_ALIGN  16
+#endif
+
+bool display_bridge_flash_encryption_active(void)
+{
+    static int s_state = -1;
+    if (s_state < 0) {
+        s_state = esp_efuse_is_flash_encryption_enabled() ? 1 : 0;
+    }
+    return s_state == 1;
+}
+
+size_t display_bridge_dma2d_ext_mem_alignment(void)
+{
+    return DISPLAY_BRIDGE_ENC_DMA_ALIGN;
+}
+
+static bool display_bridge_psram_is_no_enc(const void *buffer)
+{
+#if CONFIG_SPIRAM_ENC_EXEMPT
+    return buffer && esp_psram_ptr_is_no_enc(buffer);
+#else
+    (void)buffer;
+    return false;
+#endif
+}
+
+static size_t display_bridge_gcd_size(size_t a, size_t b)
+{
+    while (b != 0) {
+        size_t t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+static size_t display_bridge_dma2d_align_pixels(uint8_t color_bytes)
+{
+    size_t align = display_bridge_dma2d_ext_mem_alignment();
+    size_t gcd = display_bridge_gcd_size(align, color_bytes);
+    return align / gcd;
+}
+
+bool display_bridge_dma2d_buffer_needs_alignment(const void *buffer)
+{
+    if (!buffer || !display_bridge_flash_encryption_active()) {
+        return false;
+    }
+
+    if (!esp_ptr_external_ram(buffer)) {
+        return false;
+    }
+
+    return !display_bridge_psram_is_no_enc(buffer);
+}
+
+bool display_bridge_dma2d_x_rounding_sufficient(const void *buffer,
+                                                size_t stride_px,
+                                                uint8_t color_bytes)
+{
+    if (!display_bridge_dma2d_buffer_needs_alignment(buffer) || color_bytes == 0) {
+        return false;
+    }
+
+    size_t stride_bytes = stride_px * color_bytes;
+    return (stride_bytes & (display_bridge_dma2d_ext_mem_alignment() - 1)) == 0;
+}
+
+bool display_bridge_dma2d_window_is_compatible(const void *buffer,
+                                               size_t stride_px,
+                                               size_t offset_x_px,
+                                               size_t copy_width_px,
+                                               uint8_t color_bytes)
+{
+    if (!buffer || color_bytes == 0) {
+        return false;
+    }
+
+    if (!display_bridge_dma2d_buffer_needs_alignment(buffer)) {
+        return true;
+    }
+
+    const size_t align = display_bridge_dma2d_ext_mem_alignment();
+    const uintptr_t base = (uintptr_t)buffer;
+    const size_t stride_bytes = stride_px * color_bytes;
+    const size_t offset_bytes = offset_x_px * color_bytes;
+    const size_t width_bytes = copy_width_px * color_bytes;
+
+    return ((base & (align - 1)) == 0) &&
+           ((stride_bytes & (align - 1)) == 0) &&
+           ((offset_bytes & (align - 1)) == 0) &&
+           ((width_bytes & (align - 1)) == 0);
+}
+
+void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t color_bytes)
+{
+    if (!area || color_bytes == 0) {
+        return;
+    }
+
+    const int align_px = (int)display_bridge_dma2d_align_pixels(color_bytes);
+    int x1 = ((int)area->x1 / align_px) * align_px;
+    int x2 = ((((int)area->x2 + 1) + align_px - 1) / align_px) * align_px - 1;
+
+    if (x1 < 0) {
+        x1 = 0;
+    }
+    if (hor_res > 0 && x2 > hor_res - 1) {
+        x2 = hor_res - 1;
+    }
+
+    area->x1 = x1;
+    area->x2 = x2;
+}
 
 /**********************
  *   CACHE PROFILE

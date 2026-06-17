@@ -15,6 +15,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
+#include "esp_psram.h"
 #include "esp_timer.h"
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
@@ -145,6 +146,11 @@ static size_t display_manager_calc_draw_buf_bytes(const esp_lv_adapter_display_p
 #endif
 static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_node_t *node);
 
+static size_t display_manager_align_up(size_t value, size_t align)
+{
+    return (value + align - 1) & ~(align - 1);
+}
+
 /* Frame buffer helpers */
 static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_node_t *node,
                                                       uint8_t required,
@@ -216,6 +222,14 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
 
     /* Initialize sleep management state */
     node->sleep.input_count = 0;
+
+    /* Route rounder setup through the version bridge so user rounders and any
+     * encryption alignment pass share a single, ordered callback path. */
+    if (node->bridge && node->bridge->set_area_rounder) {
+        node->bridge->set_area_rounder(node->bridge,
+                                       node->cfg.rounder_cb,
+                                       node->cfg.rounder_user_data);
+    }
 
     node->next = ctx->display_list;
     ctx->display_list = node;
@@ -893,13 +907,36 @@ static size_t display_manager_ppa_alignment(void)
  */
 static void *display_manager_alloc_draw_buffer(size_t size, bool use_psram)
 {
-    const uint32_t caps = use_psram ? MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT : MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    const bool enc_active = display_bridge_flash_encryption_active();
     size_t align = display_manager_ppa_alignment();
+    size_t alloc_size = size;
+
+    if (use_psram && enc_active) {
+        size_t enc_align = display_bridge_dma2d_ext_mem_alignment();
+        if (align < enc_align) {
+            align = enc_align;
+        }
+        alloc_size = display_manager_align_up(size, align);
+#if CONFIG_SPIRAM_ENC_EXEMPT
+        void *buf = heap_caps_aligned_alloc(align, alloc_size, MALLOC_CAP_SPIRAM_NO_ENC);
+        if (buf && esp_psram_ptr_is_no_enc(buf)) {
+            return buf;
+        }
+        if (buf) {
+            free(buf);
+        }
+#endif
+    }
+
+    const uint32_t caps = use_psram ? MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT : MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
 
     if (align > 0) {
-        void *buf = heap_caps_aligned_alloc(align, size, caps);
+        void *buf = heap_caps_aligned_alloc(align, alloc_size, caps);
         if (buf) {
             return buf;
+        }
+        if (use_psram && enc_active) {
+            return NULL;
         }
     }
 

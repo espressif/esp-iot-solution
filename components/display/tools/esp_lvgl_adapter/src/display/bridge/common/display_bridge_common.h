@@ -490,6 +490,78 @@ esp_err_t display_bridge_prepare_hw_resource_for_sleep(void);
 esp_err_t display_bridge_resume_hw_resource_after_sleep(void);
 
 /**
+ * @brief Whether flash encryption is active (cached runtime efuse check)
+ *
+ * When true, DMA access to external RAM must be 16-byte aligned in both address
+ * and length; callers should align flush areas accordingly.
+ */
+bool display_bridge_flash_encryption_active(void);
+
+/**
+ * @brief Get the alignment required by DMA to encrypted external memory
+ *
+ * @return Alignment in bytes
+ */
+size_t display_bridge_dma2d_ext_mem_alignment(void);
+
+/**
+ * @brief Whether DMA to this buffer needs encryption alignment handling
+ *
+ * Returns true only when flash encryption is enabled and the buffer resides in
+ * encrypted external RAM. Internal RAM and carve-out no-encryption PSRAM do not
+ * need the extra alignment handling.
+ *
+ * @param buffer Buffer pointer
+ * @return true if encrypted external-memory DMA alignment is required
+ */
+bool display_bridge_dma2d_buffer_needs_alignment(const void *buffer);
+
+/**
+ * @brief Whether X-axis rounding alone can make DMA2D accesses safe for this picture
+ *
+ * Returns true when stride bytes are already aligned to the encryption granule
+ * AND the buffer requires encryption alignment handling. In this case X-axis
+ * (offset and width) rounding is sufficient; Y does not need adjustment.
+ *
+ * @param buffer     Picture base pointer
+ * @param stride_px  Picture stride in pixels
+ * @param color_bytes Bytes per pixel
+ * @return true if only X-axis (offset/width) rounding is needed
+ */
+bool display_bridge_dma2d_x_rounding_sufficient(const void *buffer,
+                                                size_t stride_px,
+                                                uint8_t color_bytes);
+
+/**
+ * @brief Whether a DMA2D window satisfies encrypted external-memory alignment
+ *
+ * @param buffer       Picture base pointer
+ * @param stride_px    Picture stride in pixels
+ * @param offset_x_px  Window start X in pixels
+ * @param copy_width_px Window width in pixels
+ * @param color_bytes  Bytes per pixel
+ * @return true if the DMA2D window is safe to access
+ */
+bool display_bridge_dma2d_window_is_compatible(const void *buffer,
+                                               size_t stride_px,
+                                               size_t offset_x_px,
+                                               size_t copy_width_px,
+                                               uint8_t color_bytes);
+
+/**
+ * @brief Expand an LVGL invalidated area so DMA to encrypted external RAM stays aligned
+ *
+ * Rounds x1 down and x2 up so the per-row byte offset and length are multiples
+ * of the external-memory encryption granule for the given color depth. Y is not
+ * adjusted because row-start alignment depends on stride bytes, not row index.
+ *
+ * @param area     Invalidated area, expanded in place
+ * @param hor_res  Display width used to clamp x2, or <= 0 to skip clamping
+ * @param color_bytes Bytes per pixel
+ */
+void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t color_bytes);
+
+/**
  * @brief Destroy display bridge and release resources
  *
  * Releases hardware resources (PPA, DMA2D) with reference counting and
