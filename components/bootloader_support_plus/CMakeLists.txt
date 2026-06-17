@@ -5,6 +5,13 @@ set(srcs "src/bootloader_custom_image_format.c"
 
 set(requires "bootloader" "bootloader_support" "spi_flash")
 
+# Since IDF v6.0 the watchdog HAL has graduated into its own component
+# (esp_hal_wdt). In earlier IDF versions hal/wdt_hal.h is provided by the
+# hal component, which is reachable through the existing requirements.
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "6.0")
+    list(APPEND requires "esp_hal_wdt")
+endif()
+
 if(BOOTLOADER_BUILD)
     list(APPEND srcs "src/bootloader_custom_malloc.c"
                      "src/bootloader_decompressor_common.c"
@@ -42,13 +49,7 @@ else()
 
     # Force app_update to also appear later than bootloader_support_plus in link line
     idf_component_get_property(app_update app_update COMPONENT_LIB)
-    idf_build_get_property(build_components BUILD_COMPONENTS)
-    if("espressif__bootloader_support_plus" IN_LIST build_components)
-        idf_component_get_property(bootloader_support_plus espressif__bootloader_support_plus COMPONENT_LIB)
-    else()
-        idf_component_get_property(bootloader_support_plus bootloader_support_plus COMPONENT_LIB)
-    endif()
-    target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${app_update}> $<TARGET_FILE:${bootloader_support_plus}>)
+    target_link_libraries(${COMPONENT_LIB} INTERFACE $<TARGET_FILE:${app_update}> $<TARGET_FILE:${COMPONENT_LIB}>)
 
 endif()
 
