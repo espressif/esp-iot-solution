@@ -11,6 +11,7 @@
 #include "esp_cache.h"
 #include "esp_timer.h"
 #include "esp_video_init.h"
+#include "driver/ppa.h"
 #include "camera_define.hpp"
 #include "esp_private/esp_cache_private.h"
 
@@ -110,6 +111,21 @@ protected:
     esp_err_t init_fbs();
 
     /**
+     * @brief Register the PPA SRM client used for byte-swap/rotation/mirror.
+     *
+     * @return esp_err_t ESP_OK on success, otherwise an ESP-IDF error code.
+     */
+    esp_err_t init_ppa();
+
+    /**
+     * @brief Post-process one captured frame (byte-swap/rotate/mirror) with the PPA.
+     *
+     * @param index Frame buffer index (the V4L2 buffer that was just dequeued).
+     * @return esp_err_t ESP_OK on success, otherwise an ESP-IDF error code.
+     */
+    esp_err_t process_frame_ppa(uint32_t index);
+
+    /**
      * @brief Start video streaming
      *
      * @return esp_err_t ESP_OK on success, ESP_FAIL on failure
@@ -130,8 +146,17 @@ private:
     v4l2_memory m_fb_mem_type;                        /*!< Frame buffer memory type */
     int m_width;                                      /*!< Captured image width */
     int m_height;                                     /*!< Captured image height */
-    cam_fb_t *m_cam_fbs;                              /*!< Array of frame buffers */
+    cam_fb_t *m_cam_fbs;                              /*!< Array of frame buffers (data points to the processed buffer when PPA is used) */
     std::queue<struct v4l2_buffer> m_v4l2_buf_queue;  /*!< V4L2 buffer queue */
     std::queue<cam_fb_t *> m_buf_queue;               /*!< Frame buffer pointer queue */
     bool m_horizontal_flip;                           /*!< Horizontal flip enable flag */
+
+    bool m_use_ppa;                                   /*!< Whether frames are post-processed by the PPA */
+    ppa_client_handle_t m_ppa_srm;                    /*!< PPA SRM client (byte-swap/rotate/mirror) */
+    void **m_raw_bufs;                                /*!< Raw V4L2 capture buffers (PPA input) */
+    size_t m_raw_buf_len;                             /*!< Size of each raw V4L2 capture buffer in bytes */
+    uint8_t **m_proc_bufs;                            /*!< Processed buffers (PPA output, consumed by display/model) */
+    size_t m_proc_buf_size;                           /*!< Size of each processed buffer in bytes */
+    int m_out_width;                                  /*!< Output width after rotation */
+    int m_out_height;                                 /*!< Output height after rotation */
 };

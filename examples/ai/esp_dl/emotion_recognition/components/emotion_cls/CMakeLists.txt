@@ -16,7 +16,7 @@ set(packed_model ${BUILD_DIR}/espdl_models/emotion_cls.espdl)
 idf_component_register(SRC_DIRS ${src_dirs} INCLUDE_DIRS ${include_dirs} REQUIRES ${requires})
 
 if (NOT CONFIG_EMOTION_CLS_MODEL_IN_SDCARD)
-    if (IDF_TARGET STREQUAL "esp32p4")
+    if (IDF_TARGET STREQUAL "esp32p4" OR IDF_TARGET STREQUAL "esp32s31")
         set(models_dir ${COMPONENT_DIR}/model/p4)
     endif()
 

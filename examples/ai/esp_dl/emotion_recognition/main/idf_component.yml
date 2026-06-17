@@ -1,14 +1,21 @@
 version: 0.1.0
 targets:
-- esp32p4
+  - esp32s31
+  - esp32p4
 dependencies:
   idf: '>=5.5'
   emotion_cls:
     override_path: ../components/emotion_cls
-  espressif/esp32_p4_function_ev_board: 5.2.*
   lvgl/lvgl: 9.4.0
-  espressif/esp_video: 2.0.1
-  espressif/human_face_detect: 0.4.2
+  espressif/human_face_detect: 0.5.0
   espressif/esp_painter:
     version: "*"
     override_path: "../../../../../components/display/tools/esp_painter"
+  esp32_p4_function_ev_board:
+    override_path: ../../common_components/esp32_p4_function_ev_board
+    rules:
+      - if: "target == esp32p4"
+  esp32_s31_korvo:
+    override_path: ../../common_components/esp32_s31_korvo
+    rules:
+      - if: "target == esp32s31"

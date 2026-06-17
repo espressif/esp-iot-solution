@@ -1,45 +1,5 @@
 menu "Example Configuration"
 
-    config EXAMPLE_ENABLE_MIPI_CSI_CAM_SENSOR
-        bool "Enable MIPI CSI Camera Sensor"
-        default y
-        depends on SOC_MIPI_CSI_SUPPORTED
-
-    if EXAMPLE_ENABLE_MIPI_CSI_CAM_SENSOR
-        config EXAMPLE_MIPI_CSI_SCCB_I2C_PORT
-            int "MIPI CSI SCCB I2C Port Number"
-            default 0
-            range 0 1
-
-        config EXAMPLE_MIPI_CSI_SCCB_I2C_SCL_PIN
-            int "MIPI CSI SCCB I2C SCL Pin"
-            default 8
-            range -1 56
-
-        config EXAMPLE_MIPI_CSI_SCCB_I2C_SDA_PIN
-            int "MIPI CSI SCCB I2C SDA Pin"
-            default 7
-            range -1 56
-
-        config EXAMPLE_MIPI_CSI_SCCB_I2C_FREQ
-            int "MIPI CSI SCCB I2C Frequency"
-            default 100000
-            range 100000 400000
-            help
-                Increasing this value can reduce the initialization time of the camera sensor.
-                Please refer to the relevant instructions of the camera sensor to adjust the value.
-
-        config EXAMPLE_MIPI_CSI_CAM_SENSOR_RESET_PIN
-            int "MIPI CSI Camera Sensor Reset Pin"
-            default -1
-            range -1 56
-
-        config EXAMPLE_MIPI_CSI_CAM_SENSOR_PWDN_PIN
-            int "MIPI CSI Camera Sensor Power Down Pin"
-            default -1
-            range -1 56
-    endif
-
     config EXAMPLE_CV_CONTOUR_FILTER_AREA_THRESHOLD
         int "Contour Filtering Area Threshold"
         default 5000

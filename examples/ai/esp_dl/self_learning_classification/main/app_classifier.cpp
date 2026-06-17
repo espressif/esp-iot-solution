@@ -27,8 +27,8 @@ AppClassifier::AppClassifier(Camera *cam, SelfLearningClassifier *classifier)
     m_img_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
     m_img_dsc.header.flags = 0;
 
-    m_record_class_id = lv_roller_get_selected(ui_ClassRoller);
     if (bsp_display_lock(0)) {
+        m_record_class_id = lv_roller_get_selected(ui_ClassRoller);
         m_recog_result_label = lv_label_create(ui_Screen1);
         lv_obj_align_to(m_recog_result_label, ui_CamImage, LV_ALIGN_TOP_MID, 0, 4);
         lv_obj_set_style_bg_color(m_recog_result_label, lv_color_hex(0x808080), 0);
@@ -37,11 +37,11 @@ AppClassifier::AppClassifier(Camera *cam, SelfLearningClassifier *classifier)
         lv_obj_set_style_text_font(m_recog_result_label, &lv_font_montserrat_20, 0);
         lv_obj_set_style_text_color(m_recog_result_label, lv_color_hex(0xFF0000), 0);
         lv_label_set_text(m_recog_result_label, "");
+        lv_obj_add_event_cb(ui_ClassRoller, class_roller_changed_cb, LV_EVENT_VALUE_CHANGED, this);
+        lv_obj_add_event_cb(ui_RecordButton, record_clicked_cb, LV_EVENT_CLICKED, this);
+        lv_obj_add_event_cb(ui_RecogButton, recog_clicked_cb, LV_EVENT_CLICKED, this);
         bsp_display_unlock();
     }
-    lv_obj_add_event_cb(ui_ClassRoller, class_roller_changed_cb, LV_EVENT_VALUE_CHANGED, this);
-    lv_obj_add_event_cb(ui_RecordButton, record_clicked_cb, LV_EVENT_CLICKED, this);
-    lv_obj_add_event_cb(ui_RecogButton, recog_clicked_cb, LV_EVENT_CLICKED, this);
 }
 
 void AppClassifier::start()
@@ -61,12 +61,11 @@ void AppClassifier::display_task(void *arg)
             }
             self->m_display_fb = fb;
 
-            self->m_img_dsc.header.w = fb->width;
-            self->m_img_dsc.header.h = fb->height;
-            self->m_img_dsc.data_size = fb->width * fb->height * 2;
-            self->m_img_dsc.data = (const uint8_t *)fb->buf;
-
             if (bsp_display_lock(0)) {
+                self->m_img_dsc.header.w = fb->width;
+                self->m_img_dsc.header.h = fb->height;
+                self->m_img_dsc.data_size = fb->width * fb->height * 2;
+                self->m_img_dsc.data = (const uint8_t *)fb->buf;
                 lv_image_set_src(ui_CamImage, &self->m_img_dsc);
                 bsp_display_unlock();
             }
@@ -89,7 +88,7 @@ void AppClassifier::recognition_task(void *arg)
                     .data = fb->buf,
                     .width = static_cast<uint16_t>(fb->width),
                     .height = static_cast<uint16_t>(fb->height),
-                    .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565,
+                    .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565LE,
                 };
                 self->m_classifier->enroll(img, self->m_record_class_id);
                 self->m_cam->cam_fb_return();
@@ -104,7 +103,7 @@ void AppClassifier::recognition_task(void *arg)
                     .data = fb->buf,
                     .width = static_cast<uint16_t>(fb->width),
                     .height = static_cast<uint16_t>(fb->height),
-                    .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565,
+                    .pix_type = dl::image::DL_IMAGE_PIX_TYPE_RGB565LE,
                 };
                 PredictResult result = self->m_classifier->predict(img);
                 self->m_cam->cam_fb_return();
