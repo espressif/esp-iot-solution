@@ -43,6 +43,20 @@ void emote_demo_show_permission_timeout(void);
 void emote_demo_clear_permission(void);
 
 /**
+ * @brief Show the disconnected / awaiting-link animation.
+ *
+ * Clears tip text and plays the waiting emote. Used when BLE is not connected.
+ */
+void emote_demo_show_waiting(void);
+
+/**
+ * @brief React to BLE link up/down transitions.
+ *
+ * @param connected true when a central is connected, false on disconnect.
+ */
+void emote_demo_on_ble_link_changed(bool connected);
+
+/**
  * @brief Show OpenCode session status.
  *
  * @param status_type Session status string. Supported values are `"busy"`,
