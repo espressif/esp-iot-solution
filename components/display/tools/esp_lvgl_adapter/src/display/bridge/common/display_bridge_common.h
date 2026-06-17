@@ -422,6 +422,13 @@ typedef struct {
 esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void);
 
 /**
+ * @brief Peek current shared bridge HW resources without changing refcount
+ *
+ * @return Pointer to initialized shared HW resource, or NULL if not initialized
+ */
+esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_peek_hw_resource(void);
+
+/**
  * @brief Release hardware resource reference
  *
  * Decrements the reference count. When the count reaches zero, all hardware
@@ -455,6 +462,32 @@ bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
  */
 esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms);
 #endif /* SOC_DMA2D_SUPPORTED */
+
+/**
+ * @brief Prepare shared bridge HW resources for a board-managed light sleep cycle
+ *
+ * Declared and defined unconditionally so it can be called on any target. It is
+ * a no-op without DMA2D. When DMA2D is present and peripheral power-down in
+ * light sleep is enabled, it keeps the peripheral power domain on across sleep
+ * because 2D-DMA has no sleep retention support.
+ *
+ * @return
+ *      - ESP_OK: Success or no guard required
+ *      - Other: Failed to acquire the sleep retention power lock
+ */
+esp_err_t display_bridge_prepare_hw_resource_for_sleep(void);
+
+/**
+ * @brief Release any shared bridge HW guard acquired for a light sleep cycle
+ *
+ * Declared and defined unconditionally. Safe to call even when no guard was
+ * activated during sleep preparation, including on targets without DMA2D.
+ *
+ * @return
+ *      - ESP_OK: Success or no guard was active
+ *      - Other: Failed to release the sleep retention power lock
+ */
+esp_err_t display_bridge_resume_hw_resource_after_sleep(void);
 
 /**
  * @brief Destroy display bridge and release resources

@@ -283,6 +283,9 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
         .rgb_ele_order = HW_LCD_COLOR_SPACE,
         .bits_per_pixel = HW_LCD_BITS_PER_PIXEL,
         .vendor_config = (void *) &vendor_config,
+        .flags = {
+            .reset_active_high = 1,
+        },
     };
 
     ESP_LOGI(TAG, "Install st77916 panel driver");

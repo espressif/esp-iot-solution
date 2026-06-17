@@ -563,7 +563,12 @@ ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, NULL, NULL));
 
 在保持 UI 状态的同时安全地关闭显示以降低功耗。适配器提供了与 ESP-IDF Light Sleep 配合使用的睡眠机制。
 
-**基本流程：**
+适配器的职责边界刻意保持精简：
+- 适配器负责判断 LVGL 何时可以进入睡眠、何时可以恢复
+- 应用负责 LCD、背光、触摸供电和板级唤醒源的具体控制
+- 适配器不会主动调用 `esp_lcd_panel_disp_sleep()`、`esp_lcd_panel_disp_on_off()` 或板级 LCD deinit/reinit 接口
+
+**手动完整睡眠流程：**
 
 ```c
 // 进入睡眠
@@ -576,12 +581,45 @@ panel = /* 重新初始化 LCD 硬件 */;
 esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // 重新绑定面板，恢复 worker
 ```
 
+**自动睡眠流程：**
+
+```c
+esp_lv_adapter_config_t cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+cfg.auto_sleep.enable = true;
+cfg.auto_sleep.idle_timeout_ms = 5000;
+
+// 仅暂停的流程：适配器暂停 LVGL，用户回调负责面板休眠/点亮。
+cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE;
+cfg.auto_sleep.callbacks.on_enter_sleep = panel_sleep_cb;
+cfg.auto_sleep.callbacks.on_exit_sleep = panel_wake_cb;
+
+// 用户完全托管流程：回调负责完整的休眠/唤醒/恢复流程。
+// cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER;
+// cfg.auto_sleep.callbacks.on_enter_sleep = board_light_sleep_cycle_cb;
+
+ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
+```
+
 **配合 Light Sleep 使用：**
 
 1. **进入睡眠前**：调用 `esp_lv_adapter_sleep_prepare()` 暂停适配器任务并等待当前刷新完成
 2. **删除硬件**：调用 `esp_lcd_panel_del()` 释放显示硬件资源
 3. **进入 Light Sleep**：调用 `esp_light_sleep_start()`，系统将暂停 CPU 并保持外设状态
 4. **唤醒后恢复**：重新初始化 LCD 硬件，然后调用 `esp_lv_adapter_sleep_recover()` 恢复适配器运行
+
+**使用自动睡眠 Pause 模式：**
+
+1. 在 ESP-IDF 中启用 `CONFIG_PM_ENABLE` 和 tickless idle
+2. 配置 `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE`
+3. 提供只负责面板或背光状态切换的回调
+4. 在应触发唤醒的用户活动路径中调用 `esp_lv_adapter_request_wake()` 或 `esp_lv_adapter_request_wake_from_isr()`
+
+**使用自动睡眠 User 模式：**
+
+1. 配置 `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER`
+2. 在 `on_enter_sleep()` 中执行完整板级流程：
+   `esp_lv_adapter_sleep_prepare()` -> LCD deinit -> `esp_light_sleep_start()` -> LCD init -> `esp_lv_adapter_sleep_recover()`
+3. 面板和板级相关动作仍放在应用回调中，不放进适配器
 
 **主要特性：**
 - UI 状态保留（无需重建控件）

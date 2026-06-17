@@ -759,6 +759,8 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
         touch_ctx->cbs.on_interrupt(tp, touch_ctx->cbs.user_ctx);
     }
 
+    esp_lv_adapter_request_wake_from_isr();
+
     if (!touch_ctx->touch_sem) {
         return;
     }
@@ -1173,6 +1175,8 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
     if (touch_ctx->cbs.on_interrupt) {
         touch_ctx->cbs.on_interrupt(tp, touch_ctx->cbs.user_ctx);
     }
+
+    esp_lv_adapter_request_wake_from_isr();
 
     if (!touch_ctx->touch_sem) {
         return;

@@ -482,6 +482,9 @@ size_t display_bridge_get_cache_line_size(void)
 #include "esp_async_fbcpy.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#include "esp_private/sleep_retention.h"
+#endif
 #endif
 
 /**
@@ -548,6 +551,7 @@ void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *run
 static esp_lv_adapter_display_bridge_hw_resource_t s_hw_resource = {0};
 static bool s_hw_resource_initialized = false;
 static uint8_t s_hw_resource_ref_count = 0;
+static bool s_hw_resource_sleep_guard_active = false;
 
 /**
  * @brief Get global hardware resource singleton
@@ -626,6 +630,11 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
     return &s_hw_resource;
 }
 
+esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_peek_hw_resource(void)
+{
+    return s_hw_resource_initialized ? &s_hw_resource : NULL;
+}
+
 /**
  * @brief Release hardware resource reference
  *
@@ -672,6 +681,12 @@ esp_err_t display_bridge_release_hw_resource(void)
         }
 
         if (s_hw_resource.fbcpy_handle) {
+            if (s_hw_resource_sleep_guard_active) {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+                sleep_retention_power_lock_release();
+#endif
+                s_hw_resource_sleep_guard_active = false;
+            }
             esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
             s_hw_resource.fbcpy_handle = NULL;
             ESP_LOGI(TAG, "DMA2D resources released");
@@ -679,6 +694,7 @@ esp_err_t display_bridge_release_hw_resource(void)
 #endif
 
         s_hw_resource_initialized = false;
+        s_hw_resource_sleep_guard_active = false;
         memset(&s_hw_resource, 0, sizeof(s_hw_resource));
         ESP_LOGI(TAG, "Hardware resources cleaned up successfully");
     }
@@ -715,7 +731,7 @@ bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
 esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
 {
     esp_err_t ret = ESP_OK;
-    esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_get_hw_resource();
+    esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
     ESP_RETURN_ON_FALSE(hw, ESP_ERR_INVALID_STATE, TAG, "DMA2D resource not initialized");
 
     ESP_GOTO_ON_FALSE(xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_mutex,
@@ -743,6 +759,57 @@ out:
 }
 
 #endif /* SOC_DMA2D_SUPPORTED */
+
+/**
+ * @brief Prepare shared bridge HW resources for a board-managed light sleep cycle
+ *
+ * Defined unconditionally and a no-op on targets without DMA2D. When DMA2D is
+ * present and peripheral power-down is enabled, it forces the peripheral power
+ * domain to stay on across sleep, since 2D-DMA has no sleep retention.
+ */
+esp_err_t display_bridge_prepare_hw_resource_for_sleep(void)
+{
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    if (!s_hw_resource_initialized || s_hw_resource_sleep_guard_active) {
+        return ESP_OK;
+    }
+
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+    ESP_LOGI(TAG, "Guarding DMA2D bridge resources for light sleep");
+    ESP_RETURN_ON_ERROR(sleep_retention_power_lock_acquire(), TAG,
+                        "Failed to acquire sleep retention power lock");
+    s_hw_resource_sleep_guard_active = true;
+    ESP_LOGI(TAG, "DMA2D bridge resources guarded for light sleep");
+#endif
+#endif
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Release any shared bridge HW guard acquired for a light sleep cycle
+ *
+ * Defined unconditionally and safe to call even when no guard was activated
+ * during sleep preparation (including on targets without DMA2D).
+ */
+esp_err_t display_bridge_resume_hw_resource_after_sleep(void)
+{
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    if (!s_hw_resource_sleep_guard_active) {
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Releasing DMA2D light-sleep guard");
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+    ESP_RETURN_ON_ERROR(sleep_retention_power_lock_release(), TAG,
+                        "Failed to release sleep retention power lock");
+#endif
+    s_hw_resource_sleep_guard_active = false;
+    ESP_LOGI(TAG, "DMA2D light-sleep guard released");
+#endif
+
+    return ESP_OK;
+}
 
 /**
  * @brief Destroy display bridge and release resources

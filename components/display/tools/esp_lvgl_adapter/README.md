@@ -569,7 +569,12 @@ ESP_ERROR_CHECK(esp_lv_adapter_set_area_rounder_cb(disp, NULL, NULL));
 
 Safely power down displays while preserving UI state to reduce power consumption. The adapter provides a sleep mechanism that works seamlessly with ESP-IDF Light Sleep.
 
-**Basic Flow:**
+The adapter boundary is intentionally narrow:
+- The adapter decides when LVGL can sleep or wake.
+- The application decides what to do with the LCD, backlight, touch power, and board-specific wake sources.
+- The adapter does not call `esp_lcd_panel_disp_sleep()`, `esp_lcd_panel_disp_on_off()`, or board LCD deinit/reinit APIs for you.
+
+**Manual Full Sleep Flow:**
 
 ```c
 // Enter sleep
@@ -582,12 +587,45 @@ panel = /* reinit LCD hardware */;
 esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // Rebinds panel, resumes worker
 ```
 
+**Auto Sleep Flow:**
+
+```c
+esp_lv_adapter_config_t cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+cfg.auto_sleep.enable = true;
+cfg.auto_sleep.idle_timeout_ms = 5000;
+
+// Pause-only flow: adapter pauses LVGL, user callback handles panel blank/sleep.
+cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE;
+cfg.auto_sleep.callbacks.on_enter_sleep = panel_sleep_cb;
+cfg.auto_sleep.callbacks.on_exit_sleep = panel_wake_cb;
+
+// User-managed flow: callback performs the complete sleep/deinit/wake/recover sequence.
+// cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER;
+// cfg.auto_sleep.callbacks.on_enter_sleep = board_light_sleep_cycle_cb;
+
+ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
+```
+
 **Using with Light Sleep:**
 
 1. **Before entering sleep**: Call `esp_lv_adapter_sleep_prepare()` to pause the adapter task and wait for current flush to complete
 2. **Delete hardware**: Call `esp_lcd_panel_del()` to release display hardware resources
 3. **Enter Light Sleep**: Call `esp_light_sleep_start()`, which pauses the CPU while maintaining peripheral state
 4. **Recover after wake-up**: Reinitialize LCD hardware, then call `esp_lv_adapter_sleep_recover()` to resume adapter operation
+
+**Using Auto Sleep Pause Mode:**
+
+1. Enable `CONFIG_PM_ENABLE` and tickless idle in ESP-IDF
+2. Configure `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE`
+3. Provide callbacks that only manage panel or backlight state
+4. Call `esp_lv_adapter_request_wake()` or `esp_lv_adapter_request_wake_from_isr()` from user activity paths that should wake the display
+
+**Using Auto Sleep User Mode:**
+
+1. Configure `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER`
+2. Implement `on_enter_sleep()` to run your full board flow:
+   `esp_lv_adapter_sleep_prepare()` -> LCD deinit -> `esp_light_sleep_start()` -> LCD init -> `esp_lv_adapter_sleep_recover()`
+3. Keep panel-specific or board-specific actions in the application callback, not in the adapter
 
 **Key Features:**
 - UI state preserved (no need to recreate widgets)

@@ -123,11 +123,7 @@ typedef struct {
 #if CONFIG_SOC_PPA_SUPPORTED
     ppa_client_handle_t ppa_handle;
 #endif
-#if CONFIG_SOC_DMA2D_SUPPORTED
-    esp_async_fbcpy_handle_t fbcpy_handle;
-    SemaphoreHandle_t dma2d_mutex;
-    SemaphoreHandle_t dma2d_done_sem;
-#endif
+    /* DMA2D resources live in the shared singleton (display_bridge_get_hw_resource) */
 } display_bridge_v8_hw_resource_t;
 #endif
 
@@ -434,18 +430,13 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
             hw_resource.data_cache_line_size = PPA_DEFAULT_ALIGNMENT;
         }
 
-#if CONFIG_SOC_DMA2D_SUPPORTED
-        esp_async_fbcpy_config_t cfg_dma = { };
-        ESP_ERROR_CHECK(esp_async_fbcpy_install(&cfg_dma, &hw_resource.fbcpy_handle));
-
-        hw_resource.dma2d_mutex = xSemaphoreCreateMutex();
-        hw_resource.dma2d_done_sem = xSemaphoreCreateBinary();
-        assert(hw_resource.dma2d_mutex && hw_resource.dma2d_done_sem);
-#endif
-
         hw_resource_initialized = true;
         ESP_LOGI(TAG, "Hardware resources initialized (v8)");
     }
+#endif
+
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    ESP_RETURN_ON_FALSE(display_bridge_get_hw_resource() != NULL, NULL, TAG, "Acquire DMA2D resource failed");
 #endif
 
 #if CONFIG_SOC_PPA_SUPPORTED
