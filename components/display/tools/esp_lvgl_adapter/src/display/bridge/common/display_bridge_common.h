@@ -32,7 +32,12 @@
 #define ESP_LV_ADAPTER_BRIDGE_BLOCK_SIZE_LARGE_DEFAULT  (256)
 
 #if SOC_DMA2D_SUPPORTED
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#include "esp_async_color_convert.h"
+#else
 #include "esp_async_fbcpy.h"
+#endif
 #endif
 
 /* Forward declaration */
@@ -447,9 +452,15 @@ esp_err_t display_bridge_release_hw_resource(void);
  *
  * @note This function is 100% identical in v8 and v9
  */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+bool display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
+                                        async_color_convert_event_data_t *event_data,
+                                        void *cb_args);
+#else
 bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
                                         esp_async_fbcpy_event_data_t *event_data,
                                         void *cb_args);
+#endif
 
 /**
  * @brief Synchronous DMA2D copy operation

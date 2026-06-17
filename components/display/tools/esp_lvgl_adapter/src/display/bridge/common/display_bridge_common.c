@@ -605,13 +605,40 @@ size_t display_bridge_get_cache_line_size(void)
 #endif
 
 #if SOC_DMA2D_SUPPORTED
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#include "esp_async_color_convert.h"
+#else
 #include "esp_async_fbcpy.h"
+#endif
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
 #include "esp_private/sleep_retention.h"
 #endif
+
+#if CONFIG_SOC_DMA2D_SUPPORTED
+static inline esp_err_t s_dma2d_install(void **out_handle)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    async_color_convert_config_t cfg = {};
+    return esp_async_color_convert_install_dma2d(&cfg, (async_color_convert_handle_t *)out_handle);
+#else
+    esp_async_fbcpy_config_t cfg = {};
+    return esp_async_fbcpy_install(&cfg, (esp_async_fbcpy_handle_t *)out_handle);
 #endif
+}
+
+static inline void s_dma2d_uninstall(void *handle)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    esp_async_color_convert_uninstall((async_color_convert_handle_t)handle);
+#else
+    esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)handle);
+#endif
+}
+#endif /* CONFIG_SOC_DMA2D_SUPPORTED */
+#endif /* SOC_DMA2D_SUPPORTED */
 
 /**
  * @brief Initialize runtime information from configuration
@@ -699,9 +726,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
 #endif
 
 #if CONFIG_SOC_DMA2D_SUPPORTED
-        esp_async_fbcpy_config_t cfg_dma = { };
-        esp_err_t ret = esp_async_fbcpy_install(&cfg_dma,
-                                                (esp_async_fbcpy_handle_t *)&s_hw_resource.fbcpy_handle);
+        esp_err_t ret = s_dma2d_install(&s_hw_resource.fbcpy_handle);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to install DMA2D (ret=%d)", ret);
             return NULL;
@@ -719,7 +744,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
             if (s_hw_resource.dma2d_done_sem) {
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_done_sem);
             }
-            esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+            s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
             return NULL;
         }
 #endif
@@ -738,7 +763,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
                 /* Cleanup DMA2D resources */
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_mutex);
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_done_sem);
-                esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+                s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
 #endif
                 return NULL;
             }
@@ -813,7 +838,7 @@ esp_err_t display_bridge_release_hw_resource(void)
 #endif
                 s_hw_resource_sleep_guard_active = false;
             }
-            esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+            s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
             s_hw_resource.fbcpy_handle = NULL;
             ESP_LOGI(TAG, "DMA2D resources released");
         }
@@ -833,9 +858,15 @@ esp_err_t display_bridge_release_hw_resource(void)
  *
  * IRAM: Executed in ISR context for fast response
  */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+bool IRAM_ATTR display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
+                                                  async_color_convert_event_data_t *event_data,
+                                                  void *cb_args)
+#else
 bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
                                                   esp_async_fbcpy_event_data_t *event_data,
                                                   void *cb_args)
+#endif
 {
     BaseType_t high_task_woken = pdFALSE;
     (void)mcp;
@@ -867,10 +898,17 @@ esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
     /* Clear completion semaphore */
     xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem, 0);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    ret = esp_async_color_convert(hw->fbcpy_handle,
+                                  (const async_color_convert_request_t *)trans_desc,
+                                  display_bridge_dma2d_done_callback,
+                                  NULL);
+#else
     ret = esp_async_fbcpy(hw->fbcpy_handle,
                           trans_desc,
                           display_bridge_dma2d_done_callback,
                           NULL);
+#endif
     ESP_GOTO_ON_ERROR(ret, release_mutex, TAG, "DMA2D transfer start failed (%d)", ret);
 
     ESP_GOTO_ON_FALSE(xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem,

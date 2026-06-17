@@ -49,7 +49,12 @@
 #endif
 
 #if SOC_DMA2D_SUPPORTED
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#include "esp_async_color_convert.h"
+#else
 #include "esp_async_fbcpy.h"
+#endif
 #endif
 
 /*********************
@@ -62,7 +67,11 @@
 #define COLOR_BYTES_RGB888         (3)     /* Bytes per pixel for RGB888 */
 
 #if SOC_DMA2D_SUPPORTED
-#if defined(ESP_COLOR_FOURCC_RGB16) && defined(ESP_COLOR_FOURCC_RGB24)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#define DMA2D_PIXEL_FORMAT_FIELD(_color_bytes) \
+    .src_color_format = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24), \
+    .dst_color_format = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24)
+#elif defined(ESP_COLOR_FOURCC_RGB16) && defined(ESP_COLOR_FOURCC_RGB24)
 #define DMA2D_PIXEL_FORMAT_FIELD(_color_bytes) \
     .pixel_format_fourcc_id = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24)
 #else
@@ -1472,6 +1481,23 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
         size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
         display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+        async_color_convert_request_t blit = {
+            .src_buffer  = color_map,
+            .dst_buffer  = impl->draw_fb,
+            .src_stride  = src_stride_px,
+            .src_height  = rect_h,
+            .src_x       = src_offset_x,
+            .src_y       = 0,
+            .dst_stride  = lvgl_port_h_res,
+            .dst_height  = lvgl_port_v_res,
+            .dst_x       = area->x1,
+            .dst_y       = area->y1,
+            .copy_width  = rect_w,
+            .copy_height = rect_h,
+            DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
+        };
+#else
         esp_async_fbcpy_trans_desc_t blit = {
             .src_buffer        = color_map,
             .dst_buffer        = impl->draw_fb,
@@ -1487,6 +1513,7 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
             .copy_size_y       = rect_h,
             DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
         };
+#endif
 
         ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
     } else {
@@ -2061,6 +2088,23 @@ MERGE_RESTART:;
         int offset_x = r.x1;
         if (display_bridge_dma2d_window_is_compatible(impl->disp_fb, hor_res, offset_x, copy_w_px, color_bytes) &&
                 display_bridge_dma2d_window_is_compatible(impl->draw_fb, hor_res, offset_x, copy_w_px, color_bytes)) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+            async_color_convert_request_t tr = {
+                .src_buffer  = impl->disp_fb,
+                .dst_buffer  = impl->draw_fb,
+                .src_stride  = hor_res,
+                .src_height  = ver_res,
+                .dst_stride  = hor_res,
+                .dst_height  = ver_res,
+                .src_x       = offset_x,
+                .src_y       = r.y1,
+                .dst_x       = offset_x,
+                .dst_y       = r.y1,
+                .copy_width  = copy_w_px,
+                .copy_height = copy_h_px,
+                DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
+            };
+#else
             esp_async_fbcpy_trans_desc_t tr = {
                 .src_buffer        = impl->disp_fb,
                 .dst_buffer        = impl->draw_fb,
@@ -2076,6 +2120,7 @@ MERGE_RESTART:;
                 .copy_size_y       = copy_h_px,
                 DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
             };
+#endif
 
             /* submit and wait */
             ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&tr, portMAX_DELAY));
