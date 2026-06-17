@@ -120,10 +120,10 @@ esp_err_t imu_quat_update(
     }
 
     int64_t dt_us = sample->timestamp_us - handle->pose.last_timestamp_us;
-    handle->pose.last_timestamp_us = sample->timestamp_us;
     if (dt_us <= 0) {
         return ESP_ERR_INVALID_STATE;
     }
+    handle->pose.last_timestamp_us = sample->timestamp_us;
     if (dt_us > 100000) {
         dt_us = 100000;
     }

@@ -21,4 +21,4 @@
 
 ### Testing:
 
-1. Added Unity test coverage for default creation, runtime callback dispatch, detector event output, knob axis selection, sign reversal, cooldown/release, and non-primary-axis suppression.
+1. No standalone component tests are included in this repository snapshot yet.

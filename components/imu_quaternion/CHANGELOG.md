@@ -36,7 +36,6 @@
 
 ### Testing:
 
-1. Added Unity test coverage for default config, custom heading reference, bias-disable behavior, gyro-guard-disable behavior, default warmup runtime state, and quaternion normalization smoke checks.
-2. Updated test entry to run automatically without Unity menu interaction.
+1. No standalone component tests are included in this repository snapshot yet.
 
 ### Bug Fixes:

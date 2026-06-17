@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #include "imu_gesture_types.h"
 
@@ -41,7 +42,7 @@ typedef bool (*imu_gesture_model_predict_fn)(const float *input, size_t input_le
  * @brief Latest successful inference result stored by an inference detector
  */
 typedef struct imu_gesture_inference_result_t {
-    size_t label_index; /*!< Latest top label index */
+    uint32_t label_index; /*!< Latest top label index */
     float score;        /*!< Latest top score */
 } imu_gesture_inference_result_t;
 
@@ -54,9 +55,9 @@ typedef struct imu_gesture_inference_result_t {
  * detector-long lifetime.
  */
 typedef struct imu_gesture_inference_model_t {
-    size_t input_length;                        /*!< Number of samples required by the model input window */
-    size_t input_channels;                      /*!< Number of channels for each sample in the model input */
-    size_t output_count;                        /*!< Number of output scores produced by the model */
+    uint32_t input_length;                      /*!< Number of samples required by the model input window */
+    uint32_t input_channels;                    /*!< Number of channels for each sample in the model input */
+    uint32_t output_count;                      /*!< Number of output scores produced by the model */
     imu_gesture_model_init_fn model_init;       /*!< Model initialization callback */
     imu_gesture_model_predict_fn model_predict; /*!< Model prediction callback */
 } imu_gesture_inference_model_t;
@@ -69,8 +70,8 @@ typedef struct imu_gesture_inference_model_t {
  */
 typedef struct imu_gesture_inference_config_t {
     const imu_gesture_inference_model_t *model; /*!< Static model descriptor */
-    size_t window_step;                         /*!< Sliding step in samples for realtime inference */
-    size_t sample_queue_len;                    /*!< Internal detector sample queue length */
+    uint32_t window_step;                       /*!< Sliding step in samples for realtime inference */
+    uint32_t sample_queue_len;                  /*!< Internal detector sample queue length */
 } imu_gesture_inference_config_t;
 
 /**
@@ -118,9 +119,9 @@ esp_err_t imu_gesture_inference_detector_get_last_result(imu_gesture_detector_ha
  * @param sample_count: Number of samples in @p samples, must equal input_length
  *
  * @return
- *      - ESP_OK: One-shot buffer processed successfully
+ *      - ESP_OK: One-shot buffer processed successfully (model failures are re
+ *        ported via IMU_GESTURE_EVENT_INFERENCE_MODEL_FAILED).
  *      - ESP_ERR_INVALID_ARG: Invalid detector, buffer, or sample count
- *      - ESP_FAIL: Model invocation failed
  */
 esp_err_t imu_gesture_inference_detector_process_single_shot_buffer(imu_gesture_detector_handle_t detector, const imu_gesture_sample_t *samples, size_t sample_count);
 

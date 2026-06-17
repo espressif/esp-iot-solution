@@ -22,7 +22,6 @@
 - `include/imu_quaternion.h`: public API and public configuration/data types
 - `private_include/`: internal runtime state and solver helper declarations
 - `src/`: solver core, math helpers, initialization, bias learning, and gyro guard implementation
-- `test/`: Unity tests for default behavior, initialization constraints, bias-disable behavior, and gyro-guard behavior
 
 ## Public APIs
 

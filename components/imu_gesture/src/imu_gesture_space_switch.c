@@ -42,12 +42,14 @@ static bool imu_gesture_is_space_switch_config_valid(
     }
 
     if (config->horizontal_axis == config->vertical_axis ||
+            !isfinite(config->axis_ratio_limit) ||
             config->axis_ratio_limit < 0.0f) {
         return false;
     }
 
-    if (!isfinite(config->trigger_dps) ||
-            !isfinite(config->release_dps)) {
+    if (!isfinite(config->trigger_dps) || config->trigger_dps <= 0.0f ||
+            !isfinite(config->release_dps) || config->release_dps < 0.0f ||
+            config->sample_queue_len == 0) {
         return false;
     }
 
