@@ -122,6 +122,16 @@ void display_manager_flush_ready(lv_disp_drv_t *drv);
 #endif
 
 /**
+ * @brief Notify bridge that LCD color transfer completed from an ISR.
+ */
+bool display_manager_notify_color_trans_done_from_isr(lv_display_t *disp);
+
+/**
+ * @brief Notify bridge that LCD frame refresh completed from an ISR.
+ */
+bool display_manager_notify_frame_done_from_isr(lv_display_t *disp);
+
+/**
  * @brief Calculate number of panel frame buffers required
  *
  * @param tear_avoid_mode Tearing effect avoidance mode

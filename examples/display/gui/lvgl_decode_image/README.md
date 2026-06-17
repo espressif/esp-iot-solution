@@ -8,9 +8,9 @@ This example demonstrates how to decode and display multiple image formats using
 ## Overview
 
 The example showcases:
-- **Multiple image format support**: JPG, PNG, QOI, Split-PNG (SPNG), Split-JPEG (SJPG), and PNG-JPEG (PJPG)
+- **Multiple image format support**: JPG, PNG, QOI, Split-PNG (SPNG), Split-QOI (SQOI), Split-JPEG (SJPG), and PNG-JPEG (PJPG)
 - **Memory-mapped assets**: Store images in flash partitions for efficient access
-- **Split image formats**: Reduce RAM usage by decoding images in strips (SPNG/SJPG)
+- **Split image formats**: Reduce RAM usage by decoding images in strips (SPNG/SQOI/SJPG)
 - **Hardware acceleration**: Hardware JPEG decoding on ESP32-P4 and ESP32-S31
 - **Interactive format switching**: Cycle through different formats using button or encoder
 - **Automatic animation**: Images play continuously with format information display
@@ -24,6 +24,7 @@ The example showcases:
 | **PNG** | Standard PNG | ESP32-S3, ESP32-S31, ESP32-P4 | High | Medium |
 | **QOI** | Quite OK Image | ESP32-S3, ESP32-S31, ESP32-P4 | Low | Very Fast |
 | **SPNG** | Split PNG (16-line strips) | All | Very Low | Medium |
+| **SQOI** | Split QOI (16-line strips) | All | Very Low | Very Fast |
 | **SJPG** | Split JPEG (16-line strips) | All | Very Low | Fast |
 | **PJPG** | PNG-JPEG | ESP32-P4, ESP32-S31 | Low | Very Fast |
 
@@ -34,7 +35,7 @@ The example showcases:
 - Higher memory requirements
 - Faster rendering once decoded
 
-**Split Formats (SPNG/SJPG):**
+**Split Formats (SPNG/SQOI/SJPG):**
 - Image divided into horizontal strips (16 pixels height)
 - Only one strip in RAM at a time
 - ~40x less RAM usage compared to full decode
@@ -54,7 +55,7 @@ The example showcases:
   - **ESP32-P4**: All formats supported
   - **ESP32-S3**: All except PJPG
   - **ESP32-S31**: All formats supported
-  - **ESP32-C3**: Only SPNG and SJPG (limited RAM)
+  - **ESP32-C3**: Only SPNG, SQOI, and SJPG (limited RAM)
 * A LCD panel with supported interface (MIPI DSI / RGB / QSPI / SPI)
 * (Optional) Touch panel or rotary encoder for interaction
 * A USB cable for power supply and programming
@@ -81,7 +82,7 @@ This example includes sample images (8 frames of animation) in the `assets/` dir
 - `assets/png/`: PNG images (frame_0000.png to frame_0007.png)
 
 **The build system automatically:**
-1. Converts images to various formats (QOI, SPNG, SJPG, PJPG)
+1. Converts images to various formats (QOI, SPNG, SQOI, SJPG, PJPG)
 2. Creates partition images for each format
 3. Generates metadata headers (e.g., `mmap_generate_jpg.h`)
 4. Flashes all partitions during `idf.py flash`
@@ -142,7 +143,7 @@ idf.py -p PORT build flash monitor
 - Compiles application
 - Generates image format partitions from assets
 - Creates metadata headers
-- Flashes application + all image partitions (6 partitions total)
+- Flashes application + all image partitions (7 partitions total)
 
 **First build takes longer** due to image processing and component downloads.
 
@@ -167,6 +168,7 @@ I (xxx) decode_demo: LCD: MIPI DSI
 I (xxx) decode_demo: Init LCD 1024x600
 I (xxx) decode_demo: Init touch
 I (xxx) decode_demo: SPNG ready (8 files)
+I (xxx) decode_demo: SQOI ready (8 files)
 I (xxx) decode_demo: SJPG ready (8 files)
 I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 / ESP32-S31 only
 ```
@@ -177,10 +179,10 @@ I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 / ESP32-S31 only
 - Format cycles through available options based on chip
 
 **Chip-Specific Behavior:**
-- **ESP32-P4**: All formats available (JPG → PNG → QOI → SPNG → SJPG → PJPG)
-- **ESP32-S3**: 5 formats (JPG → PNG → QOI → SPNG → SJPG)
-- **ESP32-S31**: All formats available (JPG → PNG → QOI → SPNG → SJPG → PJPG)
-- **ESP32-C3**: 2 formats only (SPNG → SJPG)
+- **ESP32-P4**: All formats available (JPG → PNG → QOI → SPNG → SQOI → SJPG → PJPG)
+- **ESP32-S3**: 6 formats (JPG → PNG → QOI → SPNG → SQOI → SJPG)
+- **ESP32-S31**: All formats available (JPG → PNG → QOI → SPNG → SQOI → SJPG → PJPG)
+- **ESP32-C3**: 3 formats only (SPNG → SQOI → SJPG)
 
 ## Code Structure
 
@@ -199,7 +201,7 @@ I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 / ESP32-S31 only
 
 3. **Format Mounting** (`mount_format()`):
    - Initializes mmap_assets for partition
-   - Mounts virtual filesystem (drive letters: J, P, Q, S, T, U)
+   - Mounts virtual filesystem (drive letters: J, P, Q, S, O, T, U)
    - Validates stored files
 
 4. **UI Creation** (`start_image_player()`):
@@ -225,18 +227,19 @@ Partition Table (partitions.csv):
 │ png       (100KB)  - PNG images      │ ← 8 PNG files
 │ qoi       (100KB)  - QOI images      │ ← 8 QOI (converted)
 │ spng      (100KB)  - Split PNG       │ ← 8 SPNG (converted)
+│ sqoi      (100KB)  - Split QOI       │ ← 8 SQOI (converted)
 │ sjpg      (100KB)  - Split JPEG      │ ← 8 SJPG (converted)
 │ pjpg      (100KB)  - PJPEG           │ ← 8 PJPG (converted, ESP32-P4 / ESP32-S31)
 └──────────────────────────────────────┘
 ```
 
-**Total flash usage**: ~1.6MB (adjust partition sizes if needed)
+**Total flash usage**: ~1.7MB (adjust partition sizes if needed)
 
 ## Technical Details
 
 ### Split Image Format
 
-SPNG/SJPG splits images horizontally:
+SPNG/SQOI/SJPG splits images horizontally:
 ```
 Original Image (480x320)
 ┌─────────────────────┐
@@ -263,6 +266,7 @@ Each format gets a drive letter:
 'P' → PNG partition  → "P:frame_0000.png"
 'Q' → QOI partition  → "Q:frame_0000.png"
 'S' → SPNG partition → "S:frame_0000.png"
+'O' → SQOI partition → "O:frame_0000.sqoi"
 'T' → SJPG partition → "T:frame_0000.jpg"
 'U' → PJPG partition → "U:frame_0000.png"
 ```
@@ -298,7 +302,7 @@ LVGL image widget loads from virtual path.
 
 **Memory allocation failures:**
 - Enable PSRAM for large displays
-- Use split formats (SPNG/SJPG) instead
+- Use split formats (SPNG/SQOI/SJPG) instead
 - Reduce LVGL buffer sizes
 
 **Encoder not switching formats:**
@@ -317,7 +321,7 @@ LVGL image widget loads from virtual path.
 - Use **JPG** if you have PSRAM and need speed
 
 **For ESP32-C3:**
-- Use **SJPG** for save memory resources
+- Use **SQOI** or **SJPG** to save memory resources
 - Keep images small
 
 For any technical queries, please open an [issue](https://github.com/espressif/esp-iot-solution/issues) on GitHub. We will get back to you soon.

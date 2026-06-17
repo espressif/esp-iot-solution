@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.5.2 (2026-06-09)
+
+* Add LVGL v9 PPA acceleration for RGB888 displays: ARGB8888 per-pixel alpha blend and opaque fill paths; opaque RGB565/RGB888 images fall back to CPU to preserve tiled image rendering
+* Fix framebuffer cache sync to use the destination pixel size (2 for RGB565, 3 for RGB888) instead of `sizeof(lv_color_t)`
+* Guard PPA source bounds on the custom-handler path to avoid reads outside the source image
+* Add bypass mode for adapter-managed ESP-IDF LCD and touch callbacks with public `notify_from_isr` entry points
+* Fix TE vsync wait deadlock by replacing `portMAX_DELAY` with a bounded timeout (6× TE period, clamped to [20ms, 1000ms])
+* Fix stale DMA completion race by moving `ulTaskNotifyValueClear()` before `esp_lcd_panel_draw_bitmap()`
+* Add `CONFIG_ESP_LVGL_ADAPTER_FREETYPE_MINIMAL_BUILD` to reduce FreeType flash footprint
+* Fix IRAM coverage of `from_isr` display and touch notification call chain
+* Add LVGL v9 multi-control touch mode for independent control of discrete widgets, plus parameter validation and cleanup handling updates
+
 ## v0.5.1 (2026-05-21)
 
 * Add optional FreeType render pool reduction for lower stack usage

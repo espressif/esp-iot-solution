@@ -108,6 +108,8 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     int block_size_large;
     size_t cache_line_size;
     esp_lv_adapter_vsync_timing_t vsync_timing;   /*!< Standardized VSYNC timing context */
+    bool idf_callbacks_registered;
+    bool idf_callback_registration_enabled;
 
     /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
     esp_lv_adapter_display_pipeline_t pipeline;
@@ -296,6 +298,10 @@ static esp_err_t display_bridge_v9_dummy_draw_blit(esp_lv_adapter_display_bridge
 static bool display_bridge_v9_handle_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
 static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
 static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_t *impl);
+static bool display_bridge_v9_handle_color_trans_done(esp_lv_adapter_display_bridge_v9_t *impl);
+static bool display_bridge_v9_handle_frame_done(esp_lv_adapter_display_bridge_v9_t *impl);
+static bool display_bridge_v9_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
+static bool display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
 static inline void display_bridge_v9_signal_dummy_draw_event(esp_lv_adapter_display_bridge_v9_t *impl,
                                                              uint32_t event_bit,
                                                              BaseType_t *need_yield);
@@ -463,12 +469,15 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     impl->base.update_panel = display_bridge_v9_update_panel;
     impl->base.set_area_rounder = display_bridge_v9_set_area_rounder;
     impl->base.set_draw_bitmap_callbacks = display_bridge_v9_set_draw_bitmap_callbacks;
+    impl->base.notify_color_trans_done_from_isr = display_bridge_v9_notify_color_trans_done_from_isr;
+    impl->base.notify_frame_done_from_isr = display_bridge_v9_notify_frame_done_from_isr;
     impl->cfg = *cfg;
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
     impl->notify_task = NULL;
     impl->dummy_draw_wait_task = NULL;
     impl->dummy_draw_wait_mask = 0;
+    impl->idf_callback_registration_enabled = cfg->idf_callback_registration_enabled;
     impl->cache_line_size = display_bridge_get_cache_line_size();
     display_bridge_get_block_sizes(&impl->block_size_small, &impl->block_size_large);
     if (impl->block_size_small <= 0) {
@@ -998,6 +1007,57 @@ static bool IRAM_ATTR display_bridge_v9_handle_vsync(esp_lv_adapter_display_brid
     return (need_yield == pdTRUE);
 }
 
+static bool IRAM_ATTR display_bridge_v9_handle_color_trans_done(esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
+    BaseType_t need_yield = pdFALSE;
+    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
+    if ((impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER) && impl->cfg.te_ctx) {
+        esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
+    }
+    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
+        lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
+        impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
+    }
+
+    bool vsync = false;
+    if ((impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER) ||
+            (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE)) {
+        vsync = display_bridge_v9_handle_vsync(impl);
+    }
+
+    return vsync || (need_yield == pdTRUE);
+}
+
+static bool IRAM_ATTR display_bridge_v9_handle_frame_done(esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
+    BaseType_t need_yield = pdFALSE;
+    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_FRAME_DONE, &need_yield);
+    bool vsync = display_bridge_v9_handle_vsync(impl);
+    return vsync || (need_yield == pdTRUE);
+}
+
+static bool IRAM_ATTR display_bridge_v9_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    return display_bridge_v9_handle_color_trans_done(impl);
+}
+
+static bool IRAM_ATTR display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapter_display_bridge_t *bridge)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    return display_bridge_v9_handle_frame_done(impl);
+}
+
 #if CONFIG_SOC_MIPI_DSI_SUPPORTED
 static bool IRAM_ATTR display_bridge_v9_on_mipi_color_trans_done(esp_lcd_panel_handle_t panel,
                                                                  esp_lcd_dpi_panel_event_data_t *event_data,
@@ -1007,22 +1067,7 @@ static bool IRAM_ATTR display_bridge_v9_on_mipi_color_trans_done(esp_lcd_panel_h
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
 
-    /* Safety check: panel detached for sleep management */
-    if (!impl || !impl->panel) {
-        return false;
-    }
-
-    BaseType_t need_yield = pdFALSE;
-    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
-        lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
-        impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    bool vsync = false;
-    if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
-        vsync = display_bridge_v9_handle_vsync(impl);
-    }
-    return vsync || (need_yield == pdTRUE);
+    return display_bridge_v9_handle_color_trans_done(impl);
 }
 
 static bool IRAM_ATTR display_bridge_v9_on_mipi_refresh_done(esp_lcd_panel_handle_t panel,
@@ -1033,15 +1078,7 @@ static bool IRAM_ATTR display_bridge_v9_on_mipi_refresh_done(esp_lcd_panel_handl
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
 
-    /* Safety check: panel detached for sleep management */
-    if (!impl || !impl->panel) {
-        return false;
-    }
-
-    BaseType_t need_yield = pdFALSE;
-    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_FRAME_DONE, &need_yield);
-    bool vsync = display_bridge_v9_handle_vsync(impl);
-    return vsync || (need_yield == pdTRUE);
+    return display_bridge_v9_handle_frame_done(impl);
 }
 #endif
 
@@ -1054,22 +1091,7 @@ static bool IRAM_ATTR display_bridge_v9_on_rgb_color_trans_done(esp_lcd_panel_ha
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
 
-    /* Safety check: panel detached for sleep management */
-    if (!impl || !impl->panel) {
-        return false;
-    }
-
-    BaseType_t need_yield = pdFALSE;
-    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
-        lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
-        impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    bool vsync = false;
-    if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE) {
-        vsync = display_bridge_v9_handle_vsync(impl);
-    }
-    return vsync || (need_yield == pdTRUE);
+    return display_bridge_v9_handle_color_trans_done(impl);
 }
 
 static bool IRAM_ATTR display_bridge_v9_on_rgb_frame_complete(esp_lcd_panel_handle_t panel,
@@ -1080,15 +1102,7 @@ static bool IRAM_ATTR display_bridge_v9_on_rgb_frame_complete(esp_lcd_panel_hand
     (void)event_data;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
 
-    /* Safety check: panel detached for sleep management */
-    if (!impl || !impl->panel) {
-        return false;
-    }
-
-    BaseType_t need_yield = pdFALSE;
-    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_FRAME_DONE, &need_yield);
-    bool vsync = display_bridge_v9_handle_vsync(impl);
-    return vsync || (need_yield == pdTRUE);
+    return display_bridge_v9_handle_frame_done(impl);
 }
 #endif
 
@@ -1100,22 +1114,7 @@ static bool IRAM_ATTR display_bridge_v9_on_io_color_trans_done(esp_lcd_panel_io_
     (void)edata;
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)user_ctx;
 
-    /* Safety check: panel detached for sleep management */
-    if (!impl || !impl->panel) {
-        return false;
-    }
-
-    BaseType_t need_yield = pdFALSE;
-    display_bridge_v9_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
-    if (impl->cfg.te_ctx) {
-        esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
-    }
-    if (impl->dummy_draw && impl->cfg.dummy_draw_cbs.on_color_trans_done) {
-        lv_display_t *disp = impl->cfg.lv_disp ? impl->cfg.lv_disp : lv_display_get_default();
-        impl->cfg.dummy_draw_cbs.on_color_trans_done(disp, true, impl->cfg.dummy_draw_user_ctx);
-    }
-    bool vsync = display_bridge_v9_handle_vsync(impl);
-    return vsync || (need_yield == pdTRUE);
+    return display_bridge_v9_handle_color_trans_done(impl);
 }
 
 /**
@@ -1127,6 +1126,11 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
         return;
     }
 
+    if (impl->idf_callbacks_registered || !impl->idf_callback_registration_enabled) {
+        return;
+    }
+
+    bool registered = false;
     switch (impl->cfg.base.profile.interface) {
     case ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI:
 #if CONFIG_SOC_MIPI_DSI_SUPPORTED
@@ -1139,6 +1143,8 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
         esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "MIPI DSI callback registration failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
@@ -1156,6 +1162,8 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
         esp_err_t ret = esp_lcd_rgb_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel callbacks failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
@@ -1175,15 +1183,23 @@ static void display_bridge_v9_register_vsync(esp_lv_adapter_display_bridge_v9_t 
         esp_err_t ret = esp_lcd_panel_io_register_event_callbacks(panel_io, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel IO callbacks failed (%d)", ret);
+        } else {
+            registered = true;
         }
         break;
     }
     }
+
+    impl->idf_callbacks_registered = registered;
 }
 
 static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_t *impl)
 {
     if (!impl) {
+        return;
+    }
+
+    if (!impl->idf_callbacks_registered) {
         return;
     }
 
@@ -1236,6 +1252,8 @@ static void display_bridge_v9_unregister_vsync(esp_lv_adapter_display_bridge_v9_
         break;
     }
     }
+
+    impl->idf_callbacks_registered = false;
 }
 
 /**********************
@@ -1303,7 +1321,11 @@ static void display_bridge_v9_flush_default(esp_lv_adapter_display_bridge_v9_t *
                                                                      offsetx1, offsety1, offsetx2 + 1, offsety2 + 1,
                                                                      color_map, impl->cfg.draw_bitmap_user_ctx);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Custom draw bitmap failed: %s", esp_err_to_name(ret));
+            if (ret == ESP_ERR_NOT_ALLOWED) {
+                ESP_LOGD(TAG, "Custom draw bitmap not allowed, skipping");
+            } else {
+                ESP_LOGE(TAG, "Custom draw bitmap failed: %s", esp_err_to_name(ret));
+            }
             display_manager_flush_ready(disp);
         }
     } else {
@@ -1341,15 +1363,17 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         lv_draw_sw_rgb565_swap(color_map, lv_area_get_size(area));
     }
 
-    /* Wait for TE signal to avoid tearing */
+    /* Wait for TE signal to avoid tearing; on timeout, proceed without sync to avoid deadlock */
     if (impl->cfg.te_ctx) {
-        esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
+        (void)esp_lv_adapter_te_sync_wait_for_vsync(impl->cfg.te_ctx);
     }
 
     if (impl->cfg.te_ctx) {
         esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
     }
 
+    /* Clear stale completion notifications before kicking off a new transfer. */
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
@@ -1358,7 +1382,6 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     }
 
     /* Wait for transmission to complete */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     display_manager_flush_ready(disp);
@@ -1377,6 +1400,7 @@ static void display_bridge_v9_flush_double_full(esp_lv_adapter_display_bridge_v9
 
     /* Switch the current LCD frame buffer to `color_map` */
     display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
@@ -1385,7 +1409,6 @@ static void display_bridge_v9_flush_double_full(esp_lv_adapter_display_bridge_v9
     }
 
     /* Waiting for the last frame buffer to complete transmission */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     display_manager_flush_ready(disp);
@@ -1438,6 +1461,7 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
     /* Action after last area refresh */
     if (lv_display_flush_is_last(disp)) {
         display_bridge_vsync_record_flush_post(&impl->vsync_timing);
+        ulTaskNotifyValueClear(NULL, ULONG_MAX);
         esp_err_t ret = display_lcd_blit_full(panel_handle, &impl->runtime, color_map);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
@@ -1446,7 +1470,6 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
         }
 
         /* Waiting for the last frame buffer to complete transmission */
-        ulTaskNotifyValueClear(NULL, ULONG_MAX);
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     }
 

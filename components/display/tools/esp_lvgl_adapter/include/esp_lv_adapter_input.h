@@ -76,6 +76,14 @@ typedef struct {
 } esp_lv_adapter_touch_callbacks_t;
 
 /**
+ * @brief Touch input operating mode
+ */
+typedef enum {
+    ESP_LV_ADAPTER_TOUCH_MODE_SINGLE = 0,      /*!< Single LVGL pointer device */
+    ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL,   /*!< Multiple LVGL pointer devices for independent control */
+} esp_lv_adapter_touch_mode_t;
+
+/**
  * @brief Touch input device configuration structure
  */
 typedef struct {
@@ -85,6 +93,10 @@ typedef struct {
         float x;                        /*!< Horizontal scale factor */
         float y;                        /*!< Vertical scale factor */
     } scale;                            /*!< Touch coordinate scaling */
+    struct {
+        esp_lv_adapter_touch_mode_t mode; /*!< Touch operating mode */
+        uint8_t pointers;               /*!< Number of virtual pointers to expose when @c mode is multi-control; must be >= 2 */
+    } multi_touch;                      /*!< Optional multi-touch configuration */
     esp_lv_adapter_touch_callbacks_t callbacks; /*!< Optional event callbacks (all fields may be NULL) */
 } esp_lv_adapter_touch_config_t;
 
@@ -101,12 +113,23 @@ typedef struct {
         .x = 1.0f,                                              \
         .y = 1.0f,                                              \
     },                                                          \
+    .multi_touch = {                                            \
+        .mode = ESP_LV_ADAPTER_TOUCH_MODE_SINGLE,               \
+        .pointers = 1,                                          \
+    },                                                          \
 }
 
 /**
  * @brief Register a touch input device to LVGL
  *
  * Registers a touch device with LVGL and associates it with a display.
+ *
+ * In the default mode a single LVGL pointer device is created.
+ * When @c config->multi_touch.mode is set to @c ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL,
+ * the adapter creates multiple virtual pointer devices backed by the same
+ * physical touch controller so discrete widgets can be pressed independently.
+ * In that mode the return value is the primary virtual pointer; the additional
+ * pointers are managed internally and are unregistered together with the returned handle.
  *
  * @param[in] config Pointer to touch input device configuration
  *
@@ -144,6 +167,38 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch);
  */
 esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
                                              const esp_lv_adapter_touch_callbacks_t *cbs);
+
+/**
+ * @brief Set the default internal ESP-IDF touch interrupt callback registration mode for new touch devices.
+ *
+ * This affects touch input devices registered after the call. The default is enabled.
+ *
+ * @param[in] enable Whether newly registered touch devices should let the adapter own the touch IRQ callback.
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_touch_set_default_idf_interrupt_callback_registration_enabled(bool enable);
+
+/**
+ * @brief Notify a registered touch input device that new touch data is available.
+ *
+ * This wakes the adapter's normal IRQ-mode read path from task context. It is useful when
+ * an external owner handles hardware interrupts and provides data through custom_touch_read.
+ *
+ * @param[in] touch LVGL touch input device handle
+ * @return true if the touch read path was notified
+ */
+bool esp_lv_adapter_touch_notify_interrupt(lv_indev_t *touch);
+
+/**
+ * @brief ISR-safe variant of @c esp_lv_adapter_touch_notify_interrupt.
+ *
+ * @param[in] touch LVGL touch input device handle
+ * @return true when a higher-priority task should yield
+ */
+bool esp_lv_adapter_touch_notify_interrupt_from_isr(lv_indev_t *touch);
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON
 /*****************************************************************************

@@ -43,6 +43,7 @@
 #endif
 
 #define SP_TAG_SPNG        "_SPNG__"
+#define SP_TAG_SQOI        "_SQOI__"
 #define SP_TAG_SJPG        "_SJPG__"
 #define SP_TAG_LEN         7
 #define SP_META_OFFSET     14
@@ -65,9 +66,15 @@ static size_t s_pjpg_rx_a_size = 0;
 static SemaphoreHandle_t s_pjpg_mutex = NULL;  // Protect PJPG global buffers from concurrent access
 #endif
 
+typedef enum {
+    SP_IMAGE_TYPE_PNG,
+    SP_IMAGE_TYPE_QOI,
+    SP_IMAGE_TYPE_JPG,
+} sp_image_type_t;
+
 typedef struct {
     bool is_file;
-    bool is_sjpg;
+    sp_image_type_t type;
     uint16_t w;
     uint16_t h;
     uint16_t splits;
@@ -180,7 +187,7 @@ static void * buf_align(void * buf, lv_color_format_t color_format);
 static uint32_t width_to_stride(uint32_t w, lv_color_format_t color_format);
 
 static inline uint32_t read_be32(const uint8_t *p);
-static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg);
+static inline bool sp_is_sp_tag(const uint8_t *hdr8, sp_image_type_t *type);
 static inline void sp_read_meta(const uint8_t *meta8, uint16_t *w, uint16_t *h, uint16_t *splits, uint16_t *split_h);
 
 static const char *TAG = "lv_decoder_v9";
@@ -249,6 +256,19 @@ static lv_color_format_t get_target_rgb_format(void)
     }
     return LV_COLOR_FORMAT_RGB888;
 }
+
+#if ESP_LV_ENABLE_PJPG
+/* RGB888 displays -> ARGB8888 (PPA blend); RGB565 -> planar RGB565A8. */
+static lv_color_format_t get_pjpg_output_format(void)
+{
+#if ESP_LV_PJPG_PREFER_ARGB8888
+    if (get_target_rgb_format() != LV_COLOR_FORMAT_RGB565) {
+        return LV_COLOR_FORMAT_ARGB8888;
+    }
+#endif
+    return LV_COLOR_FORMAT_RGB565A8;
+}
+#endif
 
 static inline uint16_t read_le16(const uint8_t *p)
 {
@@ -346,11 +366,12 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                     if (rn == PJPG_HEADER_SIZE && memcmp(pjpg_header, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
                         pjpg_info_t pjpg_info;
                         if (pjpg_parse_header(pjpg_header, PJPG_HEADER_SIZE, &pjpg_info) == ESP_OK) {
-                            header->cf = LV_COLOR_FORMAT_RGB565A8;
+                            lv_color_format_t pjpg_cf = get_pjpg_output_format();
+                            header->cf = pjpg_cf;
                             header->w = pjpg_info.width;
                             header->h = pjpg_info.height;
-                            // RGB565A8 is planar: stride is for RGB565 plane only
-                            header->stride = pjpg_info.width * 2;
+                            header->stride = (pjpg_cf == LV_COLOR_FORMAT_ARGB8888)
+                                             ? (pjpg_info.width * 4) : (pjpg_info.width * 2);
                             free(pjpg_header);
                             return LV_RESULT_OK;
                         }
@@ -365,11 +386,12 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
                     memcmp(img_dsc->data, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
                 pjpg_info_t pjpg_info;
                 if (pjpg_parse_header(img_dsc->data, img_dsc->data_size, &pjpg_info) == ESP_OK) {
-                    header->cf = LV_COLOR_FORMAT_RGB565A8;
+                    lv_color_format_t pjpg_cf = get_pjpg_output_format();
+                    header->cf = pjpg_cf;
                     header->w = pjpg_info.width;
                     header->h = pjpg_info.height;
-                    // RGB565A8 is planar: stride is for RGB565 plane only
-                    header->stride = pjpg_info.width * 2;
+                    header->stride = (pjpg_cf == LV_COLOR_FORMAT_ARGB8888)
+                                     ? (pjpg_info.width * 4) : (pjpg_info.width * 2);
                     return LV_RESULT_OK;
                 }
             }
@@ -380,13 +402,13 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
         uint8_t png_magic[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
         uint8_t qoi_magic[4] = {0x71, 0x6F, 0x69, 0x66};
         bool is_sp = false;
-        bool is_sjpg = false;
+        sp_image_type_t sp_type = SP_IMAGE_TYPE_PNG;
         if (src_type == LV_IMAGE_SRC_FILE) {
             uint8_t hdr8[8];
             uint32_t rn;
             lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
             if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
-                if (sp_is_sp_tag(hdr8, &is_sjpg)) {
+                if (sp_is_sp_tag(hdr8, &sp_type)) {
                     is_sp = true;
                 }
             }
@@ -394,7 +416,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
         } else {
             const lv_image_dsc_t *img = dsc->src;
             if (img->data_size >= 8) {
-                if (sp_is_sp_tag(img->data, &is_sjpg)) {
+                if (sp_is_sp_tag(img->data, &sp_type)) {
                     is_sp = true;
                 }
             }
@@ -421,7 +443,7 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
             if (w == 0 || h == 0) {
                 return LV_RESULT_INVALID;
             }
-            if (is_sjpg) {
+            if (sp_type == SP_IMAGE_TYPE_JPG) {
                 lv_color_format_t tgt = get_target_rgb_format();
                 header->cf = (tgt == LV_COLOR_FORMAT_RGB565) ? LV_COLOR_FORMAT_RGB565 : LV_COLOR_FORMAT_RGB888;
                 header->stride = (tgt == LV_COLOR_FORMAT_RGB565) ? (w * 2) : (w * 3);
@@ -681,7 +703,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
         // First, try to detect by file extension (more reliable with mmap_assets)
         if (dsc->src_type == LV_IMAGE_SRC_FILE) {
             const char *ext = lv_fs_get_ext(dsc->src);
-            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
+            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sqoi") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
                 is_sp = true;
             }
         }
@@ -693,7 +715,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
                 uint32_t rn;
                 lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
                 if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
-                    bool dummy = false;
+                    sp_image_type_t dummy = SP_IMAGE_TYPE_PNG;
                     if (sp_is_sp_tag(hdr8, &dummy)) {
                         is_sp = true;
                     }
@@ -702,7 +724,7 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
             } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
                 const lv_image_dsc_t * img = dsc->src;
                 if (img->data_size >= 8) {
-                    bool dummy = false;
+                    sp_image_type_t dummy = SP_IMAGE_TYPE_PNG;
                     if (sp_is_sp_tag(img->data, &dummy)) {
                         is_sp = true;
                     }
@@ -847,8 +869,8 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
     } else {
         return LV_RESULT_INVALID;
     }
-    bool is_sjpg = false;
-    if (!sp_is_sp_tag(hdr8, &is_sjpg)) {
+    sp_image_type_t sp_type = SP_IMAGE_TYPE_PNG;
+    if (!sp_is_sp_tag(hdr8, &sp_type)) {
         if (is_file) {
             lv_fs_close(&f);
         }
@@ -886,7 +908,7 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
         return LV_RESULT_INVALID;
     }
     ctx->is_file = is_file;
-    ctx->is_sjpg = is_sjpg;
+    ctx->type = sp_type;
     ctx->w = w;
     ctx->h = h;
     ctx->splits = splits;
@@ -900,7 +922,7 @@ static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc)
     ctx->base_size = base_size;
     ctx->tile = NULL;
     ctx->slice_buf = NULL;
-    ctx->out_cf = is_sjpg ? get_target_rgb_format() : LV_COLOR_FORMAT_ARGB8888;
+    ctx->out_cf = (sp_type == SP_IMAGE_TYPE_JPG) ? get_target_rgb_format() : LV_COLOR_FORMAT_ARGB8888;
     ctx->bpp = (ctx->out_cf == LV_COLOR_FORMAT_RGB565) ? 2 : (ctx->out_cf == LV_COLOR_FORMAT_RGB888 ? 3 : 4);
     ctx->tile_width = 0;
     if (is_file) {
@@ -975,7 +997,7 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
         ESP_LOGD(TAG, "Allocated aligned slice_buf: %lu bytes (requested: %lu)",
                  (unsigned long)alloc_size, (unsigned long)max_slice_bytes);
     }
-    if (!ctx->is_sjpg) {
+    if (ctx->type == SP_IMAGE_TYPE_PNG) {
         png_image im;
         memset(&im, 0, sizeof(im));
         im.version = PNG_IMAGE_VERSION;
@@ -1002,6 +1024,37 @@ static lv_result_t sp_decode_split(sp_session_t *ctx, uint16_t idx, uint8_t *dst
             return LV_RESULT_INVALID;
         }
         png_image_free(&im);
+    } else if (ctx->type == SP_IMAGE_TYPE_QOI) {
+        qoi_desc desc;
+        memset(&desc, 0, sizeof(desc));
+        unsigned char *pixels = qoi_decode(encoded, len_i, &desc, 4);
+        if (!pixels) {
+            if (ctx->is_file) {
+                free(encoded);
+            }
+            return LV_RESULT_INVALID;
+        }
+        if (desc.width != ctx->w || desc.height != cur_h) {
+            ESP_LOGE(TAG, "SQOI dimension mismatch: expected %" PRIu32 "x%" PRIu32 ", got %u x %u",
+                     (uint32_t)ctx->w, cur_h, desc.width, desc.height);
+            free(pixels);
+            if (ctx->is_file) {
+                free(encoded);
+            }
+            return LV_RESULT_INVALID;
+        }
+        uint32_t pixels_count = desc.width * desc.height;
+        uint8_t *dst = ctx->slice_buf;
+        uint8_t *src = pixels;
+        for (uint32_t i = 0; i < pixels_count; i++) {
+            dst[0] = src[2];
+            dst[1] = src[1];
+            dst[2] = src[0];
+            dst[3] = src[3];
+            src += 4;
+            dst += 4;
+        }
+        free(pixels);
     } else {
         uint32_t jw = 0, jh = 0;
         jpeg_dec_handle_t jdec = NULL;
@@ -1644,6 +1697,82 @@ static esp_err_t load_source_data(lv_image_decoder_dsc_t * dsc, uint8_t **data, 
     return ESP_OK;
 }
 
+#if ESP_LV_PJPG_PREFER_ARGB8888
+/* HW-decode RGB segment to RGB888 and alpha to A8, then interleave to ARGB8888.
+ * Shares the s_pjpg_rx_* scratch buffers; caller holds s_pjpg_mutex. */
+static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_data, lv_draw_buf_t *decoded)
+{
+    const uint32_t w = info->width;
+    const uint32_t h = info->height;
+    const uint32_t aligned_w = (w + 15) & ~15;
+    const uint32_t aligned_h = (h + 15) & ~15;
+    const uint8_t *rgb_data = src_data + PJPG_HEADER_SIZE;
+    jpeg_decode_memory_alloc_cfg_t rx_mem_cfg = { .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER };
+
+    size_t rgb_aligned_size = (size_t)aligned_w * aligned_h * 3;
+    if (s_pjpg_rx_rgb_size < rgb_aligned_size) {
+        if (s_pjpg_rx_rgb) {
+            jpeg_free_align(s_pjpg_rx_rgb);
+            s_pjpg_rx_rgb = NULL;
+            s_pjpg_rx_rgb_size = 0;
+        }
+        size_t got = 0;
+        s_pjpg_rx_rgb = jpeg_alloc_decoder_mem(rgb_aligned_size, &rx_mem_cfg, &got);
+        ESP_RETURN_ON_FALSE(s_pjpg_rx_rgb, ESP_ERR_NO_MEM, TAG, "alloc PJPG RGB888 scratch failed");
+        s_pjpg_rx_rgb_size = got;
+    }
+    safe_cache_sync((void *)rgb_data, info->rgb_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+    uint32_t rgb_out = 0;
+    ESP_RETURN_ON_ERROR(jpeg_decoder_process(jpgd_handle, &decode_cfg_rgb888,
+                                             rgb_data, info->rgb_jpeg_size,
+                                             s_pjpg_rx_rgb, s_pjpg_rx_rgb_size, &rgb_out),
+                        TAG, "RGB888 HW decode failed");
+
+    uint8_t *alpha_buf = NULL;
+    if (info->alpha_jpeg_size > 0) {
+        size_t a_aligned_size = (size_t)aligned_w * aligned_h;
+        if (s_pjpg_rx_a_size < a_aligned_size) {
+            if (s_pjpg_rx_a) {
+                jpeg_free_align(s_pjpg_rx_a);
+                s_pjpg_rx_a = NULL;
+                s_pjpg_rx_a_size = 0;
+            }
+            size_t got = 0;
+            s_pjpg_rx_a = jpeg_alloc_decoder_mem(a_aligned_size, &rx_mem_cfg, &got);
+            ESP_RETURN_ON_FALSE(s_pjpg_rx_a, ESP_ERR_NO_MEM, TAG, "alloc PJPG alpha scratch failed");
+            s_pjpg_rx_a_size = got;
+        }
+        const uint8_t *alpha_data = src_data + PJPG_HEADER_SIZE + info->rgb_jpeg_size;
+        safe_cache_sync((void *)alpha_data, info->alpha_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
+        jpeg_decode_cfg_t alpha_cfg = { .output_format = JPEG_DECODE_OUT_FORMAT_GRAY };
+        uint32_t a_out = 0;
+        ESP_RETURN_ON_ERROR(jpeg_decoder_process(jpgd_handle, &alpha_cfg,
+                                                 alpha_data, info->alpha_jpeg_size,
+                                                 s_pjpg_rx_a, s_pjpg_rx_a_size, &a_out),
+                            TAG, "Alpha HW decode failed");
+        alpha_buf = s_pjpg_rx_a;
+    }
+
+    /* Interleave BGR888 + A8 -> ARGB8888 (stored B,G,R,A) */
+    uint8_t *dst = (uint8_t *)decoded->data;
+    for (uint32_t y = 0; y < h; y++) {
+        const uint8_t *rgb_row = s_pjpg_rx_rgb + (size_t)y * aligned_w * 3;
+        const uint8_t *a_row = alpha_buf ? (alpha_buf + (size_t)y * aligned_w) : NULL;
+        uint8_t *d = dst + (size_t)y * w * 4;
+        for (uint32_t x = 0; x < w; x++) {
+            d[0] = rgb_row[0];
+            d[1] = rgb_row[1];
+            d[2] = rgb_row[2];
+            d[3] = a_row ? a_row[x] : 0xFF;
+            d += 4;
+            rgb_row += 3;
+        }
+    }
+    safe_cache_sync(decoded->data, decoded->data_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    return ESP_OK;
+}
+#endif /* ESP_LV_PJPG_PREFER_ARGB8888 */
+
 static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
 {
     uint8_t *src_data = NULL;
@@ -1670,11 +1799,25 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
     size_t expected_min_size = PJPG_HEADER_SIZE + info.rgb_jpeg_size + info.alpha_jpeg_size;
     ESP_GOTO_ON_FALSE(src_size >= expected_min_size, ESP_ERR_INVALID_SIZE, cleanup, TAG, "PJPG too small: need %zu got %lu", expected_min_size, src_size);
 
+    lv_color_format_t pjpg_cf = get_pjpg_output_format();
     decoded = lv_draw_buf_create_ex(image_cache_draw_buf_handlers,
                                     info.width, info.height,
-                                    LV_COLOR_FORMAT_RGB565A8,
+                                    pjpg_cf,
                                     LV_STRIDE_AUTO);
     ESP_GOTO_ON_FALSE(decoded, ESP_ERR_NO_MEM, cleanup, TAG, "alloc PJPG decode buffer failed");
+
+#if ESP_LV_PJPG_PREFER_ARGB8888
+    if (pjpg_cf == LV_COLOR_FORMAT_ARGB8888) {
+        ESP_GOTO_ON_ERROR(pjpg_fill_argb8888(&info, src_data, decoded), cleanup, TAG, "PJPG ARGB8888 decode failed");
+        if (need_free_src && src_data) {
+            free(src_data);
+        }
+        if (s_pjpg_mutex) {
+            xSemaphoreGive(s_pjpg_mutex);
+        }
+        return decoded;
+    }
+#endif
 
     uint8_t *rgb_data = src_data + PJPG_HEADER_SIZE;
     uint16_t *rgb565_ptr = (uint16_t *)decoded->data;
@@ -1882,17 +2025,23 @@ static inline uint32_t read_be32(const uint8_t *p)
     return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
 
-static inline bool sp_is_sp_tag(const uint8_t *hdr8, bool *is_sjpg)
+static inline bool sp_is_sp_tag(const uint8_t *hdr8, sp_image_type_t *type)
 {
     if (memcmp(hdr8, SP_TAG_SPNG, SP_TAG_LEN) == 0) {
-        if (is_sjpg) {
-            *is_sjpg = false;
+        if (type) {
+            *type = SP_IMAGE_TYPE_PNG;
+        }
+        return true;
+    }
+    if (memcmp(hdr8, SP_TAG_SQOI, SP_TAG_LEN) == 0) {
+        if (type) {
+            *type = SP_IMAGE_TYPE_QOI;
         }
         return true;
     }
     if (memcmp(hdr8, SP_TAG_SJPG, SP_TAG_LEN) == 0) {
-        if (is_sjpg) {
-            *is_sjpg = true;
+        if (type) {
+            *type = SP_IMAGE_TYPE_JPG;
         }
         return true;
     }

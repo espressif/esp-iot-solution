@@ -11,6 +11,11 @@ dependencies:
     override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
     public: true
 
+  espressif/esp_lv_decoder:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lv_decoder"
+    public: true
+
   example_lvgl_init:
     version: "*"
     override_path: "../../common/example_lvgl_init"

@@ -10,6 +10,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include "driver/gpio.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -47,25 +48,53 @@ typedef struct {
 
 #if LVGL_VERSION_MAJOR >= 9
 
+#define TOUCH_CTX_MAGIC                  UINT32_C(0x54435458)
+#define TOUCH_SLOT_MAGIC                 UINT32_C(0x54534C54)
+#define MAX_MULTI_TOUCH_CONTROL_POINTS_V9 CONFIG_ESP_LCD_TOUCH_MAX_POINTS
+
 #if LV_USE_GESTURE_RECOGNITION
 #define MAX_TOUCH_POINTS_V9     CONFIG_ESP_LCD_TOUCH_MAX_POINTS
 #else
 #define MAX_TOUCH_POINTS_V9     1
 #endif
 
+typedef struct esp_lv_adapter_touch_ctx esp_lv_adapter_touch_ctx_t;
+
+typedef struct {
+    uint32_t magic;
+    esp_lv_adapter_touch_ctx_t *touch_ctx;
+    lv_indev_t *indev;
+    uint8_t slot_index;
+    uint8_t track_id;
+    bool track_assigned;
+    bool release_pending;
+    lv_point_t last_point;
+    lv_indev_state_t last_state;
+    uint32_t last_generation_seen;
+} esp_lv_adapter_touch_slot_ctx_t;
+
 /**
  * @brief Touch device context for LVGL v9
  */
-typedef struct {
+struct esp_lv_adapter_touch_ctx {
+    uint32_t magic;
     esp_lcd_touch_handle_t handle;      /*!< Touch device handle */
-    lv_indev_t *indev;                  /*!< LVGL input device */
+    lv_indev_t *indev;                  /*!< Primary LVGL input device */
     struct {
         float x;                        /*!< X-axis scale factor */
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
+    bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
+    struct {
+        bool enabled;
+        uint8_t slot_count;
+        uint32_t snapshot_generation;
+        esp_lv_adapter_touch_slot_ctx_t slots[ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS];
+    } multi;
     lv_point_t last_point;              /*!< Last touch point coordinates */
     lv_indev_state_t last_state;        /*!< Last touch state */
     esp_lv_adapter_touch_callbacks_t cbs; /*!< User event callbacks */
@@ -78,11 +107,27 @@ typedef struct {
     bool primary_valid;                             /*!< Whether primary track is valid */
     uint8_t primary_hw_track_id;                    /*!< Primary HW track used for pointer event */
 #endif
-} esp_lv_adapter_touch_ctx_t;
+};
 
 /* Forward declarations */
 static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data);
+static void lvgl_multi_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data);
 static void lvgl_touch_isr(esp_lcd_touch_handle_t tp);
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static bool validate_touch_config(const esp_lv_adapter_touch_config_t *config);
+static bool touch_multi_control_mode_enabled(const esp_lv_adapter_touch_config_t *config);
+static uint8_t touch_multi_pointer_limit(void);
+static uint8_t touch_multi_pointer_count(const esp_lv_adapter_touch_config_t *config);
+static esp_err_t register_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ctx, lv_display_t *disp);
+static esp_err_t cleanup_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static void cleanup_multi_touch_slots_locked(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static void multi_touch_refresh_snapshot(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static void multi_touch_mark_all_released(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static int find_slot_by_track_id(const esp_lv_adapter_touch_ctx_t *touch_ctx, uint8_t track_id);
+static int find_free_slot(const esp_lv_adapter_touch_ctx_t *touch_ctx);
+static esp_lv_adapter_touch_slot_ctx_t *get_slot_ctx_from_indev(lv_indev_t *touch);
+static esp_lv_adapter_touch_ctx_t *get_touch_ctx_from_indev(lv_indev_t *touch);
 #if LV_USE_GESTURE_RECOGNITION
 static bool contains_id(const uint8_t *ids, uint8_t count, uint8_t id);
 static bool is_valid_lv_id(uint8_t id);
@@ -117,6 +162,9 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         ESP_LOGE(TAG, "Invalid configuration parameters");
         return NULL;
     }
+    if (!validate_touch_config(config)) {
+        return NULL;
+    }
 
     /* Allocate touch context */
     esp_lv_adapter_touch_ctx_t *touch_ctx = calloc(1, sizeof(esp_lv_adapter_touch_ctx_t));
@@ -126,15 +174,23 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     }
 
     /* Initialize basic context */
+    touch_ctx->magic = TOUCH_CTX_MAGIC;
     touch_ctx->handle = config->handle;
     touch_ctx->scale.x = config->scale.x ? config->scale.x : DEFAULT_SCALE_FACTOR;
     touch_ctx->scale.y = config->scale.y ? config->scale.y : DEFAULT_SCALE_FACTOR;
+    touch_ctx->multi.enabled = touch_multi_control_mode_enabled(config);
     touch_ctx->last_point.x = 0;
     touch_ctx->last_point.y = 0;
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    touch_ctx->idf_interrupt_callback_registration_enabled =
+        (adapter_ctx == NULL) || adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled;
+    touch_ctx->idf_interrupt_callback_registered = false;
     touch_ctx->cbs = config->callbacks;
+    touch_ctx->multi.slot_count = touch_ctx->multi.enabled ? touch_multi_pointer_count(config) : 1;
+    touch_ctx->multi.snapshot_generation = 0;
 #if LV_USE_GESTURE_RECOGNITION
     touch_ctx->prev_count = 0;
     touch_ctx->next_lv_id = 0;
@@ -174,11 +230,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         touch_ctx->isr_ctx->touch_ctx = touch_ctx;
         touch_ctx->isr_ctx->unregistering = false;
 
-        esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
-                            touch_ctx->handle,
-                            lvgl_touch_isr,
-                            touch_ctx->isr_ctx
-                        );
+        esp_err_t err = register_idf_interrupt_callback(touch_ctx);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register interrupt callback: 0x%x", err);
             free(touch_ctx->isr_ctx);
@@ -188,6 +240,18 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         }
 
         ESP_LOGD(TAG, "Touch interrupt mode enabled on GPIO %d", touch_ctx->handle->config.int_gpio_num);
+    }
+
+    if (touch_ctx->multi.enabled) {
+        esp_err_t ret = register_multi_touch_slots(touch_ctx, config->disp);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to register multi-touch control slots: %s", esp_err_to_name(ret));
+            goto cleanup_on_error;
+        }
+        touch_ctx->indev = touch_ctx->multi.slots[0].indev;
+        ESP_LOGI(TAG, "Touch input device registered successfully (mode: multi-control, pointers: %u, IRQ mode: %s)",
+                 touch_ctx->multi.slot_count, with_irq ? "enabled" : "disabled");
+        return touch_ctx->indev;
     }
 
     if (esp_lv_adapter_lock((uint32_t) -1) != ESP_OK) {
@@ -220,26 +284,43 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
 
     /* Associate with display for sleep mgmt */
     esp_lv_adapter_display_node_t *display_node = display_manager_get_node(config->disp);
-    if (display_node && display_node->sleep.input_count < 8) {
-        display_node->sleep.associated_inputs[display_node->sleep.input_count++] = indev;
+    if (display_node) {
+        if (display_node->sleep.input_count >= ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS) {
+            ESP_LOGW(TAG, "Display input slot table is full; touch sleep management is disabled");
+        } else {
+            display_node->sleep.associated_inputs[display_node->sleep.input_count++] = indev;
+        }
     }
 
     ESP_LOGI(TAG, "Touch input device registered successfully (IRQ mode: %s)", with_irq ? "enabled" : "disabled");
     return indev;
 
 cleanup_on_error:
-    if (with_irq) {
+    bool multi_cleanup_ok = true;
+    if (touch_ctx->multi.enabled) {
+        esp_err_t cleanup_ret = cleanup_multi_touch_slots(touch_ctx);
+        if (cleanup_ret != ESP_OK) {
+            multi_cleanup_ok = false;
+            ESP_LOGE(TAG, "Failed to clean up multi-touch slots after register error: %s",
+                     esp_err_to_name(cleanup_ret));
+        }
+    }
+    if (multi_cleanup_ok && with_irq) {
         if (touch_ctx->isr_ctx) {
             /* Restore original user_data before cleanup */
             touch_ctx->handle->config.user_data = touch_ctx->isr_ctx->original_user_data;
-            esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+            (void)unregister_idf_interrupt_callback(touch_ctx);
             free(touch_ctx->isr_ctx);
         }
         if (touch_ctx->touch_sem) {
             vSemaphoreDelete(touch_ctx->touch_sem);
         }
     }
-    free(touch_ctx);
+    if (multi_cleanup_ok) {
+        free(touch_ctx);
+    } else {
+        ESP_LOGE(TAG, "Leaking touch IRQ resources to avoid dangling multi-touch slot references");
+    }
     return NULL;
 }
 
@@ -247,17 +328,12 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
 {
     ESP_RETURN_ON_FALSE(touch, ESP_ERR_INVALID_ARG, TAG, "Touch input handle cannot be NULL");
 
-    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)lv_indev_get_driver_data(touch);
+    esp_lv_adapter_touch_slot_ctx_t *slot_ctx = get_slot_ctx_from_indev(touch);
+    esp_lv_adapter_touch_ctx_t *touch_ctx = slot_ctx ? slot_ctx->touch_ctx : get_touch_ctx_from_indev(touch);
     ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
 
     if (touch_ctx->with_irq) {
-        if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
-            gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
-            ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
-        }
-
-        esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
-        ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+        (void)unregister_idf_interrupt_callback(touch_ctx);
 
         if (touch_ctx->isr_ctx) {
             touch_ctx->isr_ctx->unregistering = true;
@@ -266,14 +342,19 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    esp_lv_adapter_unregister_input_device(touch);
+    if (touch_ctx->multi.enabled) {
+        esp_err_t ret = cleanup_multi_touch_slots(touch_ctx);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to clean up multi-touch slots: %s", esp_err_to_name(ret));
+    } else {
+        esp_lv_adapter_unregister_input_device(touch);
 
-    /* Step 5: Acquire LVGL lock and delete input device */
-    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock: 0x%x", ret);
+        /* Step 5: Acquire LVGL lock and delete input device */
+        esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock: 0x%x", ret);
 
-    lv_indev_delete(touch);
-    esp_lv_adapter_unlock();
+        lv_indev_delete(touch);
+        esp_lv_adapter_unlock();
+    }
 
     if (touch_ctx->with_irq) {
         if (touch_ctx->isr_ctx) {
@@ -292,6 +373,35 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
 
     ESP_LOGI(TAG, "Touch input device unregistered successfully");
     return ESP_OK;
+}
+
+static void lvgl_multi_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
+{
+    esp_lv_adapter_touch_slot_ctx_t *slot_ctx = (esp_lv_adapter_touch_slot_ctx_t *)lv_indev_get_driver_data(indev_drv);
+    if (!slot_ctx || slot_ctx->magic != TOUCH_SLOT_MAGIC || !slot_ctx->touch_ctx) {
+        data->point.x = 0;
+        data->point.y = 0;
+        data->state = LV_INDEV_STATE_RELEASED;
+        return;
+    }
+
+    esp_lv_adapter_touch_ctx_t *touch_ctx = slot_ctx->touch_ctx;
+
+    if (touch_ctx->multi.snapshot_generation == 0 ||
+            slot_ctx->last_generation_seen == touch_ctx->multi.snapshot_generation) {
+        if (!touch_ctx->with_irq || xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE ||
+                touch_ctx->multi.snapshot_generation == 0) {
+            multi_touch_refresh_snapshot(touch_ctx);
+        }
+    }
+
+    slot_ctx->last_generation_seen = touch_ctx->multi.snapshot_generation;
+    data->point = slot_ctx->last_point;
+    data->state = slot_ctx->last_state;
+
+    if (slot_ctx->release_pending && slot_ctx->last_state == LV_INDEV_STATE_RELEASED) {
+        slot_ctx->release_pending = false;
+    }
 }
 
 static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
@@ -383,6 +493,247 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
     data->point.x = touch_ctx->last_point.x;
     data->point.y = touch_ctx->last_point.y;
     data->state = touch_ctx->last_state;
+}
+
+static bool validate_touch_config(const esp_lv_adapter_touch_config_t *config)
+{
+    uint8_t pointer_limit = touch_multi_pointer_limit();
+
+    switch (config->multi_touch.mode) {
+    case ESP_LV_ADAPTER_TOUCH_MODE_SINGLE:
+        if (config->multi_touch.pointers > 1) {
+            ESP_LOGW(TAG, "multi_touch.pointers=%u is ignored in single-touch mode",
+                     config->multi_touch.pointers);
+        }
+        return true;
+    case ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL:
+        if (config->multi_touch.pointers < 2) {
+            ESP_LOGE(TAG, "multi_touch.pointers must be >= 2 in multi-control mode");
+            return false;
+        }
+        if (config->multi_touch.pointers > pointer_limit) {
+            ESP_LOGE(TAG, "multi_touch.pointers=%u exceeds adapter limit %u",
+                     config->multi_touch.pointers, pointer_limit);
+            return false;
+        }
+        return true;
+    default:
+        ESP_LOGE(TAG, "Unsupported touch mode: %d", (int)config->multi_touch.mode);
+        return false;
+    }
+}
+
+static bool touch_multi_control_mode_enabled(const esp_lv_adapter_touch_config_t *config)
+{
+    return config->multi_touch.mode == ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL;
+}
+
+static uint8_t touch_multi_pointer_limit(void)
+{
+    uint8_t limit = MAX_MULTI_TOUCH_CONTROL_POINTS_V9;
+    if (limit > ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS) {
+        limit = ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS;
+    }
+    return limit;
+}
+
+static uint8_t touch_multi_pointer_count(const esp_lv_adapter_touch_config_t *config)
+{
+    return touch_multi_control_mode_enabled(config) ? config->multi_touch.pointers : 1;
+}
+
+static esp_err_t register_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ctx, lv_display_t *disp)
+{
+    esp_lv_adapter_display_node_t *display_node = display_manager_get_node(disp);
+    if (display_node &&
+            display_node->sleep.input_count + touch_ctx->multi.slot_count > ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS) {
+        ESP_LOGE(TAG, "Not enough display input slots for %u virtual pointers",
+                 touch_ctx->multi.slot_count);
+        return ESP_ERR_NO_MEM;
+    }
+
+    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock");
+
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        slot_ctx->magic = TOUCH_SLOT_MAGIC;
+        slot_ctx->touch_ctx = touch_ctx;
+        slot_ctx->slot_index = i;
+        slot_ctx->last_state = LV_INDEV_STATE_RELEASED;
+
+        lv_indev_t *indev = lv_indev_create();
+        if (!indev) {
+            cleanup_multi_touch_slots_locked(touch_ctx);
+            esp_lv_adapter_unlock();
+            return ESP_ERR_NO_MEM;
+        }
+
+        lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);
+        lv_indev_set_read_cb(indev, lvgl_multi_touch_read);
+        lv_indev_set_disp(indev, disp);
+        lv_indev_set_driver_data(indev, slot_ctx);
+        slot_ctx->indev = indev;
+    }
+    esp_lv_adapter_unlock();
+
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        ret = esp_lv_adapter_register_input_device(slot_ctx->indev, ESP_LV_ADAPTER_INPUT_TYPE_TOUCH, touch_ctx);
+        if (ret != ESP_OK) {
+            esp_err_t cleanup_ret = cleanup_multi_touch_slots(touch_ctx);
+            return cleanup_ret == ESP_OK ? ret : cleanup_ret;
+        }
+
+        if (display_node) {
+            display_node->sleep.associated_inputs[display_node->sleep.input_count++] = slot_ctx->indev;
+        }
+    }
+
+    return ESP_OK;
+}
+
+static esp_err_t cleanup_multi_touch_slots(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    if (!touch_ctx || !touch_ctx->multi.enabled) {
+        return ESP_OK;
+    }
+
+    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to acquire LVGL lock during multi-touch cleanup: %s",
+                 esp_err_to_name(ret));
+        return ret;
+    }
+    cleanup_multi_touch_slots_locked(touch_ctx);
+    esp_lv_adapter_unlock();
+    return ESP_OK;
+}
+
+static void cleanup_multi_touch_slots_locked(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        if (!slot_ctx->indev) {
+            continue;
+        }
+
+        esp_lv_adapter_unregister_input_device(slot_ctx->indev);
+        lv_indev_delete(slot_ctx->indev);
+        slot_ctx->indev = NULL;
+        slot_ctx->track_assigned = false;
+        slot_ctx->release_pending = false;
+    }
+}
+
+static void multi_touch_refresh_snapshot(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    esp_lcd_touch_point_data_t touch_data[MAX_MULTI_TOUCH_CONTROL_POINTS_V9] = {0};
+    uint8_t count = 0;
+
+    esp_err_t ret;
+    if (touch_ctx->cbs.custom_touch_read) {
+        ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
+                                               MAX_MULTI_TOUCH_CONTROL_POINTS_V9, touch_ctx->cbs.user_ctx);
+    } else {
+        esp_lcd_touch_read_data(touch_ctx->handle);
+        ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_MULTI_TOUCH_CONTROL_POINTS_V9);
+    }
+
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Multi-touch snapshot refresh failed: %s", esp_err_to_name(ret));
+        multi_touch_mark_all_released(touch_ctx);
+        touch_ctx->multi.snapshot_generation++;
+        return;
+    }
+
+    bool slot_seen[ESP_LV_ADAPTER_MAX_DISPLAY_INPUTS] = {0};
+    uint8_t curr_count = count > MAX_MULTI_TOUCH_CONTROL_POINTS_V9 ? MAX_MULTI_TOUCH_CONTROL_POINTS_V9 : count;
+
+    for (uint8_t i = 0; i < curr_count; i++) {
+        int slot_index = find_slot_by_track_id(touch_ctx, touch_data[i].track_id);
+        if (slot_index < 0) {
+            slot_index = find_free_slot(touch_ctx);
+        }
+        if (slot_index < 0) {
+            ESP_LOGW(TAG, "No free virtual touch slot for track %u", touch_data[i].track_id);
+            continue;
+        }
+
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[slot_index];
+        slot_ctx->track_id = touch_data[i].track_id;
+        slot_ctx->track_assigned = true;
+        slot_ctx->release_pending = false;
+        slot_ctx->last_point.x = (lv_coord_t)(touch_ctx->scale.x * touch_data[i].x);
+        slot_ctx->last_point.y = (lv_coord_t)(touch_ctx->scale.y * touch_data[i].y);
+        slot_ctx->last_state = LV_INDEV_STATE_PRESSED;
+        slot_seen[slot_index] = true;
+    }
+
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        if (slot_ctx->track_assigned && !slot_seen[i]) {
+            slot_ctx->track_assigned = false;
+            slot_ctx->release_pending = true;
+            slot_ctx->last_state = LV_INDEV_STATE_RELEASED;
+        }
+    }
+
+    touch_ctx->multi.snapshot_generation++;
+}
+
+static void multi_touch_mark_all_released(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        if (slot_ctx->track_assigned || slot_ctx->last_state == LV_INDEV_STATE_PRESSED) {
+            slot_ctx->track_assigned = false;
+            slot_ctx->release_pending = true;
+            slot_ctx->last_state = LV_INDEV_STATE_RELEASED;
+        }
+    }
+}
+
+static int find_slot_by_track_id(const esp_lv_adapter_touch_ctx_t *touch_ctx, uint8_t track_id)
+{
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        const esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        if (slot_ctx->track_assigned && slot_ctx->track_id == track_id) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static int find_free_slot(const esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        const esp_lv_adapter_touch_slot_ctx_t *slot_ctx = &touch_ctx->multi.slots[i];
+        if (!slot_ctx->track_assigned && !slot_ctx->release_pending) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+static esp_lv_adapter_touch_slot_ctx_t *get_slot_ctx_from_indev(lv_indev_t *touch)
+{
+    void *driver_data = lv_indev_get_driver_data(touch);
+    esp_lv_adapter_touch_slot_ctx_t *slot_ctx = (esp_lv_adapter_touch_slot_ctx_t *)driver_data;
+    if (slot_ctx && slot_ctx->magic == TOUCH_SLOT_MAGIC) {
+        return slot_ctx;
+    }
+    return NULL;
+}
+
+static esp_lv_adapter_touch_ctx_t *get_touch_ctx_from_indev(lv_indev_t *touch)
+{
+    void *driver_data = lv_indev_get_driver_data(touch);
+    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)driver_data;
+    if (touch_ctx && touch_ctx->magic == TOUCH_CTX_MAGIC) {
+        return touch_ctx;
+    }
+    return NULL;
 }
 
 /**
@@ -574,6 +925,8 @@ typedef struct {
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
+    bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
     esp_lv_adapter_touch_isr_ctx_t *isr_ctx;  /*!< ISR context wrapper to protect user_data */
     lv_point_t last_point;              /*!< Last touch point coordinates */
@@ -584,6 +937,8 @@ typedef struct {
 /* Forward declarations */
 static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data);
 static void lvgl_touch_isr(esp_lcd_touch_handle_t tp);
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx);
 
 lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *config)
 {
@@ -609,7 +964,21 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
     touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
     touch_ctx->touch_sem = NULL;
     touch_ctx->isr_ctx = NULL;
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    touch_ctx->idf_interrupt_callback_registration_enabled =
+        (adapter_ctx == NULL) || adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled;
+    touch_ctx->idf_interrupt_callback_registered = false;
     touch_ctx->cbs = config->callbacks;
+
+    if (config->multi_touch.mode == ESP_LV_ADAPTER_TOUCH_MODE_MULTI_CONTROL) {
+        ESP_LOGE(TAG, "Multi-touch control mode requires LVGL v9");
+        free(touch_ctx);
+        return NULL;
+    }
+    if (config->multi_touch.pointers > 1) {
+        ESP_LOGW(TAG, "multi_touch.pointers=%u is ignored in single-touch mode",
+                 config->multi_touch.pointers);
+    }
 
     bool with_irq = touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC;
     touch_ctx->with_irq = with_irq;
@@ -636,11 +1005,7 @@ lv_indev_t *esp_lv_adapter_register_touch(const esp_lv_adapter_touch_config_t *c
         touch_ctx->isr_ctx->touch_ctx = touch_ctx;
         touch_ctx->isr_ctx->unregistering = false;
 
-        esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
-                            touch_ctx->handle,
-                            lvgl_touch_isr,
-                            touch_ctx->isr_ctx
-                        );
+        esp_err_t err = register_idf_interrupt_callback(touch_ctx);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "Failed to register interrupt callback: 0x%x", err);
             free(touch_ctx->isr_ctx);
@@ -689,7 +1054,7 @@ cleanup_on_error:
         if (touch_ctx->isr_ctx) {
             /* Restore original user_data before cleanup */
             touch_ctx->handle->config.user_data = touch_ctx->isr_ctx->original_user_data;
-            esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+            (void)unregister_idf_interrupt_callback(touch_ctx);
             free(touch_ctx->isr_ctx);
         }
         if (touch_ctx->touch_sem) {
@@ -711,13 +1076,7 @@ esp_err_t esp_lv_adapter_unregister_touch(lv_indev_t *touch)
     ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch context is NULL");
 
     if (touch_ctx->with_irq) {
-        if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
-            gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
-            ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
-        }
-
-        esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
-        ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+        (void)unregister_idf_interrupt_callback(touch_ctx);
 
         if (touch_ctx->isr_ctx) {
             touch_ctx->isr_ctx->unregistering = true;
@@ -829,13 +1188,104 @@ static void IRAM_ATTR lvgl_touch_isr(esp_lcd_touch_handle_t tp)
 
 #endif /* LVGL_VERSION_MAJOR >= 9 */
 
+static IRAM_ATTR esp_lv_adapter_touch_ctx_t *get_touch_ctx(lv_indev_t *touch)
+{
+    if (!touch) {
+        return NULL;
+    }
+
+#if LVGL_VERSION_MAJOR >= 9
+    esp_lv_adapter_touch_slot_ctx_t *slot_ctx = get_slot_ctx_from_indev(touch);
+    if (slot_ctx) {
+        return slot_ctx->touch_ctx;
+    }
+    return get_touch_ctx_from_indev(touch);
+#else
+    lv_indev_drv_t *drv = touch->driver;
+    if (!drv) {
+        return NULL;
+    }
+    return (esp_lv_adapter_touch_ctx_t *)drv->user_data;
+#endif
+}
+
+static esp_err_t register_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_ARG, TAG, "Touch context is NULL");
+    if (!touch_ctx->with_irq || !touch_ctx->idf_interrupt_callback_registration_enabled ||
+            touch_ctx->idf_interrupt_callback_registered) {
+        return ESP_OK;
+    }
+    ESP_RETURN_ON_FALSE(touch_ctx->handle, ESP_ERR_INVALID_STATE, TAG, "Touch handle is NULL");
+    ESP_RETURN_ON_FALSE(touch_ctx->isr_ctx, ESP_ERR_INVALID_STATE, TAG, "Touch ISR context is NULL");
+
+    esp_err_t err = esp_lcd_touch_register_interrupt_callback_with_data(
+                        touch_ctx->handle,
+                        lvgl_touch_isr,
+                        touch_ctx->isr_ctx
+                    );
+    ESP_RETURN_ON_ERROR(err, TAG, "Failed to register touch interrupt callback: 0x%x", err);
+    touch_ctx->idf_interrupt_callback_registered = true;
+    ESP_LOGD(TAG, "Registered touch interrupt callback");
+    return ESP_OK;
+}
+
+static esp_err_t unregister_idf_interrupt_callback(esp_lv_adapter_touch_ctx_t *touch_ctx)
+{
+    ESP_RETURN_ON_FALSE(touch_ctx, ESP_ERR_INVALID_ARG, TAG, "Touch context is NULL");
+    if (!touch_ctx->with_irq || !touch_ctx->idf_interrupt_callback_registered) {
+        return ESP_OK;
+    }
+    ESP_RETURN_ON_FALSE(touch_ctx->handle, ESP_ERR_INVALID_STATE, TAG, "Touch handle is NULL");
+
+    if (touch_ctx->handle->config.int_gpio_num != GPIO_NUM_NC) {
+        gpio_intr_disable(touch_ctx->handle->config.int_gpio_num);
+        ESP_LOGD(TAG, "Disabled GPIO interrupt on pin %d", touch_ctx->handle->config.int_gpio_num);
+    }
+    esp_err_t err = esp_lcd_touch_register_interrupt_callback(touch_ctx->handle, NULL);
+    ESP_RETURN_ON_ERROR(err, TAG, "Failed to unregister touch interrupt callback: 0x%x", err);
+    touch_ctx->idf_interrupt_callback_registered = false;
+    ESP_LOGD(TAG, "Unregistered touch interrupt callback");
+    return ESP_OK;
+}
+
+esp_err_t esp_lv_adapter_touch_set_default_idf_interrupt_callback_registration_enabled(bool enable)
+{
+    esp_lv_adapter_context_t *adapter_ctx = esp_lv_adapter_get_context();
+    ESP_RETURN_ON_FALSE(adapter_ctx && adapter_ctx->inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    adapter_ctx->default_touch_idf_interrupt_callback_registration_enabled = enable;
+    return ESP_OK;
+}
+
+bool esp_lv_adapter_touch_notify_interrupt(lv_indev_t *touch)
+{
+    esp_lv_adapter_touch_ctx_t *touch_ctx = get_touch_ctx(touch);
+    if (!touch_ctx || !touch_ctx->with_irq || !touch_ctx->touch_sem) {
+        return false;
+    }
+    return xSemaphoreGive(touch_ctx->touch_sem) == pdTRUE;
+}
+
+bool IRAM_ATTR esp_lv_adapter_touch_notify_interrupt_from_isr(lv_indev_t *touch)
+{
+    esp_lv_adapter_touch_ctx_t *touch_ctx = get_touch_ctx(touch);
+    if (!touch_ctx || !touch_ctx->with_irq || !touch_ctx->touch_sem) {
+        return false;
+    }
+
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xSemaphoreGiveFromISR(touch_ctx->touch_sem, &xHigherPriorityTaskWoken);
+    return xHigherPriorityTaskWoken == pdTRUE;
+}
+
 esp_err_t esp_lv_adapter_set_touch_callbacks(lv_indev_t *touch,
                                              const esp_lv_adapter_touch_callbacks_t *cbs)
 {
     ESP_RETURN_ON_FALSE(touch, ESP_ERR_INVALID_ARG, TAG, "Touch handle cannot be NULL");
 
 #if LVGL_VERSION_MAJOR >= 9
-    esp_lv_adapter_touch_ctx_t *touch_ctx = (esp_lv_adapter_touch_ctx_t *)lv_indev_get_driver_data(touch);
+    esp_lv_adapter_touch_slot_ctx_t *slot_ctx = get_slot_ctx_from_indev(touch);
+    esp_lv_adapter_touch_ctx_t *touch_ctx = slot_ctx ? slot_ctx->touch_ctx : get_touch_ctx_from_indev(touch);
 #else
     lv_indev_drv_t *drv = touch->driver;
     ESP_RETURN_ON_FALSE(drv, ESP_ERR_INVALID_STATE, TAG, "Touch driver not initialized");
