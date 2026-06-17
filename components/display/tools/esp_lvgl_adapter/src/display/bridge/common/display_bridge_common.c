@@ -16,7 +16,11 @@
 
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
 #include "esp_efuse.h"
+#else
+#include "esp_flash_encrypt.h"
+#endif
 #include "esp_heap_caps.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
@@ -45,7 +49,11 @@ bool display_bridge_flash_encryption_active(void)
 {
     static int s_state = -1;
     if (s_state < 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
         s_state = esp_efuse_is_flash_encryption_enabled() ? 1 : 0;
+#else
+        s_state = esp_flash_encryption_enabled() ? 1 : 0;
+#endif
     }
     return s_state == 1;
 }
