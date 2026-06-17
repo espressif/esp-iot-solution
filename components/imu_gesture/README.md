@@ -37,7 +37,6 @@ The component boundary is intentionally narrow.
 - `include/`: public headers
 - `private_include/`: internal private headers
 - `src/`: detector implementations and shared detector runtime
-- `test/`: component test sources
 
 ## Public Headers
 

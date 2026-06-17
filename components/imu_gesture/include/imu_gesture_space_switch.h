@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include <stddef.h>
 #include <stdint.h>
 
 #include "imu_gesture_types.h"
@@ -38,7 +37,7 @@ typedef struct imu_gesture_space_switch_config_t {
     float release_dps;                  /*!< Release threshold in deg/s */
     float axis_ratio_limit;             /*!< Maximum allowed ratio between non-primary and primary axes */
     uint32_t cooldown_ms;               /*!< Cooldown interval after one switch event, in milliseconds */
-    size_t sample_queue_len;            /*!< Internal detector sample queue length, 0 disables queue allocation */
+    uint32_t sample_queue_len;          /*!< Internal detector sample queue length (must be > 0) */
 } imu_gesture_space_switch_config_t;
 
 #define IMU_GESTURE_SPACE_SWITCH_DEFAULT_CONFIG() { \

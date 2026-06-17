@@ -100,14 +100,17 @@ static bool imu_gesture_is_knob_config_valid(
         return false;
     }
 
-    if (config->axis_ratio_limit < 0.0f ||
-            config->non_axis_reject_dps < 0.0f) {
+    if (!isfinite(config->axis_ratio_limit) ||
+            !isfinite(config->non_axis_reject_dps) ||
+            config->axis_ratio_limit < 0.0f ||
+            config->non_axis_reject_dps < 0.0f ||
+            config->sample_queue_len == 0) {
         return false;
     }
 
-    if (!isfinite(config->trigger_angle_deg) ||
-            !isfinite(config->enter_dps) ||
-            !isfinite(config->stable_dps)) {
+    if (!isfinite(config->trigger_angle_deg) || config->trigger_angle_deg <= 0.0f ||
+            !isfinite(config->enter_dps) || config->enter_dps <= 0.0f ||
+            !isfinite(config->stable_dps) || config->stable_dps < 0.0f) {
         return false;
     }
 

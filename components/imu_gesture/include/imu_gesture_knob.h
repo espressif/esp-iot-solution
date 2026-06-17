@@ -5,7 +5,6 @@
  */
 #pragma once
 
-#include <stddef.h>
 #include <stdint.h>
 
 #include "imu_gesture_types.h"
@@ -44,7 +43,7 @@ typedef struct imu_gesture_knob_config_t {
     float non_axis_reject_dps;     /*!< Reject threshold for non-primary gyro axes in deg/s */
     uint32_t candidate_timeout_ms; /*!< Candidate timeout in milliseconds */
     uint32_t repeat_ms;            /*!< Repeat interval while holding the knob gesture, in milliseconds */
-    size_t sample_queue_len;       /*!< Internal detector sample queue length, 0 disables queue allocation */
+    uint32_t sample_queue_len;       /*!< Internal detector sample queue length (must be > 0) */
 } imu_gesture_knob_config_t;
 
 #define IMU_GESTURE_KNOB_DEFAULT_CONFIG() { \
