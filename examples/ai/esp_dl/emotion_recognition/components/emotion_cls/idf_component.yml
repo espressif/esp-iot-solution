@@ -1,6 +1,7 @@
 version: "0.1.0"
 targets:
   - esp32p4
+  - esp32s31
 description: emotion classification model
 dependencies:
   espressif/esp-dl: "3.3.3"

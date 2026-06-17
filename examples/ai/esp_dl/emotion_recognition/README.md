@@ -1,6 +1,9 @@
+| Supported Targets | ESP32-P4 | ESP32-S31 |
+| ----------------- | -------- | --------- |
+
 # Emotion Recognition Based on ESP-DL
 
-This demo deploys a 7-class facial emotion classifier on ESP32-P4. The device streams from a MIPI-CSI camera, runs inference on the captured frame, and displays the predicted emotion on the LCD. The model is trained in PyTorch on a PC, quantized with ESP-PPQ (mixed INT8 / INT16), and the resulting `.espdl` file is flashed into the chip.
+This demo deploys a 7-class facial emotion classifier on ESP32-P4 and ESP32-S31 (both reuse the same ESP32-P4 model). The device streams from a camera, runs inference on the captured frame, and displays the predicted emotion on the LCD. The model is trained in PyTorch on a PC, quantized with ESP-PPQ (mixed INT8 / INT16), and the resulting `.espdl` file is flashed into the chip.
 
 ## Model
 
@@ -14,7 +17,7 @@ This demo deploys a 7-class facial emotion classifier on ESP32-P4. The device st
 | Input | 112 × 112 RGB |
 | Normalization | ImageNet: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225] |
 | Quantization | Mixed precision (INT8 base, sensitive layers in INT16) |
-| Target chip | ESP32-P4 |
+| Target chip | ESP32-P4 (reused on ESP32-S31) |
 
 ## Class labels
 
@@ -62,29 +65,18 @@ Evaluated on RAF-DB with the training-time image augmentation disabled. "Train (
 
 ### ESP-IDF Required
 
-- This example supports ESP-IDF release/v5.5.
+- On ESP32-P4 this example supports ESP-IDF release/v5.5 and later.
+- On ESP32-S31 this example requires the ESP-IDF master branch, configured as a preview target with `idf.py --preview set-target esp32s31`.
 - Please follow the [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/get-started/index.html) to set up the development environment. **We highly recommend** you [Build Your First Project](https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/get-started/index.html#build-your-first-project) to get familiar with ESP-IDF and make sure the environment is set up correctly.
 
 ### Hardware Required
 
-* An ESP32-P4-Function-EV-Board.
-* A 7-inch 1024 x 600 LCD screen powered by the [EK79007](https://dl.espressif.com/dl/schematics/display_driver_chip_EK79007AD_datasheet.pdf) IC, accompanied by a 32-pin FPC connection [adapter board](https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-lcd-subboard-schematics.pdf) ([LCD Specifications](https://dl.espressif.com/dl/schematics/display_datasheet.pdf)).
-* A MIPI-CSI camera powered by the SC2336 IC, accompanied by a 32-pin FPC connection [adapter board](https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-camera-subboard-schematics.pdf) ([Camera Specifications](https://dl.espressif.com/dl/schematics/camera_datasheet.pdf)).
-* A USB-C cable for power supply and programming.
-* Please refer to the following steps for the connection:
-    * **Step 1**. According to the table below, connect the pins on the back of the screen adapter board to the corresponding pins on the development board.
+This example runs on either of the following boards:
 
-        | Screen Adapter Board | ESP32-P4-Function-EV-Board |
-        | -------------------- | -------------------------- |
-        | 5V (any one)         | 5V (any one)               |
-        | GND (any one)        | GND (any one)              |
-        | PWM                  | GPIO26                     |
-        | LCD_RST              | GPIO27                     |
+* **ESP32-S31-Korvo** — integrates a DVP camera, an 800 x 480 RGB LCD and a GT1151 touch panel.
+* **ESP32-P4-Function-EV-Board** — paired with a MIPI-CSI camera (SC2336) and a 1024 x 600 MIPI-DSI LCD (EK79007).
 
-    * **Step 2**. Connect the FPC of LCD through the `MIPI_DSI` interface.
-    * **Step 3**. Connect the FPC of Camera through the `MIPI_CSI` interface (SC2336).
-    * **Step 4**. Use a USB-C cable to connect the `USB-UART` port to a PC (Used for power supply and viewing serial output).
-    * **Step 5**. Turn on the power switch of the board.
+Attach the camera and LCD to the board, then connect the `USB-UART` port to a PC with a USB-C cable for power and serial output.
 
 ### Build and flash
 

@@ -1,10 +1,18 @@
-version: 0.1.0
+version: 0.2.0
 targets:
+  - esp32s31
   - esp32p4
 dependencies:
   idf: '>=5.5'
   imagenet_cls:
     override_path: ../components/imagenet_cls
-  espressif/esp32_p4_function_ev_board: "5.0.3"
   lvgl/lvgl: "9.4.0"
-  espressif/esp_video: "2.0.1"
+  # esp_video (camera) is pulled in by whichever board is selected below.
+  esp32_p4_function_ev_board:
+    override_path: ../../common_components/esp32_p4_function_ev_board
+    rules:
+      - if: "target == esp32p4"
+  esp32_s31_korvo:
+    override_path: ../../common_components/esp32_s31_korvo
+    rules:
+      - if: "target == esp32s31"

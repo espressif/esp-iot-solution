@@ -4,53 +4,63 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "app_lcd.hpp"
-#include "esp_lcd_mipi_dsi.h"
 #include "ui.h"
+
+/* Re-flow the SquareLine layout (authored for 1024x600) to the actual panel
+ * resolution: camera preview on the left, controls in a column on the right. */
+static void app_ui_layout(void)
+{
+    lv_display_t *disp = lv_display_get_default();
+    const int32_t scr_w = lv_display_get_horizontal_resolution(disp);
+
+    const int32_t cam_w = 640;
+    const int32_t cam_h = 480;
+
+    /* Camera preview: left edge, vertically centered. */
+    lv_obj_set_size(ui_CamImage, cam_w, cam_h);
+    lv_obj_set_align(ui_CamImage, LV_ALIGN_LEFT_MID);
+    lv_obj_set_pos(ui_CamImage, 0, 0);
+
+    /* Control column to the right of the preview. */
+    const int32_t gap = 8;
+    const int32_t col_x = cam_w + gap;
+    int32_t ctrl_w = scr_w - col_x - gap;
+    if (ctrl_w < 120) {
+        ctrl_w = 120;
+    } else if (ctrl_w > 200) {
+        ctrl_w = 200;
+    }
+    const int32_t ctrl_h = 80;
+    const int32_t vgap = 12;
+    int32_t y = vgap;
+
+    lv_obj_set_align(ui_SelectLabel, LV_ALIGN_TOP_LEFT);
+    lv_obj_set_pos(ui_SelectLabel, col_x, y);
+    y += 28;
+
+    lv_obj_set_align(ui_ClassRoller, LV_ALIGN_TOP_LEFT);
+    lv_obj_set_size(ui_ClassRoller, ctrl_w, ctrl_h);
+    lv_obj_set_pos(ui_ClassRoller, col_x, y);
+    y += ctrl_h + vgap;
+
+    lv_obj_set_align(ui_RecordButton, LV_ALIGN_TOP_LEFT);
+    lv_obj_set_size(ui_RecordButton, ctrl_w, ctrl_h);
+    lv_obj_set_pos(ui_RecordButton, col_x, y);
+    y += ctrl_h + vgap;
+
+    lv_obj_set_align(ui_RecogButton, LV_ALIGN_TOP_LEFT);
+    lv_obj_set_size(ui_RecogButton, ctrl_w, ctrl_h);
+    lv_obj_set_pos(ui_RecogButton, col_x, y);
+}
 
 void app_lcd_init(void)
 {
-    bsp_display_cfg_t cfg = {
-        .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
-        .buffer_size = BSP_LCD_DRAW_BUFF_SIZE,
-        .double_buffer = BSP_LCD_DRAW_BUFF_DOUBLE,
-        .hw_cfg = {
-#if CONFIG_BSP_LCD_TYPE_HDMI
-#if CONFIG_BSP_LCD_HDMI_800x600_60HZ
-            .hdmi_resolution = BSP_HDMI_RES_800x600,
-#elif CONFIG_BSP_LCD_HDMI_1280x720_60HZ
-            .hdmi_resolution = BSP_HDMI_RES_1280x720,
-#elif CONFIG_BSP_LCD_HDMI_1280x800_60HZ
-            .hdmi_resolution = BSP_HDMI_RES_1280x800,
-#elif CONFIG_BSP_LCD_HDMI_1920x1080_30HZ
-            .hdmi_resolution = BSP_HDMI_RES_1920x1080,
-#endif
-#else
-            .hdmi_resolution = BSP_HDMI_RES_NONE,
-#endif
-            .dsi_bus = {
-                .phy_clk_src = MIPI_DSI_PHY_PLLREF_CLK_SRC_DEFAULT,
-                .lane_bit_rate_mbps = BSP_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
-            }
-        },
-        .flags = {
-#if CONFIG_BSP_LCD_COLOR_FORMAT_RGB888
-            .buff_dma = false,
-#else
-            .buff_dma = true,
-#endif
-            .buff_spiram = true,
-            .sw_rotate = true,
-        }
-    };
-
-    cfg.lvgl_port_cfg.task_priority = 5;
-    cfg.lvgl_port_cfg.task_affinity = 1;
-
-    bsp_display_start_with_config(&cfg);
+    /* Board-agnostic: each board brings up its own LCD + LVGL behind bsp_display_start(). */
+    bsp_display_start();
     bsp_display_brightness_set(100);
-    bsp_display_backlight_on();
 
     bsp_display_lock(0);
     ui_init();
+    app_ui_layout();
     bsp_display_unlock();
 }

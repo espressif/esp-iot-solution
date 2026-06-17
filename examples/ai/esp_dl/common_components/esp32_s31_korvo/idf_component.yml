@@ -1,0 +1,12 @@
+version: "0.1.0"
+description: Slim camera/LCD/touch BSP for ESP32-S31-Korvo (DVP camera, RGB 800x480 + LVGL)
+targets:
+  - esp32s31
+dependencies:
+  idf: ">=5.5"
+  esp_lvgl_adapter:
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+  espressif/esp_lcd_touch_gt1151: "^1"
+  espressif/esp_video:
+    version: "2.2.0"
+    public: true
