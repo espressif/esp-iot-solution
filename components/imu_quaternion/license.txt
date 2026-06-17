@@ -1,0 +1,4 @@
+License placeholder.
+
+Replace this file with the final component license text before publishing the
+component externally.

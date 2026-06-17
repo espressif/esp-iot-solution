@@ -1,0 +1,10 @@
+idf_component_register(
+    SRCS
+        "test_imu_quaternion.c"
+    INCLUDE_DIRS
+        "."
+        "../private_include"
+    REQUIRES
+        unity
+        imu_quaternion
+)
