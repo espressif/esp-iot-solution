@@ -1,0 +1,4 @@
+version: "0.1.0"
+description: IMU runtime gesture detector component for ESP-IDF projects
+dependencies:
+  idf: ">=5.0"
