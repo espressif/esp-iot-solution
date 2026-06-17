@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS
+        "test_imu_gesture.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        unity
+        imu_gesture
+)
