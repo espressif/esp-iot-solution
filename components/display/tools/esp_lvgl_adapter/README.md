@@ -582,7 +582,7 @@ esp_lv_adapter_sleep_prepare();      // Pauses worker, waits for flush
 esp_lcd_panel_del(panel);             // Delete hardware
 esp_light_sleep_start();              // Enter Light Sleep (CPU paused, peripherals maintained)
 
-// Recover from sleep (executed automatically after Light Sleep wake-up)
+// After Light Sleep returns, reinitialize and recover:
 panel = /* reinit LCD hardware */;
 esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // Rebinds panel, resumes worker
 ```
@@ -618,7 +618,7 @@ ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
 1. Enable `CONFIG_PM_ENABLE` and tickless idle in ESP-IDF
 2. Configure `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE`
 3. Provide callbacks that only manage panel or backlight state
-4. Call `esp_lv_adapter_request_wake()` or `esp_lv_adapter_request_wake_from_isr()` from user activity paths that should wake the display
+4. Registered touch/button/knob inputs automatically notify the adapter on activity; for custom wake sources call `esp_lv_adapter_request_wake()` or `esp_lv_adapter_request_wake_from_isr()`
 
 **Using Auto Sleep User Mode:**
 
@@ -626,6 +626,28 @@ ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
 2. Implement `on_enter_sleep()` to run your full board flow:
    `esp_lv_adapter_sleep_prepare()` -> LCD deinit -> `esp_light_sleep_start()` -> LCD init -> `esp_lv_adapter_sleep_recover()`
 3. Keep panel-specific or board-specific actions in the application callback, not in the adapter
+
+**PAUSE Mode: Touch/Button Wake**
+
+PAUSE mode releases `ESP_PM_NO_LIGHT_SLEEP` when idle; the system enters tickless light sleep automatically. Waking from a touch or button interrupt requires two steps — both are required:
+
+- **MCU wake** (app): configure `gpio_wakeup_enable()` + `esp_sleep_enable_gpio_wakeup()` in `on_enter_sleep`
+- **Adapter resume** (built-in): touch drivers call `esp_lv_adapter_request_wake_from_isr()` from ISR; button/knob drivers call `esp_lv_adapter_request_wake()` from their task callbacks
+
+```c
+static void panel_sleep_cb(void *user_data)
+{
+    bsp_display_backlight_off();
+    gpio_wakeup_enable(TOUCH_INT_GPIO, GPIO_INTR_LOW_LEVEL);
+    esp_sleep_enable_gpio_wakeup();
+}
+
+static void panel_wake_cb(void *user_data)
+{
+    gpio_wakeup_disable(TOUCH_INT_GPIO);
+    bsp_display_backlight_on();
+}
+```
 
 **Key Features:**
 - UI state preserved (no need to recreate widgets)

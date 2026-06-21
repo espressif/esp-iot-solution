@@ -210,9 +210,9 @@ typedef enum {
 } esp_lv_adapter_auto_sleep_state_t;
 
 typedef struct {
-    esp_lv_adapter_auto_sleep_config_t config;     /*!< Auto sleep configuration */
-    esp_lv_adapter_auto_sleep_state_t state;       /*!< Current auto sleep state */
-    esp_pm_lock_handle_t pm_lock;                  /*!< PM lock used in pause mode */
+    esp_lv_adapter_auto_sleep_config_t config;          /*!< Auto sleep configuration */
+    volatile esp_lv_adapter_auto_sleep_state_t state;   /*!< Current auto sleep state */
+    esp_pm_lock_handle_t pm_lock;                       /*!< PM lock used in pause mode */
     bool pm_lock_held;                             /*!< Whether the PM lock is currently held */
     volatile bool wake_requested;                  /*!< Wake request flag */
     volatile bool activity_pending;                /*!< Activity reported from ISR and pending timestamp update */

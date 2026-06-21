@@ -576,7 +576,7 @@ esp_lv_adapter_sleep_prepare();      // 暂停 worker，等待刷新完成
 esp_lcd_panel_del(panel);             // 删除硬件
 esp_light_sleep_start();              // 进入 Light Sleep（CPU 暂停，外设保持状态）
 
-// 从睡眠恢复（Light Sleep 唤醒后自动执行）
+// Light Sleep 返回后，重新初始化并恢复：
 panel = /* 重新初始化 LCD 硬件 */;
 esp_lv_adapter_sleep_recover(disp, panel, panel_io);  // 重新绑定面板，恢复 worker
 ```
@@ -612,7 +612,7 @@ ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
 1. 在 ESP-IDF 中启用 `CONFIG_PM_ENABLE` 和 tickless idle
 2. 配置 `cfg.auto_sleep.mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE`
 3. 提供只负责面板或背光状态切换的回调
-4. 在应触发唤醒的用户活动路径中调用 `esp_lv_adapter_request_wake()` 或 `esp_lv_adapter_request_wake_from_isr()`
+4. 已注册的触摸/按键/旋钮输入会自动通知适配器；对于自定义唤醒源，调用 `esp_lv_adapter_request_wake()` 或 `esp_lv_adapter_request_wake_from_isr()`
 
 **使用自动睡眠 User 模式：**
 
@@ -620,6 +620,28 @@ ESP_ERROR_CHECK(esp_lv_adapter_init(&cfg));
 2. 在 `on_enter_sleep()` 中执行完整板级流程：
    `esp_lv_adapter_sleep_prepare()` -> LCD deinit -> `esp_light_sleep_start()` -> LCD init -> `esp_lv_adapter_sleep_recover()`
 3. 面板和板级相关动作仍放在应用回调中，不放进适配器
+
+**Pause 模式：触摸/按键唤醒**
+
+Pause 模式空闲时释放 `ESP_PM_NO_LIGHT_SLEEP` 锁，系统自动进入 tickless light sleep。从触摸或按键中断唤醒需要两步——缺一不可：
+
+- **MCU 唤醒**（应用）：在 `on_enter_sleep` 中配置 `gpio_wakeup_enable()` + `esp_sleep_enable_gpio_wakeup()`
+- **适配器恢复**（内置）：触摸驱动在 ISR 中调用 `esp_lv_adapter_request_wake_from_isr()`；按键/旋钮驱动在 task 回调中调用 `esp_lv_adapter_request_wake()`
+
+```c
+static void panel_sleep_cb(void *user_data)
+{
+    bsp_display_backlight_off();
+    gpio_wakeup_enable(TOUCH_INT_GPIO, GPIO_INTR_LOW_LEVEL);
+    esp_sleep_enable_gpio_wakeup();
+}
+
+static void panel_wake_cb(void *user_data)
+{
+    gpio_wakeup_disable(TOUCH_INT_GPIO);
+    bsp_display_backlight_on();
+}
+```
 
 **主要特性：**
 - UI 状态保留（无需重建控件）

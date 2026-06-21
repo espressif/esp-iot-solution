@@ -11,13 +11,17 @@
  *
  *   PAUSE (SPI/QSPI): the adapter pauses the LVGL worker and releases its PM
  *   lock; the system enters tickless light sleep with the panel kept alive.
- *   A wake is requested through esp_lv_adapter_request_wake() (here: a one-shot
- *   timer; a product could instead arm an input GPIO as the wake source).
+ *   If the touch panel has an INT pin, it is armed as a GPIO wakeup source so
+ *   a finger tap wakes the MCU immediately; a one-shot timer provides a
+ *   guaranteed auto-wake regardless.  The adapter's built-in touch ISR wrapper
+ *   calls esp_lv_adapter_request_wake_from_isr(), so no extra LVGL-side code
+ *   is needed.
  *
  *   USER (RGB/MIPI): on idle the adapter calls on_enter_sleep, which runs the
  *   full cycle synchronously:
  *       sleep_prepare -> hw_lcd_deinit -> esp_light_sleep_start
  *       -> hw_lcd_init -> sleep_recover
+ *   Touch INT (if present) and a timer are both armed before the sleep call.
  *
  * Boundary: the adapter decides when LVGL may sleep/wake; the application owns
  * all LCD/panel operations and the choice of wake source.
@@ -75,12 +79,23 @@ static esp_err_t pause_wake_timer_ensure(void);
 static esp_err_t pause_mode_enter_sleep(void *user_ctx);
 static esp_err_t pause_mode_exit_sleep(void *user_ctx);
 static esp_err_t user_mode_enter_sleep(void *user_ctx);
+static gpio_num_t example_touch_int_gpio(void);
 static bool example_uses_auto_sleep(void);
 static bool example_uses_manual_sleep(void);
 static bool example_uses_pause_auto_sleep(void);
+static bool example_use_compact_ui(void);
 static uint32_t example_get_auto_sleep_idle_timeout_ms(void);
 static const char *example_get_auto_sleep_mode_name(void);
 static const char *example_get_action_button_text(void);
+static const char *example_get_sleep_hint_text(void);
+static const char *example_get_wake_hint_text(void);
+static const lv_font_t *example_get_status_font(void);
+static const lv_font_t *example_get_button_font(void);
+static lv_coord_t example_get_status_top_offset(void);
+static lv_coord_t example_get_status_line_space(void);
+static lv_coord_t example_get_button_height(void);
+static lv_coord_t example_get_button_bottom_offset(void);
+static lv_coord_t example_get_button_radius(void);
 static esp_lv_adapter_rotation_t get_configured_rotation(void);
 static esp_lv_adapter_tear_avoid_mode_t get_default_tear_mode(void);
 
@@ -112,6 +127,11 @@ static bool example_uses_pause_auto_sleep(void)
 #endif
 }
 
+static bool example_use_compact_ui(void)
+{
+    return (HW_LCD_H_RES <= 320) || (HW_LCD_V_RES <= 240);
+}
+
 static uint32_t example_get_auto_sleep_idle_timeout_ms(void)
 {
 #if CONFIG_EXAMPLE_SLEEP_MODE_AUTO
@@ -132,7 +152,60 @@ static const char *example_get_auto_sleep_mode_name(void)
 
 static const char *example_get_action_button_text(void)
 {
-    return example_uses_manual_sleep() ? "Sleep Now" : "Activity";
+    return example_uses_manual_sleep() ? "Sleep Now" : "Stay Awake";
+}
+
+static const char *example_get_sleep_hint_text(void)
+{
+    if (example_uses_manual_sleep()) {
+        return "Sleep: manual button";
+    }
+
+    return "Sleep: auto after idle";
+}
+
+static const char *example_get_wake_hint_text(void)
+{
+    if (example_touch_int_gpio() != GPIO_NUM_NC) {
+        return "Wake: touch or timer";
+    }
+
+    return "Wake: timer only";
+}
+
+static const lv_font_t *example_get_status_font(void)
+{
+    return example_use_compact_ui() ? LV_FONT_DEFAULT : &lv_font_montserrat_20;
+}
+
+static const lv_font_t *example_get_button_font(void)
+{
+    return example_use_compact_ui() ? &lv_font_montserrat_20 : &lv_font_montserrat_24;
+}
+
+static lv_coord_t example_get_status_top_offset(void)
+{
+    return example_use_compact_ui() ? 14 : 36;
+}
+
+static lv_coord_t example_get_status_line_space(void)
+{
+    return example_use_compact_ui() ? 4 : 10;
+}
+
+static lv_coord_t example_get_button_height(void)
+{
+    return example_use_compact_ui() ? 56 : 72;
+}
+
+static lv_coord_t example_get_button_bottom_offset(void)
+{
+    return example_use_compact_ui() ? -12 : -28;
+}
+
+static lv_coord_t example_get_button_radius(void)
+{
+    return example_use_compact_ui() ? 14 : 18;
 }
 
 static esp_lv_adapter_rotation_t get_configured_rotation(void)
@@ -195,43 +268,24 @@ static void update_status_label(void)
     if (example_uses_manual_sleep()) {
         lv_label_set_text_fmt(
             s_status_label,
-            "Mode: %s\n"
-            "Wake timer: %d ms\n"
-            "Press the button to enter light sleep\n"
-            "Sleep cycles: %" PRIu32 ", last causes: 0x%" PRIx32 ", last sleep: %" PRIu64 " ms",
-            example_get_auto_sleep_mode_name(),
-            CONFIG_EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS,
-            s_user_sleep_cycles,
-            s_last_wake_causes,
-            s_last_sleep_duration_us / 1000ULL);
+            "%s\n"
+            "Wake: timer in %d ms",
+            example_get_sleep_hint_text(),
+            CONFIG_EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS);
     } else if (example_uses_pause_auto_sleep()) {
         lv_label_set_text_fmt(
             s_status_label,
-            "Mode: %s\n"
-            "Idle timeout: %" PRIu32 " ms\n"
-            "Wake timer: %d ms\n"
-            "Activity count: %" PRIu32 "\n"
-            "Panel auto-wakes on the timer; input also wakes it.",
-            example_get_auto_sleep_mode_name(),
+            "Sleep: auto in %" PRIu32 " ms\n"
+            "%s",
             example_get_auto_sleep_idle_timeout_ms(),
-            CONFIG_EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS,
-            s_activity_count);
+            example_get_wake_hint_text());
     } else {
         lv_label_set_text_fmt(
             s_status_label,
-            "Mode: %s\n"
-            "Idle timeout: %" PRIu32 " ms\n"
-            "Wake timer: %d ms\n"
-            "Activity count: %" PRIu32 "\n"
-            "Sleep cycles: %" PRIu32 ", last causes: 0x%" PRIx32 ", last sleep: %" PRIu64 " ms\n"
-            "Touch, click, or rotate to reset the idle timer.",
-            example_get_auto_sleep_mode_name(),
+            "Sleep: auto in %" PRIu32 " ms\n"
+            "%s",
             example_get_auto_sleep_idle_timeout_ms(),
-            CONFIG_EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS,
-            s_activity_count,
-            s_user_sleep_cycles,
-            s_last_wake_causes,
-            s_last_sleep_duration_us / 1000ULL);
+            example_get_wake_hint_text());
     }
 
     esp_lv_adapter_unlock();
@@ -355,6 +409,9 @@ static esp_err_t run_full_light_sleep_cycle(void)
     bool touch_registered = true;
     esp_err_t ret = ESP_OK;
 
+    /* Save the INT GPIO now -- s_touch_handle becomes NULL after unregister */
+    gpio_num_t touch_int_gpio = example_touch_int_gpio();
+
     ESP_LOGI(TAG, "Entering full light sleep cycle");
     /* Adapter side: pause LVGL, flush pending frames, detach the panel, guard HW */
     ESP_RETURN_ON_ERROR(esp_lv_adapter_sleep_prepare(), TAG, "Sleep prepare failed");
@@ -372,16 +429,36 @@ static esp_err_t run_full_light_sleep_cycle(void)
     }
     panel_handles_valid = false;
 
-    /* App side: choose the wake source (timer here) and run the actual sleep */
+    /*
+     * App side: configure wakeup sources and enter light sleep.
+     *
+     * In USER mode the adapter does not manage sleep state -- the entire
+     * cycle runs synchronously here.  esp_light_sleep_start() blocks until
+     * any configured wakeup source fires, then returns normally.  No
+     * request_wake call is needed; the adapter resumes via sleep_recover().
+     *
+     * Timer: guaranteed auto-wake after the configured interval.
+     * Touch INT (if available): immediate wake on finger tap, same as PAUSE
+     *   mode Step 1.  Unlike PAUSE mode there is no separate Step 2 here --
+     *   the MCU returning from esp_light_sleep_start() is sufficient.
+     */
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
     ret = esp_sleep_enable_timer_wakeup((uint64_t)CONFIG_EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS * 1000ULL);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Timer wakeup configure failed: %s", esp_err_to_name(ret));
         goto recover;
     }
+    if (touch_int_gpio != GPIO_NUM_NC) {
+        gpio_wakeup_enable(touch_int_gpio, GPIO_INTR_LOW_LEVEL);
+        esp_sleep_enable_gpio_wakeup();
+    }
 
     int64_t sleep_start_us = esp_timer_get_time();
     ret = esp_light_sleep_start();
+    /* Disarm GPIO wakeup before re-registering touch so the ISR takes over */
+    if (touch_int_gpio != GPIO_NUM_NC) {
+        gpio_wakeup_disable(touch_int_gpio);
+    }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Light sleep start failed: %s", esp_err_to_name(ret));
         goto recover;
@@ -442,9 +519,9 @@ static esp_err_t example_panel_set_sleep(bool sleep)
     return ESP_OK;
 }
 
-/* Timer-driven wake for pause mode: the system enters tickless light sleep and
- * this one-shot timer requests a wake after the configured interval, mirroring
- * the timed behavior of the user-managed (RGB/MIPI) flow. */
+/* Fallback timer for pause mode (Step 2 via task context).
+ * Fires inside light sleep via esp_timer; calls request_wake() to signal the
+ * adapter task.  The MCU is already awake when this callback runs. */
 static void pause_wake_timer_cb(void *arg)
 {
     (void)arg;
@@ -464,12 +541,61 @@ static esp_err_t pause_wake_timer_ensure(void)
     return esp_timer_create(&timer_args, &s_pause_wake_timer);
 }
 
+/* Returns the touch interrupt GPIO if touch is initialized and has an INT pin,
+ * GPIO_NUM_NC otherwise. */
+static gpio_num_t example_touch_int_gpio(void)
+{
+#if HW_USE_TOUCH
+    if (s_touch_handle && s_touch_handle->config.int_gpio_num != GPIO_NUM_NC) {
+        return s_touch_handle->config.int_gpio_num;
+    }
+#endif
+    return GPIO_NUM_NC;
+}
+
+/*
+ * PAUSE mode sleep/wake callbacks.
+ *
+ * In PAUSE mode the adapter manages the LVGL side automatically:
+ *   - on_enter_sleep fires first, then the adapter pauses LVGL and releases
+ *     the ESP_PM_NO_LIGHT_SLEEP lock so tickless light sleep can begin.
+ *   - on_exit_sleep fires after the adapter re-acquires the lock but before
+ *     it resumes LVGL.
+ *
+ * Waking from light sleep via touch requires two independent steps:
+ *
+ *   Step 1 — MCU wakeup source (this callback's job):
+ *     Configure gpio_wakeup_enable() so the touch INT pin can pull the MCU
+ *     out of light sleep.  Without this the MCU stays asleep even when the
+ *     touch chip asserts its interrupt.
+ *
+ *   Step 2 — Adapter resume (built-in, no code needed here):
+ *     The touch driver's ISR calls esp_lv_adapter_request_wake_from_isr(),
+ *     which signals the adapter task to exit SLEEPING state and resume LVGL.
+ *
+ * Both steps fire when the touch INT pin goes low:
+ *   touch INT low -> [Step 1] GPIO wakeup pulls MCU out of light sleep
+ *                 -> [Step 2] touch ISR calls request_wake_from_isr()
+ *
+ * A timer is also armed as a fallback so the panel auto-wakes periodically
+ * even without user input.  The timer callback calls request_wake(), which
+ * handles Step 2 from task context (the MCU is already awake at that point).
+ */
 static esp_err_t pause_mode_enter_sleep(void *user_ctx)
 {
     (void)user_ctx;
     ESP_LOGI(TAG, "Auto sleep entering: pause mode");
     ESP_RETURN_ON_ERROR(example_panel_set_sleep(true), TAG, "Panel sleep failed");
 
+    /* Step 1: arm the touch INT pin as GPIO wakeup source (MCU side) */
+    gpio_num_t int_gpio = example_touch_int_gpio();
+    if (int_gpio != GPIO_NUM_NC) {
+        gpio_wakeup_enable(int_gpio, GPIO_INTR_LOW_LEVEL);
+        esp_sleep_enable_gpio_wakeup();
+    }
+
+    /* Timer fallback: wake the adapter after the configured interval even
+     * when there is no touch input (Step 2 handled in pause_wake_timer_cb) */
     ESP_RETURN_ON_ERROR(pause_wake_timer_ensure(), TAG, "Create pause wake timer failed");
     esp_timer_stop(s_pause_wake_timer); /* clear any previously armed shot */
     return esp_timer_start_once(s_pause_wake_timer,
@@ -480,8 +606,14 @@ static esp_err_t pause_mode_exit_sleep(void *user_ctx)
 {
     (void)user_ctx;
     ESP_LOGI(TAG, "Auto sleep exiting: pause mode");
+    /* Cancel the timer in case touch woke us before it fired */
     if (s_pause_wake_timer) {
         esp_timer_stop(s_pause_wake_timer);
+    }
+    /* Disarm the GPIO wakeup source; normal touch ISR operation resumes */
+    gpio_num_t int_gpio = example_touch_int_gpio();
+    if (int_gpio != GPIO_NUM_NC) {
+        gpio_wakeup_disable(int_gpio);
     }
     return example_panel_set_sleep(false);
 }
@@ -533,19 +665,32 @@ static void create_demo_ui(void)
 
     lv_obj_t *scr = lv_scr_act();
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x101820), 0);
+    lv_obj_set_style_bg_grad_color(scr, lv_color_hex(0x1C2A3A), 0);
+    lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, 0);
 
     s_status_label = lv_label_create(scr);
-    lv_obj_set_width(s_status_label, LV_PCT(90));
+    lv_obj_set_width(s_status_label, example_use_compact_ui() ? LV_PCT(92) : LV_PCT(88));
     lv_label_set_long_mode(s_status_label, LV_LABEL_LONG_WRAP);
-    lv_obj_align(s_status_label, LV_ALIGN_TOP_MID, 0, 20);
+    lv_obj_set_style_text_color(s_status_label, lv_color_hex(0xF5F7FA), 0);
+    lv_obj_set_style_text_align(s_status_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_line_space(s_status_label, example_get_status_line_space(), 0);
+    lv_obj_set_style_text_font(s_status_label, example_get_status_font(), 0);
+    lv_obj_align(s_status_label, LV_ALIGN_TOP_MID, 0, example_get_status_top_offset());
 
     s_action_button = lv_btn_create(scr);
-    lv_obj_set_size(s_action_button, LV_PCT(60), 60);
-    lv_obj_align(s_action_button, LV_ALIGN_BOTTOM_MID, 0, -20);
+    lv_obj_set_size(s_action_button, example_use_compact_ui() ? LV_PCT(68) : LV_PCT(64), example_get_button_height());
+    lv_obj_set_style_radius(s_action_button, example_get_button_radius(), 0);
+    lv_obj_set_style_bg_color(s_action_button, lv_color_hex(0x56CFE1), 0);
+    lv_obj_set_style_bg_grad_color(s_action_button, lv_color_hex(0x72EFDD), 0);
+    lv_obj_set_style_bg_grad_dir(s_action_button, LV_GRAD_DIR_HOR, 0);
+    lv_obj_set_style_text_color(s_action_button, lv_color_hex(0x08131D), 0);
+    lv_obj_align(s_action_button, LV_ALIGN_BOTTOM_MID, 0, example_get_button_bottom_offset());
     lv_obj_add_event_cb(s_action_button, action_button_event_cb, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *btn_label = lv_label_create(s_action_button);
     lv_label_set_text(btn_label, example_get_action_button_text());
+    lv_obj_set_style_text_font(btn_label, example_get_button_font(), 0);
+    lv_obj_set_style_text_color(btn_label, lv_color_hex(0x08131D), 0);
     lv_obj_center(btn_label);
 
     lv_label_set_text(s_status_label, "Preparing sleep demo...");

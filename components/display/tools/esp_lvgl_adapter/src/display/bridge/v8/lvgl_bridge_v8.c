@@ -870,8 +870,8 @@ static void rounder_cb_wrapper(lv_disp_drv_t *drv, lv_area_t *area)
     if (impl->cfg.rounder_cb) {
         impl->cfg.rounder_cb(area, impl->cfg.rounder_user_data);
     }
-    /* Apply last so the flushed area stays aligned for DMA to encrypted
-     * external RAM, regardless of what the user rounder did. */
+    /* Align area for encrypted external-RAM DMA. Checks source (draw_buf_primary)
+     * and dest (draw_fb, stride-aligned only — unaligned stride falls back to CPU copy). */
     if (display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
             display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb, drv->hor_res, color_bytes)) {
         display_bridge_align_area_for_enc_dma(area, drv->hor_res, color_bytes);
@@ -895,13 +895,13 @@ static void display_bridge_v8_set_area_rounder(esp_lv_adapter_display_bridge_t *
 
     lv_disp_drv_t *drv = impl->cfg.lv_disp ? impl->cfg.lv_disp->driver : NULL;
     if (drv) {
+        /* draw_fb: require aligned stride; unaligned stride means rounding won't
+         * enable DMA and the flush path already falls back to CPU copy. */
         const bool need_dma2d_rounder =
             display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
             display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb,
                                                        bridge_h_res(impl),
                                                        bridge_color_bytes(impl));
-        /* Keep the wrapper installed when encrypted external-memory DMA needs a
-         * final X-axis alignment pass, even without a user rounder. */
         drv->rounder_cb = (rounder_cb || need_dma2d_rounder)
                           ? rounder_cb_wrapper : NULL;
     }

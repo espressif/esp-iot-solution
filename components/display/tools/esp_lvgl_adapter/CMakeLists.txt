@@ -1,12 +1,15 @@
 include($ENV{IDF_PATH}/tools/cmake/version.cmake)
 
 set(ADAPTER_PRIV_REQ esp_timer esp_mm esp_pm efuse esp_psram)
-if(IDF_VERSION_MAJOR LESS 6)
+if(IDF_VERSION_MAJOR LESS 6 OR (IDF_VERSION_MAJOR EQUAL 6 AND IDF_VERSION_MINOR LESS 2))
     list(APPEND ADAPTER_PRIV_REQ bootloader_support)
 endif()
 idf_build_get_property(target IDF_TARGET)
 if(${target} STREQUAL "esp32p4" OR ${target} STREQUAL "esp32s31")
     list(APPEND ADAPTER_PRIV_REQ esp_driver_ppa)
+    if(IDF_VERSION_MAJOR GREATER 6 OR (IDF_VERSION_MAJOR EQUAL 6 AND IDF_VERSION_MINOR GREATER_EQUAL 2))
+        list(APPEND ADAPTER_PRIV_REQ esp_driver_dma)
+    endif()
 endif()
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
