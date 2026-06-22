@@ -94,7 +94,9 @@ The example will be downloaded into the current folder. You can navigate to it f
 > You can use this command to download other examples as well. Alternatively, you can download examples from the esp-iot-solution repository:
 1. [ble_periodic_adv](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_periodic_adv)
 2. [ble_periodic_sync](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_periodic_sync)
-3. [ble_spp](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_spp)
+3. [ble_ext_adv](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_ext_adv)
+4. [ble_ext_scan](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_ext_scan)
+5. [ble_spp](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_conn_mgr/ble_spp)
 
 ### Q&A
 

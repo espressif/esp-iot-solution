@@ -26,9 +26,18 @@ Examples
 
 1. BLE periodic advertiser example: :example:`bluetooth/ble_conn_mgr/ble_periodic_adv`.
 2. BLE periodic sync example: :example:`bluetooth/ble_conn_mgr/ble_periodic_sync`.
-3. BLE serial port profile example: :example:`bluetooth/ble_conn_mgr/ble_spp`.
-4. BLE L2CAP CoC Central example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_central`.
-5. BLE L2CAP CoC Peripheral example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_peripheral`.
+3. BLE extended advertising example: :example:`bluetooth/ble_conn_mgr/ble_ext_adv`.
+4. BLE extended passive scan example: :example:`bluetooth/ble_conn_mgr/ble_ext_scan`.
+5. BLE serial port profile example: :example:`bluetooth/ble_conn_mgr/ble_spp`.
+6. BLE L2CAP CoC Central example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_central`.
+7. BLE L2CAP CoC Peripheral example: :example:`bluetooth/ble_l2cap_coc/l2cap_coc_peripheral`.
+
+Extended advertising demo pair (``ble_ext_adv`` / ``ble_ext_scan``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These two projects demonstrate **BLE 5 extended advertising** with a **non-connectable, non-scannable** auxiliary chain (primary **1M**, secondary **2M**), **Advertising SID 2**, and a fixed **1000-byte** AD payload. Flash ``ble_ext_adv`` on one board and ``ble_ext_scan`` on another; compare the **FNV-1a** hash printed on both serial consoles to confirm the scanner reassembled the same octets as the advertiser.
+
+This pair does **not** use periodic advertising. For periodic train + sync, use ``ble_periodic_adv`` and ``ble_periodic_sync`` instead.
 
 API Reference
 -----------------

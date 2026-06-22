@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v1.2.0 - 2026-05-12
+
+### Enhancements:
+
+- NimBLE stack path (`esp_nimble.c`): internally use extended GAP only (`ble_gap_ext_*`, extended scan/connect) so advertising, scanning, and connection setup stay on the BLE 5 HCI path. Public `esp_ble_conn_*` usage is unchanged for typical applications.
+- Periodic advertising sync: more reliable state handling and configuration (`BLE_CONN_MGR_PERIODIC_SYNC_AUTO_SID`).
+- Extended scanning / discovery: scan results and periodic-sync paths behave more predictably together; small GAP robustness improvements (null checks, scan timing limits, malformed report guards).
+- Periodic advertising reports: application-visible payload is delivered safely; see `esp_ble_conn_periodic_report_t` for buffer ownership.
+- Device rename: `esp_ble_conn_device_name_set()` and `ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED` (including GAP name GATT writes when `CONFIG_BT_NIMBLE_SVC_GAP_NAME_WRITE` is enabled) update GAP, auto-built legacy advertising, and restart active advertising.
+- Advertising data updates: `esp_ble_conn_adv_data_set()` / `esp_ble_conn_scan_rsp_data_set()` now reapply data while advertising is active.
+
 ## v1.1.0 - 2026-04-17
 
 ### Enhancements:
