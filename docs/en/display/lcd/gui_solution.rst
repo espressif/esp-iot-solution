@@ -1,30 +1,27 @@
 GUI Optimization Solutions
 ========================================
 
-:link_to_translation:`zh:[中文]`
+:link_to_translation:`zh_CN:[中文]`
 
 .. _ESP LVGL Adapter:
 
 ESP LVGL Adapter
 ----------------
 
-ESP LVGL Adapter is a high-performance LVGL adaptation layer designed specifically for the entire ESP32 chip family. It provides deep optimizations for screen tearing and frame rate, and seamlessly integrates advanced features such as image decoding, FreeType font rendering, and Dummy Draw mode, delivering a true out-of-the-box experience for developers.
+ESP LVGL Adapter is a unified LVGL integration layer for ESP-IDF projects, compatible with LVGL v8 and v9, and provides core capabilities such as display registration, tearing control, thread-safe LVGL access, and input-device integration. It supports RGB, MIPI DSI, SPI, QSPI, I2C, I80, and monochrome displays, supports multi-display management, and offers multiple tear-avoid modes plus TE synchronization so developers can balance smoothness, memory usage, and display stability according to interface type, rotation, and frame-buffer count. On supported chips, it can also work with PPA/DMA2D acceleration, immediate refresh, area rounding, FPS statistics, and Dummy Draw to further improve rendering performance and debug efficiency.
+
+In addition, ESP LVGL Adapter supports touch, button, and knob input adaptation, provides independent multi-touch control, task/ISR wake notifications, and both manual sleep and Auto Sleep mechanisms that work with Tickless Light Sleep, enabling low-power operation while preserving UI state. With Kconfig options enabled as needed, the component can also integrate a filesystem bridge, image decoding, and FreeType font rendering, and includes adaptations and optimizations for FreeType stack usage, flash footprint, and DMA alignment constraints under flash-encryption scenarios, delivering a more complete and robust out-of-the-box LVGL experience on ESP platforms.
 
 Component Link: https://components.espressif.com/components/espressif/esp_lvgl_adapter
 
 Related Example:
 
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_decode_image
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_freetype_font
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_multi_screen
-
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_mono_demo
+- :example:`display/gui/lvgl_common_demo`
+- :example:`display/gui/lvgl_dummy_draw`
+- :example:`display/gui/lvgl_decode_image`
+- :example:`display/gui/lvgl_freetype_font`
+- :example:`display/gui/lvgl_multi_screen`
+- :example:`display/gui/lvgl_mono_demo`
 
 .. _ESP LVGL EAF Player:
 
@@ -51,7 +48,7 @@ Component Link: https://components.espressif.com/components/espressif/esp_lv_eaf
 
 Related Example:
 
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_eaf_player
+- :example:`display/gui/lvgl_eaf_player`
 
 .. _Thorvg component:
 
@@ -109,7 +106,7 @@ Component Link: https://components.espressif.com/components/espressif/esp_lv_lot
 
 Related Example:
 
-- https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_lottie_player
+- :example:`display/gui/lvgl_lottie_player`
 
 .. _esp_emote_gfx:
 

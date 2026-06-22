@@ -75,45 +75,72 @@ static void test_draw_bitmap(esp_lcd_panel_handle_t panel_handle)
     vTaskDelay(pdMS_TO_TICKS(TEST_DELAY_TIME_MS));
 }
 
-TEST_CASE("test co5300 to draw color bar with SPI interface", "[co5300][spi]")
+static void test_set_backlight(bool on)
 {
 #if TEST_PIN_NUM_BK_LIGHT >= 0
-    ESP_LOGI(TAG, "Turn on LCD backlight");
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = 1ULL << TEST_PIN_NUM_BK_LIGHT
     };
     TEST_ESP_OK(gpio_config(&bk_gpio_config));
-    TEST_ESP_OK(gpio_set_level(TEST_PIN_NUM_BK_LIGHT, TEST_LCD_BK_LIGHT_ON_LEVEL));
+    TEST_ESP_OK(gpio_set_level(TEST_PIN_NUM_BK_LIGHT, on ? TEST_LCD_BK_LIGHT_ON_LEVEL : TEST_LCD_BK_LIGHT_OFF_LEVEL));
+#else
+    (void)on;
 #endif
+}
 
-    ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = CO5300_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
-                                                                TEST_PIN_NUM_LCD_DATA0,
-                                                                TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
-    TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+static esp_lcd_panel_handle_t test_init_lcd(bool use_qspi, esp_lcd_panel_io_handle_t *io_handle)
+{
+    TEST_ASSERT_NOT_NULL(io_handle);
 
-    ESP_LOGI(TAG, "Install panel IO");
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    const esp_lcd_panel_io_spi_config_t io_config = CO5300_PANEL_IO_SPI_CONFIG(TEST_PIN_NUM_LCD_CS, TEST_PIN_NUM_LCD_DC,
-                                                                               test_notify_refresh_ready, NULL);
-    // Attach the LCD to the SPI bus
-    TEST_ESP_OK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)TEST_LCD_HOST, &io_config, &io_handle));
+    ESP_LOGI(TAG, "Turn on LCD backlight");
+    test_set_backlight(true);
+
+    ESP_LOGI(TAG, "Initialize %s bus", use_qspi ? "QSPI" : "SPI");
+    if (use_qspi) {
+        const spi_bus_config_t buscfg = CO5300_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
+                                                                     TEST_PIN_NUM_LCD_DATA0,
+                                                                     TEST_PIN_NUM_LCD_DATA1,
+                                                                     TEST_PIN_NUM_LCD_DATA2,
+                                                                     TEST_PIN_NUM_LCD_DATA3,
+                                                                     TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
+        TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+
+        ESP_LOGI(TAG, "Install panel IO");
+        const esp_lcd_panel_io_spi_config_t io_config = CO5300_PANEL_IO_QSPI_CONFIG(TEST_PIN_NUM_LCD_CS, test_notify_refresh_ready, NULL);
+        TEST_ESP_OK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)TEST_LCD_HOST, &io_config, io_handle));
+    } else {
+        const spi_bus_config_t buscfg = CO5300_PANEL_BUS_SPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
+                                                                    TEST_PIN_NUM_LCD_DATA0,
+                                                                    TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
+        TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+
+        ESP_LOGI(TAG, "Install panel IO");
+        const esp_lcd_panel_io_spi_config_t io_config = CO5300_PANEL_IO_SPI_CONFIG(TEST_PIN_NUM_LCD_CS, TEST_PIN_NUM_LCD_DC,
+                                                                                   test_notify_refresh_ready, NULL);
+        TEST_ESP_OK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)TEST_LCD_HOST, &io_config, io_handle));
+    }
 
     ESP_LOGI(TAG, "Install LCD driver of co5300");
     esp_lcd_panel_handle_t panel_handle = NULL;
+    co5300_vendor_config_t vendor_config = {0};
+    vendor_config.flags.use_qspi_interface = use_qspi ? 1 : 0;
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
+        .vendor_config = (void *) &vendor_config,
     };
-    TEST_ESP_OK(esp_lcd_new_panel_co5300(io_handle, &panel_config, &panel_handle));
-    esp_lcd_panel_reset(panel_handle);
-    esp_lcd_panel_init(panel_handle);
-    esp_lcd_panel_disp_on_off(panel_handle, true);
+    TEST_ESP_OK(esp_lcd_new_panel_co5300(*io_handle, &panel_config, &panel_handle));
+    TEST_ESP_OK(esp_lcd_panel_reset(panel_handle));
+    TEST_ESP_OK(esp_lcd_panel_init(panel_handle));
+    TEST_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-    test_draw_bitmap(panel_handle);
+    return panel_handle;
+}
 
+static void test_deinit_lcd(esp_lcd_panel_handle_t panel_handle, esp_lcd_panel_io_handle_t io_handle)
+{
     TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
     TEST_ESP_OK(esp_lcd_panel_io_del(io_handle));
     TEST_ESP_OK(spi_bus_free(TEST_LCD_HOST));
@@ -123,58 +150,50 @@ TEST_CASE("test co5300 to draw color bar with SPI interface", "[co5300][spi]")
 #endif
 }
 
-TEST_CASE("test co5300 to draw color bar with QSPI interface", "[co5300][qspi]")
+static void test_rotate_panel(esp_lcd_panel_handle_t panel_handle)
 {
-#if TEST_PIN_NUM_BK_LIGHT >= 0
-    ESP_LOGI(TAG, "Turn on LCD backlight");
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << TEST_PIN_NUM_BK_LIGHT
-    };
-    TEST_ESP_OK(gpio_config(&bk_gpio_config));
-    TEST_ESP_OK(gpio_set_level(TEST_PIN_NUM_BK_LIGHT, TEST_LCD_BK_LIGHT_ON_LEVEL));
-#endif
+    for (size_t i = 0; i < 8; i++) {
+        TEST_ESP_OK(esp_lcd_panel_mirror(panel_handle, i & 2, i & 1));
+        TEST_ESP_OK(esp_lcd_panel_swap_xy(panel_handle, i & 4));
+    }
+}
 
-    ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = CO5300_PANEL_BUS_QSPI_CONFIG(TEST_PIN_NUM_LCD_PCLK,
-                                                                 TEST_PIN_NUM_LCD_DATA0,
-                                                                 TEST_PIN_NUM_LCD_DATA1,
-                                                                 TEST_PIN_NUM_LCD_DATA2,
-                                                                 TEST_PIN_NUM_LCD_DATA3,
-                                                                 TEST_LCD_H_RES * TEST_LCD_V_RES * TEST_LCD_BIT_PER_PIXEL / 8);
-    TEST_ESP_OK(spi_bus_initialize(TEST_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
-
-    ESP_LOGI(TAG, "Install panel IO");
+TEST_CASE("test co5300 to draw color bar with SPI interface", "[co5300][spi]")
+{
     esp_lcd_panel_io_handle_t io_handle = NULL;
-    const esp_lcd_panel_io_spi_config_t io_config = CO5300_PANEL_IO_QSPI_CONFIG(TEST_PIN_NUM_LCD_CS, test_notify_refresh_ready, NULL);
-    // Attach the LCD to the SPI bus
-    TEST_ESP_OK(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)TEST_LCD_HOST, &io_config, &io_handle));
-
-    ESP_LOGI(TAG, "Install LCD driver of co5300");
-    esp_lcd_panel_handle_t panel_handle = NULL;
-    const co5300_vendor_config_t vendor_config = {
-        .flags = {
-            .use_qspi_interface = 1,
-        },
-    };
-    const esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = TEST_PIN_NUM_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
-        .vendor_config = (void *) &vendor_config,
-    };
-    TEST_ESP_OK(esp_lcd_new_panel_co5300(io_handle, &panel_config, &panel_handle));
-    esp_lcd_panel_reset(panel_handle);
-    esp_lcd_panel_init(panel_handle);
-    esp_lcd_panel_disp_on_off(panel_handle, true);
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(false, &io_handle);
 
     test_draw_bitmap(panel_handle);
 
-    TEST_ESP_OK(esp_lcd_panel_del(panel_handle));
-    TEST_ESP_OK(esp_lcd_panel_io_del(io_handle));
-    TEST_ESP_OK(spi_bus_free(TEST_LCD_HOST));
+    test_deinit_lcd(panel_handle, io_handle);
+}
 
-#if TEST_PIN_NUM_BK_LIGHT >= 0
-    TEST_ESP_OK(gpio_reset_pin(TEST_PIN_NUM_BK_LIGHT));
-#endif
+TEST_CASE("test co5300 to draw color bar with QSPI interface", "[co5300][qspi]")
+{
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(true, &io_handle);
+
+    test_draw_bitmap(panel_handle);
+
+    test_deinit_lcd(panel_handle, io_handle);
+}
+
+TEST_CASE("test co5300 to rotate with SPI interface", "[co5300][spi-rotate]")
+{
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(false, &io_handle);
+
+    test_rotate_panel(panel_handle);
+
+    test_deinit_lcd(panel_handle, io_handle);
+}
+
+TEST_CASE("test co5300 to rotate with QSPI interface", "[co5300][qspi-rotate]")
+{
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(true, &io_handle);
+
+    test_rotate_panel(panel_handle);
+
+    test_deinit_lcd(panel_handle, io_handle);
 }

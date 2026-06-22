@@ -2,7 +2,7 @@ ESP LVGL ADAPTER
 ================
 :link_to_translation:`en:[English]`
 
-``esp_lvgl_adapter`` 为 ESP-IDF 工程提供统一的 LVGL 适配层,涵盖显示注册、防撕裂策略、LVGL 线程安全访问,以及文件系统/图片解码/FreeType 字体的可选集成。兼容 LVGL v8 与 v9。
+``esp_lvgl_adapter`` 为 ESP-IDF 工程提供统一的 LVGL 适配层，涵盖显示注册、防撕裂策略、LVGL 线程安全访问、输入设备接入以及文件系统/图片解码/FreeType 字体的可选集成。兼容 LVGL v8 与 v9，并支持 Auto Sleep、Tickless Light Sleep 配合、Dummy Draw、多屏管理以及 Flash 加密场景下的 DMA 对齐适配等能力。
 
 
 功能
@@ -19,6 +19,9 @@ ESP LVGL ADAPTER
   - FPS 统计、Dummy Draw(不实际输出到显示器)
 
 - **多屏支持**: 可同时管理多个显示设备
+- **低功耗管理**: 支持手动睡眠、Auto Sleep，以及与 Tickless Light Sleep 的配合
+- **输入设备适配**: 支持触摸、按键导航、旋钮/编码器输入
+- **加密场景适配**: 针对 Flash 加密场景补充了 DMA 对齐处理
 
 
 添加到工程
@@ -802,4 +805,3 @@ API 参考
 ---------
 
 .. include-build-file:: inc/esp_lv_adapter.inc
-

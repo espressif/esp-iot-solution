@@ -134,7 +134,7 @@ SYNC 模式
 
 .. note::
 
-    虽然 ESP32-S3 仅支持 ``16-bit RGB565`` 和 ``8-bit RGB888`` 两种色彩格式，但是通过特殊的硬件连接方式可以使其驱动支持 ``18-bit RGB666`` 或 ``24-bit RGB888`` 色彩格式的 LCD ，连接方式请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 的 `LCD 子板 2 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`_ (3.95' LCD_QMZX) 和 `LCD 子板 3 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ 原理图。
+    虽然 ESP32-S3 仅支持 ``16-bit RGB565`` 和 ``8-bit RGB888`` 两种色彩格式，但是通过特殊的硬件连接方式可以使其驱动支持 ``18-bit RGB666`` 或 ``24-bit RGB888`` 色彩格式的 LCD ，连接方式请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 的 `LCD 子板 2 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`_ (3.95' LCD_QMZX) 和 `LCD 子板 3 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ 原理图。
 
 RGB LCD 驱动流程
 ------------------------------
@@ -191,15 +191,15 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 移植驱动组件
 ---------------------------
 
-**对于仅采用 RGB 接口的 LCD** ，由于 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中已经通过注册回调函数的方式实现了结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能，并且提供了函数 ``esp_lcd_new_rgb_panel()`` 用于创建数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备，使得应用程序能够使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。因此，这种 LCD 不需要移植驱动组件，请直接参考 :ref:`初始化 LCD 设备  <rgb_初始化_lcd>`。
+**对于仅采用 RGB 接口的 LCD** ，由于 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ 中已经通过注册回调函数的方式实现了结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能，并且提供了函数 ``esp_lcd_new_rgb_panel()`` 用于创建数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备，使得应用程序能够使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。因此，这种 LCD 不需要移植驱动组件，请直接参考 :ref:`初始化 LCD 设备  <rgb_初始化_lcd>`。
 
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，在上述 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 的基础上，还需要通过 ``3-wire SPI`` 接口发送命令及参数。因此，实现这种 LCD 驱动组件的基本原理包含以下三点：
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，在上述 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ 的基础上，还需要通过 ``3-wire SPI`` 接口发送命令及参数。因此，实现这种 LCD 驱动组件的基本原理包含以下三点：
 
   #. 基于数据类型为 ``esp_lcd_panel_io_handle_t`` 的接口设备发送指定格式的命令及参数。
   #. 使用函数 ``esp_lcd_new_rgb_panel()`` 创建一个 LCD 设备，然后通过注册回调函数的方式 **保存和覆盖** 该设备中的 **部分** 功能。
-  #. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。
+  #. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。
 
-下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 还有 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
+下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ 还有 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
 
 .. list-table::
     :widths: 10 20 20 50
@@ -258,7 +258,7 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 初始化 LCD 设备
 ---------------------------
 
-下面是以 ESP-IDF release/v5.1 中 `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v5.1/examples/peripherals/lcd/rgb_panel>`_ 为例的代码说明：
+下面是以 ESP-IDF release/v6.0 中 `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v6.0/examples/peripherals/lcd/rgb_panel>`_ 为例的代码说明：
 
 .. code-block:: c
 
@@ -309,7 +309,7 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
             .vsync_back_porch = 8,
             .vsync_front_porch = 4,
             .vsync_pulse_width = 1,
-            .flgas = {      // 由于一些 LCD 可以通过硬件引脚配置这些参数，需要确保它们与配置保持一致，但通常情况下均为 `0`
+            .flags = {      // 由于一些 LCD 可以通过硬件引脚配置这些参数，需要确保它们与配置保持一致，但通常情况下均为 `0`
               .hsync_idle_low = 0,    // HSYNC 信号空闲时的电平，0：高电平，1：低电平
               .vsync_idle_low = 0,    // VSYNC 信号空闲时的电平，0 表示高电平，1：低电平
               .de_idle_high = 0,      // DE 信号空闲时的电平，0：高电平，1：低电平
@@ -369,7 +369,7 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
       - Tvs
       - 垂直同步脉冲宽度
 
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中的 ``esp_lcd_new_rgb_panel()`` 函数创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备.
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过 `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ 中的 ``esp_lcd_new_rgb_panel()`` 函数创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备.
 
 关于 ``RGB`` 接口的参数配置和一些功能函数的说明，请参考 :ref:`RGB 参数配置及功能函数 <rgb_参数配置及功能函数>`
 
@@ -438,7 +438,7 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
             .vsync_back_porch = 8,
             .vsync_front_porch = 4,
             .vsync_pulse_width = 1,
-            .flgas = {      // 由于一些 LCD 可以通过硬件引脚或者软件命令配置这些参数，需要确保它们与配置保持一致，但通常情况下均为 `0`
+            .flags = {      // 由于一些 LCD 可以通过硬件引脚或者软件命令配置这些参数，需要确保它们与配置保持一致，但通常情况下均为 `0`
               .hsync_idle_low = 0,    // HSYNC 信号空闲时的电平，0：高电平，1：低电平
               .vsync_idle_low = 0,    // VSYNC 信号空闲时的电平，0 表示高电平，1：低电平
               .de_idle_high = 0,      // DE 信号空闲时的电平，0：高电平，1：低电平
@@ -470,7 +470,6 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7701(io_handle, &panel_config, &panel_handle));
 
     /* 初始化 LCD 设备 */
-    ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     // 以下函数可以根据需要使用
@@ -480,16 +479,16 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
+**对于采用 3-wire SPI 和 RGB 接口的 LCD** ，首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
 
 .. _rgb_参数配置及功能函数:
 
-关于 ``RGB`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#rgb-interfaced-lcd>`_。下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 RGB LCD 图像的说明：
+关于 ``RGB`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32p4/api-reference/peripherals/lcd/rgb_lcd.html>`_。下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 RGB LCD 图像的说明：
 
   - 该函数是通过内存拷贝的方式刷新帧缓存里的图像数据，也就是说该函数调用完成后帧缓存内的图像数据也已经更新完成，而 ``RGB`` 接口本身是通过 DMA 从帧缓存中获取图像数据来刷新 LCD，这两个过程是异步进行的。
   - 该函数会判断传入参数 ``color_data`` 的值是否为 ``RGB`` 接口内部的帧缓存地址，若是，则不会进行上述的内存拷贝操作，而是直接将 ``RGB`` 接口的 DMA 传输地址设置为该缓存地址，从而在具有多个帧缓存的情况下实现切换的功能。
 
-除了 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 之外， `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ 中还提供了一些特殊功能的函数，下面是一些常用函数的使用说明：
+除了 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 之外， `RGB 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/include/esp_lcd_panel_rgb.h>`__ 中还提供了一些特殊功能的函数，下面是一些常用函数的使用说明：
 
   - ``esp_lcd_rgb_panel_set_pclk()``：动态修改时钟频率，可以在 LCD 初始化后使用。
   - ``esp_lcd_rgb_panel_restart()``：复位数据传输，用于在屏幕发生偏移时调用可以使其恢复正常。
@@ -531,4 +530,4 @@ RGB LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 
 - `ST7701S 数据手册 <https://dl.espressif.com/AE/esp-iot-solution/ST7701S_SPEC_%20V1.4.pdf>`_
 - `ST77903 数据手册 <https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf>`_
-- `GC9503 数据手册 <https://github.com/espressif/esp-dev-kits/blob/master/docs/_static/esp32-s3-lcd-ev-board/datasheets/3.95_480x480_SmartDisplay/GC9503NP_DataSheet_V1.7.pdf>`_
+- `GC9503 数据手册 <https://dl.espressif.com/AE/esp-dev-kits/GC9503CV%20DataSheet%20V1.2.pdf>`_

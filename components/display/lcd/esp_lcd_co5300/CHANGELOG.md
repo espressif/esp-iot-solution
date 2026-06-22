@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v2.1.0 - 2026-06-29
+
+### Enhancements:
+
+* Added rotation support for the CO5300 driver through `esp_lcd_panel_mirror()` and `esp_lcd_panel_swap_xy()` on SPI and QSPI paths
+* Added SPI/QSPI rotation test coverage
+* Bumped component version to 2.1.0
+
 ## v2.0.3 - 2025-12-15
 
 ### Changes:

@@ -4,9 +4,9 @@
 
 Implementation of the ST77926 LCD controller with esp_lcd component.
 
-| LCD controller | Communication interface | Component name  | Link to datasheet |
-| :------------: | :---------------------: | :-------------: | :---------------: |
-|    ST77926     |          QSPI           | esp_lcd_st77926 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/ST77926_SPEC_V1.0.pdf) |
+| LCD controller | Communication interface | Component name  |
+| :------------: | :---------------------: | :-------------: |
+|    ST77926     |          QSPI           | esp_lcd_st77926 |
 
 **Note**: The QSPI write path requires the flush area `x_start` and width to be 4-pixel aligned.
 

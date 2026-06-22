@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.4.3 (2026-06-24)
+
+* Added missing `esp32c61` and `esp32h4` entries to the supported targets list in the component manifest.
+
 ## v0.4.2 (2026-06-09)
 
 * Add SQOI (split QOI) format support for LVGL v9 with RGBA-to-BGRA conversion

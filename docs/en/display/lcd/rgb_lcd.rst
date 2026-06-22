@@ -134,7 +134,7 @@ From the above diagrams, it can be observed that *ST77903* supports three color 
 
 .. note::
 
-    Although ESP32-S3 only supports ``16-bit RGB565`` and ``8-bit RGB888`` color formats, it can be configured to drive LCDs with ``18-bit RGB666`` or ``24-bit RGB888`` color formats through special hardware connections. For the connection details, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD Subboard 2 <https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`_ (3.95' LCD_QMZX) and `LCD Subboard 3 <https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ schematics.
+    Although ESP32-S3 only supports ``16-bit RGB565`` and ``8-bit RGB888`` color formats, it can be configured to drive LCDs with ``18-bit RGB666`` or ``24-bit RGB888`` color formats through special hardware connections. For the connection details, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD Subboard 2 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`_ (3.95' LCD_QMZX) and `LCD Subboard 3 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB3_V1.1_20230315.pdf>`_ schematics.
 
 RGB LCD Driver Process
 ------------------------------
@@ -191,15 +191,15 @@ Creating the interface device provides a handle of data type ``esp_lcd_panel_io_
 Porting Driver Components
 ---------------------------
 
-**For LCDs using only the RGB interface**, the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ already implements the functionalities specified in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure through registered callback functions. Additionally, it provides the function ``esp_lcd_new_rgb_panel()`` to create an LCD device with the data type ``esp_lcd_panel_handle_t``, allowing the application to use the `LCD Generic APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device. Therefore, no driver component porting is needed for this type of LCD; please refer directly to :ref:`Initializing the LCD device <rgb_initialize_lcd>`.
+**For LCDs using only the RGB interface**, the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ already implements the functionalities specified in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure through registered callback functions. Additionally, it provides the function ``esp_lcd_new_rgb_panel()`` to create an LCD device with the data type ``esp_lcd_panel_handle_t``, allowing the application to use the `LCD Generic APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device. Therefore, no driver component porting is needed for this type of LCD; please refer directly to :ref:`Initializing the LCD device <rgb_initialize_lcd>`.
 
-**For LCDs using both the 3-wire SPI and RGB interface**, in addition to the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_, you also need to send commands and parameters through the ``3-wire SPI`` interface. The basic principles for implementing this LCD driver component include the following three points:
+**For LCDs using both the 3-wire SPI and RGB interface**, in addition to the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__, you also need to send commands and parameters through the ``3-wire SPI`` interface. The basic principles for implementing this LCD driver component include the following three points:
 
   #. Send commands and parameters in the specified format through the interface device with data type ``esp_lcd_panel_io_handle_t``.
   #. Create an LCD device using the function ``esp_lcd_new_rgb_panel()``, then use the registered callback functions to **save and override** **some** functionalities in the device.
-  #. Implement a function to provide a handle of data type ``esp_lcd_panel_handle_t`` for the LCD device, allowing the application to use the `LCD Generic APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
+  #. Implement a function to provide a handle of data type ``esp_lcd_panel_handle_t`` for the LCD device, allowing the application to use the `LCD Generic APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
 
-Here is the explanation of the functions implemented for ``esp_lcd_panel_handle_t`` and their corresponding relationships with the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ and `LCD general APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
+Here is the explanation of the functions implemented for ``esp_lcd_panel_handle_t`` and their corresponding relationships with the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__ and `LCD general APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
 
 .. list-table::
     :widths: 10 20 20 50
@@ -258,7 +258,7 @@ For the majority of RGB LCDs, the commands and parameters of their driver IC are
 Initialize LCD Device
 ---------------------------
 
-Below is an example code explanation using the `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v5.1/examples/peripherals/lcd/rgb_panel>`_ code from ESP-IDF release/v5.1:
+Below is an example code explanation using the `rgb_panel <https://github.com/espressif/esp-idf/tree/release/v6.0/examples/peripherals/lcd/rgb_panel>`_ code from ESP-IDF release/v6.0:
 
 .. code-block:: c
 
@@ -309,7 +309,7 @@ Below is an example code explanation using the `rgb_panel <https://github.com/es
             .vsync_back_porch = 8,
             .vsync_front_porch = 4,
             .vsync_pulse_width = 1,
-            .flgas = {      // Since some LCDs can configure these parameters through hardware pins, make sure they are consistent with the configuration, but usually set to `0`
+            .flags = {      // Since some LCDs can configure these parameters through hardware pins, make sure they are consistent with the configuration, but usually set to `0`
               .hsync_idle_low = 0,    // Level when the HSYNC signal is idle, 0: high level, 1: low level
               .vsync_idle_low = 0,    // Level when the VSYNC signal is idle, 0: high level, 1: low level
               .de_idle_high = 0,      // Level when the DE signal is idle, 0: high level, 1: low level
@@ -369,7 +369,7 @@ The correspondence between the timing parameters in the above code and the symbo
       - Tvs
       - Vertical sync pulse width
 
-For LCDs using both 3-wire SPI and RGB interfaces, start by creating an LCD device and obtaining a handle of data type ``esp_lcd_panel_handle_t`` using the ``esp_lcd_new_rgb_panel()`` function from the `RGB Interface Driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
+For LCDs using both 3-wire SPI and RGB interfaces, start by creating an LCD device and obtaining a handle of data type ``esp_lcd_panel_handle_t`` using the ``esp_lcd_new_rgb_panel()`` function from the `RGB Interface Driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/esp_lcd_panel_rgb.c>`__. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
 For configuration parameters and explanations of certain functions related to the ``RGB`` interface, please refer to :ref:`RGB Configuration Parameters and Function Descriptions <rgb_parameter_configuration_and_functions>`.
 
@@ -438,7 +438,7 @@ Below is an example code explanation using the `ST7701S <https://components.espr
             .vsync_back_porch = 8,
             .vsync_front_porch = 4,
             .vsync_pulse_width = 1,
-            .flgas = {      // Since some LCDs can configure these parameters through hardware pins or software commands, make sure they are consistent with the configuration,
+            .flags = {      // Since some LCDs can configure these parameters through hardware pins or software commands, make sure they are consistent with the configuration,
               .hsync_idle_low = 0,    // Level of HSYNC signal when idle, 0: high level, 1: low level
               .vsync_idle_low = 0,    // Level of VSYNC signal when idle, 0 means high level, 1: low level
               .de_idle_high = 0,      // Level of DE signal when idle, 0: high level, 1: low level
@@ -470,7 +470,6 @@ Below is an example code explanation using the `ST7701S <https://components.espr
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7701(io_handle, &panel_config, &panel_handle));
 
     /* Initialize LCD device */
-    ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     // The following functions can be used as needed
@@ -480,16 +479,16 @@ Below is an example code explanation using the `ST7701S <https://components.espr
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-For LCDs using both 3-wire SPI and RGB interfaces, start by creating an LCD device using the ported driver component and obtaining a handle of data type ``esp_lcd_panel_handle_t``. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
+For LCDs using both 3-wire SPI and RGB interfaces, start by creating an LCD device using the ported driver component and obtaining a handle of data type ``esp_lcd_panel_handle_t``. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
 .. _rgb_parameter_configuration_and_functions:
 
-For more detailed information on the configuration parameters for the ``RGB`` interface, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#rgb-interfaced-lcd>`_. Below are some instructions on using the ``esp_lcd_panel_draw_bitmap()`` function to refresh RGB LCD images:
+For more detailed information on the configuration parameters for the ``RGB`` interface, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/rgb_lcd.html>`_. Below are some instructions on using the ``esp_lcd_panel_draw_bitmap()`` function to refresh RGB LCD images:
 
 - This function refreshes the image data in the frame buffer through memory copy. In other words, after calling this function, the image data in the frame buffer is already updated. The ``RGB`` interface itself refreshes the LCD by obtaining image data from the frame buffer through DMA, and these two processes are asynchronous.
 - The function checks whether the value of the passed parameter ``color_data`` is the internal frame buffer address of the ``RGB`` interface. If it is, the memory copy operation mentioned above will not be performed. Instead, the DMA transfer address of the ``RGB`` interface is directly set to this buffer address, achieving the switching function in the case of multiple frame buffers.
 
-In addition to the `LCD common APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_, the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_rgb.c>`_ also provides some functions for special features. Here are usage instructions for some commonly used functions:
+In addition to the `LCD common APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_, the `RGB interface driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/rgb/include/esp_lcd_panel_rgb.h>`__ also provides some functions for special features. Here are usage instructions for some commonly used functions:
 
 - ``esp_lcd_rgb_panel_set_pclk()``: Dynamically modifies the clock frequency, can be used after LCD initialization.
 - ``esp_lcd_rgb_panel_restart()``: Resets data transfer, used to restore normal operation when the screen is offset.
@@ -524,4 +523,4 @@ Related Documentation
 
 - `ST7701S Datasheet <https://dl.espressif.com/AE/esp-iot-solution/ST7701S_SPEC_%20V1.4.pdf>`_
 - `ST77903 Datasheet <https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf>`_
-- `GC9503 Datasheet <https://github.com/espressif/esp-dev-kits/blob/master/docs/_static/esp32-s3-lcd-ev-board/datasheets/3.95_480x480_SmartDisplay/GC9503NP_DataSheet_V1.7.pdf>`_
+- `GC9503 Datasheet <https://dl.espressif.com/AE/esp-dev-kits/GC9503CV%20DataSheet%20V1.2.pdf>`_
