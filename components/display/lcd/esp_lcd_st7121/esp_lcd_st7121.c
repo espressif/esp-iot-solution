@@ -223,8 +223,8 @@ static const st7121_lcd_init_cmd_t vendor_specific_init_default[] = {
         }, 37, 0
     },
     {0x60, (uint8_t []){0x71, 0x21, 0x00}, 3, 0},
-    {0x11, NULL, 0, 80},
-    {0x29, NULL, 0, 800},
+    {0x11, NULL, 0, 120},  /* SLPOUT: datasheet requires >120ms before DISPON */
+    {0x29, NULL, 0, 0},    /* DISPON: no wait required after this command */
     {0x35, (uint8_t []){0x00}, 1, 0},
 };
 
