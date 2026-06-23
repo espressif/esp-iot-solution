@@ -183,6 +183,8 @@ static void lvgl_encoder_btn_down(void *button_handle, void *user_data)
         return;
     }
 
+    (void)esp_lv_adapter_request_wake();
+
     if (button == ctx->btn_handle) {
         ctx->btn_enter = true;
     }
@@ -209,6 +211,8 @@ static void lvgl_encoder_left(void *arg, void *arg2)
         return;
     }
 
+    (void)esp_lv_adapter_request_wake();
+
     if (knob == ctx->knob_handle) {
         int32_t diff = lvgl_encoder_diff(knob, KNOB_LEFT);
         ctx->diff = (ctx->diff > 0) ? diff : ctx->diff + diff;
@@ -222,6 +226,8 @@ static void lvgl_encoder_right(void *arg, void *arg2)
     if (!ctx || !knob) {
         return;
     }
+
+    (void)esp_lv_adapter_request_wake();
 
     if (knob == ctx->knob_handle) {
         int32_t diff = lvgl_encoder_diff(knob, KNOB_RIGHT);
@@ -389,6 +395,8 @@ static void lvgl_encoder_btn_down(void *button_handle, void *user_data)
         return;
     }
 
+    (void)esp_lv_adapter_request_wake();
+
     if (button == ctx->btn_handle) {
         ctx->btn_enter = true;
     }
@@ -415,6 +423,8 @@ static void lvgl_encoder_left(void *arg, void *arg2)
         return;
     }
 
+    (void)esp_lv_adapter_request_wake();
+
     if (knob == ctx->knob_handle) {
         int32_t diff = lvgl_encoder_diff(knob, KNOB_LEFT);
         ctx->diff = (ctx->diff > 0) ? diff : ctx->diff + diff;
@@ -428,6 +438,8 @@ static void lvgl_encoder_right(void *arg, void *arg2)
     if (!ctx || !knob) {
         return;
     }
+
+    (void)esp_lv_adapter_request_wake();
 
     if (knob == ctx->knob_handle) {
         int32_t diff = lvgl_encoder_diff(knob, KNOB_RIGHT);

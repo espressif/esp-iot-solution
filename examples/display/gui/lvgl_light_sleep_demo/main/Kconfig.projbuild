@@ -1,11 +1,37 @@
 menu "LVGL Light Sleep Demo Configuration"
 
+choice EXAMPLE_SLEEP_MODE
+    prompt "Sleep mode"
+    default EXAMPLE_SLEEP_MODE_AUTO
+    help
+        Select whether the demo enters sleep automatically after LVGL idle time
+        or only when the UI button is pressed.
+
+config EXAMPLE_SLEEP_MODE_AUTO
+    bool "Auto sleep"
+
+config EXAMPLE_SLEEP_MODE_MANUAL
+    bool "Manual sleep"
+
+endchoice
+
+config EXAMPLE_AUTO_SLEEP_IDLE_TIMEOUT_MS
+    int "Auto sleep idle timeout (ms)"
+    range 100 600000
+    default 5000
+    depends on EXAMPLE_SLEEP_MODE_AUTO
+    help
+        Idle time before the adapter enters auto sleep.
+        SPI and QSPI interfaces use adapter pause mode with PM.
+        RGB and MIPI-DSI interfaces use the example-managed full light sleep flow.
+
 config EXAMPLE_LIGHT_SLEEP_WAKE_TIMER_MS
     int "Light sleep wake timer (ms)"
     range 100 600000
     default 5000
     help
-        Duration of the timer wake-up used after entering light sleep.
-        The example always relies on this timer to resume execution.
+        Duration of the timer wake-up used by the example light sleep flows.
+        RGB/MIPI-DSI (user mode) arm it before esp_light_sleep_start(); SPI/QSPI
+        (pause mode) use it via a one-shot timer that requests a wake.
 
 endmenu

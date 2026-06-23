@@ -205,6 +205,8 @@ static void lvgl_button_down(void *arg, void *arg2)
         return;
     }
 
+    (void)esp_lv_adapter_request_wake();
+
     if (button == ctx->btn[ESP_LV_ADAPTER_BTN_PREV]) {
         ctx->btn_prev = true;
     }
@@ -398,6 +400,8 @@ static void lvgl_button_down(void *arg, void *arg2)
     if (!ctx) {
         return;
     }
+
+    (void)esp_lv_adapter_request_wake();
 
     if (button == ctx->btn[ESP_LV_ADAPTER_BTN_PREV]) {
         ctx->btn_prev = true;

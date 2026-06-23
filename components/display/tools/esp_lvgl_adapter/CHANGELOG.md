@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.5.3 (2026-06-22)
+
+* Set DMA2D burst size to 128 bytes for maximum PSRAM throughput on IDF >= 6.2
+* Fix flash encryption API version guard: use `esp_efuse_is_flash_encryption_enabled()` on IDF >= 6.0, `esp_flash_encryption_enabled()` on older versions
+* Fix `bootloader_support` CMake dependency: only link on IDF < 6.0; add `esp_driver_dma` for IDF >= 6.2
+* Mark auto sleep state as `volatile` to prevent compiler optimization across task/ISR boundaries
+
 ## v0.5.2 (2026-06-09)
 
 * Add LVGL v9 PPA acceleration for RGB888 displays: ARGB8888 per-pixel alpha blend and opaque fill paths; opaque RGB565/RGB888 images fall back to CPU to preserve tiled image rendering

@@ -61,6 +61,7 @@ int hw_lcd_get_te_gpio(void);
 
 esp_err_t hw_touch_init(esp_lcd_touch_handle_t *touch_handle,
                         esp_lv_adapter_rotation_t rotation);
+esp_err_t hw_touch_deinit(void);
 
 #endif
 

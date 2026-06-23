@@ -16,17 +16,151 @@
 
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#include "esp_efuse.h"
+#else
+#include "esp_flash_encrypt.h"
+#endif
 #include "esp_heap_caps.h"
 #include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_memory_utils.h"
+#include "esp_psram.h"
 #include "esp_timer.h"
+#include "soc/soc_caps.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "freertos/task.h"
 
 static const char *TAG = "esp_lvgl:bridge";
+
+/**********************
+ *  FLASH ENC DMA ALIGN
+ **********************/
+
+#if defined(SOC_GDMA_EXT_MEM_ENC_ALIGNMENT)
+#define DISPLAY_BRIDGE_ENC_DMA_ALIGN  SOC_GDMA_EXT_MEM_ENC_ALIGNMENT
+#else
+#define DISPLAY_BRIDGE_ENC_DMA_ALIGN  16
+#endif
+
+bool display_bridge_flash_encryption_active(void)
+{
+    static int s_state = -1;
+    if (s_state < 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+        s_state = esp_efuse_is_flash_encryption_enabled() ? 1 : 0;
+#else
+        s_state = esp_flash_encryption_enabled() ? 1 : 0;
+#endif
+    }
+    return s_state == 1;
+}
+
+size_t display_bridge_dma2d_ext_mem_alignment(void)
+{
+    return DISPLAY_BRIDGE_ENC_DMA_ALIGN;
+}
+
+static bool display_bridge_psram_is_no_enc(const void *buffer)
+{
+#if CONFIG_SPIRAM_ENC_EXEMPT
+    return buffer && esp_psram_ptr_is_no_enc(buffer);
+#else
+    (void)buffer;
+    return false;
+#endif
+}
+
+static size_t display_bridge_gcd_size(size_t a, size_t b)
+{
+    while (b != 0) {
+        size_t t = a % b;
+        a = b;
+        b = t;
+    }
+    return a;
+}
+
+static size_t display_bridge_dma2d_align_pixels(uint8_t color_bytes)
+{
+    size_t align = display_bridge_dma2d_ext_mem_alignment();
+    size_t gcd = display_bridge_gcd_size(align, color_bytes);
+    return align / gcd;
+}
+
+bool display_bridge_dma2d_buffer_needs_alignment(const void *buffer)
+{
+    if (!buffer || !display_bridge_flash_encryption_active()) {
+        return false;
+    }
+
+    if (!esp_ptr_external_ram(buffer)) {
+        return false;
+    }
+
+    return !display_bridge_psram_is_no_enc(buffer);
+}
+
+bool display_bridge_dma2d_x_rounding_sufficient(const void *buffer,
+                                                size_t stride_px,
+                                                uint8_t color_bytes)
+{
+    if (!display_bridge_dma2d_buffer_needs_alignment(buffer) || color_bytes == 0) {
+        return false;
+    }
+
+    size_t stride_bytes = stride_px * color_bytes;
+    return (stride_bytes & (display_bridge_dma2d_ext_mem_alignment() - 1)) == 0;
+}
+
+bool display_bridge_dma2d_window_is_compatible(const void *buffer,
+                                               size_t stride_px,
+                                               size_t offset_x_px,
+                                               size_t copy_width_px,
+                                               uint8_t color_bytes)
+{
+    if (!buffer || color_bytes == 0) {
+        return false;
+    }
+
+    if (!display_bridge_dma2d_buffer_needs_alignment(buffer)) {
+        return true;
+    }
+
+    const size_t align = display_bridge_dma2d_ext_mem_alignment();
+    const uintptr_t base = (uintptr_t)buffer;
+    const size_t stride_bytes = stride_px * color_bytes;
+    const size_t offset_bytes = offset_x_px * color_bytes;
+    const size_t width_bytes = copy_width_px * color_bytes;
+
+    return ((base & (align - 1)) == 0) &&
+           ((stride_bytes & (align - 1)) == 0) &&
+           ((offset_bytes & (align - 1)) == 0) &&
+           ((width_bytes & (align - 1)) == 0);
+}
+
+void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t color_bytes)
+{
+    if (!area || color_bytes == 0) {
+        return;
+    }
+
+    const int align_px = (int)display_bridge_dma2d_align_pixels(color_bytes);
+    int x1 = ((int)area->x1 / align_px) * align_px;
+    int x2 = ((((int)area->x2 + 1) + align_px - 1) / align_px) * align_px - 1;
+
+    if (x1 < 0) {
+        x1 = 0;
+    }
+    if (hor_res > 0 && x2 > hor_res - 1) {
+        x2 = hor_res - 1;
+    }
+
+    area->x1 = x1;
+    area->x2 = x2;
+}
 
 /**********************
  *   CACHE PROFILE
@@ -479,10 +613,42 @@ size_t display_bridge_get_cache_line_size(void)
 #endif
 
 #if SOC_DMA2D_SUPPORTED
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#include "esp_async_color_convert.h"
+#else
 #include "esp_async_fbcpy.h"
+#endif
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#include "esp_private/sleep_retention.h"
 #endif
+
+#if CONFIG_SOC_DMA2D_SUPPORTED
+static inline esp_err_t s_dma2d_install(void **out_handle)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    async_color_convert_config_t cfg = {
+        .dma_burst_size = 128,
+    };
+    return esp_async_color_convert_install_dma2d(&cfg, (async_color_convert_handle_t *)out_handle);
+#else
+    esp_async_fbcpy_config_t cfg = {};
+    return esp_async_fbcpy_install(&cfg, (esp_async_fbcpy_handle_t *)out_handle);
+#endif
+}
+
+static inline void s_dma2d_uninstall(void *handle)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    esp_async_color_convert_uninstall((async_color_convert_handle_t)handle);
+#else
+    esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)handle);
+#endif
+}
+#endif /* CONFIG_SOC_DMA2D_SUPPORTED */
+#endif /* SOC_DMA2D_SUPPORTED */
 
 /**
  * @brief Initialize runtime information from configuration
@@ -548,6 +714,7 @@ void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *run
 static esp_lv_adapter_display_bridge_hw_resource_t s_hw_resource = {0};
 static bool s_hw_resource_initialized = false;
 static uint8_t s_hw_resource_ref_count = 0;
+static bool s_hw_resource_sleep_guard_active = false;
 
 /**
  * @brief Get global hardware resource singleton
@@ -569,9 +736,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
 #endif
 
 #if CONFIG_SOC_DMA2D_SUPPORTED
-        esp_async_fbcpy_config_t cfg_dma = { };
-        esp_err_t ret = esp_async_fbcpy_install(&cfg_dma,
-                                                (esp_async_fbcpy_handle_t *)&s_hw_resource.fbcpy_handle);
+        esp_err_t ret = s_dma2d_install(&s_hw_resource.fbcpy_handle);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Failed to install DMA2D (ret=%d)", ret);
             return NULL;
@@ -589,7 +754,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
             if (s_hw_resource.dma2d_done_sem) {
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_done_sem);
             }
-            esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+            s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
             return NULL;
         }
 #endif
@@ -608,7 +773,7 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
                 /* Cleanup DMA2D resources */
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_mutex);
                 vSemaphoreDelete((SemaphoreHandle_t)s_hw_resource.dma2d_done_sem);
-                esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+                s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
 #endif
                 return NULL;
             }
@@ -624,6 +789,11 @@ esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void
     ESP_LOGD(TAG, "Hardware resource acquired (ref_count=%d)", s_hw_resource_ref_count);
 
     return &s_hw_resource;
+}
+
+esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_peek_hw_resource(void)
+{
+    return s_hw_resource_initialized ? &s_hw_resource : NULL;
 }
 
 /**
@@ -672,13 +842,20 @@ esp_err_t display_bridge_release_hw_resource(void)
         }
 
         if (s_hw_resource.fbcpy_handle) {
-            esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)s_hw_resource.fbcpy_handle);
+            if (s_hw_resource_sleep_guard_active) {
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+                sleep_retention_power_lock_release();
+#endif
+                s_hw_resource_sleep_guard_active = false;
+            }
+            s_dma2d_uninstall(s_hw_resource.fbcpy_handle);
             s_hw_resource.fbcpy_handle = NULL;
             ESP_LOGI(TAG, "DMA2D resources released");
         }
 #endif
 
         s_hw_resource_initialized = false;
+        s_hw_resource_sleep_guard_active = false;
         memset(&s_hw_resource, 0, sizeof(s_hw_resource));
         ESP_LOGI(TAG, "Hardware resources cleaned up successfully");
     }
@@ -691,9 +868,15 @@ esp_err_t display_bridge_release_hw_resource(void)
  *
  * IRAM: Executed in ISR context for fast response
  */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+bool IRAM_ATTR display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
+                                                  async_color_convert_event_data_t *event_data,
+                                                  void *cb_args)
+#else
 bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
                                                   esp_async_fbcpy_event_data_t *event_data,
                                                   void *cb_args)
+#endif
 {
     BaseType_t high_task_woken = pdFALSE;
     (void)mcp;
@@ -715,7 +898,7 @@ bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
 esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
 {
     esp_err_t ret = ESP_OK;
-    esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_get_hw_resource();
+    esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
     ESP_RETURN_ON_FALSE(hw, ESP_ERR_INVALID_STATE, TAG, "DMA2D resource not initialized");
 
     ESP_GOTO_ON_FALSE(xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_mutex,
@@ -725,10 +908,17 @@ esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
     /* Clear completion semaphore */
     xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem, 0);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+    ret = esp_async_color_convert(hw->fbcpy_handle,
+                                  (const async_color_convert_request_t *)trans_desc,
+                                  display_bridge_dma2d_done_callback,
+                                  NULL);
+#else
     ret = esp_async_fbcpy(hw->fbcpy_handle,
                           trans_desc,
                           display_bridge_dma2d_done_callback,
                           NULL);
+#endif
     ESP_GOTO_ON_ERROR(ret, release_mutex, TAG, "DMA2D transfer start failed (%d)", ret);
 
     ESP_GOTO_ON_FALSE(xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem,
@@ -743,6 +933,57 @@ out:
 }
 
 #endif /* SOC_DMA2D_SUPPORTED */
+
+/**
+ * @brief Prepare shared bridge HW resources for a board-managed light sleep cycle
+ *
+ * Defined unconditionally and a no-op on targets without DMA2D. When DMA2D is
+ * present and peripheral power-down is enabled, it forces the peripheral power
+ * domain to stay on across sleep, since 2D-DMA has no sleep retention.
+ */
+esp_err_t display_bridge_prepare_hw_resource_for_sleep(void)
+{
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    if (!s_hw_resource_initialized || s_hw_resource_sleep_guard_active) {
+        return ESP_OK;
+    }
+
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+    ESP_LOGI(TAG, "Guarding DMA2D bridge resources for light sleep");
+    ESP_RETURN_ON_ERROR(sleep_retention_power_lock_acquire(), TAG,
+                        "Failed to acquire sleep retention power lock");
+    s_hw_resource_sleep_guard_active = true;
+    ESP_LOGI(TAG, "DMA2D bridge resources guarded for light sleep");
+#endif
+#endif
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Release any shared bridge HW guard acquired for a light sleep cycle
+ *
+ * Defined unconditionally and safe to call even when no guard was activated
+ * during sleep preparation (including on targets without DMA2D).
+ */
+esp_err_t display_bridge_resume_hw_resource_after_sleep(void)
+{
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    if (!s_hw_resource_sleep_guard_active) {
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Releasing DMA2D light-sleep guard");
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+    ESP_RETURN_ON_ERROR(sleep_retention_power_lock_release(), TAG,
+                        "Failed to release sleep retention power lock");
+#endif
+    s_hw_resource_sleep_guard_active = false;
+    ESP_LOGI(TAG, "DMA2D light-sleep guard released");
+#endif
+
+    return ESP_OK;
+}
 
 /**
  * @brief Destroy display bridge and release resources

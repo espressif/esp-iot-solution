@@ -3,16 +3,20 @@
 
 # LVGL Light Sleep Demo
 
-This example demonstrates how to use `esp_lvgl_adapter` with ESP-IDF Light Sleep to achieve low-power standby while preserving UI state. The demo shows the complete sleep cycle: preparing the adapter, releasing hardware resources, entering light sleep, and recovering after wake-up.
+This example demonstrates interface-aware auto sleep with `esp_lvgl_adapter` while keeping LCD control in the application layer.
 
 ## Overview
 
-The example showcases:
-- **Light sleep integration**: Complete workflow for entering and recovering from light sleep
-- **UI state preservation**: LVGL widgets remain intact after sleep/wake cycles
-- **Hardware resource management**: Proper release and reinitialization of LCD hardware
-- **Wake statistics**: Displays sleep duration and wake cause information
-- **Simple interaction**: Button-triggered sleep cycle for easy testing
+The example uses two different auto sleep patterns:
+
+- **SPI/QSPI**: The adapter runs `ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE`, pauses the LVGL worker after an idle timeout, releases its PM lock, and lets the example callback put the panel to sleep or blank it.
+- **RGB/MIPI DSI**: The adapter runs `ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER`, and the example callback performs the full sequence `sleep_prepare -> LCD deinit -> esp_light_sleep_start -> LCD init -> sleep_recover`.
+
+The adapter boundary is explicit:
+
+- The adapter decides when LVGL can sleep or wake.
+- The example owns LCD operations such as `esp_lcd_panel_disp_sleep()`, `esp_lcd_panel_disp_on_off()`, `hw_lcd_deinit()`, and `hw_lcd_init()`.
+- The adapter does not directly call panel sleep APIs.
 
 ## How to Use the Example
 
@@ -20,154 +24,140 @@ The example showcases:
 
 * An ESP32-P4, ESP32-S3, ESP32-S31, or ESP32-C3 development board
 * A LCD panel with one of the supported interfaces:
-  - **MIPI DSI**: For high-resolution displays (e.g., 1024x600)
-  - **RGB**: For parallel RGB interface displays (e.g., 800x480)
-  - **QSPI**: For quad-SPI displays (e.g., 360x360, 400x400)
-  - **SPI**: For standard SPI displays (e.g., 240x240, 320x240)
-* (Optional) Touch panel or rotary encoder for input
+  - **MIPI DSI**
+  - **RGB**
+  - **QSPI**
+  - **SPI**
+* Optional touch input or rotary encoder input
 * A USB cable for power supply and programming
-
-**Recommended Hardware Combinations:**
-
-| Chip | LCD Interface | Development Board |
-|------|---------------|-------------------|
-| ESP32-P4 | MIPI DSI | [ESP32-P4-Function-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) |
-| ESP32-S3 | RGB | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
-| ESP32-S3 | QSPI | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
-| ESP32-S3 | SPI | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
-| ESP32-S31 | RGB | Refer to your board documentation |
-| ESP32-C3 | SPI | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
-
-### Hardware Connection
-
-The LCD and touch panel connections depend on your hardware configuration. This example uses the `hw_init` component which provides hardware abstraction for different board configurations.
-
-**Common interface options:**
-- **MIPI DSI**: Typically uses dedicated MIPI lanes (D0+/-, D1+/-, CLK+/-)
-- **RGB**: Uses parallel data lines (RGB565: 16 data pins + HSYNC/VSYNC/DE/PCLK)
-- **QSPI**: Uses 4 data lines (IO0-IO3 + CLK + CS)
-- **SPI**: Uses standard SPI pins (MOSI/MISO/CLK + CS + DC)
-
-**Input devices:**
-- Touch panels typically use I2C or SPI interface
-- Rotary encoders use 3 GPIO pins (A, B, and button)
-
-Refer to your board's schematic or the `hw_init` component configuration for specific GPIO mappings.
 
 ### Configure the Project
 
 Run `idf.py menuconfig` and navigate to `LVGL Light Sleep Demo Configuration`:
 
-**Sleep Settings:**
-- `Light sleep wake timer (ms)`: Duration before automatic wake-up (default: 3000ms)
+- `Sleep mode`: `Auto sleep` or `Manual sleep`
+- `Auto sleep idle timeout (ms)`: Idle time before auto sleep starts
+- `Light sleep wake timer (ms)`: Wake timer used by the RGB/MIPI user-managed flow
 
-**Example Configuration:**
-- `LCD Interface Type`: Choose between MIPI DSI, RGB, QSPI, or SPI
-- `Display Rotation`: Select screen orientation (0°/90°/180°/270°)
-- Input device selection (touch panel or encoder)
+The demo defaults also enable:
+
+- `CONFIG_PM_ENABLE=y`
+- `CONFIG_FREERTOS_USE_TICKLESS_IDLE=y`
+- `CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=y`
+- `CONFIG_DMA2D_OPERATION_FUNC_IN_IRAM=y`
+
+`CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP` is optional (EXPERIMENTAL). It
+powers down digital peripherals in light sleep for lower power, at the cost of
+extra RAM/heap, and only takes effect on targets with TOP power-domain + PAU
+support (ESP32-P4, ESP32-S31, ESP32-C6/C5/C61, ESP32-H2/H4/H21). Because 2D-DMA
+has no sleep retention, the adapter guards its power domain across sleep while
+this option is on. The demo also works correctly with this option disabled.
 
 ### Build and Flash
 
 1. Set the target chip:
+
 ```bash
 idf.py set-target esp32p4
-# or
-idf.py set-target esp32s3
-# or
-idf.py set-target esp32s31
-# or
-idf.py set-target esp32c3
+# or esp32s3 / esp32s31 / esp32c3
 ```
 
 2. Build, flash and monitor:
+
 ```bash
 idf.py -p PORT build flash monitor
 ```
 
-(To exit the serial monitor, type ``Ctrl-]``.)
+## Runtime Behavior
 
-The first time you run `idf.py` for the example will take extra time as the build system needs to download components from the registry into the `managed_components` folder.
+After flashing, the LCD shows a static status label and one action button.
 
-See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
+### Manual Sleep Path
 
-### Expected Output
+1. Press `Sleep Now`
+2. The example runs `esp_lv_adapter_sleep_prepare()`
+3. The example deinitializes the LCD and enters `esp_light_sleep_start()`
+4. The wake timer resumes execution
+5. The example reinitializes the panel and calls `esp_lv_adapter_sleep_recover()`
 
-After flashing, the LCD displays a simple UI with:
-- **Status label**: Shows wake timer configuration and wake statistics
-- **Sleep button**: "Sleep Now" button to trigger sleep cycle
+### SPI/QSPI Path
 
-**Pressing the button triggers the following sequence:**
+1. The adapter detects LVGL idle time
+2. The example callback sends panel sleep or display-off commands and arms a
+   one-shot wake timer
+3. The adapter pauses the LVGL worker and releases its PM lock
+4. Tickless idle can enter light sleep automatically
+5. The wake timer (or any touch/button/encoder activity) calls
+   `esp_lv_adapter_request_wake()` to wake the adapter
+6. The example callback restores the panel before LVGL resumes
 
-1. `esp_lv_adapter_sleep_prepare()` - Pauses adapter worker and waits for flush completion
-2. `hw_lcd_deinit()` - Releases LCD hardware resources (panel, bus, backlight)
-3. Configure wake-up timer
-4. `esp_light_sleep_start()` - Enters light sleep mode
-5. After wake-up, reinitialize LCD hardware
-6. `esp_lv_adapter_sleep_recover()` - Rebinds panel and resumes adapter worker
+> The wake source is the application's choice. This demo uses a timer so the
+> behavior matches the RGB/MIPI flow; a real product can instead arm the input
+> GPIO as a light-sleep wake source for activity-driven wake.
 
-**Serial Console:**
-```
-I (xxx) main: LVGL Light Sleep Demo
+### RGB/MIPI DSI Path
+
+1. The adapter detects LVGL idle time
+2. The example callback calls `esp_lv_adapter_sleep_prepare()`
+3. The example deinitializes the LCD and enters `esp_light_sleep_start()`
+4. The wake timer resumes execution
+5. The example reinitializes the panel and calls `esp_lv_adapter_sleep_recover()`
+
+Example log flow:
+
+```text
+I (xxx) main: LVGL Sleep Demo
 I (xxx) main: LCD resolution 800x480
-I (xxx) main: Sleep button pressed, entering light sleep...
-I (xxx) main: Step 1: Preparing adapter for sleep
-I (xxx) main: Step 2: Deinitializing LCD hardware
-I (xxx) main: Step 4: Entering light sleep for 3000 ms
-I (xxx) main: Step 5: Reinitializing LCD hardware after wake-up
-I (xxx) main: Step 6: Recovering adapter
-I (xxx) main: Wake #1, cause 4, duration 3.00 s
+I (xxx) main: Sleep mode: adapter pause + PM
+I (xxx) esp_lvgl:adapter: Auto sleep entered
+I (xxx) esp_lvgl:adapter: Auto sleep wake requested
+I (xxx) esp_lvgl:adapter: Auto sleep exited
 ```
 
-The UI remains intact after each sleep/wake cycle, and the status label updates to show wake statistics.
+For RGB/MIPI targets, the status label also reports wake cause and the last timed sleep duration.
 
-## Code Structure
+## Minimal Sequence
 
-**Main Components:**
+USER mode, inside the `on_enter_sleep` callback (error handling omitted):
 
-1. **Sleep Cycle** (`enter_light_sleep()`):
-   - Prepares adapter for sleep
-   - Deinitializes LCD hardware
-   - Configures wake-up timer
-   - Enters light sleep
-   - Reinitializes hardware after wake-up
-   - Recovers adapter
+```c
+esp_lv_adapter_sleep_prepare();              // adapter: pause + detach + guard
+hw_lcd_deinit();                             // app: release the panel
+esp_sleep_enable_timer_wakeup(timeout_us);   // app: pick the wake source
+esp_light_sleep_start();
+hw_lcd_init(&panel, &io, ...);               // app: re-create the panel
+esp_lv_adapter_sleep_recover(disp, panel, io); // adapter: rebind + resume
+```
 
-2. **UI Creation** (`create_demo_ui()`):
-   - Creates status label and sleep button
-   - Sets up button event handler
+PAUSE mode: set `mode = ..._PAUSE` with enter/exit callbacks that blank/restore
+the panel; call `esp_lv_adapter_request_wake()` (timer or input) to wake.
 
-3. **Initialization** (`app_main()`):
-   - Initializes LCD hardware
-   - Configures and starts adapter
-   - Registers display and input devices
-   - Creates UI
+## Key APIs Used
 
-**Key ESP-IDF APIs Used:**
-- `esp_lv_adapter_sleep_prepare()` - Prepare adapter for sleep
-- `esp_lv_adapter_sleep_recover()` - Recover adapter after wake-up
-- `esp_light_sleep_start()` - Enter light sleep mode
-- `hw_lcd_deinit()` / `hw_lcd_init()` - Hardware resource management
+- `esp_lv_adapter_request_wake()` / `esp_lv_adapter_request_wake_from_isr()`
+- `esp_lv_adapter_sleep_prepare()`
+- `esp_lv_adapter_sleep_recover()`
+- `esp_light_sleep_start()`
+- `esp_lcd_panel_disp_sleep()` / `esp_lcd_panel_disp_on_off()`
+- `hw_lcd_deinit()` / `hw_lcd_init()`
+- `esp_pm_configure()`
 
 ## Troubleshooting
 
 **Display not working after wake-up:**
-- Verify LCD hardware reinitialization succeeded (check serial logs)
-- Ensure panel handles are properly passed to `esp_lv_adapter_sleep_recover()`
-- Check that wake-up timer is configured correctly
 
-**UI state lost after sleep:**
-- Verify `esp_lv_adapter_sleep_prepare()` is called before hardware deinit
-- Ensure `esp_lv_adapter_sleep_recover()` is called after hardware reinit
-- Check that display handle is preserved across sleep cycles
+- Verify the example callback restores panel state correctly
+- For RGB/MIPI, ensure reinitialized panel handles are passed back into `esp_lv_adapter_sleep_recover()`
+- For SPI/QSPI, check whether the panel driver supports `esp_lcd_panel_disp_sleep()`; the example falls back to `esp_lcd_panel_disp_on_off()`
 
 **Sleep not entering:**
-- Verify wake-up source is configured before `esp_light_sleep_start()`
-- Check serial logs for error messages during sleep preparation
-- Ensure no blocking operations are running during sleep entry
 
-**Build errors:**
-- Ensure ESP-IDF version is 5.5.0 or later
-- Run `idf.py fullclean` and rebuild
-- Check that all managed components downloaded correctly
+- Verify `CONFIG_PM_ENABLE` and tickless idle are enabled for SPI/QSPI pause mode
+- Check whether recurring LVGL timers or animations are keeping `lv_timer_handler()` busy
+- For RGB/MIPI, verify the wake timer is configured before `esp_light_sleep_start()`
 
-For any technical queries, please open an [issue](https://github.com/espressif/esp-iot-solution/issues) on GitHub. We will get back to you soon.
+**UI state lost after sleep:**
+
+- Ensure `esp_lv_adapter_sleep_prepare()` is called before LCD deinit
+- Ensure `esp_lv_adapter_sleep_recover()` is called after LCD reinit
+- Keep the original `lv_display_t *` handle alive across the full sleep cycle

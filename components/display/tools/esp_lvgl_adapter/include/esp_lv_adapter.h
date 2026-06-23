@@ -25,6 +25,63 @@ extern "C" {
 #endif
 
 /**
+ * @brief Auto sleep operating modes
+ */
+typedef enum {
+    ESP_LV_ADAPTER_AUTO_SLEEP_MODE_DISABLED = 0, /*!< Auto sleep disabled */
+    ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE,        /*!< Adapter pauses LVGL worker and waits for wake request */
+    ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER,         /*!< Adapter invokes user callback to run a board-managed sleep flow */
+} esp_lv_adapter_auto_sleep_mode_t;
+
+/**
+ * @brief Auto sleep callback collection
+ *
+ * The adapter never calls LCD or panel power-management APIs directly.
+ * Applications should use these callbacks to perform board-specific actions
+ * such as backlight control, panel sleep commands, or full hardware deinit/reinit.
+ */
+typedef struct {
+    /**
+     * @brief Called in task context when auto sleep is about to start.
+     *
+     * In @c ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE this callback is intended for
+     * lightweight board actions before the adapter pauses LVGL, such as blanking
+     * the panel or disabling the backlight.
+     *
+     * In @c ESP_LV_ADAPTER_AUTO_SLEEP_MODE_USER this callback is expected to
+     * perform the complete board-managed sleep cycle synchronously and return
+     * only after wake-up recovery is complete and rendering can continue.
+     *
+     * @param user_ctx User context
+     * @return ESP_OK on success, any other value to abort the sleep attempt
+     */
+    esp_err_t (*on_enter_sleep)(void *user_ctx);
+
+    /**
+     * @brief Called in task context before the adapter resumes from pause mode.
+     *
+     * This callback is only used in @c ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE.
+     * Use it to restore panel or backlight state before LVGL resumes.
+     *
+     * @param user_ctx User context
+     * @return ESP_OK on success, any other value aborts the wake sequence
+     */
+    esp_err_t (*on_exit_sleep)(void *user_ctx);
+
+    void *user_ctx; /*!< User context passed to all callbacks */
+} esp_lv_adapter_auto_sleep_callbacks_t;
+
+/**
+ * @brief Auto sleep configuration
+ */
+typedef struct {
+    bool enable;                                     /*!< Enable auto sleep handling */
+    esp_lv_adapter_auto_sleep_mode_t mode;           /*!< Auto sleep operating mode */
+    uint32_t idle_timeout_ms;                        /*!< Required idle time before sleep entry */
+    esp_lv_adapter_auto_sleep_callbacks_t callbacks; /*!< Optional board-managed callbacks */
+} esp_lv_adapter_auto_sleep_config_t;
+
+/**
  * @brief LVGL adapter configuration structure
  */
 typedef struct {
@@ -35,6 +92,7 @@ typedef struct {
     uint32_t task_min_delay_ms;     /*!< Minimum LVGL task delay in milliseconds */
     uint32_t task_max_delay_ms;     /*!< Maximum LVGL task delay in milliseconds */
     bool stack_in_psram;            /*!< Allocate LVGL task stack in PSRAM when available */
+    esp_lv_adapter_auto_sleep_config_t auto_sleep; /*!< Optional auto sleep configuration */
 } esp_lv_adapter_config_t;
 
 /**
@@ -47,6 +105,7 @@ typedef struct {
 #define ESP_LV_ADAPTER_DEFAULT_TICK_PERIOD_MS    1           /*!< Default tick period in milliseconds */
 #define ESP_LV_ADAPTER_DEFAULT_TASK_MIN_DELAY_MS 1           /*!< Default minimum task delay in milliseconds */
 #define ESP_LV_ADAPTER_DEFAULT_TASK_MAX_DELAY_MS 15          /*!< Default maximum task delay in milliseconds */
+#define ESP_LV_ADAPTER_DEFAULT_AUTO_SLEEP_TIMEOUT_MS 5000    /*!< Default auto sleep idle timeout */
 /** @} */
 
 /**
@@ -60,6 +119,11 @@ typedef struct {
     .task_min_delay_ms = ESP_LV_ADAPTER_DEFAULT_TASK_MIN_DELAY_MS,   \
     .task_max_delay_ms = ESP_LV_ADAPTER_DEFAULT_TASK_MAX_DELAY_MS,   \
     .stack_in_psram    = false,                                      \
+    .auto_sleep        = {                                           \
+        .enable = false,                                             \
+        .mode = ESP_LV_ADAPTER_AUTO_SLEEP_MODE_DISABLED,             \
+        .idle_timeout_ms = ESP_LV_ADAPTER_DEFAULT_AUTO_SLEEP_TIMEOUT_MS, \
+    },                                                               \
 }
 
 /*****************************************************************************
@@ -135,6 +199,44 @@ esp_err_t esp_lv_adapter_lock(int32_t timeout_ms);
  * @brief Release the LVGL adapter lock
  */
 void esp_lv_adapter_unlock(void);
+
+/**
+ * @brief Report user or application activity to the auto sleep framework
+ *
+ * Call this when external application logic updates the UI or otherwise wants
+ * to postpone auto sleep.
+ *
+ * @return
+ *      - ESP_OK: Activity recorded successfully
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_report_activity(void);
+
+/**
+ * @brief ISR-safe variant of esp_lv_adapter_report_activity()
+ *
+ * This function is safe to call from interrupt context.
+ */
+void esp_lv_adapter_report_activity_from_isr(void);
+
+/**
+ * @brief Request wake-up from auto sleep pause mode
+ *
+ * This function records activity and notifies the LVGL worker so it can resume
+ * from @c ESP_LV_ADAPTER_AUTO_SLEEP_MODE_PAUSE.
+ *
+ * @return
+ *      - ESP_OK: Wake request accepted
+ *      - ESP_ERR_INVALID_STATE: Adapter not initialized
+ */
+esp_err_t esp_lv_adapter_request_wake(void);
+
+/**
+ * @brief ISR-safe variant of esp_lv_adapter_request_wake()
+ *
+ * This function is safe to call from interrupt context.
+ */
+void esp_lv_adapter_request_wake_from_isr(void);
 
 /*****************************************************************************
  *                         Display Control Functions                         *
