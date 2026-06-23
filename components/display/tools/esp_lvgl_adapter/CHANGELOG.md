@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.6.0-beta (2026-06-23)
+
+* Unify anti-tearing ISR handling around `on_frame_buf_complete` for accurate buffer-switch synchronization
+* Add tear-free dummy draw pipeline APIs: `esp_lv_adapter_dummy_draw_get_free_buf()` and `esp_lv_adapter_dummy_draw_flush_buf()`
+* Update the dummy draw example to use the buffer-switch pipeline when available
+* **Breaking change**: remove `on_vsync` and `on_color_trans_done` from `esp_lv_adapter_dummy_draw_callbacks_t`; use the dummy draw pipeline APIs instead
+
 ## v0.5.3 (2026-06-22)
 
 * Set DMA2D burst size to 128 bytes for maximum PSRAM throughput on IDF >= 6.2

@@ -3,90 +3,131 @@
 
 # LVGL Dummy Draw Example
 
-This example demonstrates how to use the **dummy draw mode** of the `esp_lvgl_adapter` component. Dummy draw mode allows you to switch the screen refresh control from LVGL to user application, enabling you to take over the display refresh handling directly.
+This example demonstrates how to use the **dummy draw mode** of the `esp_lvgl_adapter` component. Dummy draw mode allows you to take direct control of the LCD framebuffer, bypassing LVGL's rendering pipeline entirely.
 
 ## Overview
 
 The example showcases:
-- **Rendering mode switching**: Switch between LVGL rendering and direct LCD control
-- **Touch interaction**: Simple tap-to-toggle interface
-- **Color cycling demo**: Automatic color transitions (Red → Green → Blue) in dummy mode
-- **Minimal UI**: Clean design focusing on the core feature demonstration
+- **Two update paths** – automatic selection based on the configured display interface:
+  - **Path A – Pipeline / Tear-free** (RGB, MIPI-DSI with multi-buffer anti-tearing)
+  - **Path B – Direct Blit** (SPI, I80, QSPI, or single-buffer modes)
+- **Color format awareness** – handles both RGB565 (2 B/px) and RGB888 (3 B/px) natively
+- **Touch / encoder interaction** – tap or button to toggle between LVGL and dummy draw mode
+- **Automatic throttling** – Path A is naturally paced by the display refresh rate
 
 ## What is Dummy Draw Mode?
 
 Dummy draw mode lets you bypass LVGL and write directly to the LCD hardware:
 
-**How it works:**
-1. Call `esp_lv_adapter_set_dummy_draw(true)` to disable LVGL rendering
-2. Prepare your framebuffer content
-3. Use `esp_lv_adapter_dummy_draw_blit()` to write directly to LCD
-4. Call `esp_lv_adapter_set_dummy_draw(false)` to restore LVGL control
+1. Call `esp_lv_adapter_set_dummy_draw(disp, true)` – LVGL rendering stops
+2. Write pixel data to the display using one of the two paths
+3. Call `esp_lv_adapter_set_dummy_draw(disp, false)` – LVGL rendering resumes
 
-**Use cases:**
-- Video playback - Write video frames without LVGL overhead
-- Camera preview - Stream camera data directly to screen
-- High-speed visualization - Custom rendering for oscilloscopes, analyzers
-- Boot screens - Display content before LVGL initialization
-- Mixed rendering - Combine LVGL UI with custom graphics
+**Typical use cases:**
+- Video playback (camera preview, MJPEG, H.264 decode output)
+- High-throughput sensor visualisation (oscilloscopes, spectrum analysers)
+- Boot splash screens before LVGL initialisation
+- Mixed rendering – LVGL UI overlaid with a custom graphics layer
 
-**Important:**
-- LVGL rendering stops while dummy mode is active
-- You must manually manage all display updates
-- Color format must match LCD native format (typically RGB565)
-- Thread-safe switching is required
+## Two Update Paths
 
-## How to Use the Example
+### Path A – Pipeline / Tear-free (RGB, MIPI-DSI)
 
-### Hardware Required
+Available when the adapter is configured with a multi-buffer anti-tearing mode:
+`TRIPLE_FULL`, `TRIPLE_PARTIAL`, `DOUBLE_FULL`, `DOUBLE_DIRECT`, or `DOUBLE_PARTIAL`.
+
+```
+get_free_buf() ──► fill buffer ──► flush_buf()
+                                       │
+                                       └── blocks until DPI/RGB hardware
+                                           switches to the new buffer
+                                           (tear-free, ~1 VSYNC latency)
+```
+
+**Key properties:**
+- **Zero extra heap allocation** – reuses the adapter's existing frame buffers
+- **Tear-free** – `flush_buf()` blocks until the hardware completes the buffer switch
+- **Self-throttled** – naturally paced at the display refresh rate (e.g., 60 fps)
+- **Color-format transparent** – the buffer is in the display's native format (RGB565 or RGB888)
+
+```c
+void *fb = esp_lv_adapter_dummy_draw_get_free_buf(disp);   // non-blocking
+if (fb) {
+    fill_my_content(fb);
+    esp_lv_adapter_dummy_draw_flush_buf(disp, fb);          // blocks ~1 frame
+}
+```
+
+### Path B – Direct Blit (SPI, I80, QSPI, or fallback)
+
+Used when the pipeline path is unavailable (e.g., tear avoidance mode `NONE` or `TE_SYNC`,
+or SPI/I80/QSPI interfaces that do not use frame-buffer switching).
+
+```
+alloc buffer ──► fill buffer ──► dummy_draw_blit()
+                                       │
+                                       └── DMA transfer to LCD controller
+```
+
+**Key properties:**
+- Requires a separately allocated framebuffer (PSRAM if available)
+- No inherent tear prevention
+- Requires explicit pacing (`vTaskDelay`)
+
+```c
+void *fb = heap_caps_malloc(w * h * bpp, MALLOC_CAP_SPIRAM);
+fill_my_content(fb);
+esp_lv_adapter_dummy_draw_blit(disp, 0, 0, w, h, fb, true /* wait */);
+vTaskDelay(pdMS_TO_TICKS(16));   // manual pacing
+```
+
+### Automatic Path Selection
+
+The example calls `esp_lv_adapter_dummy_draw_get_free_buf()` at task start to detect
+which path is available:
+
+```c
+bool use_pipeline = (esp_lv_adapter_dummy_draw_get_free_buf(disp) != NULL);
+// → true  : RGB / MIPI-DSI with multi-buffer mode  → Path A
+// → false : SPI / I80 / QSPI or NONE / TE_SYNC     → Path B
+```
+
+## Hardware Required
 
 * An ESP32-P4, ESP32-S3, ESP32-S31, or ESP32-C3 development board
 * A LCD panel with one of the supported interfaces:
-  - **MIPI DSI**: For high-resolution displays (e.g., 1024x600)
-  - **RGB**: For parallel RGB interface displays (e.g., 800x480)
-  - **QSPI**: For quad-SPI displays (e.g., 360x360, 400x400)
-  - **SPI**: For standard SPI displays (e.g., 240x240, 320x240)
+  - **MIPI DSI**: For high-resolution displays (e.g., 1024×600)
+  - **RGB**: For parallel RGB interface displays (e.g., 800×480)
+  - **QSPI**: For quad-SPI displays (e.g., 360×360, 400×400)
+  - **SPI**: For standard SPI displays (e.g., 240×240, 320×240)
 * (Optional) Touch panel or rotary encoder for input
-* A USB cable for power supply and programming
 
 **Recommended Hardware Combinations:**
 
-| Chip | LCD Interface | Development Board |
-|------|---------------|-------------------|
-| ESP32-P4 | MIPI DSI | [ESP32-P4-Function-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) |
-| ESP32-S3 | RGB | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
-| ESP32-S3 | QSPI | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
-| ESP32-S3 | SPI | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
-| ESP32-S31 | RGB | Refer to your board documentation |
-| ESP32-C3 | SPI | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
+| Chip | LCD Interface | Anti-tearing Path | Development Board |
+|------|---------------|-------------------|-------------------|
+| ESP32-P4 | MIPI DSI | **Path A** (pipeline) | [ESP32-P4-Function-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32p4/esp32-p4-function-ev-board/index.html) |
+| ESP32-S3 | RGB | **Path A** (pipeline) | [ESP32-S3-LCD-EV-Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html) |
+| ESP32-S3 | QSPI | Path B (blit) | [ESP-VoCat](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/index.html) |
+| ESP32-S3 | SPI | Path B (blit) | [ESP32-S3-BOX-3](https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box_3/hardware_overview_for_box_3.md) |
+| ESP32-S31 | RGB | **Path A** (pipeline) | Refer to your board documentation |
+| ESP32-C3 | SPI | Path B (blit) | [ESP32-C3-LCDkit](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html) |
 
-### Hardware Connection
-
-This example uses the `hw_init` component for hardware abstraction. Refer to your board's schematic for specific GPIO connections.
-
-**Typical LCD interfaces:**
-- **MIPI DSI**: Dedicated MIPI lanes
-- **RGB**: Parallel data bus + sync signals
-- **QSPI**: 4 data lines + control signals
-- **SPI**: Standard SPI interface
-
-**Input devices:**
-- Touch panel: Usually I2C or SPI
-- Rotary encoder: 3 GPIO pins (A, B, button)
-
-### Configure the Project
+## Configure the Project
 
 Run `idf.py menuconfig` and configure:
 
 **Example Configuration:**
-- LCD Interface - Select MIPI DSI / RGB / QSPI / SPI
-- Display Rotation - Choose 0° / 90° / 180° / 270°
-- Input Device - Enable touch panel or encoder if available
+- LCD Interface – Select MIPI DSI / RGB / QSPI / SPI
+- Anti-tearing Mode – For Path A, choose any multi-buffer mode
+  (`Triple Buffer Full`, `Triple Buffer Partial`, `Double Buffer`, etc.)
+- Display Rotation – Choose 0° / 90° / 180° / 270°
+- Input Device – Enable touch panel or encoder if available
 
 **Performance (Optional):**
-- Enable FPS statistics to monitor rendering performance
+- Enable FPS statistics to measure the refresh rate in dummy draw mode
 
-### Build and Flash
+## Build and Flash
 
 1. Set the target chip:
 ```bash
@@ -106,16 +147,14 @@ idf.py -p PORT build flash monitor
 
 (To exit the serial monitor, type ``Ctrl-]``.)
 
-See the [Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
-
-### Expected Output
+## Expected Output
 
 **Initial Screen (LVGL Mode):**
 ```
 ┌─────────────────────────┐
 │                         │
 │     Tap to start        │
-│       800x480          │  ← Display resolution
+│       800x480           │  ← Display resolution
 │                         │
 └─────────────────────────┘
 ```
@@ -125,23 +164,17 @@ Tap anywhere on the screen to enter Dummy Draw mode.
 ```
 ┌─────────────────────────┐
 │                         │
-│    Red (0xF800)        │  ← Current color info
-│                         │
-│   [Solid color fills    │
-│    entire screen]       │
+│    [Solid Red fill]     │  ← Full-screen colour
 │                         │
 └─────────────────────────┘
 ```
-The screen cycles through solid colors automatically. Tap to exit back to LVGL mode.
+The screen cycles Red → Green → Blue. Tap to exit back to LVGL mode.
 
-**Serial Console:**
+**Serial Console (Path A – pipeline):**
 ```
-I (xxx) main: LCD: RGB
-I (xxx) main: Init LCD: 800x480
 I (xxx) main: UI created for 800x480
-I (xxx) main: [Dummy] Enabled
-I (xxx) main: [Dummy] Buffer allocated: 800x480
-I (xxx) main: [Demo] Color cycle started
+I (xxx) main: [Dummy] Enabled – path: Pipeline (tear-free)
+I (xxx) main: [Demo] Color cycle started – pipeline / tear-free
 I (xxx) main: [Demo] Red (0xF800)
 I (xxx) main: [Demo] Green (0x07E0)
 I (xxx) main: [Demo] Blue (0x001F)
@@ -149,61 +182,76 @@ I (xxx) main: [Demo] Stopped
 I (xxx) main: [Dummy] Disabled
 ```
 
+**Serial Console (Path B – direct blit):**
+```
+I (xxx) main: UI created for 240x240
+I (xxx) main: [Dummy] Enabled – path: Direct Blit
+I (xxx) main: [Blit] Buffer allocated: 240x240 x2B = 115200 B
+I (xxx) main: [Demo] Color cycle started – direct blit
+I (xxx) main: [Demo] Red (0xF800)
+...
+```
+
 ## Code Structure
 
-The code is organized into clear functional blocks:
-
-**1. Dummy Draw Core Functions** - Direct LCD control wrapper
-```c
-dummy_draw_enable()          // Switch from LVGL to direct LCD control
-dummy_draw_disable()         // Return control to LVGL
-dummy_draw_fill_screen()     // Fill framebuffer with color
-dummy_draw_update_display()  // Blit buffer to LCD hardware
+```
+main.c
+├── Color helpers
+│   └── fill_native_framebuf()        Fill buffer in display-native format (RGB565 / RGB888)
+│
+├── Path A – Pipeline / Tear-free
+│   └── pipeline_update()             get_free_buf → fill → flush_buf (blocks ~1 frame)
+│
+├── Path B – Direct Blit
+│   ├── blit_ensure_buffer()          Lazy heap allocation (PSRAM preferred)
+│   └── blit_update()                 fill → dummy_draw_blit
+│
+├── Dummy draw enable / disable
+│   ├── dummy_draw_enable()           Set mode + log active path
+│   └── dummy_draw_disable()          Restore LVGL control
+│
+├── Demo task
+│   └── dummy_draw_cycle_colors_task  Auto-detect path, cycle Red/Green/Blue
+│
+├── Mode switching
+│   ├── enter_dummy_mode()
+│   └── exit_dummy_mode()
+│
+└── UI & Events
+    ├── create_control_ui()
+    └── screen_touch_event_cb()
 ```
 
-**2. Demo Task** - Color cycling demonstration
-```c
-dummy_draw_cycle_colors_task()  // Cycles through Red/Green/Blue
-```
+**Key APIs used:**
 
-**3. Mode Switching** - High-level mode management
-```c
-enter_dummy_mode()   // Enable dummy draw + start demo task
-exit_dummy_mode()    // Disable dummy draw mode
-```
-
-**4. UI & Events** - User interaction
-```c
-create_control_ui()        // Create minimal UI (label + touch layer)
-screen_touch_event_cb()    // Handle tap to toggle modes
-```
-
-**Key ESP-IDF APIs Used:**
-- `esp_lv_adapter_set_dummy_draw()` - Enable/disable dummy mode
-- `esp_lv_adapter_get_dummy_draw_enabled()` - Query current mode
-- `esp_lv_adapter_dummy_draw_blit()` - Direct LCD write (bypasses LVGL)
-- `heap_caps_malloc()` - Allocate framebuffer (PSRAM if available)
+| API | Description |
+|-----|-------------|
+| `esp_lv_adapter_set_dummy_draw()` | Enable / disable dummy draw mode |
+| `esp_lv_adapter_get_dummy_draw_enabled()` | Query current mode |
+| `esp_lv_adapter_dummy_draw_get_free_buf()` | Get next writable pipeline buffer (Path A) |
+| `esp_lv_adapter_dummy_draw_flush_buf()` | Submit buffer; block until hardware switch (Path A) |
+| `esp_lv_adapter_dummy_draw_blit()` | Copy user buffer to LCD (Path B) |
+| `lv_display_get_color_format()` | Determine display colour format |
+| `lv_color_format_get_size()` | Get bytes-per-pixel for the format |
 
 ## Troubleshooting
 
 **Screen stays black after entering dummy mode:**
-- Check that framebuffer allocation succeeded (serial logs)
-- Verify LCD interface is properly initialized
-- Ensure RGB565 color format is correct
+- Check framebuffer allocation succeeded (serial logs)
+- Verify LCD interface is properly initialised
+- For Path A: confirm a multi-buffer anti-tearing mode is selected in menuconfig
 
-**Cannot allocate framebuffer:**
-- Enable PSRAM in menuconfig (for large displays)
-- Reduce display resolution if PSRAM unavailable
-- Check available heap memory
+**Path B is selected on a MIPI-DSI / RGB display:**
+- Ensure anti-tearing mode is set to a multi-buffer mode (not `NONE`)
+- Confirm the display adapter was initialised before entering dummy draw mode
 
-**Colors appear incorrect:**
-- Check byte order (big-endian vs little-endian)
-- Consult LCD datasheet for native color format
+**Colors appear incorrect on MIPI-DSI (RGB888):**
+- The example auto-detects bytes-per-pixel via `lv_display_get_color_format()`
+- Verify the color format is correctly configured in `example_lvgl_init`
 
 **Touch not responding:**
 - Verify touch panel is functioning (check serial logs during touch init)
 - Try tapping center of screen
-- For encoder: use the toggle button at bottom of screen
+- For encoder: use the toggle button at the bottom of the screen
 
 For any technical queries, please open an [issue](https://github.com/espressif/esp-iot-solution/issues) on GitHub. We will get back to you soon.
-

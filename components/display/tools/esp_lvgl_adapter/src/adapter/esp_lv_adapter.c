@@ -1140,18 +1140,39 @@ esp_err_t esp_lv_adapter_set_dummy_draw(lv_display_t *disp, bool enable)
     ESP_RETURN_ON_FALSE(xSemaphoreTakeRecursive(s_ctx.dummy_draw_mutex, portMAX_DELAY) == pdTRUE,
                         ESP_ERR_TIMEOUT, TAG, "Failed to acquire dummy draw lock");
 
-    esp_err_t ret = display_manager_set_dummy_draw(disp, enable);
+    esp_err_t ret = esp_lv_adapter_lock((uint32_t) -1);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to acquire LVGL lock for dummy draw switch");
+        xSemaphoreGiveRecursive(s_ctx.dummy_draw_mutex);
+        return ret;
+    }
 
-    if (ret == ESP_OK && !enable) {
-        esp_err_t lock_ret = esp_lv_adapter_lock((uint32_t) -1);
-        if (lock_ret == ESP_OK) {
-            display_manager_request_full_refresh(disp);
-            esp_lv_adapter_unlock();
+    bool current_enabled = false;
+    ret = display_manager_get_dummy_draw_state(disp, &current_enabled);
+    if (ret == ESP_OK && current_enabled != enable) {
+        if (enable) {
+            /* Wait for any in-flight flush, then unload LVGL from the panel
+             * framebuffers so dummy draw can own them via the shared pipeline. */
+            ret = display_manager_wait_flush_done(disp, -1);
+            if (ret == ESP_OK) {
+                ret = display_manager_prepare_dummy_draw(disp);
+            }
+            if (ret == ESP_OK) {
+                ret = display_manager_set_dummy_draw(disp, true);
+            }
         } else {
-            ESP_LOGW(TAG, "Failed to acquire LVGL lock for full refresh");
+            /* Rebind LVGL back to the panel framebuffers, then redraw fully. */
+            ret = display_manager_restore_dummy_draw(disp);
+            if (ret == ESP_OK) {
+                ret = display_manager_set_dummy_draw(disp, false);
+            }
+            if (ret == ESP_OK) {
+                display_manager_request_full_refresh(disp);
+            }
         }
     }
 
+    esp_lv_adapter_unlock();
     xSemaphoreGiveRecursive(s_ctx.dummy_draw_mutex);
     return ret;
 }
@@ -1205,6 +1226,30 @@ esp_err_t esp_lv_adapter_dummy_draw_blit(lv_display_t *disp,
                         ESP_ERR_TIMEOUT, TAG, "Failed to acquire dummy draw lock");
 
     esp_err_t ret = display_manager_dummy_draw_blit(disp, x_start, y_start, x_end, y_end, frame_buffer, wait);
+
+    xSemaphoreGiveRecursive(s_ctx.dummy_draw_mutex);
+    return ret;
+}
+
+void *esp_lv_adapter_dummy_draw_get_free_buf(lv_display_t *disp)
+{
+    if (!s_ctx.inited || !disp) {
+        return NULL;
+    }
+
+    return display_manager_dummy_draw_get_free_buf(disp);
+}
+
+esp_err_t esp_lv_adapter_dummy_draw_flush_buf(lv_display_t *disp, void *frame_buffer)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    ESP_RETURN_ON_FALSE(frame_buffer, ESP_ERR_INVALID_ARG, TAG, "Frame buffer cannot be NULL");
+
+    ESP_RETURN_ON_FALSE(xSemaphoreTakeRecursive(s_ctx.dummy_draw_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_TIMEOUT, TAG, "Failed to acquire dummy draw lock");
+
+    esp_err_t ret = display_manager_dummy_draw_flush_buf(disp, frame_buffer);
 
     xSemaphoreGiveRecursive(s_ctx.dummy_draw_mutex);
     return ret;

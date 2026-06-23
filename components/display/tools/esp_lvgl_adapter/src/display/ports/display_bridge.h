@@ -75,6 +75,22 @@ struct esp_lv_adapter_display_bridge {
                                  bool wait);
 
     /**
+     * @brief Get a free frame buffer from the pipeline for dummy draw
+     *
+     * Returns the current writable back buffer. Must be called only when dummy draw is enabled
+     * and a non-NONE tear avoidance mode is configured.
+     */
+    void *(*dummy_draw_get_free_buf)(esp_lv_adapter_display_bridge_t *bridge);
+
+    /**
+     * @brief Submit a complete frame buffer in dummy draw mode
+     *
+     * Blits the provided frame buffer to the display and waits for the hardware to switch
+     * to it, then returns the next free buffer into draw_fb. Tear-safe via on_frame_buf_complete.
+     */
+    esp_err_t (*dummy_draw_flush_buf)(esp_lv_adapter_display_bridge_t *bridge, void *frame_buffer);
+
+    /**
      * @brief Update panel handle and configuration for rebind
      *
      * @param bridge Bridge instance

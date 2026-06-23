@@ -151,6 +151,13 @@ static size_t display_manager_align_up(size_t value, size_t align)
     return (value + align - 1) & ~(align - 1);
 }
 
+/* Dummy draw buffer redirect helpers */
+static esp_err_t display_manager_redirect_dummy_draw_buffer(esp_lv_adapter_display_node_t *node);
+static void display_manager_dummy_draw_mark_all_framebuffers_dirty(esp_lv_adapter_display_node_t *node);
+static void display_manager_dummy_draw_clear_if_dirty(esp_lv_adapter_display_node_t *node, void *buf);
+static bool display_manager_draw_buffers_use_panel_framebuffers(const esp_lv_adapter_display_node_t *node);
+static esp_err_t display_manager_clear_panel_framebuffers(esp_lv_adapter_display_node_t *node);
+
 /* Frame buffer helpers */
 static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_node_t *node,
                                                       uint8_t required,
@@ -339,6 +346,43 @@ esp_err_t display_manager_dummy_draw_blit(lv_display_t *disp,
     return node->bridge->dummy_draw_blit(node->bridge, x_start, y_start, x_end, y_end, frame_buffer, wait);
 }
 
+void *display_manager_dummy_draw_get_free_buf(lv_display_t *disp)
+{
+    if (!disp) {
+        return NULL;
+    }
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    if (!node || !node->cfg.dummy_draw_enabled) {
+        return NULL;
+    }
+
+    if (!node->bridge || !node->bridge->dummy_draw_get_free_buf) {
+        ESP_LOGE(TAG, "Bridge does not support dummy draw get free buf");
+        return NULL;
+    }
+
+    void *buf = node->bridge->dummy_draw_get_free_buf(node->bridge);
+    if (buf) {
+        display_manager_dummy_draw_clear_if_dirty(node, buf);
+    }
+    return buf;
+}
+
+esp_err_t display_manager_dummy_draw_flush_buf(lv_display_t *disp, void *frame_buffer)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Display handle cannot be NULL");
+    ESP_RETURN_ON_FALSE(frame_buffer, ESP_ERR_INVALID_ARG, TAG, "Frame buffer cannot be NULL");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_INVALID_ARG, TAG, "Display not registered");
+    ESP_RETURN_ON_FALSE(node->cfg.dummy_draw_enabled, ESP_ERR_INVALID_STATE, TAG, "Dummy draw not enabled");
+    ESP_RETURN_ON_FALSE(node->bridge && node->bridge->dummy_draw_flush_buf,
+                        ESP_ERR_NOT_SUPPORTED, TAG, "Bridge does not support dummy draw flush buf");
+
+    return node->bridge->dummy_draw_flush_buf(node->bridge, frame_buffer);
+}
+
 void display_manager_request_full_refresh(lv_display_t *disp)
 {
     if (!disp) {
@@ -430,20 +474,185 @@ static void display_manager_free_draw_buffers(esp_lv_adapter_display_node_t *nod
 
     esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
 
-    /* Free primary buffer if it's not from panel frame buffer */
+    /* Skip panel frame buffers and the private dummy buffer (freed in destroy_node). */
     if (cfg->draw_buf_primary &&
+            cfg->draw_buf_primary != cfg->dummy_draw_buf_primary &&
             !display_manager_is_panel_frame_buffer(node, cfg->draw_buf_primary)) {
         free(cfg->draw_buf_primary);
         cfg->draw_buf_primary = NULL;
     }
 
-    /* Free secondary buffer if it's not from panel frame buffer */
     if (cfg->draw_buf_secondary &&
+            cfg->draw_buf_secondary != cfg->dummy_draw_buf_primary &&
             !display_manager_is_panel_frame_buffer(node, cfg->draw_buf_secondary)) {
         free(cfg->draw_buf_secondary);
         cfg->draw_buf_secondary = NULL;
     }
 
+}
+
+/**
+ * @brief Mark every panel frame buffer as needing a clear before reuse in dummy draw
+ */
+static void display_manager_dummy_draw_mark_all_framebuffers_dirty(esp_lv_adapter_display_node_t *node)
+{
+    if (!node || node->cfg.frame_buffer_count == 0) {
+        return;
+    }
+    uint8_t mask = 0;
+    for (uint8_t i = 0; i < node->cfg.frame_buffer_count && i < ESP_LV_ADAPTER_MAX_FRAME_BUFFERS; i++) {
+        if (node->cfg.frame_buffers[i]) {
+            mask |= (uint8_t)(1U << i);
+        }
+    }
+    node->cfg.dummy_draw_fb_dirty_mask = mask;
+}
+
+/**
+ * @brief Clear a panel frame buffer on its first acquisition in dummy draw mode
+ */
+static void display_manager_dummy_draw_clear_if_dirty(esp_lv_adapter_display_node_t *node, void *buf)
+{
+    if (!node || !buf || node->cfg.frame_buffer_size == 0) {
+        return;
+    }
+    for (uint8_t i = 0; i < node->cfg.frame_buffer_count && i < ESP_LV_ADAPTER_MAX_FRAME_BUFFERS; i++) {
+        if (node->cfg.frame_buffers[i] != buf) {
+            continue;
+        }
+        if ((node->cfg.dummy_draw_fb_dirty_mask & (uint8_t)(1U << i)) == 0) {
+            return;
+        }
+        memset(buf, 0, node->cfg.frame_buffer_size);
+        display_cache_msync_framebuffer(buf, node->cfg.frame_buffer_size);
+        node->cfg.dummy_draw_fb_dirty_mask &= (uint8_t)~(uint8_t)(1U << i);
+        return;
+    }
+}
+
+/**
+ * @brief Check whether the LVGL draw buffers currently point at panel frame buffers
+ */
+static bool display_manager_draw_buffers_use_panel_framebuffers(const esp_lv_adapter_display_node_t *node)
+{
+    if (!node) {
+        return false;
+    }
+
+    return display_manager_is_panel_frame_buffer(node, node->cfg.draw_buf_primary) ||
+           display_manager_is_panel_frame_buffer(node, node->cfg.draw_buf_secondary);
+}
+
+/**
+ * @brief Mark panel frame buffers for lazy clearing when entering dummy draw
+ */
+static esp_err_t display_manager_clear_panel_framebuffers(esp_lv_adapter_display_node_t *node)
+{
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_INVALID_ARG, TAG, "Display node cannot be NULL");
+
+    if (node->cfg.frame_buffer_count == 0 || node->cfg.frame_buffer_size == 0) {
+        return ESP_OK;
+    }
+
+    /* Defer the memset to first acquisition so the scanned-out buffer is untouched. */
+    display_manager_dummy_draw_mark_all_framebuffers_dirty(node);
+    return ESP_OK;
+}
+
+/**
+ * @brief Redirect LVGL rendering to a private buffer while dummy draw owns the panel FBs
+ */
+static esp_err_t display_manager_redirect_dummy_draw_buffer(esp_lv_adapter_display_node_t *node)
+{
+    ESP_RETURN_ON_FALSE(node && node->lv_disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display node");
+
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    if (!display_manager_draw_buffers_use_panel_framebuffers(node)) {
+        cfg->dummy_draw_redirected = false;
+        return ESP_OK;
+    }
+
+    if (cfg->dummy_draw_redirected) {
+        return ESP_OK;
+    }
+
+    if (!cfg->dummy_draw_buf_primary) {
+        size_t draw_buf_pixels = cfg->base.profile.hor_res ? cfg->base.profile.hor_res : 1;
+#if LVGL_VERSION_MAJOR >= 9
+        lv_color_format_t color_format = lv_display_get_color_format(node->lv_disp);
+        size_t draw_buf_bytes = display_manager_calc_draw_buf_bytes(&cfg->base.profile,
+                                                                    draw_buf_pixels,
+                                                                    color_format);
+#else
+        size_t draw_buf_bytes = draw_buf_pixels * sizeof(lv_color_t);
+#endif
+        ESP_RETURN_ON_FALSE(draw_buf_bytes > 0, ESP_ERR_INVALID_STATE, TAG, "Dummy draw buffer size invalid");
+
+        void *buf = display_manager_alloc_draw_buffer(draw_buf_bytes, cfg->base.profile.use_psram);
+        ESP_RETURN_ON_FALSE(buf, ESP_ERR_NO_MEM, TAG, "Failed to allocate dummy draw buffer");
+
+        memset(buf, 0, draw_buf_bytes);
+        cfg->dummy_draw_buf_primary = buf;
+        cfg->dummy_draw_buf_pixels = draw_buf_pixels;
+        cfg->dummy_draw_buf_bytes = draw_buf_bytes;
+    }
+
+    cfg->draw_buf_primary = cfg->dummy_draw_buf_primary;
+    cfg->draw_buf_secondary = NULL;
+    cfg->draw_buf_pixels = cfg->dummy_draw_buf_pixels;
+    cfg->dummy_draw_redirected = true;
+
+#if LVGL_VERSION_MAJOR >= 9
+    lv_display_set_buffers(node->lv_disp,
+                           cfg->draw_buf_primary,
+                           NULL,
+                           cfg->dummy_draw_buf_bytes,
+                           LV_DISPLAY_RENDER_MODE_PARTIAL);
+#else
+    lv_disp_draw_buf_init(&node->draw_buf,
+                          (lv_color_t *)cfg->draw_buf_primary,
+                          NULL,
+                          cfg->dummy_draw_buf_pixels);
+    /* Match partial mode to the one-line buffer (active driver = disp->driver). */
+    node->lv_disp->driver->full_refresh = 0;
+    node->lv_disp->driver->direct_mode = 0;
+#endif
+
+    return ESP_OK;
+}
+
+esp_err_t display_manager_prepare_dummy_draw(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Display handle cannot be NULL");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_INVALID_ARG, TAG, "Display not registered");
+
+    esp_err_t ret = display_manager_clear_panel_framebuffers(node);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to clear panel framebuffers");
+
+    ret = display_manager_redirect_dummy_draw_buffer(node);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to redirect dummy draw buffer");
+
+    return ESP_OK;
+}
+
+esp_err_t display_manager_restore_dummy_draw(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Display handle cannot be NULL");
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_INVALID_ARG, TAG, "Display not registered");
+
+    if (!node->cfg.dummy_draw_redirected) {
+        return ESP_OK;
+    }
+
+    esp_err_t ret = display_manager_rebind_draw_buffers(disp);
+    if (ret == ESP_OK) {
+        node->cfg.dummy_draw_redirected = false;
+    }
+    return ret;
 }
 
 /**
@@ -465,6 +674,21 @@ static void display_manager_destroy_node(esp_lv_adapter_display_node_t *node)
     if (node->cfg.mono_buf) {
         free(node->cfg.mono_buf);
         node->cfg.mono_buf = NULL;
+    }
+
+    /* Free the private dummy draw buffer (used while LVGL is redirected) */
+    if (node->cfg.dummy_draw_buf_primary) {
+        if (node->cfg.draw_buf_primary == node->cfg.dummy_draw_buf_primary) {
+            node->cfg.draw_buf_primary = NULL;
+        }
+        if (node->cfg.draw_buf_secondary == node->cfg.dummy_draw_buf_primary) {
+            node->cfg.draw_buf_secondary = NULL;
+        }
+        free(node->cfg.dummy_draw_buf_primary);
+        node->cfg.dummy_draw_buf_primary = NULL;
+        node->cfg.dummy_draw_buf_pixels = 0;
+        node->cfg.dummy_draw_buf_bytes = 0;
+        node->cfg.dummy_draw_redirected = false;
     }
 
     /* Destroy the bridge (hardware interface) */
@@ -1043,8 +1267,10 @@ static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_nod
     switch (cfg->base.tear_avoid_mode) {
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
+        rebound = display_manager_use_panel_buffers(node, full_pixels, 1, 0);
+        break;
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL:
-        rebound = display_manager_use_panel_buffers(node, full_pixels, 0, 1);
+        rebound = display_manager_use_panel_buffers(node, full_pixels, 1, 2);
         break;
     default:
         rebound = true; /* Modes that do not rely on panel buffers keep existing draw buffers */
@@ -1075,10 +1301,17 @@ static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *no
 
     switch (mode) {
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT:
-    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL:
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL: {
+        size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
+        if (!display_manager_use_panel_buffers(node, full_pixels, 1, 0)) {
+            ESP_LOGW(TAG, "tear mode %d: panel buffers unavailable", mode);
+            return false;
+        }
+        break;
+    }
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL: {
         size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
-        if (!display_manager_use_panel_buffers(node, full_pixels, 0, 1)) {
+        if (!display_manager_use_panel_buffers(node, full_pixels, 1, 2)) {
             ESP_LOGW(TAG, "tear mode %d: panel buffers unavailable", mode);
             return false;
         }
@@ -1825,6 +2058,10 @@ esp_err_t display_manager_rebind_draw_buffers(lv_display_t *disp)
                           (lv_color_t *)cfg->draw_buf_primary,
                           (lv_color_t *)cfg->draw_buf_secondary,
                           cfg->draw_buf_pixels);
+    /* Restore the render-mode flags redirect may have cleared (active driver). */
+    esp_lv_adapter_display_render_mode_t render_mode = display_manager_pick_render_mode(cfg);
+    disp->driver->full_refresh = (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL) ? 1 : 0;
+    disp->driver->direct_mode = (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT) ? 1 : 0;
 #endif
 
     ESP_LOGD(TAG, "LVGL draw buffers rebound successfully");

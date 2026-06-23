@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -7,196 +7,158 @@
 /**
  * LVGL Dummy Draw Example
  *
- * Demonstrates bypassing LVGL to write directly to LCD:
- * - dummy_draw_enable/disable()  : Switch between LVGL and direct LCD control
- * - dummy_draw_fill_screen()     : Fill framebuffer
- * - dummy_draw_update_display()  : Blit to LCD hardware
+ * Demonstrates bypassing LVGL to write directly to the LCD.
+ * Two update paths are selected automatically at runtime:
+ *
+ *   Path A – Pipeline (RGB, MIPI-DSI with multi-buffer anti-tearing):
+ *     get_free_buf() → fill → flush_buf()   [tear-free, self-throttled]
+ *
+ *   Path B – Direct Blit (SPI, I80, QSPI, or single-buffer modes):
+ *     alloc buffer → fill → dummy_draw_blit()
  */
 
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
-#include "esp_err.h"
-#include "sdkconfig.h"
-#include <string.h>
-#include "example_lvgl_init.h"
 #include "esp_heap_caps.h"
+#include "sdkconfig.h"
+#include "lvgl.h"
+#include "example_lvgl_init.h"
+#include "esp_lv_adapter.h"
 
 static const char *TAG = "main";
 
-/* Dummy draw task configuration */
-#define DUMMY_DRAW_TASK_STACK_SIZE     8192
-#define DUMMY_DRAW_TASK_PRIORITY       4
-#define DUMMY_DRAW_CYCLE_DELAY_MS      100
+#define DUMMY_TASK_STACK   8192
+#define DUMMY_TASK_PRI     4
+#define COLOR_HOLD_MS      pdMS_TO_TICKS(800)
 
 static lv_display_t *s_disp;
-static lv_obj_t *s_info_label;
-static lv_obj_t *s_dummy_touch_layer;
-static TaskHandle_t s_dummy_task;
-static uint16_t *s_dummy_framebuffer;
-static size_t s_dummy_pixel_count;
-static size_t s_current_color_index;
+static lv_obj_t     *s_info_label;
+static lv_obj_t     *s_touch_layer;
+static TaskHandle_t  s_dummy_task;
 #if HW_USE_ENCODER
 static lv_group_t *s_input_group;
-static lv_obj_t *s_toggle_button;
+static lv_obj_t   *s_toggle_button;
 #endif
 
-static const uint16_t s_dummy_palette[] = {
-    0xF800,  // Red
-    0x07E0,  // Green
-    0x001F,  // Blue
-};
+static void *s_blit_buf;   /* Path B: heap-allocated framebuffer (lazy) */
 
-static const char *s_color_names[] = {"Red", "Green", "Blue"};
+static const uint16_t s_palette[] = { 0xF800, 0x07E0, 0x001F };   /* Red, Green, Blue (RGB565) */
+static const char    *s_palette_names[] = { "Red", "Green", "Blue" };
 
-static void dummy_draw_enable(void);
-static void dummy_draw_disable(void);
-static void dummy_draw_fill_screen(uint16_t color_rgb565);
-static void dummy_draw_update_display(void);
-static void dummy_draw_cycle_colors_task(void *arg);
-static void screen_touch_event_cb(lv_event_t *e);
-#if HW_USE_ENCODER
-static void toggle_button_event_cb(lv_event_t *e);
-#endif
-
-/* ========== Dummy Draw Core Functions ========== */
-
-static void dummy_draw_enable(void)
+/* Fill a display-native framebuffer with a solid RGB565 colour.
+ * MIPI-DSI panels commonly use RGB888 (3 B/px); others use RGB565 (2 B/px). */
+static void fill_framebuf(void *fb, uint16_t rgb565)
 {
-    esp_err_t ret = esp_lv_adapter_set_dummy_draw(s_disp, true);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "[Dummy] Enabled");
+    uint8_t bpp = lv_color_format_get_size(lv_display_get_color_format(s_disp));
+    size_t  n   = (size_t)HW_LCD_H_RES * HW_LCD_V_RES;
+
+    if (bpp == 2) {
+        uint16_t *p = (uint16_t *)fb;
+        for (size_t i = 0; i < n; i++) {
+            p[i] = rgb565;
+        }
+    } else if (bpp == 3) {
+        uint8_t r = (uint8_t)(((rgb565 >> 11) & 0x1F) << 3);
+        uint8_t g = (uint8_t)(((rgb565 >>  5) & 0x3F) << 2);
+        uint8_t b = (uint8_t)((rgb565         & 0x1F) << 3);
+        uint8_t *p = (uint8_t *)fb;
+        for (size_t i = 0; i < n; i++) {
+            *p++ = r;
+            *p++ = g;
+            *p++ = b;
+        }
     } else {
-        ESP_LOGE(TAG, "[Dummy] Enable failed");
+        memset(fb, (int)(rgb565 & 0xFF), n * bpp);
     }
 }
 
-static void dummy_draw_disable(void)
+/* Path A: get the next writable pipeline buffer, fill it, then submit.
+ * flush_buf() blocks until the display hardware switches to the new buffer,
+ * guaranteeing a tear-free update and naturally throttling to the refresh rate. */
+static bool pipeline_update(uint16_t rgb565)
 {
-    esp_lv_adapter_set_dummy_draw(s_disp, false);
-    ESP_LOGI(TAG, "[Dummy] Disabled");
+    void *fb = esp_lv_adapter_dummy_draw_get_free_buf(s_disp);
+    if (!fb) {
+        return false;
+    }
+    fill_framebuf(fb, rgb565);
+    return esp_lv_adapter_dummy_draw_flush_buf(s_disp, fb) == ESP_OK;
 }
 
-static void dummy_draw_fill_screen(uint16_t color_rgb565)
+/* Path B: fill a self-allocated buffer and push it to the LCD via blit. */
+static void blit_update(uint16_t rgb565)
 {
-    if (!s_dummy_framebuffer) {
-        s_dummy_pixel_count = (size_t)HW_LCD_H_RES * HW_LCD_V_RES;
-        size_t bytes = s_dummy_pixel_count * sizeof(uint16_t);
-
-        s_dummy_framebuffer = heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-        if (!s_dummy_framebuffer) {
-            s_dummy_framebuffer = heap_caps_malloc(bytes, MALLOC_CAP_8BIT);
+    if (!s_blit_buf) {
+        uint8_t bpp  = lv_color_format_get_size(lv_display_get_color_format(s_disp));
+        size_t  size = (size_t)HW_LCD_H_RES * HW_LCD_V_RES * bpp;
+        s_blit_buf = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (!s_blit_buf) {
+            s_blit_buf = heap_caps_malloc(size, MALLOC_CAP_8BIT);
         }
-
-        if (!s_dummy_framebuffer) {
-            ESP_LOGE(TAG, "[Dummy] Buffer allocation failed");
+        if (!s_blit_buf) {
+            ESP_LOGE(TAG, "framebuffer alloc failed");
             return;
         }
-        ESP_LOGI(TAG, "[Dummy] Buffer allocated: %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
+        ESP_LOGI(TAG, "blit buf: %dx%d @%uB", HW_LCD_H_RES, HW_LCD_V_RES, (unsigned)bpp);
     }
-
-    for (size_t i = 0; i < s_dummy_pixel_count; ++i) {
-        s_dummy_framebuffer[i] = color_rgb565;
-    }
+    fill_framebuf(s_blit_buf, rgb565);
+    esp_lv_adapter_dummy_draw_blit(s_disp, 0, 0, HW_LCD_H_RES, HW_LCD_V_RES, s_blit_buf, true);
 }
 
-static void dummy_draw_update_display(void)
+static void dummy_draw_cycle_task(void *arg)
 {
-    if (!s_dummy_framebuffer) {
-        return;
-    }
+    /* get_free_buf() returns NULL when the pipeline path is unavailable
+     * (e.g. tear avoidance mode NONE / TE_SYNC, or SPI/I80/QSPI).
+     * The call itself is non-blocking; the blocking happens inside flush_buf(). */
+    bool pipeline = (esp_lv_adapter_dummy_draw_get_free_buf(s_disp) != NULL);
+    ESP_LOGI(TAG, "dummy draw: %s", pipeline ? "pipeline (tear-free)" : "direct blit");
 
-    esp_err_t ret = esp_lv_adapter_dummy_draw_blit(s_disp, 0, 0,
-                                                   HW_LCD_H_RES, HW_LCD_V_RES,
-                                                   s_dummy_framebuffer, true);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "[Dummy] Blit failed");
-    }
-}
-
-/* ========== Demo Task ========== */
-
-static void dummy_draw_cycle_colors_task(void *arg)
-{
-    size_t color_index = 0;
-    const size_t palette_size = sizeof(s_dummy_palette) / sizeof(s_dummy_palette[0]);
-
-    ESP_LOGI(TAG, "[Demo] Color cycle started");
-
+    size_t idx = 0;
     while (esp_lv_adapter_get_dummy_draw_enabled(s_disp)) {
-        s_current_color_index = color_index;
-        uint16_t current_color = s_dummy_palette[color_index];
+        uint16_t color = s_palette[idx];
+        ESP_LOGI(TAG, "%s (0x%04X)", s_palette_names[idx], color);
+        idx = (idx + 1) % (sizeof(s_palette) / sizeof(s_palette[0]));
 
-        dummy_draw_fill_screen(current_color);
-        dummy_draw_update_display();
-
-        ESP_LOGI(TAG, "[Demo] %s (0x%04X)", s_color_names[color_index], current_color);
-
-        color_index = (color_index + 1) % palette_size;
-        vTaskDelay(pdMS_TO_TICKS(DUMMY_DRAW_CYCLE_DELAY_MS * 4));
+        if (pipeline) {
+            if (!pipeline_update(color)) {
+                ESP_LOGW(TAG, "pipeline failed, switching to blit");
+                pipeline = false;
+                blit_update(color);
+            }
+        } else {
+            blit_update(color);
+        }
+        vTaskDelay(COLOR_HOLD_MS);
     }
-
-    ESP_LOGI(TAG, "[Demo] Stopped");
 
     s_dummy_task = NULL;
-    dummy_draw_disable();
-
+    esp_lv_adapter_set_dummy_draw(s_disp, false);
     vTaskDelete(NULL);
 }
 
-/* ========== Mode Switching ========== */
-
 static void enter_dummy_mode(void)
 {
-    if (esp_lv_adapter_get_dummy_draw_enabled(s_disp)) {
+    if (esp_lv_adapter_get_dummy_draw_enabled(s_disp) || s_dummy_task) {
         return;
     }
-
-    dummy_draw_enable();
-
-    if (s_dummy_task == NULL) {
-        BaseType_t ret = xTaskCreate(dummy_draw_cycle_colors_task, "dummy_demo",
-                                     DUMMY_DRAW_TASK_STACK_SIZE, NULL,
-                                     DUMMY_DRAW_TASK_PRIORITY, &s_dummy_task);
-        if (ret != pdPASS) {
-            ESP_LOGE(TAG, "Task creation failed");
-            dummy_draw_disable();
-        }
+    if (esp_lv_adapter_set_dummy_draw(s_disp, true) != ESP_OK) {
+        return;
     }
+    xTaskCreate(dummy_draw_cycle_task, "dummy", DUMMY_TASK_STACK, NULL, DUMMY_TASK_PRI, &s_dummy_task);
 }
 
 static void exit_dummy_mode(void)
 {
-    if (!esp_lv_adapter_get_dummy_draw_enabled(s_disp)) {
-        return;
-    }
-
-    dummy_draw_disable();
+    esp_lv_adapter_set_dummy_draw(s_disp, false);
 }
 
-/* ========== Event Handlers ========== */
-
-#if HW_USE_ENCODER
-static void toggle_button_event_cb(lv_event_t *e)
+static void on_click(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
         return;
     }
-
-    if (esp_lv_adapter_get_dummy_draw_enabled(s_disp)) {
-        exit_dummy_mode();
-    } else {
-        enter_dummy_mode();
-    }
-}
-#endif
-
-static void screen_touch_event_cb(lv_event_t *e)
-{
-    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
-        return;
-    }
-
     if (esp_lv_adapter_get_dummy_draw_enabled(s_disp)) {
         exit_dummy_mode();
     } else {
@@ -204,9 +166,7 @@ static void screen_touch_event_cb(lv_event_t *e)
     }
 }
 
-/* ========== UI Creation ========== */
-
-static void create_control_ui(lv_indev_t *encoder)
+static void create_ui(lv_indev_t *encoder)
 {
     lv_obj_t *scr = lv_disp_get_scr_act(s_disp);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x202020), 0);
@@ -216,28 +176,25 @@ static void create_control_ui(lv_indev_t *encoder)
     lv_obj_set_style_text_font(s_info_label, &lv_font_montserrat_24, 0);
     lv_obj_set_style_text_align(s_info_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(s_info_label, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_text_fmt(s_info_label, "Tap to start\n%dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
 
-    s_dummy_touch_layer = lv_obj_create(scr);
-    lv_obj_remove_style_all(s_dummy_touch_layer);
-    lv_obj_set_size(s_dummy_touch_layer, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_pos(s_dummy_touch_layer, 0, 0);
-    lv_obj_set_style_bg_opa(s_dummy_touch_layer, LV_OPA_TRANSP, 0);
-    lv_obj_clear_flag(s_dummy_touch_layer, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(s_dummy_touch_layer, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(s_dummy_touch_layer, screen_touch_event_cb, LV_EVENT_CLICKED, NULL);
-
+    s_touch_layer = lv_obj_create(scr);
+    lv_obj_remove_style_all(s_touch_layer);
+    lv_obj_set_size(s_touch_layer, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_opa(s_touch_layer, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(s_touch_layer, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(s_touch_layer, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_touch_layer, on_click, LV_EVENT_CLICKED, NULL);
     lv_obj_move_foreground(s_info_label);
 
 #if HW_USE_ENCODER
     s_toggle_button = lv_btn_create(scr);
     lv_obj_set_size(s_toggle_button, 180, 50);
     lv_obj_align(s_toggle_button, LV_ALIGN_BOTTOM_MID, 0, -20);
-    lv_obj_add_event_cb(s_toggle_button, toggle_button_event_cb, LV_EVENT_CLICKED, NULL);
-
+    lv_obj_add_event_cb(s_toggle_button, on_click, LV_EVENT_CLICKED, NULL);
     lv_obj_t *btn_label = lv_label_create(s_toggle_button);
     lv_label_set_text(btn_label, "Toggle");
     lv_obj_center(btn_label);
-
     if (encoder) {
         s_input_group = lv_group_create();
         lv_group_add_obj(s_input_group, s_toggle_button);
@@ -246,20 +203,16 @@ static void create_control_ui(lv_indev_t *encoder)
 #else
     (void)encoder;
 #endif
-
-    lv_label_set_text_fmt(s_info_label, "Tap to start\n%dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
-    ESP_LOGI(TAG, "UI created for %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
 }
 
 void app_main(void)
 {
     example_lvgl_ctx_t ctx;
     ESP_ERROR_CHECK(example_lvgl_init(&ctx));
-
     s_disp = ctx.disp;
 
     if (esp_lv_adapter_lock(-1) == ESP_OK) {
-        create_control_ui(ctx.encoder);
+        create_ui(ctx.encoder);
         esp_lv_adapter_unlock();
     }
 }
