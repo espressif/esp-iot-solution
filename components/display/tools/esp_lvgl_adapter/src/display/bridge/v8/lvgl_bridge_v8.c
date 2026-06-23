@@ -1690,7 +1690,17 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         const esp_lv_adapter_tear_avoid_mode_t mode = impl->cfg.base.tear_avoid_mode;
         esp_lcd_dpi_panel_event_callbacks_t cbs = {
             .on_color_trans_done = display_bridge_v8_on_mipi_color_trans_done,
+            /*
+             * The DPI "frame buffer reusable" event was renamed from `on_refresh_done` to
+             * `on_frame_buf_complete` (union alias) by IDF "feat(lcd): support buffer switch interrupt".
+             * The new name is backported to release/v5.5, v6.1 and v6.2, but NOT to release/v6.0.
+             * Use the legacy field name only on the v6.0.x branch; drop this guard once v6.0 backports it.
+             */
+#if ESP_IDF_VERSION_MAJOR == 6 && ESP_IDF_VERSION_MINOR == 0
+            .on_refresh_done = (bridge_mode_uses_buf_switch_release(mode) || impl->dummy_draw) ? display_bridge_v8_on_mipi_frame_buf_complete : NULL,
+#else
             .on_frame_buf_complete = (bridge_mode_uses_buf_switch_release(mode) || impl->dummy_draw) ? display_bridge_v8_on_mipi_frame_buf_complete : NULL,
+#endif
         };
 
         esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, impl);
