@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.4.0 - 2026-06-11
+
+### Features:
+
+* Support ESP32-S31.
+
+### Bug Fixes:
+
+* Fixed RNDIS control polling for devices that do not reliably send response notifications.
+* Fixed QUERY transfer length and response information-buffer offset parsing.
+* Handled interleaved indicate and keepalive messages during command completions.
+
 ## v0.3.1 - 2025-12-31
 
 ### Bug Fixes:
