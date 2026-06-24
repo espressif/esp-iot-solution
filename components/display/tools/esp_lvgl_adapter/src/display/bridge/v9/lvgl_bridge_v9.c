@@ -1519,7 +1519,15 @@ static bool IRAM_ATTR display_bridge_v9_handle_vsync(esp_lv_adapter_display_brid
     return (need_yield == pdTRUE);
 }
 
-static bool IRAM_ATTR display_bridge_v9_handle_frame_buf_complete(esp_lv_adapter_display_bridge_v9_t *impl)
+/*
+ * Shared frame-buffer-switch ISR handler. Its only callers are the MIPI DSI and
+ * RGB frame-complete callbacks, both compiled out on SoCs that have neither
+ * controller; mark it unused so such targets stay warning-clean (the linker
+ * garbage-collects it). Keeping it interface-agnostic avoids wrapping pure logic
+ * in panel-type macros.
+ */
+static bool IRAM_ATTR __attribute__((unused))
+display_bridge_v9_handle_frame_buf_complete(esp_lv_adapter_display_bridge_v9_t *impl)
 {
     if (!impl) {
         return false;
