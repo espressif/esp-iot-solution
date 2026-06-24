@@ -1,2 +1,3 @@
-idf_component_register(SRCS main.c wave_1ch_16bits.c
-                    INCLUDE_DIRS ".")
+idf_component_register(SRC_DIRS "."
+                    INCLUDE_DIRS "."
+                    EMBED_FILES "web/index.html" "web/style.css" "web/app.js" "web/mic-player-worklet.js")
