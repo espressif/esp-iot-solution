@@ -17,6 +17,7 @@
 #include <string.h>
 
 #include "lvgl.h"
+#include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
 #if LVGL_VERSION_MAJOR >= 9
 #include "lvgl_private.h"
@@ -264,6 +265,18 @@ void display_cache_msync_range(const void *addr,
 void display_cache_msync_framebuffer(void *buffer,
                                      size_t size);
 
+/**
+ * @brief Invalidate CPU cache for a framebuffer (Memory to Cache)
+ *
+ * Use after hardware accelerators (DMA2D/PPA) write directly to PSRAM,
+ * so subsequent CPU reads fetch fresh data from memory instead of stale cache.
+ *
+ * @param buffer Framebuffer pointer
+ * @param size Framebuffer size in bytes
+ */
+void display_cache_msync_invalidate_framebuffer(void *buffer,
+                                                size_t size);
+
 /* LCD operations */
 
 /**
@@ -367,8 +380,8 @@ struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapte
  * @param runtime Runtime info structure to initialize
  * @param cfg Display runtime configuration
  */
-void display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *runtime,
-                                      const esp_lv_adapter_display_runtime_config_t *cfg);
+esp_err_t display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *runtime,
+                                           const esp_lv_adapter_display_runtime_config_t *cfg);
 
 /**
  * @brief Record timestamp after a successful flush/blit operation

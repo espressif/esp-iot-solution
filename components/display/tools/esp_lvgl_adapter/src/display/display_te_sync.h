@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <stddef.h>
 #include "freertos/FreeRTOS.h"
 #include "esp_err.h"
 #include "esp_lv_adapter_display.h"
@@ -21,7 +22,7 @@ esp_err_t esp_lv_adapter_te_sync_create(const esp_lv_adapter_te_sync_config_t *c
                                         bool prefer_refresh_end,
                                         esp_lv_adapter_te_sync_context_t **out_ctx);
 void esp_lv_adapter_te_sync_destroy(esp_lv_adapter_te_sync_context_t *ctx);
-void esp_lv_adapter_te_sync_begin_frame(esp_lv_adapter_te_sync_context_t *ctx);
+void esp_lv_adapter_te_sync_begin_frame(esp_lv_adapter_te_sync_context_t *ctx, size_t transfer_bytes);
 esp_err_t esp_lv_adapter_te_sync_wait_for_vsync(esp_lv_adapter_te_sync_context_t *ctx);
 void esp_lv_adapter_te_sync_record_tx_start(esp_lv_adapter_te_sync_context_t *ctx);
 void esp_lv_adapter_te_sync_record_tx_done(esp_lv_adapter_te_sync_context_t *ctx);

@@ -28,6 +28,7 @@ struct esp_lv_adapter_te_sync_context {
     int64_t te_period_us;           /*!< Estimated TE period */
     int64_t tx_start_time_us;       /*!< Timestamp when the current transmission started */
     int64_t last_tx_duration_us;    /*!< Duration of the last transmission */
+    int64_t estimated_tx_duration_us; /*!< Estimated duration of the current transmission */
     bool tx_in_progress;            /*!< Whether a transmission timestamp is active */
     bool isr_registered;
     gpio_int_type_t intr_type;
@@ -119,6 +120,22 @@ static void te_reset_wait_state(esp_lv_adapter_te_sync_context_t *ctx)
     ctx->window_defer_count = 0;
     ctx->window_violation_logged = false;
     portEXIT_CRITICAL(&ctx->lock);
+}
+
+static int64_t te_estimate_transfer_time_us(const esp_lv_adapter_te_sync_context_t *ctx, size_t transfer_bytes)
+{
+    if (!ctx || transfer_bytes == 0 || ctx->cfg.bus_freq_hz == 0) {
+        return 0;
+    }
+
+    uint32_t data_lines = ctx->cfg.data_lines ? ctx->cfg.data_lines : ESP_LV_ADAPTER_TE_DATA_LINES_DEFAULT;
+    uint64_t bus_bits_per_sec = (uint64_t)ctx->cfg.bus_freq_hz * data_lines;
+    if (bus_bits_per_sec == 0) {
+        return 0;
+    }
+
+    uint64_t transfer_bits = (uint64_t)transfer_bytes * 8ULL;
+    return (int64_t)((transfer_bits * 1000000ULL + bus_bits_per_sec - 1ULL) / bus_bits_per_sec);
 }
 
 /**
@@ -216,6 +233,7 @@ esp_err_t esp_lv_adapter_te_sync_create(const esp_lv_adapter_te_sync_config_t *c
     ctx->te_period_us = 0;
     ctx->tx_start_time_us = 0;
     ctx->last_tx_duration_us = 0;
+    ctx->estimated_tx_duration_us = 0;
     ctx->tx_in_progress = false;
 
     /* Auto-detect or use specified TE edge type */
@@ -279,16 +297,18 @@ void esp_lv_adapter_te_sync_destroy(esp_lv_adapter_te_sync_context_t *ctx)
     ESP_LOGI(TAG, "TE sync context destroyed");
 }
 
-void esp_lv_adapter_te_sync_begin_frame(esp_lv_adapter_te_sync_context_t *ctx)
+void esp_lv_adapter_te_sync_begin_frame(esp_lv_adapter_te_sync_context_t *ctx, size_t transfer_bytes)
 {
     if (!ctx) {
         return;
     }
 
     TickType_t request_ticks = xTaskGetTickCount();
+    int64_t estimated_tx_duration_us = te_estimate_transfer_time_us(ctx, transfer_bytes);
 
     portENTER_CRITICAL(&ctx->lock);
     ctx->frame_request_ticks = request_ticks;
+    ctx->estimated_tx_duration_us = estimated_tx_duration_us;
     ctx->window_defer_count = 0;
     ctx->window_violation_logged = false;
     portEXIT_CRITICAL(&ctx->lock);
@@ -333,6 +353,7 @@ esp_err_t esp_lv_adapter_te_sync_wait_for_vsync(esp_lv_adapter_te_sync_context_t
         TickType_t request_ticks;
         int64_t te_period_us;
         int64_t tx_duration_us;
+        int64_t estimated_tx_duration_us;
         uint8_t window_percent;
         uint8_t window_defer_count;
 
@@ -341,9 +362,14 @@ esp_err_t esp_lv_adapter_te_sync_wait_for_vsync(esp_lv_adapter_te_sync_context_t
         request_ticks = ctx->frame_request_ticks;
         te_period_us = ctx->te_period_us;
         tx_duration_us = ctx->last_tx_duration_us;
+        estimated_tx_duration_us = ctx->estimated_tx_duration_us;
         window_percent = ctx->window_percent;
         window_defer_count = ctx->window_defer_count;
         portEXIT_CRITICAL(&ctx->lock);
+
+        if (estimated_tx_duration_us > tx_duration_us) {
+            tx_duration_us = estimated_tx_duration_us;
+        }
 
         if (request_ticks != 0 && !te_tick_after(te_ticks, request_ticks)) {
             ESP_LOGD(TAG, "TE signal before frame request, ignoring");

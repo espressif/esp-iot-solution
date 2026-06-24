@@ -84,6 +84,11 @@ typedef struct {
     uint8_t *mono_buf;                      /*!< Monochrome conversion buffer (VTILED) */
     esp_lv_adapter_dummy_draw_callbacks_t dummy_draw_cbs; /*!< Dummy draw callback collection */
     void *dummy_draw_user_ctx;              /*!< User context for dummy draw callbacks */
+    void *dummy_draw_buf_primary;           /*!< Private LVGL draw buffer used while dummy draw is enabled */
+    size_t dummy_draw_buf_pixels;           /*!< Pixel count of the private dummy draw buffer */
+    size_t dummy_draw_buf_bytes;            /*!< Byte size of the private dummy draw buffer */
+    bool dummy_draw_redirected;             /*!< True when LVGL rendering is redirected away from panel framebuffers */
+    uint8_t dummy_draw_fb_dirty_mask;       /*!< Bit i: frame_buffers[i] needs memset on next dummy_draw_get_free_buf */
     void (*rounder_cb)(lv_area_t *, void *); /*!< Area rounding callback */
     void *rounder_user_data;                /*!< User data for rounder callback */
     esp_lv_adapter_draw_bitmap_callbacks_t draw_bitmap_cbs; /*!< Draw bitmap callback collection */
