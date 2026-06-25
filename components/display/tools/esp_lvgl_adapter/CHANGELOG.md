@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.6.0 (2026-06-25)
+
+* Fix flash encryption API version guard boundary: switch the `esp_efuse_is_flash_encryption_enabled()` branch to IDF >= 6.0.1, falling back to `esp_flash_encryption_enabled()` below it, so both the `v6.0` tag (6.0.0) and the `release/v6.0` branch (6.0.1) compile
+
 ## v0.6.0-beta (2026-06-23)
 
 * Unify anti-tearing ISR handling around `on_frame_buf_complete` for accurate buffer-switch synchronization
