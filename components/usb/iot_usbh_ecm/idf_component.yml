@@ -1,7 +1,8 @@
-version: "0.2.1"
+version: "0.3.0"
 targets:
   - esp32s2
   - esp32s3
+  - esp32s31
   - esp32p4
 description: USB Host ETH ECM Driver
 url: https://github.com/espressif/esp-iot-solution
@@ -11,7 +12,7 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=5.2"
   espressif/iot_usbh_cdc:
-    version: "^3.0"
+    version: "^3.1"
     override_path: "../iot_usbh_cdc"
     public: true
   espressif/iot_eth:

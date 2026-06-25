@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v3.1.0 - 2026-06-11
+
+### Features:
+
+* Support ESP32-S31.
+
+### Bug Fixes:
+
+* Allow CDC notification interfaces without interrupt endpoints.
+
 ## v3.0.0 - 2025-10-15
 
 ### Features:

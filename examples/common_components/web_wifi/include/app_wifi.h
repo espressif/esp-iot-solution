@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,14 @@
 
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define WIFI_BW_HT20 WIFI_BW20
+#define WIFI_BW_HT40 WIFI_BW40
+
+#define ESP_IF_WIFI_STA WIFI_IF_STA
+#define ESP_IF_WIFI_AP WIFI_IF_AP
 #endif
 
 #ifdef CONFIG_WIFI_BANDWIFTH_40

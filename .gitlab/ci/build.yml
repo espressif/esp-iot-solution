@@ -974,7 +974,7 @@ build_example_usb_host_usb_cdc_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_4g_module
 
@@ -982,7 +982,7 @@ build_example_usb_host_usb_cdc_basic:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_cdc_basic
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_cdc_basic
 
@@ -1006,7 +1006,7 @@ build_example_usb_host_usb_ecm_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_ecm_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_ecm_4g_module
 
@@ -1022,7 +1022,7 @@ build_example_usb_host_usb_rndis_4g_module:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_host_usb_rndis_4g_module
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_4_to_v6_2
   variables:
     EXAMPLE_DIR: examples/usb/host/usb_rndis_4g_module
 
