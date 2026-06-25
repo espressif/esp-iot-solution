@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,55 +19,105 @@
 #define SERVO_CH2_PIN 3
 #define SERVO_CH3_PIN 4
 
+#define SERVO_CHANNEL_NUM 4
 #define TEST_MEMORY_LEAK_THRESHOLD (-500)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
 
-static void _set_angle(ledc_mode_t speed_mode, float angle)
+static void _set_angle(servo_handle_t *servos, float angle)
 {
-    for (size_t i = 0; i < 4; i++) {
-        iot_servo_write_angle(speed_mode, i, angle);
+    for (size_t i = 0; i < SERVO_CHANNEL_NUM; i++) {
+        TEST_ASSERT_EQUAL(ESP_OK, iot_servo_write_angle(servos[i], angle));
     }
 }
 
 TEST_CASE("Servo_motor test", "[servo][iot]")
 {
-    servo_config_t servo_cfg_ls = {
-        .max_angle = 180,
-        .min_width_us = 500,
-        .max_width_us = 2500,
-        .freq = 50,
-        .timer_number = LEDC_TIMER_0,
-        .channels = {
-            .servo_pin = {
-                SERVO_CH0_PIN,
-                SERVO_CH1_PIN,
-                SERVO_CH2_PIN,
-                SERVO_CH3_PIN,
-            },
-            .ch = {
-                LEDC_CHANNEL_0,
-                LEDC_CHANNEL_1,
-                LEDC_CHANNEL_2,
-                LEDC_CHANNEL_3,
-            },
-        },
-        .channel_number = 4,
-    } ;
-    TEST_ASSERT(ESP_OK == iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg_ls));
+    const gpio_num_t servo_pins[SERVO_CHANNEL_NUM] = {
+        SERVO_CH0_PIN,
+        SERVO_CH1_PIN,
+        SERVO_CH2_PIN,
+        SERVO_CH3_PIN,
+    };
+    const ledc_channel_t servo_channels[SERVO_CHANNEL_NUM] = {
+        LEDC_CHANNEL_0,
+        LEDC_CHANNEL_1,
+        LEDC_CHANNEL_2,
+        LEDC_CHANNEL_3,
+    };
+    servo_handle_t servos[SERVO_CHANNEL_NUM] = { NULL };
+    servo_config_t servo_cfg = SERVO_CONFIG_DEFAULT(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, LEDC_CHANNEL_0, SERVO_CH0_PIN);
 
-    size_t i;
-    float angle_ls, angle_hs;
-    for (i = 0; i <= 180; i++) {
-        _set_angle(LEDC_LOW_SPEED_MODE, i);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
-        iot_servo_read_angle(LEDC_LOW_SPEED_MODE, 0, &angle_ls);
-        ESP_LOGI("servo", "[%d|%.2f]", i, angle_ls);
-        (void)angle_hs;
+    for (size_t i = 0; i < SERVO_CHANNEL_NUM; i++) {
+        servo_cfg.gpio_num = servo_pins[i];
+        servo_cfg.channel = servo_channels[i];
+        TEST_ASSERT_EQUAL(ESP_OK, iot_servo_new(&servo_cfg, &servos[i]));
     }
 
-    iot_servo_deinit(LEDC_LOW_SPEED_MODE);
+    float angle_ls;
+    for (size_t i = 0; i <= 180; i++) {
+        _set_angle(servos, i);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        TEST_ASSERT_EQUAL(ESP_OK, iot_servo_read_angle(servos[0], &angle_ls));
+        TEST_ASSERT_FLOAT_WITHIN(0.5f, (float)i, angle_ls);
+        ESP_LOGI("servo", "[%d|%.2f]", i, angle_ls);
+    }
+
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_write_angle(servos[0], -1.0f));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_write_angle(servos[0], 181.0f));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_read_angle(servos[0], NULL));
+
+    for (size_t i = 0; i < SERVO_CHANNEL_NUM; i++) {
+        TEST_ASSERT_EQUAL(ESP_OK, iot_servo_del(servos[i]));
+    }
+}
+
+TEST_CASE("Servo_motor invalid argument test", "[servo][iot]")
+{
+    servo_handle_t servo = NULL;
+    float angle = 0;
+    servo_config_t servo_cfg = SERVO_CONFIG_DEFAULT(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, LEDC_CHANNEL_0, SERVO_CH0_PIN);
+
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_new(NULL, &servo));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_new(&servo_cfg, NULL));
+
+    servo_cfg.freq = 1;
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_new(&servo_cfg, &servo));
+    servo_cfg.freq = 50;
+
+    servo_cfg.gpio_num = GPIO_NUM_NC;
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_new(&servo_cfg, &servo));
+    servo_cfg.gpio_num = SERVO_CH0_PIN;
+
+    servo_cfg.max_width_us = servo_cfg.min_width_us;
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_new(&servo_cfg, &servo));
+
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_del(NULL));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_write_angle(NULL, 0));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, iot_servo_read_angle(NULL, &angle));
+}
+
+TEST_CASE("Servo_motor ledc resource conflict test", "[servo][iot]")
+{
+    servo_handle_t servo0 = NULL;
+    servo_handle_t servo1 = NULL;
+    servo_config_t servo_cfg = SERVO_CONFIG_DEFAULT(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, LEDC_CHANNEL_0, SERVO_CH0_PIN);
+
+    TEST_ASSERT_EQUAL(ESP_OK, iot_servo_new(&servo_cfg, &servo0));
+
+    servo_cfg.gpio_num = SERVO_CH1_PIN;
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, iot_servo_new(&servo_cfg, &servo1));
+
+    servo_cfg.channel = LEDC_CHANNEL_1;
+    servo_cfg.freq = 100;
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, iot_servo_new(&servo_cfg, &servo1));
+
+    servo_cfg.freq = 50;
+    TEST_ASSERT_EQUAL(ESP_OK, iot_servo_new(&servo_cfg, &servo1));
+
+    TEST_ASSERT_EQUAL(ESP_OK, iot_servo_del(servo0));
+    TEST_ASSERT_EQUAL(ESP_OK, iot_servo_del(servo1));
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)
