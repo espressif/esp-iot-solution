@@ -461,6 +461,10 @@
   - "components/esp_xiaozhi/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_ramfs: &patterns-components_ramfs
+  - "components/storage/ramfs/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 # examples folder, in the alphabetic order
 .patterns-docs: &patterns-docs
   - "docs/**/*"
@@ -3550,6 +3554,17 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_esp_xiaozhi
+
+.rules:build:components_ramfs_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_ramfs
 
 .rules:build:example_xiaozhi_chat:
   rules:
