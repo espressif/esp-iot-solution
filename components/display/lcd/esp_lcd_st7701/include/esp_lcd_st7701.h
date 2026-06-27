@@ -73,6 +73,8 @@ typedef struct {
              *   Please set it to 1 to release the panel IO and its pins (except CS signal).
              *   This flag is only valid for the RGB interface.
              */
+        unsigned int skip_mipi_sw_reset: 1;        /*!< Skip automatic software reset command for MIPI panels */
+        unsigned int skip_mipi_auto_cmds: 1;       /*!< Skip automatic MADCTL/COLMOD writes before custom MIPI init */
     } flags;
 } st7701_vendor_config_t;
 

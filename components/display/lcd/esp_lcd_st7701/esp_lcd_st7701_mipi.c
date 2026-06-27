@@ -40,6 +40,8 @@ typedef struct {
     uint16_t init_cmds_size;
     struct {
         unsigned int reset_level: 1;
+        unsigned int skip_sw_reset: 1;
+        unsigned int skip_auto_cmds: 1;
     } flags;
     // To save the original functions of MIPI DPI panel
     esp_err_t (*del)(esp_lcd_panel_t *panel);
@@ -97,6 +99,8 @@ esp_err_t esp_lcd_new_panel_st7701_mipi(const esp_lcd_panel_io_handle_t io, cons
     st7701->init_cmds_size = vendor_config->init_cmds_size;
     st7701->reset_gpio_num = panel_dev_config->reset_gpio_num;
     st7701->flags.reset_level = panel_dev_config->flags.reset_active_high;
+    st7701->flags.skip_sw_reset = vendor_config->flags.skip_mipi_sw_reset;
+    st7701->flags.skip_auto_cmds = vendor_config->flags.skip_mipi_auto_cmds;
 
     // Create MIPI DPI panel
     esp_lcd_panel_handle_t panel_handle = NULL;
@@ -155,7 +159,7 @@ static esp_err_t panel_st7701_reset(esp_lcd_panel_t *panel)
         vTaskDelay(pdMS_TO_TICKS(10));
         gpio_set_level(st7701->reset_gpio_num, !st7701->flags.reset_level);
         vTaskDelay(pdMS_TO_TICKS(10));
-    } else if (io) { // perform software reset
+    } else if (io && !st7701->flags.skip_sw_reset) { // perform software reset
         ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_SWRESET, NULL, 0), TAG, "send command failed");
         vTaskDelay(pdMS_TO_TICKS(20)); // spec, wait at least 5ms before sending new command
     }
@@ -223,17 +227,21 @@ static esp_err_t panel_st7701_init(esp_lcd_panel_t *panel)
     ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(io, 0x04, ID, 3), TAG, "read ID failed");
     ESP_LOGI(TAG, "LCD ID: %02X %02X %02X", ID[0], ID[1], ID[2]);
 
-    // back to CMD_Page 0
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
-        ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0x00
-    }, 5), TAG, "Write cmd failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
-        st7701->madctl_val,
-    }, 1), TAG, "send command failed");
-    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t[]) {
-        st7701->colmod_val,
-    }, 1), TAG, "send command failed");
-    ESP_LOGI(TAG, " st7701->madctl_val: 0x%x, st7701->colmod_val: 0x%x",  st7701->madctl_val, st7701->colmod_val);
+    if (!st7701->flags.skip_auto_cmds) {
+        // back to CMD_Page 0
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, ST7701_CMD_CND2BKxSEL, (uint8_t []) {
+            ST7701_CMD_BKxSEL_BYTE0, ST7701_CMD_BKxSEL_BYTE1, ST7701_CMD_BKxSEL_BYTE2, ST7701_CMD_BKxSEL_BYTE3, 0x00
+        }, 5), TAG, "Write cmd failed");
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_MADCTL, (uint8_t[]) {
+            st7701->madctl_val,
+        }, 1), TAG, "send command failed");
+        ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(io, LCD_CMD_COLMOD, (uint8_t[]) {
+            st7701->colmod_val,
+        }, 1), TAG, "send command failed");
+        ESP_LOGI(TAG, " st7701->madctl_val: 0x%x, st7701->colmod_val: 0x%x",  st7701->madctl_val, st7701->colmod_val);
+    } else {
+        ESP_LOGI(TAG, "skip automatic MADCTL/COLMOD before vendor init");
+    }
 
     // vendor specific initialization, it can be different between manufacturers
     // should consult the LCD supplier for initialization sequence code
