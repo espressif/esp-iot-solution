@@ -99,8 +99,10 @@
 .build_idf_ge_than_v5_5_with_pre_release:
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:v5.5
       - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
 
 .build_idf_active_release_version_with_pre_release:
   parallel:

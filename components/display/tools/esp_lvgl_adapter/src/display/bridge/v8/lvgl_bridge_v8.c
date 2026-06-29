@@ -49,8 +49,7 @@
 #endif
 
 #if SOC_DMA2D_SUPPORTED
-#include "esp_idf_version.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 #include "esp_async_color_convert.h"
 #else
 #include "esp_async_fbcpy.h"
@@ -67,7 +66,7 @@
 #define COLOR_BYTES_RGB888         (3)     /* Bytes per pixel for RGB888 */
 
 #if SOC_DMA2D_SUPPORTED
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 #define DMA2D_PIXEL_FORMAT_FIELD(_color_bytes) \
     .src_color_format = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24), \
     .dst_color_format = ((_color_bytes) == COLOR_BYTES_RGB565 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24)
@@ -1698,19 +1697,16 @@ static void display_bridge_v8_register_vsync(esp_lv_adapter_display_bridge_v8_t 
         const esp_lv_adapter_tear_avoid_mode_t mode = impl->cfg.base.tear_avoid_mode;
         esp_lcd_dpi_panel_event_callbacks_t cbs = {
             .on_color_trans_done = display_bridge_v8_on_mipi_color_trans_done,
-            /*
-             * The DPI "frame buffer reusable" event was renamed from `on_refresh_done` to
-             * `on_frame_buf_complete` (union alias) by IDF "feat(lcd): support buffer switch interrupt".
-             * The new name is backported to release/v5.5, v6.1 and v6.2, but NOT to release/v6.0.
-             * Use the legacy field name only on the v6.0.x branch; drop this guard once v6.0 backports it.
-             */
-#if ESP_IDF_VERSION_MAJOR == 6 && ESP_IDF_VERSION_MINOR == 0
-            .on_refresh_done = (bridge_mode_uses_buf_switch_release(mode) || impl->dummy_draw) ? display_bridge_v8_on_mipi_frame_buf_complete : NULL,
-#else
+#ifdef ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB
             .on_frame_buf_complete = (bridge_mode_uses_buf_switch_release(mode) || impl->dummy_draw) ? display_bridge_v8_on_mipi_frame_buf_complete : NULL,
+#else
+            .on_refresh_done = (bridge_mode_uses_buf_switch_release(mode) || impl->dummy_draw) ? display_bridge_v8_on_mipi_frame_buf_complete : NULL,
 #endif
         };
 
+#ifndef ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB
+        ESP_LOGW(TAG, "on_frame_buf_complete unavailable; buffer-switch release and dummy-draw may not function on MIPI DSI");
+#endif
         esp_err_t ret = esp_lcd_dpi_panel_register_event_callbacks(impl->panel, &cbs, impl);
         if (ret != ESP_OK) {
             ESP_LOGW(TAG, "register panel callbacks failed (%d)", ret);
@@ -2041,7 +2037,7 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
         size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
         display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
         async_color_convert_request_t blit = {
             .src_buffer  = color_map,
             .dst_buffer  = impl->draw_fb,
@@ -2650,7 +2646,7 @@ MERGE_RESTART:;
         int offset_x = r.x1;
         if (display_bridge_dma2d_window_is_compatible(impl->disp_fb, hor_res, offset_x, copy_w_px, color_bytes) &&
                 display_bridge_dma2d_window_is_compatible(impl->draw_fb, hor_res, offset_x, copy_w_px, color_bytes)) {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
             async_color_convert_request_t tr = {
                 .src_buffer  = impl->disp_fb,
                 .dst_buffer  = impl->draw_fb,

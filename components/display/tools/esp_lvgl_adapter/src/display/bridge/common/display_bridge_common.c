@@ -633,8 +633,7 @@ size_t display_bridge_get_cache_line_size(void)
 #endif
 
 #if SOC_DMA2D_SUPPORTED
-#include "esp_idf_version.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 #include "esp_async_color_convert.h"
 #else
 #include "esp_async_fbcpy.h"
@@ -648,7 +647,7 @@ size_t display_bridge_get_cache_line_size(void)
 #if CONFIG_SOC_DMA2D_SUPPORTED
 static inline esp_err_t s_dma2d_install(void **out_handle)
 {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
     async_color_convert_config_t cfg = {
         .dma_burst_size = 128,
     };
@@ -661,7 +660,7 @@ static inline esp_err_t s_dma2d_install(void **out_handle)
 
 static inline void s_dma2d_uninstall(void *handle)
 {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
     esp_async_color_convert_uninstall((async_color_convert_handle_t)handle);
 #else
     esp_async_fbcpy_uninstall((esp_async_fbcpy_handle_t)handle);
@@ -913,7 +912,7 @@ esp_err_t display_bridge_release_hw_resource(void)
  *
  * IRAM: Executed in ISR context for fast response
  */
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 bool IRAM_ATTR display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
                                                   async_color_convert_event_data_t *event_data,
                                                   void *cb_args)
@@ -953,7 +952,7 @@ esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
     /* Clear completion semaphore */
     xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem, 0);
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
     ret = esp_async_color_convert(hw->fbcpy_handle,
                                   (const async_color_convert_request_t *)trans_desc,
                                   display_bridge_dma2d_done_callback,
