@@ -1,6 +1,8 @@
 Mass Production
 ===============
 
+:link_to_translation:`zh_CN:[中文]`
+
 This document compiles various tools for mass production of Espressif chips, including flashing, testing, fixture specifications, network configuration, and RF tools.
 
 **Flash Download Tool**

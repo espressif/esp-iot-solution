@@ -1,6 +1,6 @@
 Model Context Protocol (MCP)
 ==============================
-:link_to_translation:`en:[English]`
+:link_to_translation:`zh_CN:[中文]`
 
 ==================  ===========  ===============  ===============  =============  =============
 Supported chips     ESP32        ESP32-C2         ESP32-C3         ESP32-C6       ESP32-S3

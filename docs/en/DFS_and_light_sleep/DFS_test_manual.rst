@@ -29,7 +29,7 @@ For example:
        .max_cpu_freq =RTC_CPU_FREQ_240M,
        .min_cpu_freq = RTC_CPU_FREQ_XTAL,
     };
-  
+
     esp_err_t ret;
     if((ret = esp_pm_configure(&pm_config)) != ESP_OK) {
         printf("pm config error %s\n", \
@@ -115,7 +115,7 @@ When pm_lock are acquired, LEDC's frequency keeps 5kHz, this indicates that APB 
 .. figure:: ../../_static/DFS_and_light_sleep/pic4.svg.png
     :align: center
 
-    
+
 
 
 
@@ -126,7 +126,7 @@ After pm_lock are released, when task is suspended, LEDC's frequency becomes to 
 
 .. figure:: ../../_static/DFS_and_light_sleep/pic3.svg.png
     :align: center
-    
+
 
 
 

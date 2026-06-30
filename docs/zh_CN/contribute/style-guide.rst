@@ -1,6 +1,8 @@
 esp-iot-solution 编码规范
 =========================
 
+:link_to_translation:`en:[English]`
+
 总体原则
 --------
 

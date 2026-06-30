@@ -1,6 +1,8 @@
 Secure Boot
 *****************
 
+:link_to_translation:`zh_CN:[中文]`
+
 Secure Boot is a critical security mechanism in ESP32 series chips that ensures devices only execute authorized firmware through digital signature verification during boot process and OTA updates. This mechanism establishes a complete chain of trust from bootloader to application, providing comprehensive code integrity protection for devices.
 
 Key features of Secure Boot:

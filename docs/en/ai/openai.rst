@@ -1,6 +1,6 @@
 OpenAI
 =============
-:link_to_translation:`en:[English]`
+:link_to_translation:`zh_CN:[中文]`
 
 The `openai` component is a porting version of  `OpenAI-ESP32 <https://github.com/me-no-dev/OpenAI-ESP32>`_ arduino library, which simplifies the process of invoking the OpenAI API on `ESP-IDF`. 
 
