@@ -568,15 +568,15 @@ Port Driver Component
 
 The basic principles for porting MIPI-DSI LCD driver components include the following three points:
 
-  1. Send commands and parameters in specified formats based on interface device handles of type ``esp_lcd_dbi_io_config_t``.
-  2. Implement and create an LCD device, then implement the functions in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure by registering callback functions.
-  3. Implement a function to provide LCD device handles of type ``esp_lcd_panel_handle_t``, enabling applications to use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device
+  1. Send commands and parameters in specified formats based on interface device handles of type ``esp_lcd_panel_io_handle_t``.
+  2. Implement and create an LCD device, then implement the functions in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure by registering callback functions.
+  3. Implement a function to provide LCD device handles of type ``esp_lcd_panel_handle_t``, enabling applications to use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device
 
-Below is the implementation description of each function in ``esp_lcd_panel_handle_t`` and its correspondence with `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
+Below is the implementation description of each function in ``esp_lcd_panel_handle_t`` and its correspondence with `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
 
 For most MIPI-DSI LCDs, their driver IC commands and parameters are compatible with the implementation descriptions above, so porting can be completed through the following steps:
 
-1. Select a MIPI-DSI LCD driver component with a similar model from the `LCD Driver Components <https://github.com/espressif/esp-iot-solution/blob/master/docs/zh_CN/display/lcd/lcd_development_guide.rst#%E9%A9%B1%E5%8A%A8%E5%8F%8A%E7%A4%BA%E4%BE%8B>`_.
+1. Select a MIPI-DSI LCD driver component with a similar model from :ref:`LCD Driver Components <LCD_Driver_Component>`.
 2. Confirm whether the commands and parameters used in each function of the selected component are consistent with the target LCD driver IC by consulting the target LCD driver IC datasheet. If not, modify the relevant code.
 3. Even for LCD driver ICs of the same model, screens from different manufacturers usually require their own initialization command configurations. Therefore, it is necessary to modify the commands and parameters sent in the initialization function ``init()``. These initialization commands are usually stored in a static array in a specific format. Additionally, be careful not to include special commands in the initialization commands, such as ``LCD_CMD_COLMOD(3Ah)`` and ``LCD_CMD_MADCTL(36h)``, which are managed and used by the driver component.
 4. Use the editor's character search and replace function to replace the LCD driver IC name in the component with the target name, such as replacing ``ek79007`` with ``ili9881``
@@ -663,18 +663,18 @@ The timing parameter definitions for MIPI-DSI are consistent with the `SYNC Mode
 
 Note that ESP32P4 requires a stable 2.5V power supply for the MIPI DSI PHY. The clock frequency calculation refers to the pixel_clock calculation method mentioned above. Color format, resolution, pulse width, and front/back porch parameters must strictly follow the panel datasheet requirements.
 
-Then create an LCD device through the ported driver component and obtain a handle of type ``esp_lcd_panel_handle_t``, then use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
+Then create an LCD device through the ported driver component and obtain a handle of type ``esp_lcd_panel_handle_t``, then use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
-For more detailed explanations of ``MIPI-DSI`` interface configuration parameters, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/api-reference/peripherals/lcd/index.html>`_. Below are some explanations about using the function ``esp_lcd_panel_draw_bitmap()`` to refresh LCD images:
+For more detailed explanations of ``MIPI-DSI`` interface configuration parameters, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html>`_. Below are some explanations about using the function ``esp_lcd_panel_draw_bitmap()`` to refresh LCD images:
 
   - This function refreshes image data in the frame buffer through memory copy, meaning that after the function call completes, the image data in the frame buffer has also been updated. The ``MIPI-DSI`` interface itself uses DMA to fetch image data from the frame buffer to refresh the LCD, and these two processes are asynchronous.
   - This function will check whether the incoming parameter ``color_data`` value is the internal frame buffer address of the ``MIPI-DSI`` interface. If so, it will not perform the above memory copy operation, but directly set the DMA transfer address of the ``MIPI-DSI`` interface to that buffer address, thus achieving switching functionality in cases with multiple frame buffers.
 
-In addition to `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_, the `MIPI-DSI Interface Driver <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_mipi_dsi.c>`_ also provides some special function functions. Below are usage instructions for some commonly used functions:
+In addition to `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_, the `MIPI-DSI interface driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/dsi/include/esp_lcd_mipi_dsi.h>`_ also provides some special functions. Below are usage instructions for some commonly used functions:
 
   * esp_lcd_dpi_panel_get_frame_buffer(): Get frame buffer addresses, available quantity determined by configuration parameter ``num_fbs``, used for multi-buffer anti-tearing.
   * esp_lcd_dpi_panel_set_pattern(): Set predefined patterns to the screen for testing or debugging purposes.
-  * esp_lcd_dpi_panel_set_color_conversion(): Set color conversion configuration for DPI panel.
+  * esp_lcd_dpi_panel_set_yuv_conversion(): Set YUV conversion configuration for DPI panel.
   * esp_lcd_dpi_panel_register_event_callbacks(): Register callback functions for various events, example code and explanation as follows:
 
 .. code-block:: c
@@ -730,7 +730,7 @@ This issue occurs due to insufficient PSRAM bandwidth. You can consider reducing
 Issue: How to resolve screen tearing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Refer to `LCD Screen Tearing Detailed Guide <https://github.com/espressif/esp-iot-solution/blob/master/docs/zh_CN/display/lcd/lcd_screen_tearing.rst>`, related examples can be found in `mipi_dsi_avoid_tearing <https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/mipi_dsi_avoid_tearing>`_.
+Refer to :doc:`LCD Screen Tearing Detailed Guide <lcd_screen_tearing>`. Related examples can be found in :example:`display/lcd/mipi_dsi_avoid_tearing`.
 
 Issue: Frame rate optimization configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -771,7 +771,7 @@ Related Documentation and Examples
 ----------------------------------
 
 - `MIPI DSI Specification <https://www.mipi.org/specifications/dsi>`_
-- `ESP-IDF MIPI DSI LCD Programming Guide <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html>`_
+- `ESP-IDF MIPI DSI LCD Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html>`_
 - `ESP LCD Driver Library <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd>`_
 - `ESP LCD Example Code <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_
-- `ESP LCD FAQ <https://docs.espressif.com/projects/esp-faq/zh_CN/latest/software-framework/peripherals/lcd.html>`_
+- `ESP LCD FAQ <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html>`_

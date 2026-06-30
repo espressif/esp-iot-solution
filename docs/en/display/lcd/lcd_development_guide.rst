@@ -22,13 +22,13 @@ Please refer to the :ref:`LCD Terms Table <LCD_Terms_Table>` 。
 Supported Interface Types
 ----------------------------
 
-Espressif Systems provides comprehensive support for all interface types introduced in the :ref:`LCD Overview - Driver Interface <LCD_Overview_Driver_Interface>`. Specific support for each series of ESP chips within this section is as follows:
+Espressif Systems provides comprehensive support for all interface types introduced in the :ref:`LCD Overview - Driver Interface <LCD_Overview_Driver_Interface>`. Specific support for each series of ESP chips within this section is as follows. In the I80 column, ``Via Parlio`` means the chip does not have a native I80 peripheral, but it can drive an LCD by simulating I80 timing through the ``Parlio`` interface in ``esp_lcd``.
 
 .. list-table::
     :widths: 20 20 20 20 20
     :header-rows: 1
 
-    * - Soc
+    * - SoC
       - SPI(QSPI)
       - I80
       - RGB
@@ -38,14 +38,44 @@ Espressif Systems provides comprehensive support for all interface types introdu
       - |supported|
       -
       -
+    * - ESP32-C2
+      - |supported|
+      -
+      -
+      -
     * - ESP32-C3
       - |supported|
       -
       -
       -
+    * - ESP32-C5
+      - |supported|
+      - ``Via Parlio``
+      -
+      -
     * - ESP32-C6
       - |supported|
+      - ``Via Parlio``
       -
+      -
+    * - ESP32-C61
+      - |supported|
+      -
+      -
+      -
+    * - ESP32-H2
+      - |supported|
+      - ``Via Parlio``
+      -
+      -
+    * - ESP32-H21
+      - |supported|
+      -
+      -
+      -
+    * - ESP32-H4
+      - |supported|
+      - ``Via Parlio``
       -
       -
     * - ESP32-S2
@@ -54,6 +84,11 @@ Espressif Systems provides comprehensive support for all interface types introdu
       -
       -
     * - ESP32-S3
+      - |supported|
+      - |supported|
+      - |supported|
+      -
+    * - ESP32-S31
       - |supported|
       - |supported|
       - |supported|
@@ -71,24 +106,24 @@ Espressif Systems provides comprehensive support for all interface types introdu
 Driver and Examples
 ---------------------
 
-**LCD Peripheral** Driver is located in the `components/esp_lcd <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>_` directory under **ESP-IDF**. Currently, it supports the ``I2C``, ``SPI (QSPI)``, ``I80``, and ``RGB`` interfaces. The following table lists the LCD driver components officially ported by Espressif based on esp_lcd, and these components will continue to be updated:
+**LCD Peripheral** Driver is located in the `components/esp_lcd <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd>`_ directory under **ESP-IDF**. Currently, it supports the ``I2C``, ``SPI (QSPI)``, ``I80``, ``RGB``, ``MIPI-DSI``, and ``Parlio``-simulated ``SPI/I80`` interfaces. For details, please refer to the `Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/index.html>`_. The following table lists the LCD driver components officially ported by Espressif based on esp_lcd, and these components will continue to be updated:
 
 .. list-table::
     :widths: 10 15
     :header-rows: 1
 
-    * - 接口
-      - LCD 控制器
+    * - Interface
+      - LCD Controller
     * - I2C
       - `ssd1306 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_ssd1306.c>`_, `sh1107 <https://components.espressif.com/components/espressif/esp_lcd_sh1107>`_
     * - SPI
-      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `nv3022b <https://components.espressif.com/components/espressif/esp_lcd_nv3022b>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `gc9a01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_, `gc9d01 <https://components.espressif.com/components/espressif/esp_lcd_gc9d01>`_, `ili9341 <https://components.espressif.com/components/espressif/esp_lcd_ili9341>`_, `ssd1681 <https://components.espressif.com/components/espressif/esp_lcd_ssd1681>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_,  `gc9107 <https://components.espressif.com/components/espressif/esp_lcd_gc9107>`_
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://components.espressif.com/components/espressif/esp_lcd_nt35510>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `nv3022b <https://components.espressif.com/components/espressif/esp_lcd_nv3022b>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `gc9a01 <https://components.espressif.com/components/espressif/esp_lcd_gc9a01>`_, `gc9d01 <https://components.espressif.com/components/espressif/esp_lcd_gc9d01>`_, `ili9341 <https://components.espressif.com/components/espressif/esp_lcd_ili9341>`_, `ssd1681 <https://components.espressif.com/components/espressif/esp_lcd_ssd1681>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_,  `gc9107 <https://components.espressif.com/components/espressif/esp_lcd_gc9107>`_
     * - QSPI
-      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77903 <https://components.espressif.com/components/espressif/esp_lcd_st77903_qspi>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `st77926 <https://components.espressif.com/components/espressif/esp_lcd_st77926>`_, `co5300 <https://components.espressif.com/components/espressif/esp_lcd_co5300>`_
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `gc9b71 <https://components.espressif.com/components/espressif/esp_lcd_gc9b71>`_, `sh8601 <https://components.espressif.com/components/espressif/esp_lcd_sh8601>`_, `spd2010 <https://components.espressif.com/components/espressif/esp_lcd_spd2010>`_, `st77903 <https://components.espressif.com/components/espressif/esp_lcd_st77903_qspi>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, :component:`esp_lcd_st77926 <display/lcd/esp_lcd_st77926>`, `co5300 <https://components.espressif.com/components/espressif/esp_lcd_co5300>`_
     * - I80
-      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_nt35510.c>`_, `ra8875 <https://components.espressif.com/components/espressif/esp_lcd_ra8875>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `st7789 <https://github.com/espressif/esp-idf/blob/master/components/esp_lcd/src/esp_lcd_panel_st7789.c>`_, `nt35510 <https://components.espressif.com/components/espressif/esp_lcd_nt35510>`_, `ra8875 <https://components.espressif.com/components/espressif/esp_lcd_ra8875>`_, `st7796 <https://components.espressif.com/components/espressif/esp_lcd_st7796>`_
     * - MIPI-DSI
-      - `co5300 <https://components.espressif.com/components/espressif/esp_lcd_co5300>`_, `ek79007 <https://components.espressif.com/components/espressif/esp_lcd_ek79007>`_, `er88577 <https://components.espressif.com/components/espressif/esp_lcd_er88577>`_, `gc9503_mipi <https://components.espressif.com/components/espressif/esp_lcd_gc9503_mipi>`_, `hx8399 <https://components.espressif.com/components/espressif/esp_lcd_hx8399>`_, `ili9881c <https://components.espressif.com/components/espressif/esp_lcd_ili9881c>`_, `jd9165 <https://components.espressif.com/components/espressif/esp_lcd_jd9165>`_, `jd9365 <https://components.espressif.com/components/espressif/esp_lcd_jd9365>`_, `st7121 <https://components.espressif.com/components/espressif/esp_lcd_st7121>`_, `st7123 <https://components.espressif.com/components/espressif/esp_lcd_st7123>`_, `st7701 <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_, `st7703 <https://components.espressif.com/components/espressif/esp_lcd_st7703>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_
+      - `axs15231b <https://components.espressif.com/components/espressif/esp_lcd_axs15231b>`_, `co5300 <https://components.espressif.com/components/espressif/esp_lcd_co5300>`_, `ek79007 <https://components.espressif.com/components/espressif/esp_lcd_ek79007>`_, `er88577 <https://components.espressif.com/components/espressif/esp_lcd_er88577>`_, :component:`esp_lcd_gc9503_mipi <display/lcd/esp_lcd_gc9503_mipi>`, `hx8399 <https://components.espressif.com/components/espressif/esp_lcd_hx8399>`_, `ili9881c <https://components.espressif.com/components/espressif/esp_lcd_ili9881c>`_, `jd9165 <https://components.espressif.com/components/espressif/esp_lcd_jd9165>`_, `jd9365 <https://components.espressif.com/components/espressif/esp_lcd_jd9365>`_, `st7121 <https://components.espressif.com/components/espressif/esp_lcd_st7121>`_, `st7123 <https://components.espressif.com/components/espressif/esp_lcd_st7123>`_, `st7701 <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_, `st7703 <https://components.espressif.com/components/espressif/esp_lcd_st7703>`_, `st77916 <https://components.espressif.com/components/espressif/esp_lcd_st77916>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_
     * - 3-wire SPI + RGB
       - `st7701 <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_, `st77903_rgb <https://components.espressif.com/components/espressif/esp_lcd_st77903_rgb>`_, `st77922 <https://components.espressif.com/components/espressif/esp_lcd_st77922>`_, `gc9503 <https://components.espressif.com/components/espressif/esp_lcd_gc9503>`_, `nv3052 <https://components.espressif.com/components/espressif/esp_lcd_nv3052>`_
 
@@ -96,14 +131,14 @@ Driver and Examples
 
 .. _LCD_Driver_Component:
 
-  - The **st7789**, **nt35510**, and **ssd1306** components are maintained in the `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_. Other components can be found in the `Espressif IDF Component Registry <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_.
-  - Although the models of the **LCD driver IC** might be identical, **different screens** require specific configurations through initialization commands provided by their respective manufacturers. Most driver components support the customization of initialization commands during the initialization of the LCD device. If it is not supported, please refer to the `method <https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/peripherals/lcd.html#steps-to-add-manufacture-specific-initialization>`_.
+  - The **st7789** and **ssd1306** components are maintained in the `ESP-IDF <https://github.com/espressif/esp-idf/tree/master/components/esp_lcd/src>`_. The **nt35510** component and other components can be found in the `Espressif IDF Component Registry <https://components.espressif.com/components?q=espressif%2Fesp_lcd>`_.
+  - Although the models of the **LCD driver IC** might be identical, **different screens** require specific configurations through initialization commands provided by their respective manufacturers. Most driver components support the customization of initialization commands during the initialization of the LCD device. If it is not supported, please refer to the `method <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/index.html#steps-to-add-manufacturer-specific-initialization>`_.
 
-**LCD Example** is located in the `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ directory under **ESP-IDF** and the :project:`examples/display/lcd <examples/display/lcd>` directory under **esp-iot-solution**. These serve as a reference for the usage of the LCD driver component.
+**LCD Example** is located in the `examples/peripherals/lcd <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd>`_ directory under **ESP-IDF** and the :example:`display/lcd` directory under **esp-iot-solution**. These serve as a reference for the usage of the LCD driver component.
 
 .. note::
 
-    - It is recommended to develop based on ESP-IDF `release/v5.1 <https://github.com/espressif/esp-idf/tree/release/v5.1>`_ and above version branches, because lower versions may lack to support some parts of the important new features, especially for the ``RGB`` interface.
+    - It is recommended to develop based on ESP-IDF `release/v6.0 <https://github.com/espressif/esp-idf/tree/release/v6.0>`_ and above version branches. If you use the ``MIPI-DSI`` interface, please ensure the selected ESP-IDF version includes this feature.
     - For LCDs using the ``3-wire SPI + RGB`` interface, please refer to the example `esp_lcd_st7701 - Example use <https://components.espressif.com/components/espressif/esp_lcd_st7701>`_.
 
 Development Framework
@@ -155,7 +190,7 @@ Software Framework
 
 The software development framework primarily consists of three layers: SDK (Software Development Kit), Driver, and APP (Application).
 
-  #. **SDK layer**: ESP-IDF serves as the foundational element of the framework. It not only includes ``I2C``, ``SPI (QSPI)``, ``I80`` and ``RGB`` required to drive LCD and other peripherals, it also provides unified APIs through the ``esp_lcd`` component to operate the interface and LCD, such as command and parameter transmission, LCD image refresh, inversion, mirroring and other functions.
+  #. **SDK layer**: ESP-IDF serves as the foundational element of the framework. It not only includes ``I2C``, ``SPI (QSPI)``, ``I80``, ``RGB``, ``MIPI-DSI``, and ``Parlio`` peripherals required to drive LCDs and other devices, it also provides unified APIs through the ``esp_lcd`` component to operate the interface and LCD, such as command and parameter transmission, LCD image refresh, inversion, mirroring and other functions.
   #. **Driver layer**: Based on the APIs provided by the SDK, various device drivers can be implemented, and the porting of LVGL (GUI framework) can be implemented by initializing interface devices and LCD devices.
   #. **APP layer**: Use the APIs provided by LVGL to implement various GUI functions, such as displaying pictures, animations, text, etc.
 
@@ -172,7 +207,7 @@ Development Steps
 Initialize interface device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-First, initialize the peripherals corresponding to the LCD interface. Then, create the interface device and get its handle, the data type of the handle should be ``esp_lcd_panel_io_handle_t``. In this way, unified `interface common APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ can be used for data transmission.
+First, initialize the peripherals corresponding to the LCD interface. Then, create the interface device and get its handle, the data type of the handle should be ``esp_lcd_panel_io_handle_t``. In this way, unified `interface common APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_io.h>`_ can be used for data transmission.
 
 .. note::
 
@@ -182,15 +217,16 @@ Different types of LCD interfaces require the use of different peripherals. The 
 
   - :ref:`SPI LCD Introduction - Initialize interface device <spi_initialization_interface_device>`
   - :ref:`RGB LCD Introduction - Initialize interface device <rgb_init_interface_device>`
+  - :doc:`MIPI DSI LCD Detailed Guide <mipi_dsi_lcd>`
   - I80 LCD Introduction -  Initialization interface device (to be updated)
   - QSPI LCD Introduction - Initializing interface devices (to be updated)
 
-For a more detailed description of this part, please refer to `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_.
+For a more detailed description of this part, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/index.html>`_.
 
 Initialize LCD device
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-Since different models of LCD driver ICs may have different commands (registers) and parameters, and different interface types may also use different data formats and driving methods, here first need to use `interface common APIs  <https:// github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ for specific interfaces to port the target LCD driver, then create the LCD device and obtain the data type ``esp_lcd_panel_handle_t`` handle, ultimately enabling applications to pass unified `LCD common APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
+Since different models of LCD driver ICs may have different commands (registers) and parameters, and different interface types may also use different data formats and driving methods, first use the `interface common APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_io.h>`_ for the target interface to port the LCD driver, then create the LCD device and obtain its ``esp_lcd_panel_handle_t`` handle. This allows applications to use unified `LCD common APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
 
 .. note::
 
@@ -200,6 +236,7 @@ Before porting the driver component, please first try to obtain the components o
 
   - :ref:`SPI LCD Introduction - Porting driver components <spi_porting_driver_components>`
   - :ref:`RGB LCD Introduction - Porting driver components <rgb_porting_driver_components>`
+  - :doc:`MIPI DSI LCD Detailed Guide <mipi_dsi_lcd>`
   - I80 LCD Introduction - Porting driver component (to be updated)
   - QSPI LCD Introduction - Porting driver component (to be updated)
 
@@ -209,10 +246,11 @@ Then, the LCD initialization can be realized by using the driver component. The 
 
   - :ref:`SPI LCD Introduction - Initialize LCD device  <spi_init_lcd>`
   - :ref:`RGB LCD Introduction - Initialize LCD device  <rgb_initialize_lcd>`
+  - :doc:`MIPI DSI LCD Detailed Guide <mipi_dsi_lcd>`
   - I80 LCD Introduction - Initialize LCD device (To be updated)
   - QSPI LCD Introduction - Initialize LCD device (To be updated)
 
-For a more detailed description of this part, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_.
+For a more detailed description of this part, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/index.html>`_.
 
 Porting LVGL
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -231,7 +269,7 @@ The following lists some common issues encountered during the development of LCD
 
 * `How to use Arduino IDE to develop GUI for ESP series chips <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#do-esp-series-development-boards-with-screens-support-gui-development-using-the-arduino-ide>`_
 * `Maximum Resolution and Frame Rate Supported by ESP Series Chips for LCD <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#what-is-the-maximum-resolution-supported-by-esp-lcd-what-is-the-corresponding-frame-rate>`_
-* `How ESP series chips improve LCD rendering frame rate <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#how-can-i-improve-the-display-frame-rate-of-lcd-screens>`_
+* `How ESP series chips improve LCD rendering frame rate <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html>`_
 * `How to increase the PCLK (refresh frame rate) of RGB LCD with ESP32-S3 <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#how-can-i-increase-the-upper-limit-of-pclk-settings-on-esp32-s3-while-ensuring-normal-rgb-screen-display>`_
 * `How to solve the problem of screen offset or flickering when driving RGB LCD with ESP32-S3 <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#why-do-i-get-drift-overall-drift-of-the-display-when-esp32-s3-is-driving-an-rgb-lcd-screen>`_
 * `How to configure ESP32-S3R8 PSRAM 120M Octal(DDR) <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html#how-can-i-enable-psram-120m-octal-ddr-on-esp32-s3r8>`_
@@ -239,6 +277,6 @@ The following lists some common issues encountered during the development of LCD
 Related Documents
 -------------------------
 
-* `ESP-IDF Programming Guide- LCD <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html>`_
+* `ESP-IDF Programming Guide- LCD <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/index.html>`_
 * `ESP-FAQ - LCD <https://docs.espressif.com/projects/esp-faq/en/latest/software-framework/peripherals/lcd.html>`_
 * `LVGL Documentation <https://docs.lvgl.io/8.3/>`_

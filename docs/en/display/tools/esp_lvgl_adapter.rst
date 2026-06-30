@@ -2,7 +2,7 @@ ESP LVGL ADAPTER
 ================
 :link_to_translation:`zh_CN:[中文]`
 
-``esp_lvgl_adapter`` provides a runtime-managed LVGL integration for ESP-IDF projects. It unifies display registration, tearing control, thread-safe LVGL access, and optional integration with filesystem, image decoding, and FreeType fonts. It supports LVGL v8 and v9.
+``esp_lvgl_adapter`` provides a unified LVGL integration layer for ESP-IDF projects. It covers display registration, tearing control, thread-safe LVGL access, input-device integration, and optional integration with filesystem, image decoding, and FreeType fonts. It supports LVGL v8 and v9, and also provides capabilities such as Auto Sleep, Tickless Light Sleep coordination, Dummy Draw, multi-display management, and DMA alignment adaptation for flash-encryption scenarios.
 
 
 Features
@@ -19,6 +19,9 @@ Features
   - FPS statistics, Dummy Draw (headless rendering)
 
 - **Multi-display support**: Manage multiple displays simultaneously
+- **Low-power management**: Supports manual sleep, Auto Sleep, and coordination with Tickless Light Sleep
+- **Input adaptation**: Supports touch, navigation buttons, and knob/encoder input
+- **Encrypted-flash adaptation**: Adds DMA alignment handling for flash-encryption scenarios
 
 
 Add to Project
@@ -808,4 +811,3 @@ API Reference
 -------------
 
 .. include-build-file:: inc/esp_lv_adapter.inc
-

@@ -26,7 +26,7 @@ Maintained Components
       - esp-bsp
     * - FT6336U
       - I2C
-      - `esp_lcd_touch_ft6336u <https://components.espressif.com/components/espressif/esp_lcd_touch_ft6336u>`_
+      - :component:`esp_lcd_touch_ft6336u <display/lcd_touch/esp_lcd_touch_ft6336u>`
       - esp-iot-solution
     * - GT1151
       - I2C
@@ -50,7 +50,7 @@ Maintained Components
       - esp-iot-solution
     * - ST77926
       - I2C
-      - `esp_lcd_touch_st77926 <https://components.espressif.com/components/espressif/esp_lcd_touch_st77926>`_
+      - :component:`esp_lcd_touch_st77926 <display/lcd_touch/esp_lcd_touch_st77926>`
       - esp-iot-solution
     * - STMPE610
       - SPI

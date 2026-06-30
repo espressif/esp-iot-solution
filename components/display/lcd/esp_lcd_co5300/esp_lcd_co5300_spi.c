@@ -312,7 +312,6 @@ static esp_err_t panel_co5300_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
 {
     co5300_panel_t *co5300 = __containerof(panel, co5300_panel_t, base);
     esp_lcd_panel_io_handle_t io = co5300->io;
-    esp_err_t ret = ESP_OK;
 
     if (mirror_x) {
         co5300->madctl_val |= BIT(6);
@@ -320,19 +319,30 @@ static esp_err_t panel_co5300_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
         co5300->madctl_val &= ~BIT(6);
     }
     if (mirror_y) {
-        ESP_LOGE(TAG, "mirror_y is not supported by this panel");
-        ret = ESP_ERR_NOT_SUPPORTED;
+        co5300->madctl_val |= BIT(7);
+    } else {
+        co5300->madctl_val &= ~BIT(7);
     }
     ESP_RETURN_ON_ERROR(tx_param(co5300, io, LCD_CMD_MADCTL, (uint8_t[]) {
         co5300->madctl_val
     }, 1), TAG, "send command failed");
-    return ret;
+    return ESP_OK;
 }
 
 static esp_err_t panel_co5300_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
 {
-    ESP_LOGE(TAG, "swap_xy is not supported by this panel");
-    return ESP_ERR_NOT_SUPPORTED;
+    co5300_panel_t *co5300 = __containerof(panel, co5300_panel_t, base);
+    esp_lcd_panel_io_handle_t io = co5300->io;
+
+    if (swap_axes) {
+        co5300->madctl_val |= LCD_CMD_MV_BIT;
+    } else {
+        co5300->madctl_val &= ~LCD_CMD_MV_BIT;
+    }
+    ESP_RETURN_ON_ERROR(tx_param(co5300, io, LCD_CMD_MADCTL, (uint8_t[]) {
+        co5300->madctl_val
+    }, 1), TAG, "send command failed");
+    return ESP_OK;
 }
 
 static esp_err_t panel_co5300_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap)

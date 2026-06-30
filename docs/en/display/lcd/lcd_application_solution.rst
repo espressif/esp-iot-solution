@@ -149,7 +149,7 @@ Circular rotary screen solution, integrating common scenarios such as washing ma
 
 | **Related Links:**
 
-- Code Repository: `esp32-c3-lcdkit <https://github.com/espressif/esp-dev-kits/tree/master/esp32-c3-lcdkit/examples/knob_panel>`__
+- Example Reference: `ESP32-C3-LCDkit User Guide <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/user_guide.html>`__
 - Related Videos:
     - `ESP32-C3 Rotary Screen Demo <https://www.bilibili.com/video/BV1nG4y1d7Ja/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
     - `ESP32-C3-LCDKit Rotary Screen Development Board <https://www.bilibili.com/video/BV1GM4y177A6/?spm_id_from=333.999.0.0&vd_source=2dce370e48c5640c913869575b606ebe>`__
@@ -168,12 +168,12 @@ Can be used for the upgrade iteration of traditional 86 panels, building an inte
 
 | **Hardware:**
 
-- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - Screen: LCD Subboard 2 (480x480)
 
 | **Related Links:**
 
-- Code Repository: `esp32-s3-lcd-ev-board/86-box Smart Panel Example <https://github.com/espressif/esp-dev-kits/tree/master/esp32-s3-lcd-ev-board/examples/86box_smart_panel>`__
+- Example Reference: `ESP32-S3-LCD-EV-Board User Guide <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - Related Video: `ESP32-S3 Smart Voice Touch Panel <https://www.bilibili.com/video/BV12G4y1o7A7/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
 
 | **Features:**
@@ -191,12 +191,12 @@ Utilizes native USB interface to connect with a generic USB camera, achieving ca
 
 | **Hardware:**
 
-- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - Screen: LCD Subboard 3 (800x480)
 
 | **Related Links:**
 
-- Code Repository: `esp32-s3-lcd-ev-board/USB Camera LCD Example <https://github.com/espressif/esp-dev-kits/tree/master/esp32-s3-lcd-ev-board/examples/usb_camera_lcd>`__
+- Example Reference: :example:`usb/host/usb_camera_lcd_display`
 - Related Video: `ESP32-S3 Driving RGB Interface Screen + USB CDC Camera Demo <https://www.bilibili.com/video/BV1ZM411k7tZ/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
 
 | **Features:**
@@ -215,7 +215,7 @@ Recognizes gestures such as double-finger tapping and patting through a multi-to
 
 | **Hardware:**
 
-- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- Development Board: `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - Screen: 7-inch, RGB interface, 800x480 resolution
 
 | **Related Links:**
@@ -264,8 +264,8 @@ LCD Reference Materials
 - LCD Solutions & Development Guides
 
   - `ESP-HMI Smart Display Solution <https://www.espressif.com/solutions/hmi/smart-displays>`_
-  - `Quick Start GUI (Part 1) <https://www.bilibili.com/read/cv19147389?spm_id_from=333.999.0.0>`_
-  - `Quick Start GUI (Part 2) <https://www.bilibili.com/read/cv19354117?spm_id_from=333.999.0.0>`_
+  - Quick Start GUI (Part 1)
+  - Quick Start GUI (Part 2)
   - `ESP LCD Development Guide <https://docs.espressif.com/projects/espressif-esp-iot-solution/en/latest/display/screen.html>`_
 
 - Purchase Links for LCD Development Boards

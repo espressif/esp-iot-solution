@@ -171,8 +171,8 @@ LCD 屏幕撕裂详解
 
 下面是基于 LVGL 实现的相关示例代码:
 
-#. :project:`rgb_avoid_tearing <examples/display/lcd/rgb_avoid_tearing>`
-#. :project:`qspi_without_ram <examples/display/lcd/qspi_without_ram>`
+#. :example:`display/lcd/rgb_avoid_tearing`
+#. :example:`display/lcd/qspi_without_ram`
 
 .. Note::
 
@@ -201,7 +201,7 @@ LCD 屏幕撕裂详解
 
 下面是基于 LVGL 实现的相关示例代码:
 
-#. :project:`lcd_with_te <examples/display/lcd/lcd_with_te>`
+#. :example:`display/lcd/lcd_with_te`
 
 .. Note::
 

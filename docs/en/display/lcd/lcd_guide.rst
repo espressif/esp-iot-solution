@@ -106,7 +106,7 @@ The relationship between size and resolution is not a one-to-one correspondence,
 Driver Interface
 ---------------------
 
-For developers, the focus is often on the LCD's driver interface. Common interface types in the field of IoT include ``SPI``, ``QSPI``, ``I80``, ``RGB``, and ``MIPI-DSI``. A comparison of parameters such as ``IO count``, ``parallel data bits``, ``data transfer bandwidth``, and ``Graphics RAM (GRAM) location`` is presented below:
+For developers, the focus is often on the LCD's driver interface. Common interface types in the field of IoT include ``SPI``, ``QSPI``, ``I80``, ``RGB``, and ``MIPI-DSI``. A comparison of parameters such as ``IO count``, ``data width / lane count``, ``data transfer bandwidth``, and ``Graphics RAM (GRAM) location`` is presented below:
 
 Parameter Comparison
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -118,7 +118,7 @@ Parameter Comparison
     * - Type
       - Description
       - IO Count
-      - Parallel Bits
+      - Data Width / Lane Count
       - Data Bandwidth
       - GRAM Location
     * - SPI
@@ -148,7 +148,7 @@ Parameter Comparison
     * - MIPI-DSI
       - Serial interface using differential signal transmission, based on the high-speed, low-power, scalable serial interconnect D-PHY physical layer specification of MIPI
       - More
-      - 1/2/3/4
+      - 1/2/3/4 lanes
       - Maximum
       - LCD or MCU
 
@@ -210,6 +210,7 @@ Detailed descriptions of commonly used interface types for LCDs are as follows:
 
   - :doc:`./spi_lcd`
   - :doc:`./rgb_lcd`
+  - :doc:`./mipi_dsi_lcd`
   - I80 LCD Introduction (To be updated)
   - QSPI LCD Introduction (To be updated)
 
@@ -223,12 +224,12 @@ For the common LCD pins, the typical connection method is as follows:
 - **TE (Tear Effect)**: Recommend connecting to GPIO and using GPIO interrupts to obtain the TE signal for achieving frame synchronization.
 - **Power(VCC、GND)**: It is recommended to connect all to the corresponding system power sources and avoid leaving any pins floating.
 
-For pins of different interface types, the  MCU needs to adopt different connection methods. Below, we will introduce the typical connection methods for four interfaces: SPI, QSPI, I80, and RGB.
+For pins of different interface types, the MCU needs to adopt different connection methods. Below, we will introduce the typical connection methods for four interfaces: SPI, QSPI, I80, and RGB. For MIPI-DSI interface connection and timing requirements, please refer to :doc:`MIPI DSI LCD Detailed Guide <mipi_dsi_lcd>`.
 
 SPI Interface
 ^^^^^^^^^^^^^^^
 
-The hardware design of the LCD with the ``SPI`` interface can be referred to the development board `ESP32-C3-LCDkit <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html>`_ and its `LCD sub-board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/_static/esp32-c3-lcdkit/schematics/SCH_ESP32-C3-LCDkit-DB_V1.0_20230329.pdf>`__, The typical connection diagram is as follows:
+The hardware design of the LCD with the ``SPI`` interface can be referred to the development board `ESP32-C3-LCDkit <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32c3/esp32-c3-lcdkit/index.html>`_ and its `LCD sub-board <https://dl.espressif.com/dl/schematics/SCH_ESP32-C3-LCDkit-DB_V1.0_20230329.pdf>`__, The typical connection diagram is as follows:
 
 .. figure:: ../../../_static/display/screen/lcd_connection_spi.png
     :align: center
@@ -263,7 +264,7 @@ QSPI Interface
 I80 Interface
 ^^^^^^^^^^^^^
 
-For the hardware design of the LCD with the ``I80`` interface, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD sub-board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.5' LCD_ZJY). The typical connection diagram is as follows:
+For the hardware design of the LCD with the ``I80`` interface, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD sub-board <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`__ (3.5' LCD_ZJY). The typical connection diagram is as follows:
 
 .. figure:: ../../../_static/display/screen/lcd_connection_i80.png
     :align: center
@@ -280,7 +281,7 @@ For the hardware design of the LCD with the ``I80`` interface, please refer to t
 RGB Interface
 ^^^^^^^^^^^^^
 
-For the hardware design of the LCD with the ``RGB`` interface, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD sub-board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.95' LCD_QMZX). The typical connection diagram is as follows:
+For the hardware design of the LCD with the ``RGB`` interface, please refer to the development board `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ and its `LCD sub-board <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`__ (3.95' LCD_QMZX). The typical connection diagram is as follows:
 
 .. figure:: ../../../_static/display/screen/lcd_connection_rgb.png
     :align: center
@@ -358,4 +359,4 @@ Display refers to the process in which the LCD driver IC displays the received i
 For LCDs with SPI/I80 interfaces, the screen refresh rate is determined by the LCD driver IC and can typically be set by sending specific commands, such as the *ST7789* command ``FRCTRL2 (C6h)``. For LCDs with RGB interfaces, the screen refresh rate is determined by the main controller and is equivalent to the interface frame rate.
 
 .. note::
-  - If development needs to proceed without an LCD, the `esp_lcd_usb_display component <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ can be used to simulate the LCD display on a PC monitor via USB UVC, enabling application debugging. The corresponding example is available at `usb_lcd_display <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_lcd_display>`_.
+  - If development needs to proceed without an LCD, the `esp_lcd_usb_display component <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ can be used to simulate the LCD display on a PC monitor via USB UVC, enabling application debugging. The corresponding example is :example:`usb/device/usb_lcd_display`.

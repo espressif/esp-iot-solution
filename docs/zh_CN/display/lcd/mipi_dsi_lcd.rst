@@ -563,15 +563,15 @@ DSI、DBI 与 DPI
 
 移植 MIPI-DSI LCD 驱动组件的基本原理包含以下三点：
 
-  1. 基于数据类型为 ``esp_lcd_dbi_io_config_t`` 的接口设备句柄发送指定格式的命令及参数。
-  2. 实现并创建一个 LCD 设备，然后通过注册回调函数的方式实现结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能。
-  3. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备
+  1. 基于数据类型为 ``esp_lcd_panel_io_handle_t`` 的接口设备句柄发送指定格式的命令及参数。
+  2. 实现并创建一个 LCD 设备，然后通过注册回调函数的方式实现结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能。
+  3. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备
 
-下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
+下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
 
 对于大多数 MIPI-DSI LCD，其驱动 IC 的命令及参数与上述实现说明中的兼容，因此可以通过以下步骤完成移植：
 
-1. 在 `LCD 驱动组件 <https://github.com/espressif/esp-iot-solution/blob/master/docs/zh_CN/display/lcd/lcd_development_guide.rst#%E9%A9%B1%E5%8A%A8%E5%8F%8A%E7%A4%BA%E4%BE%8B>`_ 中选择一个型号相似的 MIPI-DSI LCD 驱动组件。
+1. 在 :ref:`LCD 驱动组件 <lcd_驱动组件>` 中选择一个型号相似的 MIPI-DSI LCD 驱动组件。
 2. 通过查阅目标 LCD 驱动 IC 的数据手册，确认其与所选组件中各功能使用到的命令及参数是否一致，若不一致则需要修改相关代码。
 3. 即使 LCD 驱动 IC 的型号相同，不同制造商的屏幕也通常需要使用各自提供的初始化命令配置。因此，需要修改初始化函数 ``init()`` 中发送的命令和参数。这些初始化命令通常以特定的格式存储在一个静态数组中。此外，需要注意不要在初始化命令中包含一些特殊的命令，例如 ``LCD_CMD_COLMOD(3Ah)`` 和 ``LCD_CMD_MADCTL(36h)``，这些命令是由驱动组件进行管理和使用的。
 4. 可使用编辑器的字符搜索和替换功能，将组件中的 LCD 驱动 IC 名称替换为目标名称，如将 ``ek79007`` 替换为 ``ili9881``
@@ -658,18 +658,18 @@ MIPI-DSI 的时序参数定义与 RGB 接口的 `SYNC 模式` 在时序图上是
 
 注意，在 ESP32P4 中要求为 MIPI DSI PHY 提供 2.5V 的稳定电源。其中时钟频率计算参考上文 pixel_clock 计算方式。色彩格式、分辨率、脉冲宽度和前后肩参数需要严格遵循面板规格书要求。
 
-然后通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
+然后通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
 
-关于 ``MIPI-DSI`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32s3/api-reference/peripherals/lcd/index.html>`_ 。下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 LCD 图像的说明：
+关于 ``MIPI-DSI`` 接口配置参数更加详细的说明，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32p4/api-reference/peripherals/lcd/dsi_lcd.html>`_ 。下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 LCD 图像的说明：
 
   - 该函数是通过内存拷贝的方式刷新帧缓存里的图像数据，也就是说该函数调用完成后帧缓存内的图像数据也已经更新完成，而 ``MIPI-DSI`` 接口本身是通过 DMA 从帧缓存中获取图像数据来刷新 LCD，这两个过程是异步进行的。
   - 该函数会判断传入参数 ``color_data`` 的值是否为 ``MIPI-DSI`` 接口内部的帧缓存地址，若是，则不会进行上述的内存拷贝操作，而是直接将 ``MIPI-DSI`` 接口的 DMA 传输地址设置为该缓存地址，从而在具有多个帧缓存的情况下实现切换的功能
 
-除了 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 之外， `MIPI-DSI 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/src/esp_lcd_panel_mipi_dsi.c>`_ 中还提供了一些特殊功能的函数，下面是一些常用函数的使用说明：
+除了 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 之外， `MIPI-DSI 接口驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/dsi/include/esp_lcd_mipi_dsi.h>`_ 中还提供了一些特殊功能的函数，下面是一些常用函数的使用说明：
 
   * esp_lcd_dpi_panel_get_frame_buffer()：获取帧缓存的地址，可用数量由配置参数 ``num_fbs`` 决定，用于多缓冲防撕裂。
   * esp_lcd_dpi_panel_set_pattern()：设置预定义的图案到屏幕上，用于测试或调试目的。
-  * esp_lcd_dpi_panel_set_color_conversion()：为 DPI 面板设置颜色转换配置。
+  * esp_lcd_dpi_panel_set_yuv_conversion()：为 DPI 面板设置颜色转换配置。
   * esp_lcd_dpi_panel_register_event_callbacks()：注册多种事件的回调函数，示例代码及说明如下：
 
 .. code-block:: c
@@ -725,7 +725,7 @@ MIPI-DSI 的时序参数定义与 RGB 接口的 `SYNC 模式` 在时序图上是
 问题：屏幕画面撕裂如何解决
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-参考 `LCD 屏幕撕裂详解 <https://github.com/espressif/esp-iot-solution/blob/master/docs/zh_CN/display/lcd/lcd_screen_tearing.rst>`_，相关例程可参考 `mipi_dsi_avoid_tearing <https://github.com/espressif/esp-iot-solution/tree/master/examples/display/lcd/mipi_dsi_avoid_tearing>`_。
+参考 :doc:`LCD 屏幕撕裂详解 <lcd_screen_tearing>`，相关例程可参考 :example:`display/lcd/mipi_dsi_avoid_tearing`。
 
 问题：帧率优化配置
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
