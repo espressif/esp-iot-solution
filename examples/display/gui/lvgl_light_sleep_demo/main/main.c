@@ -79,6 +79,7 @@ static esp_err_t pause_wake_timer_ensure(void);
 static esp_err_t pause_mode_enter_sleep(void *user_ctx);
 static esp_err_t pause_mode_exit_sleep(void *user_ctx);
 static esp_err_t user_mode_enter_sleep(void *user_ctx);
+static uint32_t example_get_wakeup_causes_bitmap(void);
 static gpio_num_t example_touch_int_gpio(void);
 static bool example_uses_auto_sleep(void);
 static bool example_uses_manual_sleep(void);
@@ -464,7 +465,7 @@ static esp_err_t run_full_light_sleep_cycle(void)
         goto recover;
     }
     s_last_sleep_duration_us = (uint64_t)(esp_timer_get_time() - sleep_start_us);
-    s_last_wake_causes = esp_sleep_get_wakeup_causes();
+    s_last_wake_causes = example_get_wakeup_causes_bitmap();
     s_user_sleep_cycles++;
 
     ret = hw_lcd_init(&s_panel_handle, &s_panel_io_handle, s_tear_mode, s_rotation);
@@ -504,6 +505,20 @@ recover: {
         }
         return ret;
     }
+}
+
+static uint32_t example_get_wakeup_causes_bitmap(void)
+{
+#ifdef EXAMPLE_HAS_ESP_SLEEP_GET_WAKEUP_CAUSES
+    return esp_sleep_get_wakeup_causes();
+#else
+    /* v5.5.0 only reports one wake source; normalize it to the bitmap form used by this demo. */
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    if ((cause == ESP_SLEEP_WAKEUP_UNDEFINED) || ((uint32_t)cause >= 32U)) {
+        return 0;
+    }
+    return 1UL << (uint32_t)cause;
+#endif
 }
 
 static esp_err_t example_panel_set_sleep(bool sleep)

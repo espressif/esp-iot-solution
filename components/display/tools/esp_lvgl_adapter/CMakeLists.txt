@@ -1,15 +1,26 @@
 include($ENV{IDF_PATH}/tools/cmake/version.cmake)
 
 set(ADAPTER_PRIV_REQ esp_timer esp_mm esp_pm efuse esp_psram)
-if(IDF_VERSION_MAJOR LESS 6 OR (IDF_VERSION_MAJOR EQUAL 6 AND IDF_VERSION_MINOR LESS 2))
-    list(APPEND ADAPTER_PRIV_REQ bootloader_support)
-endif()
+
 idf_build_get_property(target IDF_TARGET)
 if(${target} STREQUAL "esp32p4" OR ${target} STREQUAL "esp32s31")
     list(APPEND ADAPTER_PRIV_REQ esp_driver_ppa)
-    if(IDF_VERSION_MAJOR GREATER 6 OR (IDF_VERSION_MAJOR EQUAL 6 AND IDF_VERSION_MINOR GREATER_EQUAL 2))
+
+    if(EXISTS "${IDF_PATH}/components/esp_driver_dma/include/esp_async_color_convert.h")
+        set(_has_async_color_convert ON)
         list(APPEND ADAPTER_PRIV_REQ esp_driver_dma)
     endif()
+endif()
+
+set(_efuse_header "${IDF_PATH}/components/efuse/include/esp_efuse.h")
+if(EXISTS "${_efuse_header}")
+    file(READ "${_efuse_header}" _efuse_content)
+    string(FIND "${_efuse_content}" "esp_efuse_is_flash_encryption_enabled" _efuse_api_pos)
+    if(_efuse_api_pos EQUAL -1)
+        list(APPEND ADAPTER_PRIV_REQ bootloader_support)
+    endif()
+else()
+    list(APPEND ADAPTER_PRIV_REQ bootloader_support)
 endif()
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
@@ -87,8 +98,6 @@ idf_component_register(
     PRIV_REQUIRES ${ADAPTER_PRIV_REQ}
 )
 
-# Optional dependencies must be linked after registration. Keep both managed
-# and local component names so projects can override registry components.
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_BUTTON)
     idf_component_optional_requires(PUBLIC espressif__button button)
 endif()
@@ -112,6 +121,23 @@ endif()
 idf_component_get_property(ESP_LCD_DIR esp_lcd COMPONENT_DIR)
 if(ESP_LCD_DIR)
     target_include_directories(${COMPONENT_LIB} PRIVATE "${ESP_LCD_DIR}/priv_include")
+
+    set(_mipi_dsi_header "${ESP_LCD_DIR}/dsi/include/esp_lcd_mipi_dsi.h")
+    if(EXISTS "${_mipi_dsi_header}")
+        file(READ "${_mipi_dsi_header}" _mipi_dsi_content)
+        string(FIND "${_mipi_dsi_content}"
+               "esp_lcd_dpi_panel_frame_buf_complete_cb_t" _frame_buf_complete_pos)
+        if(NOT _frame_buf_complete_pos EQUAL -1)
+            set(_has_frame_buf_complete_cb ON)
+        endif()
+    endif()
+endif()
+
+if(_has_async_color_convert)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_ASYNC_COLOR_CONVERT_AVAILABLE=1)
+endif()
+if(_has_frame_buf_complete_cb)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB=1)
 endif()
 
 target_link_libraries(${COMPONENT_LIB} PUBLIC idf::${lvgl_name})

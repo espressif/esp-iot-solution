@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.6.1 (2026-06-29)
+
+* Replace IDF version-number guards with header/symbol-based feature detection in CMake:
+  - `ESP_ASYNC_COLOR_CONVERT_AVAILABLE`: probed by checking for `esp_driver_dma/include/esp_async_color_convert.h`; replaces `ESP_IDF_VERSION >= 6.2.0` guards throughout the DMA2D paths
+  - `ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB`: probed by searching for `esp_lcd_dpi_panel_frame_buf_complete_cb_t` in `esp_lcd_mipi_dsi.h`; replaces the `IDF_VERSION_MAJOR == 6 && IDF_VERSION_MINOR == 0` guard for `on_frame_buf_complete` vs `on_refresh_done`
+  - `bootloader_support` dependency: probed by checking for `esp_efuse_is_flash_encryption_enabled` in `esp_efuse.h`; avoids the component on IDF versions that expose the API directly
+* Add `#warning` build diagnostic when `on_frame_buf_complete` is unavailable, alerting that buffer-switch release and dummy-draw require an IDF update
+
 ## v0.6.0 (2026-06-25)
 
 * Fix flash encryption API version guard boundary: switch the `esp_efuse_is_flash_encryption_enabled()` branch to IDF >= 6.0.1, falling back to `esp_flash_encryption_enabled()` below it, so both the `v6.0` tag (6.0.0) and the `release/v6.0` branch (6.0.1) compile
