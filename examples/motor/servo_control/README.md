@@ -7,30 +7,18 @@ This example shows how to use the servo component.
 Initialize the sensor with the configuration:
 
 ```c
-    servo_config_t servo_cfg = {
-        .max_angle = 180,
-        .min_width_us = 500,
-        .max_width_us = 2500,
-        .freq = 50,
-        .timer_number = LEDC_TIMER_0,
-        .channels = {
-            .servo_pin = {
-                SERVO_GPIO,
-            },
-            .ch = {
-                LEDC_CHANNEL_0,
-            },
-        },
-        .channel_number = 1,
-    };
+    servo_handle_t servo = NULL;
+    servo_config_t servo_cfg = SERVO_CONFIG_DEFAULT(LEDC_LOW_SPEED_MODE, LEDC_TIMER_0, LEDC_CHANNEL_0, SERVO_GPIO);
 
     // Initialize the servo
-    iot_servo_init(LEDC_LOW_SPEED_MODE, &servo_cfg);
+    iot_servo_new(&servo_cfg, &servo);
 ```
 
 Set the angle:
 
 ```c
 uint16_t angle = 0;
-iot_servo_write_angle(LEDC_LOW_SPEED_MODE, 0, angle);
+iot_servo_write_angle(servo, angle);
 ```
+
+Each servo handle owns one LEDC channel. Multiple servo handles can share the same LEDC timer only when they use the same speed mode, frequency, and duty resolution.

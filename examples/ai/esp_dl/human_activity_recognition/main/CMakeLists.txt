@@ -1,12 +1,16 @@
 idf_component_register(SRC_DIRS "."
                     INCLUDE_DIRS "." "include/")
 
+target_compile_options(${COMPONENT_LIB} PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wno-non-c-typedef-for-linkage>)
+
 idf_component_get_property(esp-dl espressif__esp-dl COMPONENT_LIB)
 target_compile_options(${esp-dl} PRIVATE
     -Wno-unused-variable
     -Wno-unused-but-set-variable
     -Wno-deprecated-declarations
-    -Wno-missing-field-initializers)
+    -Wno-missing-field-initializers
+    $<$<COMPILE_LANGUAGE:CXX>:-Wno-non-c-typedef-for-linkage>)
 
 # Locate esp-dl and reuse its packing helpers (no local pack_model.py needed).
 idf_build_get_property(component_targets __COMPONENT_TARGETS)
