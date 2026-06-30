@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,16 @@
 #include "esp_check.h"
 #include "esp_timer.h"
 #include "adc_battery_estimation.h"
+
+#if defined(SOC_ADC_DIGI_MIN_BITWIDTH)
+#define ADC_BATTERY_SOC_ADC_MIN_BITWIDTH SOC_ADC_DIGI_MIN_BITWIDTH
+#define ADC_BATTERY_SOC_ADC_MAX_BITWIDTH SOC_ADC_DIGI_MAX_BITWIDTH
+#elif defined(SOC_ADC_RTC_MIN_BITWIDTH)
+#define ADC_BATTERY_SOC_ADC_MIN_BITWIDTH SOC_ADC_RTC_MIN_BITWIDTH
+#define ADC_BATTERY_SOC_ADC_MAX_BITWIDTH SOC_ADC_RTC_MAX_BITWIDTH
+#else
+#error "No supported ADC bitwidth SOC macros found"
+#endif
 
 static const char* TAG = "adc_battery_estimation";
 
@@ -106,7 +116,7 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
         ctx->battery_points_count = config->battery_points_count;
     }
 
-    if ((config->internal.adc_unit < SOC_ADC_PERIPH_NUM) && ((config->internal.adc_bitwidth >= SOC_ADC_RTC_MIN_BITWIDTH && config->internal.adc_bitwidth <= SOC_ADC_RTC_MAX_BITWIDTH) || config->internal.adc_bitwidth == ADC_BITWIDTH_DEFAULT)) {
+    if ((config->internal.adc_unit < SOC_ADC_PERIPH_NUM) && ((config->internal.adc_bitwidth >= ADC_BATTERY_SOC_ADC_MIN_BITWIDTH && config->internal.adc_bitwidth <= ADC_BATTERY_SOC_ADC_MAX_BITWIDTH) || config->internal.adc_bitwidth == ADC_BITWIDTH_DEFAULT)) {
         // Create new ADC unit and channel
         adc_oneshot_unit_init_cfg_t init_cfg = {
             .unit_id = config->internal.adc_unit,

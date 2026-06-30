@@ -1,12 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <esp_log.h>
 #include <esp_adc/adc_oneshot.h>
-#include "ble_hid.h"
+#include "hid_transport.h"
 #include "bsp/esp-bsp.h"
 #include "battery_adc.h"
 #include "adc_battery_estimation.h"
@@ -17,9 +17,9 @@ static TaskHandle_t battery_monitor_task_handle;
 static void battery_monitor_task(void *pvParameters);
 
 /* Pull up resistor value. Unit: KOhm */
-#define PULL_UP_RESISTOR    (51)
+#define PULL_UP_RESISTOR    (100)
 /* Pull down resistor value. Unit: KOhm */
-#define PULL_DOWN_RESISTOR  (100)
+#define PULL_DOWN_RESISTOR  (22)
 
 esp_err_t battery_adc_init(void)
 {
@@ -62,7 +62,7 @@ static void battery_monitor_task(void *pvParameters)
 
     while (1) {
         adc_battery_estimation_get_capacity(adc_battery_estimation_handle, &capacity);
-        ble_hid_battery_report((int) capacity);
+        hid_transport_battery_report((int) capacity);
 
         /* Sample period. */
         vTaskDelay(pdMS_TO_TICKS(10000));

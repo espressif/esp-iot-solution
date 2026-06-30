@@ -1,3 +1,5 @@
 dependencies:
   idf: ">=5.0"
-  led_strip: "^2.5.3"
+  led_strip:
+    # Keep aligned with keyboard_rgb_matrix, which requires led_strip 3.x.
+    version: "^3.0.3"

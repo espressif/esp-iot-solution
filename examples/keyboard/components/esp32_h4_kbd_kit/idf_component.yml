@@ -1,8 +1,8 @@
 version: "0.1.0"
-description: Board Support Package for ESP32-S3-KBD-KIT
+description: Board Support Package for ESP32-H4-KBD-KIT
 
 targets:
-  - esp32s3
+  - esp32h4
 
 dependencies:
   idf: ">=5.0"
