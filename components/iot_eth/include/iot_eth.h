@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -49,6 +49,14 @@ typedef void *iot_eth_handle_t;
 typedef esp_err_t (*static_input_cb_t)(iot_eth_handle_t handle, uint8_t *data, size_t len, void *user_data);
 
 /**
+ * @brief Static input callback function type with extra frame information
+ *
+ * This callback is used by drivers that can provide additional frame metadata,
+ * such as hardware timestamps, while keeping the legacy input callback available.
+ */
+typedef esp_err_t (*static_input_info_cb_t)(iot_eth_handle_t handle, uint8_t *data, size_t len, void *user_data, void *info);
+
+/**
  * @brief Ethernet configuration structure
  *
  * This structure holds the configuration for initializing an Ethernet instance.
@@ -56,6 +64,7 @@ typedef esp_err_t (*static_input_cb_t)(iot_eth_handle_t handle, uint8_t *data, s
 typedef struct {
     iot_eth_driver_t *driver; /*!< Pointer to the Ethernet driver */
     static_input_cb_t stack_input; /*!< Function pointer for stack input */
+    static_input_info_cb_t stack_input_info; /*!< Function pointer for stack input with extra frame info */
 } iot_eth_config_t;
 
 /*
@@ -158,6 +167,22 @@ esp_err_t iot_eth_get_addr(iot_eth_handle_t handle, uint8_t *mac);
  *      - ESP_ERR_INVALID_ARG: Invalid handle argument
  */
 esp_err_t iot_eth_update_input_path(iot_eth_handle_t handle, static_input_cb_t stack_input, void *user_data);
+
+/*
+ * @brief Update the input path for Ethernet data with extra frame information
+ *
+ * This function updates the stack input callback function and user data pointer
+ * that will be used when receiving Ethernet packets with optional metadata.
+ *
+ * @param[in] handle Ethernet handle
+ * @param[in] stack_input_info Function pointer for stack input callback with extra frame info
+ * @param[in] user_data User data to be passed to stack input callback
+ *
+ * @return
+ *      - ESP_OK: Successfully updated input path
+ *      - ESP_ERR_INVALID_ARG: Invalid handle argument
+ */
+esp_err_t iot_eth_update_input_path_info(iot_eth_handle_t handle, static_input_info_cb_t stack_input_info, void *user_data);
 
 #ifdef __cplusplus
 }

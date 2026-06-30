@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,9 @@
 #include "iot_eth.h"
 #include "iot_eth_netif_glue.h"
 #include "../lwip/esp_netif_lwip_internal.h"
+#if CONFIG_ESP_NETIF_L2_TAP
+#include "esp_vfs_l2tap.h"
+#endif
 
 const static char *TAG = "iot_eth.netif_glue";
 
@@ -21,6 +24,7 @@ typedef struct iot_eth_netif_glue_t iot_eth_netif_glue_t;
 struct iot_eth_netif_glue_t {
     esp_netif_driver_base_t base;
     iot_eth_handle_t eth;
+    bool is_ppp;
     esp_event_handler_instance_t eth_event_handler_instance;
     esp_event_handler_instance_t ip_got_ip_handler_instance;
     esp_event_handler_instance_t ppp_got_ip_handler_instance;
@@ -29,16 +33,19 @@ struct iot_eth_netif_glue_t {
 #endif
 };
 
-static esp_err_t eth_input_to_netif(iot_eth_handle_t eth_handle, uint8_t *buffer, size_t length, void *user_data)
+static esp_err_t eth_input_to_netif(iot_eth_handle_t eth_handle, uint8_t *buffer, size_t length, void *user_data, void *info)
 {
+    iot_eth_netif_glue_t *glue = (iot_eth_netif_glue_t *)user_data;
 #if CONFIG_ESP_NETIF_L2_TAP
-    esp_err_t ret = ESP_OK;
-    ret = esp_vfs_l2tap_eth_filter_frame(eth_handle, buffer, (size_t *)&length, info);
-    if (length == 0) {
-        return ret;
+    if (!glue->is_ppp) {
+        esp_err_t ret = ESP_OK;
+        ret = esp_vfs_l2tap_eth_filter_frame(eth_handle, buffer, &length, info);
+        if (length == 0) {
+            return ret;
+        }
     }
 #endif
-    return esp_netif_receive((esp_netif_t *)user_data, buffer, length, NULL);
+    return esp_netif_receive(glue->base.netif, buffer, length, NULL);
 }
 
 static void eth_l2_free(void *h, void *buffer)
@@ -51,7 +58,7 @@ static esp_err_t iot_eth_post_attach(esp_netif_t *esp_netif, void *args)
     iot_eth_netif_glue_t *glue = (iot_eth_netif_glue_t *)args;
     glue->base.netif = esp_netif;
 
-    iot_eth_update_input_path(glue->eth, eth_input_to_netif, esp_netif);
+    iot_eth_update_input_path_info(glue->eth, eth_input_to_netif, glue);
 
     // set driver related config to esp-netif
     esp_netif_driver_ifconfig_t driver_ifconfig = {
@@ -63,6 +70,7 @@ static esp_err_t iot_eth_post_attach(esp_netif_t *esp_netif, void *args)
 #else
     bool is_ppp = _IS_NETIF_POINT2POINT_TYPE(esp_netif, PPP_LWIP_NETIF);
 #endif
+    glue->is_ppp = is_ppp;
     if (!is_ppp) {
         ESP_LOGD(TAG, "non-ppp netif");
         driver_ifconfig.driver_free_rx_buffer = eth_l2_free;

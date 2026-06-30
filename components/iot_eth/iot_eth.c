@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,19 +23,28 @@ typedef struct {
     bool started;
 
     static_input_cb_t stack_input;
+    static_input_info_cb_t stack_input_info;
     void *stack_input_user_data;
 } iot_eth_t;
 
-esp_err_t iot_eth_stack_input(iot_eth_mediator_t *mediator, uint8_t *data, size_t len)
+esp_err_t iot_eth_stack_input_info(iot_eth_mediator_t *mediator, uint8_t *data, size_t len, void *info)
 {
     iot_eth_t *eth = __containerof(mediator, iot_eth_t, mediator);
-    if (eth->stack_input != NULL) {
+    if (eth->stack_input_info != NULL) {
+        ESP_LOG_BUFFER_HEXDUMP("iot-eth: if_input", data, len, ESP_LOG_VERBOSE);
+        return eth->stack_input_info(eth, data, len, eth->stack_input_user_data, info);
+    } else if (eth->stack_input != NULL) {
         ESP_LOG_BUFFER_HEXDUMP("iot-eth: if_input", data, len, ESP_LOG_VERBOSE);
         return eth->stack_input(eth, data, len, eth->stack_input_user_data);
     }
-    // if no stack input, free the data
+    // Free the RX buffer when no stack input is registered.
     free(data);
     return ESP_OK;
+}
+
+esp_err_t iot_eth_stack_input(iot_eth_mediator_t *mediator, uint8_t *data, size_t len)
+{
+    return iot_eth_stack_input_info(mediator, data, len, NULL);
 }
 
 esp_err_t iot_eth_transmit(iot_eth_handle_t handle, void *data, size_t len)
@@ -98,7 +107,9 @@ esp_err_t iot_eth_install(const iot_eth_config_t *config, iot_eth_handle_t *hand
     eth->link = IOT_ETH_LINK_DOWN;
     eth->driver = config->driver;
     eth->stack_input = config->stack_input;
+    eth->stack_input_info = config->stack_input_info;
     eth->mediator.stack_input = iot_eth_stack_input;
+    eth->mediator.stack_input_info = iot_eth_stack_input_info;
     eth->mediator.on_stage_changed = iot_eth_on_stage_changed;
     ESP_GOTO_ON_ERROR(eth->driver->set_mediator(eth->driver, &eth->mediator), err, TAG, "Failed to set mediator");
     ESP_GOTO_ON_ERROR(eth->driver->init(eth->driver), err, TAG, "Failed to init driver");
@@ -166,6 +177,17 @@ esp_err_t iot_eth_update_input_path(iot_eth_handle_t handle, static_input_cb_t s
     ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle is NULL");
     iot_eth_t *eth = (iot_eth_t *)handle;
     eth->stack_input = stack_input;
+    eth->stack_input_info = NULL;
+    eth->stack_input_user_data = user_data;
+    return ESP_OK;
+}
+
+esp_err_t iot_eth_update_input_path_info(iot_eth_handle_t handle, static_input_info_cb_t stack_input_info, void *user_data)
+{
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "handle is NULL");
+    iot_eth_t *eth = (iot_eth_t *)handle;
+    eth->stack_input_info = stack_input_info;
+    eth->stack_input = NULL;
     eth->stack_input_user_data = user_data;
     return ESP_OK;
 }
