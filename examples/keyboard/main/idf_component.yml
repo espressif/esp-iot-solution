@@ -3,4 +3,12 @@ dependencies:
   idf: '>=5.2'
   espressif/tinyusb:
     version: '>=0.15.0~2'
-  espressif/adc_battery_estimation: =*
+  espressif/adc_battery_estimation:
+    version: =*
+    override_path: ../../../components/sensors/battery_fuel_gauge/adc_battery_estimation
+  espressif/led_strip:
+    # keyboard_rgb_matrix 0.2.0 requires led_strip 3.x; use 3.0.3+ across supported IDF versions.
+    version: "^3.0.3"
+  lijunru-hub/keyboard_rgb_matrix: ^0.2.0
+  keyboard_button:
+    override_path: ../../../components/keyboard_button

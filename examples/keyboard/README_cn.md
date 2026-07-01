@@ -1,6 +1,6 @@
 # KeyBoard 键盘示例
 
-ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB 蓝牙双模输出，以及 40+种的本地灯效和 WIN11 灯效同步，并支持了低功耗蓝牙，使得键盘无线使用时间大大延长。
+ESP-KeyBoard 项目是键盘示例，支持 **ESP32-S3** 和 **ESP32-H4**（USB / BLE）。支持全键无冲、40+ 种本地灯效和 WIN11 灯效同步，并支持低功耗蓝牙，可显著延长无线使用时间。
 
 主要的软件功能：
 
@@ -9,6 +9,7 @@ ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB
     * 支持 USB 1K 回报率
     * 支持 BLE 125hz 回报率
     * 支持 BLE 电池电量报告
+    * 支持 USB / BLE 双模切换
     * 支持本地灯效控制 40+ 种
     * 支持 `Windows 11` 动态灯效控制
 
@@ -16,13 +17,19 @@ ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB
 
 ## 如何使用
 
+### ESP-IDF 6.x / ESP32-H4 编译说明
+
+ESP32-H4 默认编译 WS2812、RGB 矩阵和电量 ADC。ESP32-H4-Core-V0_2 使用 GPIO32 作为 WS2812 数据脚，GPIO28 / ADC1_CH0 作为电池采样脚。
+
 ### 硬件需求
 
 * 参考 ESP-KeyBoard 硬件设计，开源地址 [esp-keyboard](https://oshwhub.com/esp-college/esp-keyboard)
 
 * Demo 视频 [video](https://www.bilibili.com/video/BV1yi421C7qV/?share_source=copy_web&vd_source=7e24f4cefdafbd8477369f33616312a9)
 
-* BSP 介绍文档 [BSP](./components/esp32_s3_kbd_kit/README.md)
+* BSP 介绍文档：
+  * ESP32-S3：[esp32_s3_kbd_kit](./components/esp32_s3_kbd_kit/README.md)
+  * ESP32-H4：[esp32_h4_kbd_kit](./components/esp32_h4_kbd_kit/README.md)
 
 ![keyboard_hardware](https://dl.espressif.com/esp-iot-solution/static/keyboard_1.gif)
 
@@ -30,11 +37,10 @@ ESP-KeyBoard 项目是使用 ESP32-S3 的键盘项目，支持全键无冲，USB
 
 #### 模式组合
 
-|     连接模式     |    本地灯效     | WIN11 灯效 | 全键无冲 | 回报率 |
-| :--------------: | :-------------: | :--------: | :------: | :----: |
-|       USB        |        √        |     √      |    √     |   1k   |
-|       BLE        | √（默认不开启） |     ×      |    √     | 125Hz  |
-| 2.4G（暂不支持） |        √        |     ×      |    √     |   1k   |
+| 连接模式 | 适用芯片 | 本地灯效 | WIN11 灯效 | 全键无冲 | 回报率 | 电池上报 |
+| :------: | :------: | :------: | :--------: | :------: | :----: | :------: |
+|   USB    | ESP32-S3 / H4 |   √    |     √      |    √     |   1k   |    ×     |
+|   BLE    | ESP32-S3 / H4 | √（默认不开启） |  ×  |    √     | 125Hz  |    √     |
 
 本地灯效
 
@@ -71,13 +77,20 @@ Win11 灯效
 
 如何修改按键映射：
 
-  * 请修改 [keymap.h](./components/esp32_s3_kbd_kit/include/bsp/keymap.h) 文件中的按键映射表
+  * ESP32-S3：[keymap.h](./components/esp32_s3_kbd_kit/include/bsp/keymap.h)
+  * ESP32-H4：[keymap.h](./components/esp32_h4_kbd_kit/include/bsp/keymap.h)
 
 #### license
 
 Note: keyboard_rgb_martix 来自 **QMK** 工程，由于使用 GPL 协议，如果您有基于本示例的产品计划，建议替换该组件。
 
 #### Change LOG
+
+* v0.4.0 - 2026-5-21
+
+  * 新增 ESP32-H4 BSP（`esp32_h4_kbd_kit`）及统一 `hid_transport` 传输层
+  * `led_strip` 依赖按 IDF 版本区分：ESP-IDF >= 6.0 使用 `^3.0.3`（修复 `esp_heap_caps.h` / `MALLOC_CAP_*` 编译报错，不再需要原先的本地补丁），旧版本 IDF 保持 `^2.5.3` 以兼容历史版本
+  * 适配 ESP-IDF 6.x / ESP32-H4 的 `adc_battery_estimation`：仓库内源码（经 `main/idf_component.yml` 的 `override_path` 引用）按芯片自动选择 `SOC_ADC_DIGI_*` 或 `SOC_ADC_RTC_*` 位宽宏，修复新芯片上 `'SOC_ADC_RTC_*BITWIDTH' undeclared` 报错
 
 * v0.3.0 - 2025-8-4
 

@@ -11,7 +11,8 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "btn_progress.h"
+#include "esp_err.h"
+#include "hid_report_types.h"
 
 /**
  * @brief Initialize BLE HID device.

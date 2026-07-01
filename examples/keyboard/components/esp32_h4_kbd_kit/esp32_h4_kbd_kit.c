@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2026 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -30,7 +30,7 @@ esp_err_t bsp_keyboard_init(keyboard_btn_handle_t *kbd_handle, keyboard_btn_conf
             .input_gpios = (int[])KBD_INPUT_IOS,
             .input_gpio_num = KBD_COL_NUM,
             .active_level = KBD_ATTIVE_LEVEL,
-            .debounce_ticks = 3,
+            .debounce_ticks = 2,
             .ticks_interval = KBD_TICKS_INTERVAL_US,
             .enable_power_save = true,
         };
