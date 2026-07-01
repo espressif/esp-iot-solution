@@ -1,40 +1,227 @@
-menu "LOG ROUTER"
+menu "Log router"
 
-    config LOG_ROUTER_BUFFER_SIZE
-        int "Buffer size (bytes)"
-        range 2048 10240
-        default 4096
-        help
-            Size of the buffer used for log buffering.
-            Larger buffer reduces flash write frequency but uses more RAM.
-            Range: 2KB (2048) to 10KB (10240)
+	menu "Background task"
 
-    config LOG_ROUTER_FLUSH_THRESHOLD_PERCENT
-        int "Flush threshold percentage"
-        range 50 90
-        default 75
-        help
-            Percentage of buffer size at which to trigger a flush.
-            Higher percentage means more data buffered before writing to flash.
-            Range: 50% to 90%
+	    config LOG_ROUTER_TASK_NAME
+	        string "log_router task name"
+	        default "log_router"
+	        help
+	            Sets the log_router task's name.
 
-    config LOG_ROUTER_FLUSH_TIMEOUT_MS
-        int "Flush timeout (milliseconds)"
-        range 2000 10000
-        default 2000
-        help
-            Maximum time to wait before flushing buffer to flash.
-            Shorter timeout ensures more frequent writes but may reduce performance.
-            Range: 2 seconds (2000ms) to 10 seconds (10000ms)
+	     choice LOG_ROUTER_TASK_CORE_AFFINITY
+	     	prompt "log_router task core affinity"
+	        default LOG_ROUTER_TASK_NO_AFFINITY
+	        help
+	            Sets the log_router task's core affinity
 
-    config LOG_ROUTER_FORMAT_BUFFER_SIZE
-        int "Log format buffer size (bytes)"
-        range 256 1024
-        default 256
+	        config LOG_ROUTER_TASK_AFFINITY_CPU0
+	            bool "CPU0"
+	        config LOG_ROUTER_TASK_AFFINITY_CPU1
+	            bool "CPU1"
+	            depends on !FREERTOS_UNICORE
+	        config LOG_ROUTER_TASK_NO_AFFINITY
+	            bool "No affinity"
+	    endchoice
+
+	    config LOG_ROUTER_TASK_CORE_AFFINITY
+	        hex
+	        default 0x0 if LOG_ROUTER_TASK_AFFINITY_CPU0
+	        default 0x1 if LOG_ROUTER_TASK_AFFINITY_CPU1
+	        default FREERTOS_NO_AFFINITY if FREERTOS_TIMER_TASK_NO_AFFINITY
+
+	    config LOG_ROUTER_TASK_PRIORITY
+	        int "log_router task priority"
+	        range 1 25
+	        default 1
+	        depends on FREERTOS_USE_TIMERS
+	        help
+	            Sets the log_router task's priority.
+
+	    config LOG_ROUTER_TASK_STACK_DEPTH
+	        int "log_router task stack depth"
+	        range 1536 32768
+	        default 3840
+	        help
+	            Set the log_router task's stack size.
+
+	endmenu
+
+	menu "Ringbuffer"
+
+
+		config LOG_ROUTER_RINGBUFFER
+	    	bool "Defer log writing to background task"
+	    	default y
+	    	help
+	    		Reduce logging latency by writing into a ring-buffer and processing
+	    		them in the background when there is nothing else to do. This allows
+	    		the task doing the logging to continue immediately after formatting
+	    		the message, without having to do any expensive string parsing,
+	    		copying, or writing to files.
+
+	    if LOG_ROUTER_RINGBUFFER
+
+			config LOG_ROUTER_RINGBUFFER_SIZE
+		    	int "Ring-buffer size (bytes)"
+		        range 2048 32768
+		        default 16384
+		        help
+		            Size of the ringbuffer used to defer writing logs to background task.
+		            If too many messages are written without an opportunity for task to
+		            run, the buffer will fill up, and the tasks logging ESP_LOG will
+		            be forced to write out some of the older logs before it can continue.
+		            Range: 2KB (2048) to 16KB (16384)
+
+	        config LOG_ROUTER_RINGBUFFER_STATIC
+		        bool "Static allocate ringbuffer memory"
+		        default n
+		        help
+		            When this option is enabled, the ringbuffer will be allocated in static memory.
+					The size of LOG_ROUTER_RINGBUFFER_SIZE must be a multiple of 4 (32-bit aligned)
+					or else the application will crash.
+
+	        config LOG_ROUTER_RINGBUFFER_IN_EXT
+		        bool "Allocate ringbuffer in external RAM"
+		        default n
+		        depends on SPIRAM
+		        depends on 	(!LOG_ROUTER_RINGBUFFER_STATIC && (SPIRAM_USE_CAPS_ALLOC || SPIRAM_USE_MALLOC)) \
+		        		||	(LOG_ROUTER_RINGBUFFER_STATIC && SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY)
+		        help
+					When this option is enabled, the ringbuffer will be allocated in external RAM.
+					It is recommended to keep this option off, as it will reduce the speed of calls to
+					ESP_LOG functions.
+
+	    endif #LOG_ROUTER_RINGBUFFER
+
+	    if !LOG_ROUTER_RINGBUFFER
+
+		    config LOG_ROUTER_FORMAT_BUFFER_SIZE
+		        int "Log format buffer size (bytes)"
+		        range 256 2048
+		        default 256
+		        help
+		            Size of the buffer used for formatting log messages in log_router.
+		            A larger buffer can handle longer messages without truncating, at
+		            the cost of using more static memory.
+
+		            Not required when the ringbuffer is enabled - the ringbuffer's
+		            memory is used for formatting the message.
+
+		            Range: 256 to 2048 bytes
+
+	    endif #!LOG_ROUTER_RINGBUFFER
+
+	endmenu
+
+	menu "Batch write buffers"
+
+	    config LOG_ROUTER_BATCH_WRITE_BUFFER
+	    	bool "Batch writes to each log file"
+	    	default y
+	    	help
+	    		Reduce the frequency of flash operations by writing messages in batches.
+	    		Messages will a per-file buffer until there is no more space, then the
+	    		whole buffer will be written at once. Buffers will also be flushed after
+	    		a certain amount of time has passed.
+
+	    if LOG_ROUTER_BATCH_WRITE_BUFFER
+
+		    config LOG_ROUTER_BUFFER_SIZE
+		        int "Buffer size (bytes)"
+		        range 2048 10240
+		        default 4096
+		        help
+		            Size of the buffer used to batch writes to each file.
+		            Larger buffer reduces flash write frequency but uses more RAM.
+		            Range: 2KB (2048) to 10KB (10240)
+
+	        config LOG_ROUTER_BATCH_BUFFER_PREFER_EXT_RAM
+		        bool "Allocate per-file batch buffer in external RAM"
+		        default y
+		        depends on SPIRAM
+		        depends on SPIRAM_USE_CAPS_ALLOC || SPIRAM_USE_MALLOC
+		        help
+		            When this option is enabled, the per-file batch buffers will be allocated
+					from external RAM. If the allocation from external RAM fails, the buffer
+					will be allocated from internal RAM.
+					External RAM is slower, but this is not a problem when the ringbuffer
+					is enabled as operations using it are performed in a background task, and
+					do not affect the speed of ESP_LOG functions.
+
+		    config LOG_ROUTER_FLUSH_TIMEOUT_MS
+		        int "Batch buffer flush timeout (milliseconds)"
+		        range 2000 60000
+		        default 10000
+		        help
+		            Maximum time to wait before flushing a partially-filled buffer to flash,
+		            measured from the oldest data in the buffer.
+		            A shorter timeout can reduce the risk of losing data due to crash or
+		            power-loss, at the cost of more frequent writes to flash.
+		            Range: 2 seconds (2000ms) to 60 seconds (60000ms)
+
+		    config LOG_ROUTER_FLUSH_TIMEOUT_HYSTERESIS_MS
+		        int "Group together batch buffer flush (milliseconds)"
+		        range 0 LOG_ROUTER_FLUSH_TIMEOUT_MS
+		        default 50
+		        help
+		            When flushing a buffer, flush other buffers as well if their timeout will
+		            occur within the set period. This reduces the amount of work the log_router
+		            task needs to do, especially when the log_router is writing the same
+		            messages to multiple files at once.
+		            Range: less than the flush timeout period
+
+
+	    endif #LOG_ROUTER_BATCH_WRITE_BUFFER
+
+	endmenu
+
+    config LOG_ROUTER_FLUSH_BUFFERS_ON_RESTART
+    depends on LOG_ROUTER_RINGBUFFER || LOG_ROUTER_BATCH_WRITE_BUFFER
+    bool "Flush buffers when esp_restart() is called"
+    default y
+    help
+        Register a shutdown handler to ensure that messages in the ring-buffer
+        and batch-buffer are flushed to disk before restarting the esp32, when
+        esp_restart() is called.
+        Calls to ESP_LOG functions after esp_restart(), but if they do, they
+        are guaranteed to be whole.
+        It is not recommended to turn this option off.
+
+    config LOG_ROUTER_SHUTDOWN_HANDLER_TIMEOUT_MS
+        int "Shutdown handler timeout (milliseconds)"
+        range 0 20000
+        default 1000
+        depends on LOG_ROUTER_FLUSH_BUFFERS_ON_RESTART
         help
-            Size of the buffer used for formatting log messages in log_router.
-            Larger buffer can handle longer log messages but uses more stack space.
-            Range: 256 to 1024 bytes
+            If another task got stuck while writing messages to a file, it could cause the
+            shutdown handler to wait forever for the mutex. This timeout makes sure that
+            if that happened, it will panic and reboot (without flushing any files).
+            Range: up to 20 seconds (20000ms)
+
+
+    config LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
+        bool "Show message on truncate"
+        default y
+        help
+            When enabled, log messages that are truncated because they do not fit
+            into LOG_ROUTER_FORMAT_BUFFER_SIZE will have a string appended to them,
+            to indicate that the log message is incomplete.
+
+    if LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
+
+		config LOG_ROUTER_TRUNCATE_STRING
+			string
+			default "<TRUNCATED>"
+			prompt "Append this string to truncated logs"
+			help
+				String appended to truncated log messages. If log colors are enabled,
+				it will be formatted as purple italics: see CONFIG_LOG_COLORS
+
+				A newline character is also added, so that the next log message starts
+				on its own line.
+
+
+	endif #LOG_ROUTER_APPEND_STRING_ON_TRUNCATE
 
     config LOG_ROUTER_DEBUG_OUTPUT
         bool "Enable debug output"

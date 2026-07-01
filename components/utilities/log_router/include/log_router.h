@@ -1,9 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
+
+#include <stdio.h>
+#include <stdbool.h>
+#include <sys/stat.h>
 
 #include "esp_err.h"
 #include "esp_log.h"
@@ -20,8 +24,13 @@ extern "C" {
  * specified level will be written to the file. If a tag is specified, only messages
  * from that specific tag will be captured.
  *
- * The log router uses buffered writing for better performance and automatically
- * flushes the buffer when it reaches the threshold or timeout.
+ * The log router uses an intermediate ring-buffer to reduce the latency of calls to
+ * ESP_LOG() functions. A background task flushes the buffer when the CPU has nothing
+ * more important to do. The size of the buffer is set by KConfig options.
+ *
+ * The log_router also uses a buffer to batch together writes to each log file. This
+ * can substantially reduce the number of flash operations. The size of the buffer,
+ * and the time-out period is set by KConfig options.
  *
  * @param file_path Path to the log file where messages will be written
  * @param tag Tag filter for log messages. If NULL, captures all messages that meet the level requirement
@@ -48,34 +57,77 @@ esp_err_t esp_log_router_to_file(const char* file_path, const char* tag, esp_log
 void esp_log_router_to_console(bool output_console);
 
 /**
- * @brief Dump the contents of a log file to console
+ * @brief Stop routing logs to a file.
  *
- * This function reads and displays the entire contents of a log file to the console.
- * Useful for debugging and viewing log file contents without external tools.
+ * Stop routing logs to the specified file. All pending messages destined to this file
+ * will be written before closing the file. The file is not deleted.
  *
- * @param file_path Path to the log file to dump
- *
- * @return
- *      - ESP_OK: File dumped successfully
- *      - ESP_ERR_INVALID_ARG: Invalid file path
- *      - ESP_FAIL: Failed to open or read file
- */
-esp_err_t esp_log_router_dump_file_messages(const char* file_path);
-
-/**
- * @brief Delete a log router and close its associated file
- *
- * This function removes a log router from the system and closes its associated
- * log file. The file itself is not deleted from the filesystem.
- *
- * @param file_path Path to the log file whose router should be deleted
+ * @param file_path Path to the log file registered with \c esp_log_router_to_file()
  *
  * @return
  *      - ESP_OK: Log router deleted successfully
  *      - ESP_ERR_INVALID_ARG: Invalid file path
  *      - ESP_ERR_NOT_FOUND: No log router found for the specified file path
  */
-esp_err_t esp_log_delete_router(const char* file_path);
+esp_err_t esp_log_router_stop_file(const char* file_path);
+
+__attribute__((deprecated))
+static inline esp_err_t esp_log_delete_router(const char* file_path)
+{
+    return esp_log_router_stop_file(file_path);
+}
+
+/**
+ * @brief Check if a file is being used for logging
+ *
+ * @param [in]  file_path   Path to the log file
+ *
+ * @return
+ *      - ESP_OK: File is currently a log target.
+ *      - ESP_ERR_INVALID_ARG: Invalid file path
+ *      - ESP_ERR_NOT_FOUND: File is not currently being used for logging
+ */
+esp_err_t esp_log_router_status_file(const char* file_path);
+
+/**
+ * @brief Flush all pending messages to a given logfile
+ *
+ * Ensures that all pending messages destined to this file have been processed,
+ * and flushes associated buffers to disk before returning.
+ *
+ * An optional \p sbuf argument can be used to get the file size immediately after
+ * sync has finished, before other tasks have an opportunity to add to it. All
+ * messages up to that point in the file are guaranteed to be fully-written.
+ *
+ * @param [in]  file_path   Path to the log file to sync
+ * @param [out] sbuf        Result of fstat() immediately after sync.
+ *
+ * @return
+ *      - ESP_OK: Sync success
+ *      - ESP_ERR_NOT_FOUND: File is not currently being used for logging
+ *      - ESP_ERR_INVALID_ARG: Invalid file path
+ *      - ESP_FAIL: Failed to fstat() the file
+ */
+esp_err_t esp_log_router_sync_file(const char* file_path, struct stat *sbuf);
+
+/**
+ * @brief Dump the contents of a log file to console
+ *
+ * This function will first flush buffers, ensuring that any in-flight logs intended
+ * for \p file_path have been written to the file.
+ *
+ * Messages that arrive after that point will not be dumped; this prevents partially-written
+ * message fragments from ending up in the output.
+ *
+ * @param file_path Path to the log file to dump
+ *
+ * @return
+ *      - ESP_OK: File dumped successfully
+ *      - ESP_ERR_NOT_FOUND: File dumped successfully, even though it is not currently a log target
+ *      - ESP_ERR_INVALID_ARG: Invalid file path
+ *      - ESP_FAIL: Failed to open or read file
+ */
+esp_err_t esp_log_router_dump_file_messages(const char* file_path);
 
 #ifdef __cplusplus
 }
