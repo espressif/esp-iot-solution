@@ -795,7 +795,7 @@ components_test_ramfs:
         ENV_TAG: generic
       - IDF_TARGET: esp32p4
         IDF_VERSION: "5.5"
-        ENV_TAG: generic
+        ENV_TAG: rev_default
   tags:
     - ${IDF_TARGET}
     - ${ENV_TAG}
