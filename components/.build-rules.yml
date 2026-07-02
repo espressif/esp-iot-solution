@@ -317,3 +317,7 @@ components/mcp-c-sdk/test_apps:
 components/esp_xiaozhi/test_apps:
   enable:
     - if: INCLUDE_DEFAULT == 1
+
+components/storage/ramfs/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1

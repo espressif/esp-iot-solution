@@ -2051,6 +2051,14 @@ build_components_esp_xiaozhi_test_apps:
   variables:
     EXAMPLE_DIR: components/esp_xiaozhi/test_apps
 
+build_components_ramfs_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_ramfs_test_apps
+    - .build_idf_active_release_version_with_pre_release
+  variables:
+    EXAMPLE_DIR: components/storage/ramfs/test_apps
+
 build_example_xiaozhi_chat:
   extends:
     - .build_examples_template
