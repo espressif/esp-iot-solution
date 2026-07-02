@@ -108,6 +108,7 @@ typedef enum {
  */
 struct iot_eth_mediator_s {
     esp_err_t (*stack_input)(iot_eth_mediator_t *mediator, uint8_t *data, size_t len);  /*!< Input function for stack */
+    esp_err_t (*stack_input_info)(iot_eth_mediator_t *mediator, uint8_t *data, size_t len, void *info);  /*!< Input function for stack with extra frame info */
     esp_err_t (*on_stage_changed)(iot_eth_mediator_t *mediator, iot_eth_stage_t stage, void *arg);  /*!< Stage change callback */
 };
 

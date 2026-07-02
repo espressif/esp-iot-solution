@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -158,7 +158,15 @@ static void _usbh_ecm_recv_data_cb(usbh_cdc_port_handle_t cdc_port_handle, void 
             return;
         }
         ESP_LOGD(TAG, "USB ECM received data: %d", rx_length);
-        ecm->mediator->stack_input(ecm->mediator, buf, rx_length);
+        if (ecm->mediator->stack_input_info) {
+            // USB ECM currently has no extra RX frame metadata to forward.
+            ecm->mediator->stack_input_info(ecm->mediator, buf, rx_length, NULL);
+        } else if (ecm->mediator->stack_input) {
+            ecm->mediator->stack_input(ecm->mediator, buf, rx_length);
+        } else {
+            ESP_LOGE(TAG, "No stack input callback registered, drop RX packet");
+            free(buf);
+        }
     }
 }
 

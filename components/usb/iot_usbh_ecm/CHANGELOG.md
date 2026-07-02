@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.4.0 - 2026-06-30
+
+### Features:
+
+* Add support for the `iot_eth` input callback with extra RX frame information.
+
 ## v0.3.0 - 2026-06-11
 
 ### Features:

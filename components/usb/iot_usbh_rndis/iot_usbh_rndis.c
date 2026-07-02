@@ -530,7 +530,15 @@ static void _usbh_rndis_recv_data_cb(usbh_cdc_port_handle_t cdc_port_handle, voi
             size_t data_len = pmsg.DataLength;
             ESP_GOTO_ON_ERROR(usbh_cdc_read_bytes(cdc_port_handle, data, &data_len, pdMS_TO_TICKS(10)), err, TAG, "Failed to read data from RNDIS (%s)", esp_err_to_name(ret));
             assert(data_len == pmsg.DataLength);
-            rndis->mediator->stack_input(rndis->mediator, data, data_len);
+            if (rndis->mediator->stack_input_info) {
+                // USB RNDIS currently has no extra RX frame metadata to forward.
+                rndis->mediator->stack_input_info(rndis->mediator, data, data_len, NULL);
+            } else if (rndis->mediator->stack_input) {
+                rndis->mediator->stack_input(rndis->mediator, data, data_len);
+            } else {
+                ESP_LOGE(TAG, "No stack input callback registered, drop RX packet");
+                free(data);
+            }
             continue;
 err:
             free(data);
