@@ -1,6 +1,6 @@
 Xiaozhi AI Chatbot
 ===================
-:link_to_translation:`en:[English]`
+:link_to_translation:`zh_CN:[中文]`
 
 ==================  =============
 Supported chips     ESP32-S3

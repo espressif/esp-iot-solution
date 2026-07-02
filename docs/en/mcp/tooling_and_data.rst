@@ -1,6 +1,8 @@
 Tooling and Data APIs
 ========================
 
+:link_to_translation:`zh_CN:[中文]`
+
 This section covers tool declaration/execution APIs and shared data/property structures.
 
 Tool APIs

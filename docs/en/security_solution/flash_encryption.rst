@@ -1,6 +1,8 @@
 Flash Encryption
 *****************
 
+:link_to_translation:`zh_CN:[中文]`
+
 Flash Encryption is an important security feature of ESP32 series chips, used to protect the confidentiality of firmware and data stored in external Flash. When Flash Encryption is enabled, the content in Flash is transparently encrypted, preventing plaintext firmware and data from being obtained through physical reading.
 
 Key features of Flash Encryption:

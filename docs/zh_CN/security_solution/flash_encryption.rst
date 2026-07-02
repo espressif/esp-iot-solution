@@ -1,6 +1,8 @@
 Flash 加密
 *****************
 
+:link_to_translation:`en:[English]`
+
 Flash 加密是 ESP32 系列芯片的重要安全特性，用于保护存储在外部 Flash 中固件和数据的机密性。启用 Flash 加密后，Flash 中的内容将被透明加密，防止通过物理方式读取获得明文固件和数据。
 
 Flash 加密的核心特点：

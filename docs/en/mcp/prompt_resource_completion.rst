@@ -1,6 +1,8 @@
 Prompt, Resource, and Completion APIs
 =========================================
 
+:link_to_translation:`zh_CN:[中文]`
+
 This section covers prompt/resource definitions and completion provider interfaces.
 
 Prompt APIs
