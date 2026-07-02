@@ -265,6 +265,19 @@ static void _usbh_ecm_task(void *arg)
         if (events & ECM_DEV_CONNECTED) {
             _ecm_config_intf(ecm);
             connected_time_ms = pdTICKS_TO_MS(xTaskGetTickCount());
+            /*
+             * The IN bulk endpoint fails with STATUS_ERROR while the interface
+             * is in alt=0 (no physical endpoint), leaving the pipe HALTED.
+             * The OUT pipe may also be HALTED after a software reboot (device
+             * not power-cycled, stale HALTED state from previous session).
+             *
+             * SET_INTERFACE(alt=1) is now complete — restart both transfer
+             * chains so the data path is live before "Connected" fires.
+             */
+            if (ecm->cdc_port) {
+                usbh_cdc_restart_in_transfer(ecm->cdc_port);
+                usbh_cdc_restart_out_transfer(ecm->cdc_port);
+            }
         }
         if (events & ECM_STOP) {
             ESP_LOGI(TAG, "USB ECM stop");
