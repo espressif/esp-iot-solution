@@ -441,6 +441,19 @@ bool esp_lv_adapter_display_notify_color_trans_done_from_isr(lv_display_t *disp)
  */
 bool esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp);
 
+/**
+ * @brief Notify adapter-side display logic that an LCD frame-buffer transfer completed from an ISR.
+ *
+ * Releases pipeline buffers for buffer-switch tear-avoid modes and dummy-draw. Required when an
+ * external owner registers the LCD panel callbacks (after
+ * esp_lv_adapter_set_default_display_idf_callback_registration_enabled(false)); otherwise the
+ * flush path can block forever waiting for a free buffer.
+ *
+ * @param[in] disp LVGL display handle.
+ * @return Whether a high-priority task should yield.
+ */
+bool esp_lv_adapter_display_notify_frame_buf_complete_from_isr(lv_display_t *disp);
+
 #ifdef __cplusplus
 }
 #endif

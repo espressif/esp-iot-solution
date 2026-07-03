@@ -125,6 +125,20 @@ bool IRAM_ATTR display_manager_notify_frame_done_from_isr(lv_display_t *disp)
     return node->bridge->notify_frame_done_from_isr(node->bridge);
 }
 
+bool IRAM_ATTR display_manager_notify_frame_buf_complete_from_isr(lv_display_t *disp)
+{
+    if (!disp) {
+        return false;
+    }
+
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    if (!node || !node->bridge || !node->bridge->notify_frame_buf_complete_from_isr) {
+        return false;
+    }
+
+    return node->bridge->notify_frame_buf_complete_from_isr(node->bridge);
+}
+
 /* Buffer management */
 #if LVGL_VERSION_MAJOR >= 9
 static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,

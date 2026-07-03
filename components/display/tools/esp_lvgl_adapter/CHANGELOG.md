@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.6.2 (2026-07-03)
+
+* Add `esp_lv_adapter_display_notify_frame_buf_complete_from_isr()` to forward an LCD frame-buffer-complete event into the adapter's buffer-switch/pipeline release path from an ISR. This closes a gap in the external-callback-driven flow: when an external owner holds the ESP-IDF panel callbacks (after `esp_lv_adapter_set_default_display_idf_callback_registration_enabled(false)`), the existing `notify_color_trans_done_from_isr`/`notify_frame_done_from_isr` forwarders never release pipeline buffers, so buffer-switch tear-avoid modes and dummy-draw could block forever in the flush path waiting for a free buffer.
+  - Add `notify_frame_buf_complete_from_isr` to the display-bridge vtable and implement it in the LVGL v9 bridge (routes to the shared frame-buffer-switch handler)
+  - Add `display_manager_notify_frame_buf_complete_from_isr()` wrapper
+
 ## v0.6.1 (2026-06-29)
 
 * Replace IDF version-number guards with header/symbol-based feature detection in CMake:

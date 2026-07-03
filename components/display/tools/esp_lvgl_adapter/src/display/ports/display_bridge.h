@@ -139,6 +139,17 @@ struct esp_lv_adapter_display_bridge {
      * @return Whether a high-priority task should yield
      */
     bool (*notify_frame_done_from_isr)(esp_lv_adapter_display_bridge_t *bridge);
+
+    /**
+     * @brief Notify that an LCD frame-buffer transfer completed from an ISR.
+     *
+     * Drives the buffer-switch/pipeline release path (buffer-switch tear-avoid
+     * modes and dummy-draw) when an external owner holds the panel callbacks.
+     *
+     * @param bridge Bridge instance
+     * @return Whether a high-priority task should yield
+     */
+    bool (*notify_frame_buf_complete_from_isr)(esp_lv_adapter_display_bridge_t *bridge);
 };
 
 /**********************

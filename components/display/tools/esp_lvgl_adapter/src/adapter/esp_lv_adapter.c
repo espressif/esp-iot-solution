@@ -1357,6 +1357,15 @@ bool IRAM_ATTR esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *d
     return display_manager_notify_frame_done_from_isr(disp);
 }
 
+bool IRAM_ATTR esp_lv_adapter_display_notify_frame_buf_complete_from_isr(lv_display_t *disp)
+{
+    if (!s_ctx.inited || !disp) {
+        return false;
+    }
+
+    return display_manager_notify_frame_buf_complete_from_isr(disp);
+}
+
 esp_err_t esp_lv_adapter_deinit(void)
 {
     /* Check if already deinitialized */
