@@ -615,6 +615,7 @@ static bool display_bridge_v9_handle_color_trans_done(esp_lv_adapter_display_bri
 static bool display_bridge_v9_handle_frame_done(esp_lv_adapter_display_bridge_v9_t *impl);
 static bool display_bridge_v9_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
 static bool display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
+static bool display_bridge_v9_notify_frame_buf_complete_from_isr(esp_lv_adapter_display_bridge_t *bridge);
 static void display_bridge_v9_wait_for_buf_switch(esp_lv_adapter_display_bridge_v9_t *impl);
 static bool display_bridge_v9_has_pending_submit(esp_lv_adapter_display_bridge_v9_t *impl);
 static inline void display_bridge_v9_signal_dummy_draw_event(esp_lv_adapter_display_bridge_v9_t *impl,
@@ -785,6 +786,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     impl->base.set_draw_bitmap_callbacks = display_bridge_v9_set_draw_bitmap_callbacks;
     impl->base.notify_color_trans_done_from_isr = display_bridge_v9_notify_color_trans_done_from_isr;
     impl->base.notify_frame_done_from_isr = display_bridge_v9_notify_frame_done_from_isr;
+    impl->base.notify_frame_buf_complete_from_isr = display_bridge_v9_notify_frame_buf_complete_from_isr;
     impl->cfg = *cfg;
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
@@ -1629,6 +1631,13 @@ static bool IRAM_ATTR display_bridge_v9_notify_frame_done_from_isr(esp_lv_adapte
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
 
     return display_bridge_v9_handle_frame_done(impl);
+}
+
+static bool IRAM_ATTR display_bridge_v9_notify_frame_buf_complete_from_isr(esp_lv_adapter_display_bridge_t *bridge)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+
+    return display_bridge_v9_handle_frame_buf_complete(impl);
 }
 
 #if CONFIG_SOC_MIPI_DSI_SUPPORTED
