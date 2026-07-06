@@ -37,7 +37,7 @@ set(pack_model_exe ${espdl_dir}/fbs_loader/pack_espdl_models.py)
 add_custom_command(
     OUTPUT ${image_file}
     COMMENT "Move and Pack models..."
-    COMMAND python ${pack_model_exe} --model_path ${model_file} --out_file ${image_file}
+    COMMAND python ${pack_model_exe} --model_path ${model_file} --out_file ${image_file} --format PDL2
     DEPENDS ${model_file}
     VERBATIM)
 
