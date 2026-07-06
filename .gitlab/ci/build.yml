@@ -121,9 +121,6 @@ build_example_ai_esp_dl_emotion_recognition:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.5
-      - IMAGE: espressif/idf:release-v6.0
-      - IMAGE: espressif/idf:latest
-        EXAMPLE_APPEND_ARGS: "--default-build-targets esp32s31"
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/emotion_recognition
 
@@ -134,9 +131,6 @@ build_example_ai_esp_dl_human_activity_recognition:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.5
-      - IMAGE: espressif/idf:release-v6.0
-      - IMAGE: espressif/idf:latest
-        EXAMPLE_APPEND_ARGS: "--default-build-targets esp32s31"
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
 
@@ -147,9 +141,6 @@ build_example_ai_esp_dl_self_learning_classification:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.5
-      - IMAGE: espressif/idf:release-v6.0
-      - IMAGE: espressif/idf:latest
-        EXAMPLE_APPEND_ARGS: "--default-build-targets esp32s31"
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/self_learning_classification
 
