@@ -13,13 +13,11 @@
 
 esp_err_t imu_quat_handle_gyro_guard(
     imu_quat_handle_t handle,
-    const float accel[3],
-    const float gyro[3],
-    int64_t now_us,
+    const imu_quat_sample_t *sample,
     float dt_sec,
     bool *reinitialized_out)
 {
-    if (handle == NULL || accel == NULL || gyro == NULL || reinitialized_out == NULL) {
+    if (handle == NULL || sample == NULL || reinitialized_out == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -29,9 +27,9 @@ esp_err_t imu_quat_handle_gyro_guard(
         return ESP_OK;
     }
 
-    const float gyro_x_dps = gyro[0] - handle->bias.gyro_bias[0] * IMU_QUAT_RAD2DEG;
-    const float gyro_y_dps = gyro[1] - handle->bias.gyro_bias[1] * IMU_QUAT_RAD2DEG;
-    const float gyro_z_dps = gyro[2] - handle->bias.gyro_bias[2] * IMU_QUAT_RAD2DEG;
+    const float gyro_x_dps = sample->gyro[0] - handle->bias.gyro_bias[0] * IMU_QUAT_RAD2DEG;
+    const float gyro_y_dps = sample->gyro[1] - handle->bias.gyro_bias[1] * IMU_QUAT_RAD2DEG;
+    const float gyro_z_dps = sample->gyro[2] - handle->bias.gyro_bias[2] * IMU_QUAT_RAD2DEG;
 
     const bool gyro_over_limit =
         fabsf(gyro_x_dps) > handle->config.gyro_guard_limit_dps ||
@@ -69,8 +67,7 @@ esp_err_t imu_quat_handle_gyro_guard(
                     "gyro recovered below %.1f dps for %.3f s, reinitializing quat state",
                     (double)IMU_QUAT_INTERNAL_GYRO_RECOVER_DPS,
                     (double)handle->gyro_guard.gyro_recover_time_sec);
-                const esp_err_t ret =
-                    imu_quat_reinitialize_from_sample(handle, accel, gyro, now_us);
+                const esp_err_t ret = imu_quat_reinitialize_from_sample(handle, sample);
                 if (ret != ESP_OK) {
                     return ret;
                 }

@@ -15,14 +15,6 @@ extern "C" {
 #endif
 
 /**
- * @brief Quaternion initialization strategy.
- */
-typedef enum {
-    IMU_QUAT_INIT_CURRENT_POSE = 0,       /*!< Keep the startup pose as the initial solver state. */
-    IMU_QUAT_INIT_ACCEL_HEADING_ALIGNMENT, /*!< Build the initial pose from accel and heading constraints. */
-} imu_quat_init_strategy_t;
-
-/**
  * @brief Signed axis selector used by quaternion configuration.
  */
 typedef enum {
@@ -38,8 +30,10 @@ typedef enum {
  * @brief One IMU sample consumed by the quaternion solver.
  */
 typedef struct {
-    float accel[3];        /*!< Acceleration sample in g, stored in body-frame XYZ order. */
-    float gyro[3];         /*!< Angular velocity sample in deg/s, stored in body-frame XYZ order. */
+    float accel[3];        /*!< Acceleration sample in g, body-frame XYZ order. */
+    float gyro[3];         /*!< Angular velocity sample in deg/s, body-frame XYZ order. */
+    bool mag_valid;        /*!< True when mag[] contains a calibrated body-frame magnetic sample. */
+    float mag[3];          /*!< Calibrated magnetic field sample in body-frame XYZ order, usually in uT. */
     int64_t timestamp_us;  /*!< Sample timestamp in microseconds. */
 } imu_quat_sample_t;
 
@@ -50,13 +44,17 @@ typedef struct {
  * frame and whether optional bias learning and gyro-guard logic are enabled.
  */
 typedef struct {
-    imu_quat_init_strategy_t init_strategy; /*!< Initialization strategy. */
-    imu_quat_axis_t accel_target_axis;      /*!< World axis that measured accel should align to at initialization. */
-    float heading_ref_body[3];              /*!< Body-frame heading reference vector used during alignment init. */
-    imu_quat_axis_t heading_target_axis;    /*!< World axis that the projected heading reference should align to. */
-    bool gyro_bias_enabled;                 /*!< Enable gyro bias learning during detected rest periods. */
-    bool gyro_guard_enabled;                /*!< Enable gyro over-limit guard and guarded reinitialization. */
-    float gyro_guard_limit_dps;             /*!< Gyro over-limit threshold in deg/s. */
+    imu_quat_axis_t accel_target_axis;   /*!< World axis that measured accel should align to at initialization. */
+    float heading_ref_body[3];           /*!< Body-frame heading reference vector used during alignment init. */
+    imu_quat_axis_t heading_target_axis; /*!< World axis that the projected heading reference should align to. */
+    bool mag_input_enabled;              /*!< Enable optional magnetic input for recording an initial world-frame magnetic
+                                              reference and future yaw correction. The initialization heading still uses
+                                              heading_ref_body. */
+    bool gyro_bias_enabled;              /*!< Enable runtime rest-based gyro bias learning. When false, the solver keeps
+                                              the current bias fixed after create/reset or caller-provided
+                                              initialization. */
+    bool gyro_guard_enabled;             /*!< Enable gyro over-limit guard and guarded reinitialization. */
+    float gyro_guard_limit_dps;          /*!< Gyro over-limit threshold in deg/s. */
 } imu_quat_config_t;
 
 /**
@@ -132,10 +130,59 @@ esp_err_t imu_quat_set_config(imu_quat_handle_t handle, const imu_quat_config_t 
 esp_err_t imu_quat_reset_state(imu_quat_handle_t handle);
 
 /**
+ * @brief Replace the current gyro bias estimate with a caller-provided value.
+ *
+ * This API is intended for startup/restored bias injection. The provided
+ * vector uses deg/s units for convenience, while the internal solver stores
+ * gyro bias in rad/s. Runtime rest-based bias learning can remain enabled and
+ * continue refining the estimate after this initial value is applied.
+ *
+ * @param handle Solver handle.
+ * @param gyro_bias_dps Gyro bias in deg/s, body-frame XYZ order.
+ *
+ * @return
+ *      - ESP_OK: The gyro bias was updated successfully.
+ *      - ESP_ERR_INVALID_ARG: The input arguments are invalid.
+ */
+esp_err_t imu_quat_set_gyro_bias_dps(imu_quat_handle_t handle, const float gyro_bias_dps[3]);
+
+/**
+ * @brief Read back the current gyro bias estimate in deg/s.
+ *
+ * @param handle Solver handle.
+ * @param gyro_bias_dps Returned gyro bias in deg/s, body-frame XYZ order.
+ *
+ * @return
+ *      - ESP_OK: The gyro bias was returned successfully.
+ *      - ESP_ERR_INVALID_ARG: The input arguments are invalid.
+ */
+esp_err_t imu_quat_get_gyro_bias_dps(imu_quat_handle_t handle, float gyro_bias_dps[3]);
+
+/**
+ * @brief Explicitly reinitialize the solver from one IMU sample.
+ *
+ * This rebuilds the world frame from the current sample using the stored
+ * configuration. The initialization heading always comes from
+ * `config.heading_ref_body`. When magnetic input is enabled and the sample
+ * carries a valid calibrated magnetic field, the solver records an initial
+ * world-frame magnetic reference after initialization.
+ *
+ * @param handle Solver handle.
+ * @param sample Input IMU sample used to rebuild the world frame.
+ *
+ * @return
+ *      - ESP_OK: The solver was reinitialized successfully.
+ *      - ESP_ERR_INVALID_ARG: The input arguments are invalid.
+ *      - ESP_ERR_INVALID_STATE: The sample cannot build a valid pose frame.
+ */
+esp_err_t imu_quat_reinitialize_from_sample(imu_quat_handle_t handle, const imu_quat_sample_t *sample);
+
+/**
  * @brief Consume one IMU sample and update solver output.
  *
- * If the first accel-heading alignment cannot build a valid pose frame, this
- * API returns `ESP_ERR_INVALID_STATE`.
+ * This API only performs the normal continuous-update path. Call
+ * `imu_quat_reinitialize_from_sample()` first after create/reset to establish
+ * the world frame explicitly before feeding normal update samples.
  *
  * @param handle Solver handle.
  * @param sample Input IMU sample.
@@ -144,7 +191,8 @@ esp_err_t imu_quat_reset_state(imu_quat_handle_t handle);
  * @return
  *      - ESP_OK: The sample was processed successfully.
  *      - ESP_ERR_INVALID_ARG: The input arguments are invalid.
- *      - ESP_ERR_INVALID_STATE: Initialization or update state is invalid.
+ *      - ESP_ERR_INVALID_STATE: The solver has not been explicitly initialized
+ *        yet, or the update state/timestamp is invalid.
  *      - ESP_FAIL: The update failed.
  */
 esp_err_t imu_quat_update(imu_quat_handle_t handle, const imu_quat_sample_t *sample, imu_quat_output_t *out);
