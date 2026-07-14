@@ -37,6 +37,7 @@ The component boundary is intentionally narrow.
 - `include/`: public headers
 - `private_include/`: internal private headers
 - `src/`: detector implementations and shared detector runtime
+- `examples/`: short runnable detector examples for knob, space-switch, and inference, each using offline input and local leak checks
 
 ## Public Headers
 
@@ -188,3 +189,15 @@ Knob direction is determined from the configured primary gyro axis and `cw_sign`
 Knob posture gating uses the absolute value of the computed plane angle, and the `atan2(accel[first], accel[second])` axis pair can be configured explicitly.
 
 For one-shot inference, the application owns capture start/stop policy and buffer lifetime. The detector only evaluates the provided full sample window.
+
+## Examples
+
+The component now keeps its detector-behavior demos under `examples/` instead
+of a component-local behavior test app.
+
+- `examples/knob/`
+  Offline recorded knob replay example with a leak check.
+- `examples/space_switch/`
+  Offline recorded space-switch replay example with a leak check.
+- `examples/inference/`
+  Minimal inference detector example with copied offline model/test input and a leak check.

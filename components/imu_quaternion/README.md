@@ -24,7 +24,7 @@
 - `include/imu_quaternion.h`: public API and public configuration/data types
 - `private_include/`: internal runtime state and solver helper declarations
 - `src/`: solver core, math helpers, initialization, bias learning, and gyro guard implementation
-- `test/`: Unity tests for default behavior, initialization constraints, bias-disable behavior, and gyro-guard behavior
+- `examples/`: offline runnable replay example for recorded-data validation
 
 ## Public APIs
 
@@ -108,3 +108,11 @@ ESP_ERROR_CHECK(imu_quat_delete(handle));
 - `imu_quat_set_gyro_bias_dps()` is intended for startup/restored bias injection. Runtime rest-based bias learning can stay enabled and continue refining the estimate afterward.
 - `imu_quat_reset_state()` only clears solver runtime state. It does not by itself redefine the world frame.
 - `imu_quat_update()` is now a pure continuous-update API. It requires a prior successful `imu_quat_reinitialize_from_sample()` after create/reset before normal updates can proceed.
+
+## Examples
+
+The component now keeps short offline demos under `examples/` instead of the
+previous component-local Unity behavior test app.
+
+- `examples/replay/`
+  Recorded six-axis replay demo using copied CSV data plus a local leak check.
