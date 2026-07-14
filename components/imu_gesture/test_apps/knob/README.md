@@ -14,7 +14,7 @@ The replay data comes from `framework/tools/imu_data_collection/test_imu_gesture
 ## Build
 
 ```bash
-cd common_components/imu_gesture/examples/knob
+cd components/imu_gesture/test_apps/knob
 idf.py build
 ```
 

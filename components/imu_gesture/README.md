@@ -37,7 +37,7 @@ The component boundary is intentionally narrow.
 - `include/`: public headers
 - `private_include/`: internal private headers
 - `src/`: detector implementations and shared detector runtime
-- `examples/`: short runnable detector examples for knob, space-switch, and inference, each using offline input and local leak checks
+- `test_apps/`: short runnable detector test apps for knob, space-switch, and inference, each using offline input and local leak checks
 
 ## Public Headers
 
@@ -192,12 +192,12 @@ For one-shot inference, the application owns capture start/stop policy and buffe
 
 ## Examples
 
-The component now keeps its detector-behavior demos under `examples/` instead
+The component now keeps its detector-behavior demos under `test_apps/` instead
 of a component-local behavior test app.
 
-- `examples/knob/`
+- `test_apps/knob/`
   Offline recorded knob replay example with a leak check.
-- `examples/space_switch/`
+- `test_apps/space_switch/`
   Offline recorded space-switch replay example with a leak check.
-- `examples/inference/`
+- `test_apps/inference/`
   Minimal inference detector example with copied offline model/test input and a leak check.

@@ -20,7 +20,7 @@ The `label` column is ignored.
 ## Build
 
 ```bash
-cd common_components/imu_quaternion/examples/replay
+cd components/imu_quaternion/test_apps/replay
 idf.py build
 ```
 

@@ -24,7 +24,7 @@
 - `include/imu_quaternion.h`: public API and public configuration/data types
 - `private_include/`: internal runtime state and solver helper declarations
 - `src/`: solver core, math helpers, initialization, bias learning, and gyro guard implementation
-- `examples/`: offline runnable replay example for recorded-data validation
+- `test_apps/`: offline runnable replay test app for recorded-data validation
 
 ## Public APIs
 
@@ -111,8 +111,8 @@ ESP_ERROR_CHECK(imu_quat_delete(handle));
 
 ## Examples
 
-The component now keeps short offline demos under `examples/` instead of the
+The component now keeps short offline demos under `test_apps/` instead of the
 previous component-local Unity behavior test app.
 
-- `examples/replay/`
+- `test_apps/replay/`
   Recorded six-axis replay demo using copied CSV data plus a local leak check.

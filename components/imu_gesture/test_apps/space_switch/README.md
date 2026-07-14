@@ -17,7 +17,7 @@ The copied test data uses the first six channels as `ax, ay, az, gx, gy, gz`.
 ## Build
 
 ```bash
-cd common_components/imu_gesture/examples/space_switch
+cd components/imu_gesture/test_apps/space_switch
 idf.py build
 ```
 

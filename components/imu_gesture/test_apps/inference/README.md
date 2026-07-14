@@ -7,7 +7,7 @@ It reuses the exported `components/inference/` input/model files copied from `fr
 ## Build
 
 ```bash
-cd common_components/imu_gesture/examples/inference
+cd components/imu_gesture/test_apps/inference
 idf.py build
 ```
 
