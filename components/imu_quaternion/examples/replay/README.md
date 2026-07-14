@@ -26,6 +26,4 @@ idf.py build
 
 ## Expected Result
 
-The serial log first runs a memory leak check, then replays the copied dataset
-with a fixed synthetic timestamp step, prints intermediate quaternion pose
-updates at a fixed interval, and finally prints the last replay pose state.
+The serial log first runs a memory leak check, then replays the copied dataset with a fixed synthetic timestamp step, prints intermediate quaternion pose updates at a fixed interval, and finally prints the last replay pose state.

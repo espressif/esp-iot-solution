@@ -23,5 +23,4 @@ idf.py build
 
 ## Expected Result
 
-The serial log first runs a memory leak check, then replays the copied dataset
-and reports whether the four labeled action segments were each hit at least once.
+The serial log first runs a memory leak check, then replays the copied dataset and reports whether the four labeled action segments were each hit at least once.
