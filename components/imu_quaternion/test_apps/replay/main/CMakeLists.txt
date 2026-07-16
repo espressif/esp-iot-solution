@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS
+        "replay_main.c"
+    REQUIRES
+        imu_quaternion
+        test_data
+    INCLUDE_DIRS
+        "."
+)

@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS
+        "inference_main.cpp"
+    REQUIRES
+        imu_gesture
+        inference
+    INCLUDE_DIRS
+        "."
+)

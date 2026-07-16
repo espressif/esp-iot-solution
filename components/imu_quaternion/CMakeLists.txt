@@ -1,0 +1,13 @@
+idf_component_register(
+    SRCS
+        "src/imu_quaternion.c"
+        "src/imu_quaternion_math.c"
+        "src/imu_quaternion_init.c"
+        "src/imu_quaternion_bias.c"
+        "src/imu_quaternion_guard.c"
+        "src/imu_quaternion_update.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "private_include"
+)
