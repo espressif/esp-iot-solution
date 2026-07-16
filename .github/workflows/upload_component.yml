@@ -94,6 +94,8 @@ jobs:
             components/extended_vfs;
             components/gprof;
             components/i2c_bus;
+            components/imu_gesture;
+            components/imu_quaternion;
             components/iot_eth;
             components/ir/ir_learn;
             components/keyboard_button;

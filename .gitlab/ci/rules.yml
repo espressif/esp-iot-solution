@@ -221,6 +221,14 @@
   - "components/extended_vfs/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_imu_gesture: &patterns-components_imu_gesture
+  - "components/imu_gesture/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_imu_quaternion: &patterns-components_imu_quaternion
+  - "components/imu_quaternion/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
   - "components/ir/ir_learn/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -1524,6 +1532,26 @@
       changes: *patterns-components_extended_vfs
     - <<: *if-dev-push
       changes: *patterns-example_extended_vfs_spi_spi_slave_simple
+
+.rules:build:components_imu_gesture_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_gesture
+
+.rules:build:components_imu_quaternion_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_quaternion
 
 .rules:build:example_get_started_blink:
   rules:

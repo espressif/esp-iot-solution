@@ -1435,6 +1435,22 @@ build_components_keyboard_button_test_apps:
   variables:
     EXAMPLE_DIR: components/keyboard_button/test_apps
 
+build_components_imu_gesture_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_gesture_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_gesture/test_apps
+
+build_components_imu_quaternion_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_quaternion_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_quaternion/test_apps
+
 build_components_ir_ir_learn_test_apps:
   extends:
     - .build_examples_template

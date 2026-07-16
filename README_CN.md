@@ -1,65 +1,6 @@
-[![Documentation Status](https://dl.espressif.com/AE/docs/docs_latest.svg)](https://docs.espressif.com/projects/esp-iot-solution/zh_CN)
-
-<a href="https://espressif.github.io/esp-launchpad/?flashConfigURL=https://dl.espressif.com/AE/esp-iot-solution/config.toml">
-    <img alt="Try it with ESP Launchpad" src="https://espressif.github.io/esp-launchpad/assets/try_with_launchpad.png" width="200" height="56">
-</a>
-
-## Espressif IoT Solution 概述
-
-* [English Version](./README.md)
-
-ESP-IoT-Solution 包含物联网系统开发中常用的外设驱动和代码框架，提供了 ESP-IDF 的扩展组件，方便用户实现更简单的开发。
-
-ESP-IoT-Solution 包含的内容如下:
-
-* 传感器、显示屏、音频设备、输入设备、电机控制等设备驱动；
-* 低功耗、安全加密、存储方案等代码框架或说明文档；
-* 从实际应用的角度出发，为乐鑫开源解决方案提供了入口指引。
-
-## 文档中心
-
-- 中文：https://docs.espressif.com/projects/esp-iot-solution/zh_CN
-- English: https://docs.espressif.com/projects/esp-iot-solution/en
-
-## 版本说明
-
-自 `release/v2.0` 起，ESP-IoT-Solution 采用组件化管理，各组件与示例独立迭代，不再绑定仓库分支。具体依赖的 ESP-IDF 版本请查阅组件 `idf_component.yml` 文件中的声明。Release 分支仅用于维护组件的历史大版本，例如 `button` `v3.x` 版本在 `release/v2.0` 分支中维护，`master` 分支中维护最新的 `button` 版本（例如 `v4.x`）。
 
 
-| ESP-IoT-Solution |  依赖的 ESP-IDF  |                  主要变更                  |                                                     文档                                                     |           支持状态           |
-| :--------------: | :--------------: | :----------------------------------------: | :----------------------------------------------------------------------------------------------------------: | ---------------------------- |
-|      master      |     >= v5.3      |          新芯片支持                              |                  [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN)                   | 新功能开发分支               |
-|   release/v2.0   | <= v5.3, >= v4.4 |               支持组件管理器               |                  [Docs online](https://docs.espressif.com/projects/esp-iot-solution/zh_CN/release-v2.0/index.html)                   | 仅限组件历史版本 Bugfix，维护到 v5.3 EOL |
-|   release/v1.1   |      v4.0.1      | IDF 版本更新，删除已经移动到其它仓库的代码 | [v1.1 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.1#esp32-iot-solution-overview) | 备份，停止维护               |
-|   release/v1.0   |      v3.2.2      |                  历史版本                  | [v1.0 Overview](https://github.com/espressif/esp-iot-solution/tree/release/v1.0#esp32-iot-solution-overview) | 备份，停止维护               |
-
-> **Note**
->
-> 不同芯片推荐的 ESP-IDF 首选版本也不同，具体可参考 [ESP-IDF 版本与乐鑫芯片版本兼容性](https://github.com/espressif/esp-idf/blob/master/COMPATIBILITY_CN.md)。
-
-## 快速参考
-
-### 硬件准备
-
-您可以选择任意 ESP 系列开发板使用 ESP-IoT-Solution，或者选择[esp-bsp](https://github.com/espressif/esp-bsp)中支持的开发板快速开始。
-
-ESP 系列 SoC 采用先进工艺制程，提供业界领先的射频性能、低功耗特性和稳定可靠性，适用于物联网、工业控制、智能家居、可穿戴设备等多种应用场景。各系列芯片的具体规格和功能请参考 [ESP 产品选型工具](https://products.espressif.com/)。
-
-### 组件使用或二次开发
-
-请参考 [ESP-IDF 详细安装步骤](https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32/get-started/index.html#get-started-step-by-step) 先完成 ESP-IDF 开发环境的搭建。
-
-#### 从 ESP 组件注册表获取组件
-
-如果您只想使用 ESP-IoT-Solution 中的组件，我们建议您从 ESP 组件注册表 [ESP Component Registry](https://components.espressif.com/) 中使用它。
-
-可以在项目根目录下使用 `idf.py add-dependency` 命令直接将组件从 Component Registry 添加到项目中。例如，执行 `idf.py add-dependency "espressif/button"` 命令添加 `button`，该组件将在 `CMake` 步骤中自动下载。
-
-> 请参考 [IDF Component Manager](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html) 查看更多关于组件管理器的细节.
-
-ESP-IoT-Solution 中注册的组件如下:
-
-<center>
+| 组件 
 
 | 组件 | 版本 |
 | --- | --- |
@@ -136,6 +77,8 @@ ESP-IoT-Solution 中注册的组件如下:
 | [gprof](https://components.espressif.com/components/espressif/gprof) | [![Component Registry](https://components.espressif.com/components/espressif/gprof/badge.svg)](https://components.espressif.com/components/espressif/gprof) |
 | [hdc2010](https://components.espressif.com/components/espressif/hdc2010) | [![Component Registry](https://components.espressif.com/components/espressif/hdc2010/badge.svg)](https://components.espressif.com/components/espressif/hdc2010) |
 | [i2c_bus](https://components.espressif.com/components/espressif/i2c_bus) | [![Component Registry](https://components.espressif.com/components/espressif/i2c_bus/badge.svg)](https://components.espressif.com/components/espressif/i2c_bus) |
+| [imu_gesture](https://components.espressif.com/components/espressif/imu_gesture) | [![Component Registry](https://components.espressif.com/components/espressif/imu_gesture/badge.svg)](https://components.espressif.com/components/espressif/imu_gesture) |
+| [imu_quaternion](https://components.espressif.com/components/espressif/imu_quaternion) | [![Component Registry](https://components.espressif.com/components/espressif/imu_quaternion/badge.svg)](https://components.espressif.com/components/espressif/imu_quaternion) |
 | [ina236](https://components.espressif.com/components/espressif/ina236) | [![Component Registry](https://components.espressif.com/components/espressif/ina236/badge.svg)](https://components.espressif.com/components/espressif/ina236) |
 | [iot_eth](https://components.espressif.com/components/espressif/iot_eth) | [![Component Registry](https://components.espressif.com/components/espressif/iot_eth/badge.svg)](https://components.espressif.com/components/espressif/iot_eth) |
 | [iot_usbh](https://components.espressif.com/components/espressif/iot_usbh) | [![Component Registry](https://components.espressif.com/components/espressif/iot_usbh/badge.svg)](https://components.espressif.com/components/espressif/iot_usbh) |
