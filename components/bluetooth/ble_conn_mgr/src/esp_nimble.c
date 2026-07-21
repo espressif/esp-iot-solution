@@ -2840,6 +2840,11 @@ static void esp_ble_conn_on_sync(void)
     /* Begin scanning for a peripheral to connect to. */
     esp_ble_conn_scan(s_conn_session);
 #endif
+
+    /* Notify the application that the NimBLE host is synced and the stack is
+       ready (advertising/scanning have begun). */
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_STARTED,
+                   NULL, 0, portMAX_DELAY);
 }
 
 static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, void *arg)
