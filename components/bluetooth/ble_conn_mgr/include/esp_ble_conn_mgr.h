@@ -1041,9 +1041,9 @@ esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params);
  * as the controller whitelist (ble_gap_wl_set), so advertising/scanning with
  * filter_policy = ESP_BLE_CONN_SCAN_FILT_USE_WL only admits bonded peers.
  *
- * Call after a bond is added or removed. NOTE: peers that reconnect with a
- * resolvable private address (RPA) also need controller address resolution and
- * a populated resolving list, which this helper does not manage yet.
+ * Call after a bond is added or removed. RPA peers are resolved via NimBLE's own
+ * resolving list, which it maintains from bonds when CONFIG_BT_NIMBLE_HS_PVCY is
+ * enabled, so this helper manages only the plain whitelist.
  *
  * @return
  *  - ESP_OK on success
