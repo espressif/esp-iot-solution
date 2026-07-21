@@ -1035,6 +1035,23 @@ esp_err_t esp_ble_conn_set_data_len(uint16_t conn_handle, uint16_t tx_octets, ui
 esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params);
 
 /**
+ * @brief   Rebuild the controller whitelist from the bonded peers in the store.
+ *
+ * Reads the identity addresses of all currently bonded peers and installs them
+ * as the controller whitelist (ble_gap_wl_set), so advertising/scanning with
+ * filter_policy = ESP_BLE_CONN_SCAN_FILT_USE_WL only admits bonded peers.
+ *
+ * Call after a bond is added or removed. RPA peers are resolved via NimBLE's own
+ * resolving list, which it maintains from bonds when CONFIG_BT_NIMBLE_HS_PVCY is
+ * enabled, so this helper manages only the plain whitelist.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_FAIL if reading bonds or setting the whitelist fails
+ */
+esp_err_t esp_ble_conn_whitelist_sync_bonds(void);
+
+/**
  * @brief   Set local GAP device name.
  *
  *          This function updates NimBLE GAP Device Name and the internal local name.
