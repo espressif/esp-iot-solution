@@ -4088,6 +4088,28 @@ esp_err_t esp_ble_conn_periodic_adv_data_set(const uint8_t *data, uint16_t len)
 #endif
 }
 
+esp_err_t esp_ble_conn_whitelist_sync_bonds(void)
+{
+    ble_addr_t peer_addrs[CONFIG_BT_NIMBLE_MAX_BONDS];
+    int num_peers = 0;
+
+    int rc = ble_store_util_bonded_peers(peer_addrs, &num_peers,
+                                         sizeof(peer_addrs) / sizeof(peer_addrs[0]));
+    if (rc != 0) {
+        ESP_LOGE(TAG, "Failed to read bonded peers; rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    rc = ble_gap_wl_set(peer_addrs, (uint8_t)num_peers);
+    if (rc != 0) {
+        ESP_LOGE(TAG, "ble_gap_wl_set failed; rc=%d", rc);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "Whitelist synced from %d bonded peer(s)", num_peers);
+    return ESP_OK;
+}
+
 esp_err_t esp_ble_conn_adv_start(void)
 {
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
