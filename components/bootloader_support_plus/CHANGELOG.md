@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.5.0 - 2026-07-24
+
+### Improve:
+
+- Add ESP32-P4 support.
+- Add ESP32-S31 support (preview target, requires ESP-IDF with ESP32-S31 enabled).
+
 ## v0.4.1 - 2026-06-10
 
 ### Fix:
