@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AirMouse Config</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <main class="page">
+        <header class="topbar">
+            <div class="hero">
+                <h1>AirMouse Config</h1>
+                <p>
+                    Configure hardware pins, pose mapping, gesture axes, and
+                    inference options before AirMouse starts.
+                </p>
+            </div>
+            <div id="connectionStatus" class="status-pill ready">Ready</div>
+        </header>
+
+        <section class="dashboard">
+            <section class="card">
+                <div class="card-header">
+                    <h2>Pose Mapping</h2>
+                    <p>Configure body-frame axes and shared cursor sensitivity for screen projection.</p>
+                </div>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Forward Axis</span>
+                        <select data-config-key="pose_forward_axis">
+                            <option value="+X">+X</option>
+                            <option value="-X">-X</option>
+                            <option value="+Y">+Y</option>
+                            <option value="-Y">-Y</option>
+                            <option value="+Z">+Z</option>
+                            <option value="-Z">-Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Up Axis</span>
+                        <select data-config-key="pose_up_axis">
+                            <option value="+X">+X</option>
+                            <option value="-X">-X</option>
+                            <option value="+Y">+Y</option>
+                            <option value="-Y">-Y</option>
+                            <option value="+Z">+Z</option>
+                            <option value="-Z">-Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Screen X Axis</span>
+                        <select data-config-key="pose_screen_x_axis">
+                            <option value="+X">+X</option>
+                            <option value="-X">-X</option>
+                            <option value="+Y">+Y</option>
+                            <option value="-Y">-Y</option>
+                            <option value="+Z">+Z</option>
+                            <option value="-Z">-Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Screen Y Axis</span>
+                        <select data-config-key="pose_screen_y_axis">
+                            <option value="+X">+X</option>
+                            <option value="-X">-X</option>
+                            <option value="+Y">+Y</option>
+                            <option value="-Y">-Y</option>
+                            <option value="+Z">+Z</option>
+                            <option value="-Z">-Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Sensitivity (x100)</span>
+                        <input type="number" step="1" min="1" data-config-key="pose_sensitivity_centi">
+                    </label>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Hardware</h2>
+                    <p>Configure the IMU I2C bus, BMM350 firmware status and magnetometer I2C bus, optional SDO GPIO control, and control button pin.</p>
+                </div>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>IMU I2C SCL</span>
+                        <input type="number" step="1" data-config-key="imu_i2c_scl">
+                    </label>
+                    <label class="field">
+                        <span>IMU I2C SDA</span>
+                        <input type="number" step="1" data-config-key="imu_i2c_sda">
+                    </label>
+                    <label class="field field-checkbox">
+                        <span>Enable BMM350 Magnetometer</span>
+                        <input type="checkbox" id="magEnableFlag" disabled>
+                    </label>
+                    <label class="field">
+                        <span>MAG I2C SCL</span>
+                        <input type="number" step="1" data-config-key="mag_i2c_scl">
+                    </label>
+                    <label class="field">
+                        <span>MAG I2C SDA</span>
+                        <input type="number" step="1" data-config-key="mag_i2c_sda">
+                    </label>
+                    <label class="field field-checkbox">
+                        <span>Control IMU SDO by GPIO</span>
+                        <input type="checkbox" data-config-key="imu_sdo_gpio_control" checked>
+                    </label>
+                    <label id="imuSdoPinField" class="field">
+                        <span>IMU SDO Pin</span>
+                        <input type="number" step="1" data-config-key="imu_sdo_pin" value="7">
+                    </label>
+                    <label class="field">
+                        <span>Reset Button</span>
+                        <input type="number" step="1" data-config-key="reset_button">
+                    </label>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Inference</h2>
+                    <p>Control runtime gesture inference enablement and sample cadence.</p>
+                </div>
+                <div class="form-grid">
+                    <label class="field field-checkbox">
+                        <span>Enable Inference</span>
+                        <input type="checkbox" data-config-key="infer_enable">
+                    </label>
+                    <label class="field">
+                        <span>Sample Interval (ms)</span>
+                        <input type="number" step="1" min="1" data-config-key="infer_sample_interval_ms">
+                    </label>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Knob Gesture</h2>
+                    <p>Configure knob axis, direction polarity, hold angle, and posture-angle inputs.</p>
+                </div>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Primary Axis</span>
+                        <select data-config-key="knob_axis">
+                            <option value="X">X</option>
+                            <option value="Y">Y</option>
+                            <option value="Z">Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>CW Sign</span>
+                        <select data-config-key="knob_cw_sign">
+                            <option value="1">Positive (+1)</option>
+                            <option value="-1">Negative (-1)</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Hold Angle (x1000)</span>
+                        <input type="number" step="1" min="1" data-config-key="knob_hold_angle_milli">
+                    </label>
+                    <label class="field">
+                        <span>atan2 First Axis</span>
+                        <select data-config-key="knob_atan2_first_axis">
+                            <option value="X">X</option>
+                            <option value="Y">Y</option>
+                            <option value="Z">Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>atan2 Second Axis</span>
+                        <select data-config-key="knob_atan2_second_axis">
+                            <option value="X">X</option>
+                            <option value="Y">Y</option>
+                            <option value="Z">Z</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Space Switch</h2>
+                    <p>Configure page-switch horizontal and vertical axis direction mapping.</p>
+                </div>
+                <div class="form-grid">
+                    <label class="field">
+                        <span>Horizontal Axis</span>
+                        <select data-config-key="space_switch_horizontal_axis">
+                            <option value="X">X</option>
+                            <option value="Y">Y</option>
+                            <option value="Z">Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Left Sign</span>
+                        <select data-config-key="space_switch_left_sign">
+                            <option value="1">Positive (+1)</option>
+                            <option value="-1">Negative (-1)</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Vertical Axis</span>
+                        <select data-config-key="space_switch_vertical_axis">
+                            <option value="X">X</option>
+                            <option value="Y">Y</option>
+                            <option value="Z">Z</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Up Sign</span>
+                        <select data-config-key="space_switch_up_sign">
+                            <option value="1">Positive (+1)</option>
+                            <option value="-1">Negative (-1)</option>
+                        </select>
+                    </label>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Function Mapping</h2>
+                    <p>Current fixed runtime action mapping. This module is reserved for future customization.</p>
+                </div>
+                <ul class="mapping-list">
+                    <li><span>Short Press</span><strong>Left Click</strong></li>
+                    <li><span>Double Press</span><strong>Recenter</strong></li>
+                    <li><span>Multiple Press</span><strong>Open Space Switch Window</strong></li>
+                    <li><span>Long Press Hold</span><strong>Single-shot Inference</strong></li>
+                    <li><span>KEY Short Press</span><strong>Left Click</strong></li>
+                    <li><span>KEY Double Press</span><strong>Recenter</strong></li>
+                    <li><span>KEY Triple Press</span><strong>Open Space Switch Window</strong></li>
+                    <li><span>KEY Long Press</span><strong>Pause Mouse + Open Power Reminder</strong></li>
+                    <li><span>KEY Long Press Again</span><strong>Power Down</strong></li>
+                    <li><span>Inference O</span><strong>Media Play/Pause</strong></li>
+                    <li><span>Inference S</span><strong>Task View (Win + Tab)</strong></li>
+                    <li><span>Inference V</span><strong>Escape</strong></li>
+                    <li><span>Inference Z</span><strong>Ctrl + Win + O</strong></li>
+                    <li><span>Space Left</span><strong>Alt + Left</strong></li>
+                    <li><span>Space Right</span><strong>Alt + Right</strong></li>
+                    <li><span>Space Up</span><strong>Open Runtime Config</strong></li>
+                    <li><span>Space Down</span><strong>Ctrl + Shift + Tab</strong></li>
+                    <li><span>Knob CW</span><strong>Scroll Up</strong></li>
+                    <li><span>Knob CCW</span><strong>Scroll Down</strong></li>
+                </ul>
+            </section>
+        </section>
+
+        <section id="jsonPanel" class="json-panel collapsed">
+            <div class="json-header">
+                <span id="jsonSummary">JSON Preview · 0 fields · collapsed</span>
+                <button id="toggleJsonButton" type="button" class="secondary-button">Show JSON</button>
+            </div>
+            <pre id="jsonPreview" class="json-preview"></pre>
+        </section>
+
+        <footer class="actions">
+            <div class="status-stack">
+                <div id="runtimeNotice" class="runtime-notice" hidden aria-live="polite"></div>
+                <div id="statusMessage" class="status-message" aria-live="polite"></div>
+            </div>
+            <div class="action-buttons">
+                <button id="reloadButton" type="button" class="secondary-button">Reload</button>
+                <button id="saveButton" type="button" class="primary-button">Save Config</button>
+            </div>
+        </footer>
+    </main>
+
+    <script src="/app.js"></script>
+</body>
+</html>

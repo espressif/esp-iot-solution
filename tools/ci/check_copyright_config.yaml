@@ -58,6 +58,8 @@ ignore:  # You can also select ignoring files here
     - 'components/sensors/magnetometer/bmm150/common/*'
     - 'components/sensors/magnetometer/bmm350/*'
     - 'components/sensors/magnetometer/bmm350/common/*'
+    - 'examples/sensors/airmouse/components/bmm350_sensor/*'
+    - 'examples/sensors/airmouse/components/bmm350_sensor/include/*'
     - 'components/usb/esp_tinyuf2/**/*'
     - 'components/usb/iot_usbh_rndis/priv_include/ndis.h'
     - 'components/usb/usb_device_uvc/tusb/**/*'
