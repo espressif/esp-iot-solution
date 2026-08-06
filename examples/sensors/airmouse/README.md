@@ -120,9 +120,15 @@ The ESP32-C5 board presets are defined in `main/Kconfig.projbuild`:
 
 The corresponding board-specific defaults files select the preset and provide the predefined BMI270 and button configuration.
 
-When either known ESP32-C5 board preset is active, the firmware can skip the initial HTTP hardware-configuration gate.
+The firmware only skips the initial HTTP configuration gate when all of the following are true:
 
-The current ESP32-P4 path does not provide fixed board pin defaults and must complete runtime hardware configuration after boot.
+- a known board preset is active
+- a valid startup gyroscope bias is already stored in flash
+- when `CONFIG_AIRMOUSE_ENABLE_BMM350=y`, a valid magnetometer calibration is also already stored in flash
+
+If any of those conditions is not satisfied, the firmware starts the HTTP configuration flow before BLE runtime.
+
+The current ESP32-P4 path does not provide fixed board pin defaults and therefore always requires the initial HTTP configuration flow.
 
 ## Build
 
@@ -185,10 +191,31 @@ cd demo/airmouse
 idf.py flash monitor
 ```
 
+## Boot-Time HTTP Configuration And Calibration Flow
+
+The boot-time frontend is used whenever the firmware still needs board bring-up or missing calibration data:
+
+- custom boards always enter the HTTP configuration page
+- preset boards also enter the HTTP configuration page when the gyroscope bias is missing from flash
+- preset boards with `CONFIG_AIRMOUSE_ENABLE_BMM350=y` also enter the HTTP configuration page when the magnetometer calibration is missing from flash
+
+The current startup sequence is:
+
+1. Boot the firmware and connect to the device's HTTP page.
+2. Fill in the hardware and runtime configuration if the page is shown.
+3. Submit the configuration.
+4. The firmware keeps the HTTP server alive, initializes BMI270 and, when enabled, BMM350 with the submitted hardware pins.
+5. If gyroscope calibration is required, the frontend redirects to `/runtime-state`, shows a dedicated calibration page, and starts a 3-second countdown so the user can place the device still.
+6. After the countdown finishes, gyroscope calibration starts automatically. No button press is required.
+7. If magnetometer calibration is required, the same runtime page continues to display progress and asks the user to rotate the device through different orientations.
+8. When all required startup calibration data has been written to flash, the HTTP server stops and the firmware continues into BLE startup.
+
+If the firmware already has both the required preset mapping and the required stored calibration data, this entire HTTP flow is skipped and boot proceeds directly to BLE startup.
+
 ## Basic Usage Flow
 
 1. Build and flash the firmware for the target board.
-2. If no known board preset is active, complete the boot-time HTTP configuration.
+2. If the initial HTTP page appears, complete the configuration and follow the runtime calibration page until startup continues automatically.
 3. Wait until BLE HID becomes ready.
 4. Pair the device with the host.
 5. Move the board to control the cursor.

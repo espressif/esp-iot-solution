@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -16,11 +17,17 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "airmouse_gyro_bias.h"
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+#include "airmouse_bmm350.h"
+#endif
 #include "airmouse_server.h"
 
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT      BIT1
-#define CONFIG_DONE_BIT    BIT2
+#define CONFIG_SUBMITTED_BIT BIT2
+#define CONFIG_DONE_BIT      BIT3
+#define RUNTIME_CALIBRATION_START_BIT BIT4
 #define CONFIG_BODY_MAX_LEN    2048
 #define HTTP_SERVER_STOP_DRAIN_DELAY_MS  120
 #define WIFI_DISCONNECT_DRAIN_DELAY_MS   60
@@ -28,6 +35,7 @@
 #define RUNTIME_NOTICE_MAX_LEN           192
 #define RUNTIME_NOTICE_MODE_MAX_LEN      32
 #define RUNTIME_NOTICE_LEVEL_MAX_LEN     16
+#define RUNTIME_CALIBRATION_KIND_MAX_LEN 16
 
 static EventGroupHandle_t s_wifi_event_group = NULL;
 static EventGroupHandle_t s_config_event_group = NULL;
@@ -44,6 +52,15 @@ static bool s_runtime_notice_active = false;
 static char s_runtime_notice_mode[RUNTIME_NOTICE_MODE_MAX_LEN] = "";
 static char s_runtime_notice_level[RUNTIME_NOTICE_LEVEL_MAX_LEN] = "";
 static char s_runtime_notice_message[RUNTIME_NOTICE_MAX_LEN] = "";
+static bool s_calibration_notice_gyro_missing = false;
+static bool s_calibration_notice_enabled = false;
+static bool s_initial_calibration_flow = false;
+static bool s_runtime_calibration_pending_start = false;
+static uint32_t s_runtime_calibration_countdown_seconds = 0;
+static char s_runtime_calibration_kind[RUNTIME_CALIBRATION_KIND_MAX_LEN] = "";
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+static bool s_calibration_notice_mag_missing = false;
+#endif
 
 static airmouse_config_t *s_airmouse_config = NULL;
 
@@ -53,8 +70,34 @@ extern const unsigned char index_html_end[] asm("_binary_index_html_end");
 extern const unsigned char app_js_start[] asm("_binary_app_js_start");
 extern const unsigned char app_js_end[] asm("_binary_app_js_end");
 
+extern const unsigned char runtime_html_start[] asm("_binary_runtime_html_start");
+extern const unsigned char runtime_html_end[] asm("_binary_runtime_html_end");
+
+extern const unsigned char runtime_js_start[] asm("_binary_runtime_js_start");
+extern const unsigned char runtime_js_end[] asm("_binary_runtime_js_end");
+
 extern const unsigned char style_css_start[] asm("_binary_style_css_start");
 extern const unsigned char style_css_end[] asm("_binary_style_css_end");
+
+static const char *airmouse_http_get_missing_calibration_detail(void)
+{
+    if (s_calibration_notice_enabled && s_calibration_notice_gyro_missing) {
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+        if (s_calibration_notice_mag_missing) {
+            return "Gyroscope and magnetometer calibration data are not stored in flash yet.";
+        }
+#endif
+        return "Gyroscope calibration data is not stored in flash yet.";
+    }
+
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+    if (s_calibration_notice_enabled && s_calibration_notice_mag_missing) {
+        return "Magnetometer calibration data is not stored in flash yet.";
+    }
+#endif
+
+    return "";
+}
 
 static esp_err_t airmouse_http_root_get_handler(httpd_req_t *req)
 {
@@ -63,12 +106,28 @@ static esp_err_t airmouse_http_root_get_handler(httpd_req_t *req)
 
 }
 
+static esp_err_t airmouse_http_runtime_page_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/html");
+    return httpd_resp_send(req,
+                           (const char *)runtime_html_start,
+                           runtime_html_end - runtime_html_start);
+}
+
 static esp_err_t airmouse_http_app_js_get_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "application/javascript");
     return httpd_resp_send(req,
                            (const char *)app_js_start,
                            app_js_end - app_js_start);
+}
+
+static esp_err_t airmouse_http_runtime_js_get_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/javascript");
+    return httpd_resp_send(req,
+                           (const char *)runtime_js_start,
+                           runtime_js_end - runtime_js_start);
 }
 
 static esp_err_t airmouse_http_style_css_get_handler(httpd_req_t *req)
@@ -105,16 +164,81 @@ static esp_err_t airmouse_config_get_handler(httpd_req_t *req)
     return ret;
 }
 
-static esp_err_t airmouse_runtime_state_get_handler(httpd_req_t *req)
+static int airmouse_http_build_runtime_state_json(char *response,
+                                                  size_t response_size)
 {
-    char response[320];
-    int written = snprintf(response,
-                           sizeof(response),
-                           "{\"active\":%s,\"mode\":\"%s\",\"level\":\"%s\",\"message\":\"%s\"}",
-                           s_runtime_notice_active ? "true" : "false",
-                           s_runtime_notice_mode,
-                           s_runtime_notice_level,
-                           s_runtime_notice_message);
+    bool active = s_runtime_notice_active;
+    const char *mode = s_runtime_notice_mode;
+    const char *level = s_runtime_notice_level;
+    const char *message = s_runtime_notice_message;
+    char calibration_message[RUNTIME_NOTICE_MAX_LEN];
+
+    calibration_message[0] = '\0';
+
+    if (s_calibration_notice_enabled && s_calibration_notice_gyro_missing) {
+        snprintf(calibration_message,
+                 sizeof(calibration_message),
+                 "Please calibrate the gyroscope%s.",
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+                 s_calibration_notice_mag_missing ? " and magnetometer" : ""
+#else
+                 ""
+#endif
+                );
+    }
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+    else if (s_calibration_notice_enabled && s_calibration_notice_mag_missing) {
+        snprintf(calibration_message,
+                 sizeof(calibration_message),
+                 "Please calibrate the magnetometer.");
+    }
+#endif
+
+    if (calibration_message[0] != '\0') {
+        active = true;
+        level = "warning";
+        if (s_runtime_notice_active && s_runtime_notice_message[0] != '\0') {
+            const char *calibration_detail =
+                airmouse_http_get_missing_calibration_detail();
+            mode = s_runtime_notice_mode[0] != '\0' ? s_runtime_notice_mode : "runtime-config";
+            int prefix_written = snprintf(calibration_message,
+                                          sizeof(calibration_message),
+                                          "%s",
+                                          s_runtime_notice_message);
+            if (prefix_written < 0) {
+                calibration_message[0] = '\0';
+            } else if ((size_t)prefix_written < sizeof(calibration_message) &&
+                       calibration_detail[0] != '\0') {
+                (void)snprintf(calibration_message + prefix_written,
+                               sizeof(calibration_message) - (size_t)prefix_written,
+                               " %s",
+                               calibration_detail);
+            }
+        } else {
+            mode = "calibration";
+        }
+        message = calibration_message;
+    }
+
+    return snprintf(response,
+                    response_size,
+                    "{\"active\":%s,\"mode\":\"%s\",\"level\":\"%s\",\"message\":\"%s\","
+                    "\"initial_calibration_flow\":%s,"
+                    "\"calibration\":{\"pending_start\":%s,\"kind\":\"%s\",\"countdown_seconds\":%" PRIu32 "}}",
+                    active ? "true" : "false",
+                    mode,
+                    level,
+                    message,
+                    s_initial_calibration_flow ? "true" : "false",
+                    s_runtime_calibration_pending_start ? "true" : "false",
+                    s_runtime_calibration_kind,
+                    s_runtime_calibration_countdown_seconds);
+}
+
+static esp_err_t airmouse_runtime_state_data_get_handler(httpd_req_t *req)
+{
+    char response[448];
+    int written = airmouse_http_build_runtime_state_json(response, sizeof(response));
     if (written < 0 || written >= (int)sizeof(response)) {
         httpd_resp_send_err(req,
                             HTTPD_500_INTERNAL_SERVER_ERROR,
@@ -124,6 +248,73 @@ static esp_err_t airmouse_runtime_state_get_handler(httpd_req_t *req)
 
     httpd_resp_set_type(req, "application/json");
     return httpd_resp_sendstr(req, response);
+}
+
+static esp_err_t airmouse_runtime_state_start_post_handler(httpd_req_t *req)
+{
+    if (s_config_event_group == NULL) {
+        httpd_resp_send_err(req,
+                            HTTPD_500_INTERNAL_SERVER_ERROR,
+                            "runtime state not ready");
+        return ESP_FAIL;
+    }
+
+    s_runtime_calibration_pending_start = false;
+    xEventGroupSetBits(s_config_event_group, RUNTIME_CALIBRATION_START_BIT);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
+void airmouse_http_refresh_calibration_notice_state(void)
+{
+    bool gyro_stored = false;
+    esp_err_t ret = airmouse_gyro_bias_probe(&gyro_stored);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to probe gyro calibration state: %s",
+                 esp_err_to_name(ret));
+    }
+    s_calibration_notice_gyro_missing = (ret != ESP_OK) || !gyro_stored;
+
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+    bool mag_stored = false;
+    ret = airmouse_bmm350_calibration_probe(&mag_stored);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to probe magnetometer calibration state: %s",
+                 esp_err_to_name(ret));
+    }
+    s_calibration_notice_mag_missing = (ret != ESP_OK) || !mag_stored;
+#endif
+}
+
+void airmouse_http_set_calibration_notice_enabled(bool enabled)
+{
+    s_calibration_notice_enabled = enabled;
+}
+
+void airmouse_http_set_initial_calibration_flow(bool enabled)
+{
+    s_initial_calibration_flow = enabled;
+}
+
+void airmouse_http_prepare_runtime_calibration(const char *kind,
+                                               uint32_t countdown_seconds)
+{
+    s_runtime_calibration_pending_start = true;
+    s_runtime_calibration_countdown_seconds = countdown_seconds;
+    snprintf(s_runtime_calibration_kind,
+             sizeof(s_runtime_calibration_kind),
+             "%s",
+             kind != NULL ? kind : "");
+    if (s_config_event_group != NULL) {
+        xEventGroupClearBits(s_config_event_group, RUNTIME_CALIBRATION_START_BIT);
+    }
+}
+
+void airmouse_http_finish_runtime_calibration(void)
+{
+    s_runtime_calibration_pending_start = false;
+    s_runtime_calibration_countdown_seconds = 0;
+    s_runtime_calibration_kind[0] = '\0';
 }
 
 static esp_err_t airmouse_config_post_handler(httpd_req_t *req)
@@ -180,12 +371,20 @@ static esp_err_t airmouse_config_post_handler(httpd_req_t *req)
     }
 
     httpd_resp_set_type(req, "application/json");
-    ret = httpd_resp_sendstr(req, "{\"ok\":true}");
+    if (s_initial_calibration_flow) {
+        ret = httpd_resp_sendstr(req, "{\"ok\":true,\"next\":\"/runtime-state\"}");
+    } else {
+        ret = httpd_resp_sendstr(req, "{\"ok\":true}");
+    }
     if (ret != ESP_OK) {
         return ret;
     }
 
-    xEventGroupSetBits(s_config_event_group, CONFIG_DONE_BIT);
+    airmouse_http_runtime_notice_set("initial-config",
+                                     "info",
+                                     "Configuration saved. Initializing sensors and checking calibration state.",
+                                     true);
+    xEventGroupSetBits(s_config_event_group, CONFIG_SUBMITTED_BIT);
     return ESP_OK;
 }
 
@@ -397,6 +596,14 @@ esp_err_t airmouse_http_server_start(airmouse_config_t *airmouse_config)
 #endif
 
     s_airmouse_config = airmouse_config;
+    s_calibration_notice_enabled = false;
+    s_calibration_notice_gyro_missing = false;
+    s_runtime_calibration_pending_start = false;
+    s_runtime_calibration_countdown_seconds = 0;
+    s_runtime_calibration_kind[0] = '\0';
+#if CONFIG_AIRMOUSE_ENABLE_BMM350
+    s_calibration_notice_mag_missing = false;
+#endif
 
     if (s_config_event_group == NULL) {
         s_config_event_group = xEventGroupCreate();
@@ -409,10 +616,13 @@ esp_err_t airmouse_http_server_start(airmouse_config_t *airmouse_config)
         return ESP_OK;
     }
 
-    xEventGroupClearBits(s_config_event_group, CONFIG_DONE_BIT);
+    xEventGroupClearBits(s_config_event_group,
+                         CONFIG_SUBMITTED_BIT | CONFIG_DONE_BIT |
+                         RUNTIME_CALIBRATION_START_BIT);
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_open_sockets = 2;
+    config.max_uri_handlers = 12;
     httpd_handle_t server = NULL;
     esp_err_t ret = httpd_start(&server, &config);
     if (ret != ESP_OK) {
@@ -440,6 +650,32 @@ esp_err_t airmouse_http_server_start(airmouse_config_t *airmouse_config)
     };
 
     ret = httpd_register_uri_handler(server, &app_js_uri);
+    if (ret != ESP_OK) {
+        httpd_stop(server);
+        return ret;
+    }
+
+    const httpd_uri_t runtime_page_uri = {
+        .uri = "/runtime-state",
+        .method = HTTP_GET,
+        .handler = airmouse_http_runtime_page_get_handler,
+        .user_ctx = NULL,
+    };
+
+    ret = httpd_register_uri_handler(server, &runtime_page_uri);
+    if (ret != ESP_OK) {
+        httpd_stop(server);
+        return ret;
+    }
+
+    const httpd_uri_t runtime_js_uri = {
+        .uri = "/runtime.js",
+        .method = HTTP_GET,
+        .handler = airmouse_http_runtime_js_get_handler,
+        .user_ctx = NULL,
+    };
+
+    ret = httpd_register_uri_handler(server, &runtime_js_uri);
     if (ret != ESP_OK) {
         httpd_stop(server);
         return ret;
@@ -484,14 +720,27 @@ esp_err_t airmouse_http_server_start(airmouse_config_t *airmouse_config)
         return ret;
     }
 
-    const httpd_uri_t runtime_state_get_uri = {
-        .uri = "/runtime-state",
+    const httpd_uri_t runtime_state_data_get_uri = {
+        .uri = "/runtime-state-data",
         .method = HTTP_GET,
-        .handler = airmouse_runtime_state_get_handler,
+        .handler = airmouse_runtime_state_data_get_handler,
         .user_ctx = NULL,
     };
 
-    ret = httpd_register_uri_handler(server, &runtime_state_get_uri);
+    ret = httpd_register_uri_handler(server, &runtime_state_data_get_uri);
+    if (ret != ESP_OK) {
+        httpd_stop(server);
+        return ret;
+    }
+
+    const httpd_uri_t runtime_state_start_uri = {
+        .uri = "/runtime-state/start",
+        .method = HTTP_POST,
+        .handler = airmouse_runtime_state_start_post_handler,
+        .user_ctx = NULL,
+    };
+
+    ret = httpd_register_uri_handler(server, &runtime_state_start_uri);
     if (ret != ESP_OK) {
         httpd_stop(server);
         return ret;
@@ -539,6 +788,48 @@ esp_err_t airmouse_http_server_wait_config_done(TickType_t ticks_to_wait)
     return ESP_ERR_TIMEOUT;
 }
 
+esp_err_t airmouse_http_server_wait_runtime_calibration_start(TickType_t ticks_to_wait)
+{
+    if (s_config_event_group == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    EventBits_t bits = xEventGroupWaitBits(
+                           s_config_event_group,
+                           RUNTIME_CALIBRATION_START_BIT,
+                           pdTRUE,
+                           pdFALSE,
+                           ticks_to_wait
+                       );
+
+    if (bits & RUNTIME_CALIBRATION_START_BIT) {
+        return ESP_OK;
+    }
+
+    return ESP_ERR_TIMEOUT;
+}
+
+esp_err_t airmouse_http_server_wait_config_submitted(TickType_t ticks_to_wait)
+{
+    if (s_config_event_group == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    EventBits_t bits = xEventGroupWaitBits(
+                           s_config_event_group,
+                           CONFIG_SUBMITTED_BIT,
+                           pdTRUE,
+                           pdFALSE,
+                           ticks_to_wait
+                       );
+
+    if (bits & CONFIG_SUBMITTED_BIT) {
+        return ESP_OK;
+    }
+
+    return ESP_ERR_TIMEOUT;
+}
+
 void airmouse_http_runtime_notice_set(const char *mode,
                                       const char *level,
                                       const char *message,
@@ -558,4 +849,11 @@ void airmouse_http_runtime_notice_set(const char *mode,
              sizeof(s_runtime_notice_message),
              "%s",
              message != NULL ? message : "");
+}
+
+void airmouse_http_signal_config_done(void)
+{
+    if (s_config_event_group != NULL) {
+        xEventGroupSetBits(s_config_event_group, CONFIG_DONE_BIT);
+    }
 }

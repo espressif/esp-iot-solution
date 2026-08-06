@@ -46,6 +46,8 @@ idf_component_register(
     EMBED_FILES
         "web/index.html"
         "web/app.js"
+        "web/runtime.html"
+        "web/runtime.js"
         "web/style.css"
     INCLUDE_DIRS "include" "."
 )

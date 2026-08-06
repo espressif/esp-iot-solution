@@ -16,6 +16,8 @@ extern "C" {
 
 esp_err_t airmouse_gyro_bias_load(float gyro_bias_dps[3], bool *loaded);
 
+esp_err_t airmouse_gyro_bias_probe(bool *stored);
+
 esp_err_t airmouse_gyro_bias_save(const float gyro_bias_dps[3]);
 
 esp_err_t airmouse_gyro_bias_erase(void);

@@ -8,7 +8,6 @@
 #include <inttypes.h>
 #include <math.h>
 
-#include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -24,11 +23,8 @@ static constexpr const char *AIRMOUSE_GYRO_BIAS_NVS_KEY_VALID = "valid";
 static constexpr uint32_t AIRMOUSE_GYRO_BIAS_NVS_VERSION = 1;
 
 static constexpr int64_t AIRMOUSE_GYRO_BIAS_CALIBRATION_TIME_US = 3000000;
-static constexpr int64_t AIRMOUSE_GYRO_BIAS_START_DELAY_US = 5000000;
 static constexpr TickType_t AIRMOUSE_GYRO_BIAS_SAMPLE_DELAY_TICKS =
     pdMS_TO_TICKS(10);
-static constexpr TickType_t AIRMOUSE_GYRO_BIAS_BUTTON_POLL_TICKS =
-    pdMS_TO_TICKS(20);
 static constexpr float AIRMOUSE_GYRO_BIAS_MAX_STILL_NORM_DPS = 5.0f;
 static constexpr float AIRMOUSE_GYRO_BIAS_MIN_STILL_ACC_G = 0.90f;
 static constexpr float AIRMOUSE_GYRO_BIAS_MAX_STILL_ACC_G = 1.10f;
@@ -40,48 +36,52 @@ static float airmouse_vec_norm3(const float v[3])
     return sqrtf(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
-static esp_err_t airmouse_gyro_bias_wait_for_button_confirm(
-    const airmouse_hardware_config_t *hardware_config)
+esp_err_t airmouse_gyro_bias_probe(bool *stored)
 {
-    if (hardware_config == nullptr) {
+    if (stored == nullptr) {
         return ESP_ERR_INVALID_ARG;
     }
 
-    const gpio_num_t button_gpio =
-        static_cast<gpio_num_t>(hardware_config->reset_button);
-    gpio_config_t io_conf = {};
-    io_conf.pin_bit_mask = (1ULL << button_gpio);
-    io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
+    *stored = false;
 
-    esp_err_t ret = gpio_config(&io_conf);
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG,
-                 "Failed to configure startup gyro calibration button GPIO%d: %s",
-                 hardware_config->reset_button,
-                 esp_err_to_name(ret));
-        return ret;
+    nvs_handle_t nvs_handle = 0;
+    esp_err_t err = nvs_open(AIRMOUSE_GYRO_BIAS_NVS_NAMESPACE,
+                             NVS_READONLY,
+                             &nvs_handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
     }
 
-    ESP_LOGW(TAG,
-             "Press the reset button on GPIO%d once to start startup gyro calibration",
-             hardware_config->reset_button);
+    uint32_t version = 0;
+    uint8_t valid = 0;
+    float gyro_bias_dps[3] = {0.0f, 0.0f, 0.0f};
+    size_t blob_size = sizeof(gyro_bias_dps);
 
-    while (gpio_get_level(button_gpio) == 0) {
-        vTaskDelay(AIRMOUSE_GYRO_BIAS_BUTTON_POLL_TICKS);
+    err = nvs_get_u32(nvs_handle, AIRMOUSE_GYRO_BIAS_NVS_KEY_VERSION, &version);
+    if (err == ESP_OK) {
+        err = nvs_get_u8(nvs_handle, AIRMOUSE_GYRO_BIAS_NVS_KEY_VALID, &valid);
+    }
+    if (err == ESP_OK) {
+        err = nvs_get_blob(nvs_handle,
+                           AIRMOUSE_GYRO_BIAS_NVS_KEY_BIAS,
+                           gyro_bias_dps,
+                           &blob_size);
+    }
+    nvs_close(nvs_handle);
+
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
     }
 
-    while (gpio_get_level(button_gpio) != 0) {
-        vTaskDelay(AIRMOUSE_GYRO_BIAS_BUTTON_POLL_TICKS);
-    }
-
-    while (gpio_get_level(button_gpio) == 0) {
-        vTaskDelay(AIRMOUSE_GYRO_BIAS_BUTTON_POLL_TICKS);
-    }
-
-    ESP_LOGI(TAG, "Startup gyro calibration confirmed by button press");
+    *stored = (version == AIRMOUSE_GYRO_BIAS_NVS_VERSION) &&
+              (valid != 0) &&
+              (blob_size == sizeof(gyro_bias_dps));
     return ESP_OK;
 }
 
@@ -95,32 +95,12 @@ static esp_err_t airmouse_gyro_bias_calibrate(
         return ESP_ERR_INVALID_ARG;
     }
 
+    (void)hardware_config;
+
     ESP_LOGW(TAG,
-             "No valid startup gyro bias in NVS, starting calibration. "
-             "Press the button once to confirm, then keep the device still.");
+             "No valid startup gyro bias in NVS, starting calibration sampling immediately.");
 
-    esp_err_t ret = airmouse_gyro_bias_wait_for_button_confirm(hardware_config);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-
-    ESP_LOGW(TAG, "Startup gyro calibration will begin after 5 seconds");
-    const int64_t delay_start_us = esp_timer_get_time();
-    int64_t last_delay_log_us = delay_start_us - AIRMOUSE_GYRO_BIAS_PROGRESS_LOG_US;
-    while ((esp_timer_get_time() - delay_start_us) < AIRMOUSE_GYRO_BIAS_START_DELAY_US) {
-        const int64_t now_us = esp_timer_get_time();
-        if ((now_us - last_delay_log_us) >= AIRMOUSE_GYRO_BIAS_PROGRESS_LOG_US) {
-            const int64_t remaining_us =
-                AIRMOUSE_GYRO_BIAS_START_DELAY_US - (now_us - delay_start_us);
-            const int remaining_sec =
-                (int)((remaining_us + 999999) / 1000000);
-            ESP_LOGI(TAG,
-                     "Startup gyro calibration starts in %d second(s); keep still",
-                     remaining_sec);
-            last_delay_log_us = now_us;
-        }
-        vTaskDelay(AIRMOUSE_GYRO_BIAS_BUTTON_POLL_TICKS);
-    }
+    esp_err_t ret = ESP_OK;
 
     ESP_LOGW(TAG, "Startup gyro calibration sampling started; keep still for 3 seconds");
 

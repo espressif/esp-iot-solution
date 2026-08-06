@@ -618,6 +618,7 @@ void airmouse_runtime_config_task(void *pvParameters)
         }
         wifi_started = true;
 
+        airmouse_http_set_initial_calibration_flow(false);
         ret = airmouse_http_server_start(&airmouse_ctx->config);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "runtime config: http server start failed: 0x%x",
@@ -626,7 +627,7 @@ void airmouse_runtime_config_task(void *pvParameters)
         }
         http_started = true;
 
-        ret = airmouse_http_server_wait_config_done(portMAX_DELAY);
+        ret = airmouse_http_server_wait_config_submitted(portMAX_DELAY);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "runtime config: wait config done failed: 0x%x",
                      (unsigned int)ret);

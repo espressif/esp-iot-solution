@@ -47,6 +47,7 @@ airmouse_bmm350_handle_t *airmouse_bmm350_init(
 void airmouse_bmm350_deinit(airmouse_bmm350_handle_t *handle);
 
 esp_err_t airmouse_bmm350_calibration_load(airmouse_bmm350_handle_t *handle);
+esp_err_t airmouse_bmm350_calibration_probe(bool *stored);
 esp_err_t airmouse_bmm350_calibration_save(airmouse_bmm350_handle_t *handle);
 esp_err_t airmouse_bmm350_calibration_erase(void);
 esp_err_t airmouse_bmm350_calibration_prepare_or_run(

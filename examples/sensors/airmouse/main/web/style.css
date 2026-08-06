@@ -272,6 +272,107 @@ body {
     border-color: rgba(223, 143, 143, 0.36);
 }
 
+.runtime-page {
+    max-width: 1180px;
+}
+
+.runtime-dashboard {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 16px;
+}
+
+.runtime-hero-card {
+    min-height: 360px;
+    justify-content: space-between;
+}
+
+.runtime-detail-card,
+.runtime-guide-card {
+    min-height: 0;
+}
+
+.runtime-countdown-shell {
+    display: grid;
+    justify-items: center;
+    gap: 14px;
+    padding: 24px 16px 8px;
+}
+
+.runtime-countdown {
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 4rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #2c5964;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.96), rgba(214, 236, 239, 0.88));
+    border: 1px solid rgba(106, 168, 173, 0.26);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 34px rgba(106, 168, 173, 0.14);
+}
+
+.runtime-countdown.active {
+    animation: runtime-pulse 1s ease-in-out infinite;
+}
+
+.runtime-countdown-label {
+    max-width: 420px;
+    text-align: center;
+    color: var(--text-soft);
+    font-size: 0.95rem;
+    line-height: 1.55;
+}
+
+.runtime-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.runtime-detail-item {
+    padding: 14px;
+    border-radius: 14px;
+    background: rgba(109, 177, 181, 0.08);
+    border: 1px solid rgba(106, 168, 173, 0.14);
+    display: grid;
+    gap: 8px;
+}
+
+.runtime-detail-item span {
+    color: var(--text-soft);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.runtime-detail-item strong {
+    font-size: 1.02rem;
+}
+
+.runtime-guide-list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 10px;
+    color: var(--text-soft);
+    line-height: 1.55;
+}
+
+@keyframes runtime-pulse {
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 18px 34px rgba(106, 168, 173, 0.14);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 24px 42px rgba(106, 168, 173, 0.22);
+    }
+}
+
 .status-message {
     min-height: 1.2em;
     color: #a95c5c;
@@ -316,6 +417,10 @@ button:active {
     .dashboard {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         grid-template-rows: auto;
+    }
+
+    .runtime-dashboard {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "bmm350_api.h"
 #include "driver/gpio.h"
@@ -17,6 +18,7 @@
 #include "freertos/task.h"
 #include "i2c_bus.h"
 #include "nvs.h"
+#include "soc/soc_caps.h"
 
 static const char *TAG = "BMM350";
 static constexpr uint32_t AIRMOUSE_BMM350_POST_INTERFACE_DELAY_US = 100000;
@@ -100,6 +102,17 @@ static bool airmouse_bmm350_calibration_blob_is_valid(
     }
 
     return true;
+}
+
+static i2c_port_t airmouse_bmm350_get_dedicated_i2c_port(void)
+{
+#if SOC_HP_I2C_NUM >= 2
+    return I2C_NUM_1;
+#elif SOC_LP_I2C_NUM >= 1
+    return LP_I2C_NUM_0;
+#else
+    return I2C_NUM_0;
+#endif
 }
 
 static airmouse_bmm350_euler_angles_t airmouse_bmm350_calculate_euler_from_accel(
@@ -274,7 +287,8 @@ airmouse_bmm350_handle_t *airmouse_bmm350_init(
         i2c_bus_conf.scl_io_num = hardware_config->mag_i2c_scl;
         i2c_bus_conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
         i2c_bus_conf.master.clk_speed = AIRMOUSE_BMM350_I2C_CLK_HZ;
-        handle->i2c_bus = i2c_bus_create(I2C_NUM_1, &i2c_bus_conf);
+        handle->i2c_bus = i2c_bus_create(airmouse_bmm350_get_dedicated_i2c_port(),
+                                         &i2c_bus_conf);
         if (handle->i2c_bus == nullptr) {
             ESP_LOGE(TAG, "Failed to create dedicated BMM350 I2C bus");
             airmouse_bmm350_deinit(handle);
@@ -503,6 +517,67 @@ esp_err_t airmouse_bmm350_calibration_load(airmouse_bmm350_handle_t *handle)
              handle->mag_cal.soft_iron[1][1],
              handle->mag_cal.soft_iron[2][2]);
 
+    return ESP_OK;
+}
+
+esp_err_t airmouse_bmm350_calibration_probe(bool *stored)
+{
+    if (stored == nullptr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    *stored = false;
+
+    nvs_handle_t nvs_handle = 0;
+    esp_err_t err = nvs_open(AIRMOUSE_BMM350_NVS_NAMESPACE, NVS_READONLY, &nvs_handle);
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    uint32_t version = 0;
+    float hard_iron[3] = {};
+    float soft_iron[3][3] = {};
+    uint8_t calibrated = 0;
+    size_t hard_iron_size = sizeof(hard_iron);
+    size_t soft_iron_size = sizeof(soft_iron);
+
+    err = nvs_get_u32(nvs_handle, AIRMOUSE_BMM350_NVS_KEY_VERSION, &version);
+    if (err == ESP_OK) {
+        err = nvs_get_blob(nvs_handle,
+                           AIRMOUSE_BMM350_NVS_KEY_HARD_IRON,
+                           hard_iron,
+                           &hard_iron_size);
+    }
+    if (err == ESP_OK) {
+        err = nvs_get_blob(nvs_handle,
+                           AIRMOUSE_BMM350_NVS_KEY_SOFT_IRON,
+                           soft_iron,
+                           &soft_iron_size);
+    }
+    if (err == ESP_OK) {
+        err = nvs_get_u8(nvs_handle, AIRMOUSE_BMM350_NVS_KEY_CALIBRATED, &calibrated);
+    }
+    nvs_close(nvs_handle);
+
+    if (err == ESP_ERR_NVS_NOT_FOUND) {
+        return ESP_OK;
+    }
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    airmouse_bmm350_mag_calibration_t mag_cal = {};
+    memcpy(mag_cal.hard_iron, hard_iron, sizeof(hard_iron));
+    memcpy(mag_cal.soft_iron, soft_iron, sizeof(soft_iron));
+    mag_cal.calibrated = (calibrated != 0);
+
+    *stored = (version == AIRMOUSE_BMM350_NVS_VERSION) &&
+              (hard_iron_size == sizeof(hard_iron)) &&
+              (soft_iron_size == sizeof(soft_iron)) &&
+              airmouse_bmm350_calibration_blob_is_valid(&mag_cal);
     return ESP_OK;
 }
 

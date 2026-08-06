@@ -184,6 +184,12 @@ async function saveConfig() {
             return;
         }
 
+        const result = JSON.parse(text);
+        if (result.next) {
+            window.location.href = result.next;
+            return;
+        }
+
         await loadConfig();
     } catch (err) {
         setStatus("Error", "Save failed: " + err);
@@ -192,7 +198,7 @@ async function saveConfig() {
 
 async function loadRuntimeState() {
     try {
-        const response = await fetch("/runtime-state", {
+        const response = await fetch("/runtime-state-data", {
             cache: "no-store",
         });
         if (!response.ok) {
