@@ -156,6 +156,7 @@ bool airmouse_gesture_infer_build_detector_config(
     out_config->model = model;
     out_config->window_step = CONFIG_AIRMOUSE_GESTURE_WINDOW_STEP;
     out_config->sample_queue_len = model->input_length;
+    out_config->input_source = IMU_GESTURE_INFERENCE_INPUT_GYRO;
     return true;
 }
 

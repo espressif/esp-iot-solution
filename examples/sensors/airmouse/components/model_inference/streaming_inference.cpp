@@ -19,6 +19,7 @@ static const streaming_inference_model_t s_streaming_inference_model = {
     .input_length = 150,
     .input_channels = 3,
     .output_count = 5,
+    .model_preprocess = nullptr,
     .model_init = gesture_inference_micro_simple_norm_model_init,
     .model_predict = gesture_inference_micro_simple_norm_model_predict,
 };
