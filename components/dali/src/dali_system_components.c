@@ -71,54 +71,28 @@ struct dali_master_t {
     QueueHandle_t        rx_queue;
     rmt_receive_config_t rx_cfg;
     rmt_symbol_word_t    rx_raw[32]; /* static DMA buffer — must not be on stack */
-
-    /* TX symbol pointers — set once during init based on polarity config. */
-    const rmt_symbol_word_t *symbol_one;
-    const rmt_symbol_word_t *symbol_zero;
-    const rmt_symbol_word_t *symbol_stop;
 };
 
 /* -------------------------------------------------------------------------
- * Static TX symbol tables
+ * Static TX symbol table
  * ------------------------------------------------------------------------- */
 
-/* --- Non-inverting (invert_tx = false, default) --- */
-static const rmt_symbol_word_t s_sym_one_normal = {
+static const rmt_symbol_word_t s_sym_one = {
     .level0    = 0,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
     .level1    = 1,
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
 };
-static const rmt_symbol_word_t s_sym_zero_normal = {
+static const rmt_symbol_word_t s_sym_zero = {
     .level0    = 1,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
     .level1    = 0,
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
 };
-static const rmt_symbol_word_t s_sym_stop_normal = {
-    .level0    = 0,
+static const rmt_symbol_word_t s_sym_stop = {
+    .level0    = 1,
     .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
-    .level1    = 0,
-    .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
-};
-
-/* --- Inverting (invert_tx = true) --- */
-static const rmt_symbol_word_t s_sym_one_invert = {
-    .level0    = 1,
-    .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
-    .level1    = 0,
-    .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
-};
-static const rmt_symbol_word_t s_sym_zero_invert = {
-    .level0    = 0,
-    .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
     .level1    = 1,
-    .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US),
-};
-static const rmt_symbol_word_t s_sym_stop_invert = {
-    .level0    = 0,
-    .duration0 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
-    .level1    = 0,
     .duration1 = DALI_US_TO_RMT_TICKS(DALI_TE_US) * 2,
 };
 
@@ -220,13 +194,11 @@ static esp_err_t dali_decode_backward_frame_byte(const rmt_symbol_word_t *symbol
 static size_t dali_tx_encode_cb(const void *data, size_t data_size, size_t symbols_written, size_t symbols_free,
                                 rmt_symbol_word_t *symbols, bool *done, void *arg)
 {
-    struct dali_master_t *dev = (struct dali_master_t *)arg;
-
     if (symbols_free < 10) {
         return 0;
     }
     if (symbols_written == 0) {
-        symbols[0] = *dev->symbol_one;
+        symbols[0] = s_sym_one;
         return 1;
     }
     const uint8_t *bytes = (const uint8_t *)data;
@@ -234,11 +206,11 @@ static size_t dali_tx_encode_cb(const void *data, size_t data_size, size_t symbo
     if (byte_idx < data_size) {
         size_t out = 0;
         for (int mask = 0x80; mask != 0; mask >>= 1) {
-            symbols[out++] = (bytes[byte_idx] & mask) ? *dev->symbol_one : *dev->symbol_zero;
+            symbols[out++] = (bytes[byte_idx] & mask) ? s_sym_one : s_sym_zero;
         }
         return out;
     }
-    symbols[0] = *dev->symbol_stop;
+    symbols[0] = s_sym_stop;
     *done = true;
     return 1;
 }
@@ -288,16 +260,6 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
     struct dali_master_t *dev = calloc(1, sizeof(struct dali_master_t));
     ESP_RETURN_ON_FALSE(dev != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate DALI context");
 
-    if (config->invert_tx) {
-        dev->symbol_one  = &s_sym_one_invert;
-        dev->symbol_zero = &s_sym_zero_invert;
-        dev->symbol_stop = &s_sym_stop_invert;
-    } else {
-        dev->symbol_one  = &s_sym_one_normal;
-        dev->symbol_zero = &s_sym_zero_normal;
-        dev->symbol_stop = &s_sym_stop_normal;
-    }
-
     rmt_rx_channel_config_t rx_cfg = {
         .clk_src           = RMT_CLK_SRC_DEFAULT,
         .resolution_hz     = DALI_RMT_RESOLUTION_HZ,
@@ -327,13 +289,13 @@ esp_err_t dali_new_master_rmt(const dali_master_config_t *config, const dali_mas
         .gpio_num          = config->tx_gpio,
         .mem_block_symbols = mem_block,
         .trans_queue_depth = 4,
-        .flags.invert_out  = false,
+        .flags.invert_out  = config->invert_tx ? 1 : 0,
     };
     ESP_GOTO_ON_ERROR(rmt_new_tx_channel(&tx_cfg, &dev->tx_channel), err, TAG, "Failed to create TX channel");
 
     const rmt_simple_encoder_config_t enc_cfg = {
         .callback = dali_tx_encode_cb,
-        .arg      = dev,
+        .arg      = NULL,
     };
     ESP_GOTO_ON_ERROR(rmt_new_simple_encoder(&enc_cfg, &dev->tx_encoder), err, TAG, "Failed to create TX encoder");
 
@@ -392,7 +354,7 @@ esp_err_t dali_master_do_raw_transaction(dali_master_handle_t handle, const uint
     ESP_RETURN_ON_FALSE(tx_buf != NULL && tx_len > 0, ESP_ERR_INVALID_ARG, TAG, "tx buffer must not be empty");
 
     struct dali_master_t *dev = handle;
-    const rmt_transmit_config_t tx_cfg = {.loop_count = 0};
+    const rmt_transmit_config_t tx_cfg = {.loop_count = 0, .flags.eot_level = 1};
 
     xQueueReset(dev->rx_queue);
 
