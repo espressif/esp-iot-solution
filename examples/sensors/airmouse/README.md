@@ -44,7 +44,7 @@ Custom boards can still be configured through Kconfig or through the boot-time H
 
 Moving or rotating the device updates the host cursor through BLE HID mouse reports.
 
-![AirMouse cursor movement](gif/cursor_movement.gif)
+![AirMouse cursor movement](https://dl.espressif.com/AE/esp-iot-solution/cursor_movement.gif)
 
 ### Gesture Actions
 
@@ -54,17 +54,17 @@ The demo supports gesture-triggered business actions in addition to normal point
 - space-switch gesture: directional shortcut actions, including browser/app navigation and runtime-config entry
 - inference gesture labels: mapped to media or keyboard shortcuts
 
-![AirMouse knob gesture](gif/knob.gif)
+![AirMouse knob gesture](https://dl.espressif.com/AE/esp-iot-solution/knob.gif)
 
-![AirMouse space switch gesture](gif/space%20switch.gif)
+![AirMouse space switch gesture](https://dl.espressif.com/AE/esp-iot-solution/space_switch.gif)
 
-![AirMouse inference gesture](gif/inference%20gesture.gif)
+![AirMouse inference gesture](https://dl.espressif.com/AE/esp-iot-solution/inference_gesture.gif)
 
 ### Runtime Configuration
 
 When the firmware is not using a known board preset, it can start a local HTTP configuration flow before entering normal BLE runtime.
 
-![AirMouse runtime configuration](gif/runtime%20config.gif)
+![AirMouse runtime configuration](https://dl.espressif.com/AE/esp-iot-solution/runtime_config.gif)
 
 ## Feature-to-Effect Mapping
 
