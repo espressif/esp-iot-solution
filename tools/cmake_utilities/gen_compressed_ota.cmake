@@ -14,5 +14,8 @@ if (NOT TARGET gen_compressed_ota)
     COMMAND ${PYTHON} ${GEN_COMPRESSED_BIN_CMD}
     COMMENT "The gen compressed bin cmd is: ${GEN_COMPRESSED_BIN_CMD}"
     )
-    add_dependencies(gen_compressed_ota gen_project_binary)
+    # "app" is the build-system-version-agnostic alias for the final app
+    # binary target: Build System v1 additionally exposes the legacy
+    # "gen_project_binary" name, but Build System v2 only creates "app".
+    add_dependencies(gen_compressed_ota app)
 endif()

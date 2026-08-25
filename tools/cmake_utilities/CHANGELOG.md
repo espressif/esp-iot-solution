@@ -1,3 +1,10 @@
+## v1.1.2 - 2026-08-03
+
+### Bugfix:
+
+* gen_compressed_ota: fix `CMake Error: The dependency target "gen_project_binary" ... does not exist` under ESP-IDF Build System v2 by depending on the version-agnostic `app` target instead of the Build System v1-only `gen_project_binary` target
+* gen_single_bin: same `gen_project_binary` -> `app` fix as above
+
 ## v1.1.1 - 2025-02-25
 
 * relinker: some typo

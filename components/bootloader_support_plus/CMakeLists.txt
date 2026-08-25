@@ -3,7 +3,7 @@ set(srcs "src/bootloader_custom_image_format.c"
          "src/bootloader_custom_utility.c"
          )
 
-set(requires "bootloader" "bootloader_support" "spi_flash")
+set(requires "bootloader" "bootloader_support" "spi_flash" "efuse")
 
 # Since IDF v6.0 the watchdog HAL has graduated into its own component
 # (esp_hal_wdt). In earlier IDF versions hal/wdt_hal.h is provided by the
