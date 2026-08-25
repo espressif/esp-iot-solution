@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <sys/reent.h>
 #include "esp_log.h"
 
 #include "bootloader_init.h"
@@ -67,8 +68,10 @@ static int select_partition_number(bootloader_state_t *bs)
     return bootloader_utility_get_selected_boot_partition(bs);
 }
 
+#if CONFIG_LIBC_NEWLIB
 // Return global reent struct if any newlib functions are linked to bootloader
 struct _reent *__getreent(void)
 {
     return _GLOBAL_REENT;
 }
+#endif
