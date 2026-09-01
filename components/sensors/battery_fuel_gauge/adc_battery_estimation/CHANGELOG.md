@@ -1,5 +1,16 @@
 # ChangeLog
 
+## v0.3.0 - 2026-9-1
+
+### Enhancements:
+
+* Add standby state detection, capacity stays at 100% when the battery is full and still charging
+* Add `adc_battery_estimation_get_voltage` to get the filtered battery voltage
+
+### Bug Fix:
+
+* Fix resource leaks on the create and destroy error paths
+
 ## v0.2.2 - 2026-6-9
 
 ### Bug Fix:

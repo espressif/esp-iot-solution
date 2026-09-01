@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "esp_log.h"
@@ -33,6 +34,8 @@ typedef struct {
     size_t battery_points_count;
     adc_battery_charging_detect_cb_t charging_detect_cb;
     void *charging_detect_user_data;
+    adc_battery_standby_detect_cb_t standby_detect_cb;
+    void *standby_detect_user_data;
     float last_capacity;                                                           /*!< Last calculated battery capacity in percentage */
     bool is_first_read;                                                            /*!< Flag for first capacity reading */
     bool last_charging_state;                                                      /*!< Last charging state */
@@ -69,6 +72,7 @@ static float calculate_battery_capacity(float voltage, const battery_point_t *po
     }
 }
 
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
 // Helper function to analyze battery trend
 static bool analyze_battery_trend(const int *buffer, int buffer_size, bool last_charging_state)
 {
@@ -94,10 +98,51 @@ static bool analyze_battery_trend(const int *buffer, int buffer_size, bool last_
     // Otherwise, determine by increasing/decreasing trend
     return increasing_count > decreasing_count;
 }
+#endif
+
+// Helper function to sample the ADC pin and reject the readings deviating by more than one standard deviation
+static esp_err_t read_filtered_voltage(adc_battery_estimation_ctx_t *ctx, int *voltage_mv)
+{
+    int vol[CONFIG_ADC_FILTER_WINDOW_SIZE] = {0};
+    int avg = 0, std_vol = 0, filtered_vol = 0, filtered_count = 0;
+
+    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
+        int adc_raw = 0;
+        ESP_RETURN_ON_ERROR(adc_oneshot_read(ctx->adc_handle, ctx->adc_channel, &adc_raw), TAG, "Failed to read ADC");
+        ESP_RETURN_ON_ERROR(adc_cali_raw_to_voltage(ctx->adc_cali_handle, adc_raw, &vol[i]), TAG, "Failed to convert ADC raw to voltage");
+        avg += vol[i];
+    }
+    avg /= CONFIG_ADC_FILTER_WINDOW_SIZE;
+
+    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
+        std_vol += (vol[i] - avg) * (vol[i] - avg);
+    }
+    std_vol = (int)sqrt(std_vol / (CONFIG_ADC_FILTER_WINDOW_SIZE));
+
+    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
+        if (abs(vol[i] - avg) < std_vol) {
+            filtered_vol += vol[i];
+            filtered_count++;
+        }
+    }
+
+    // A zero deviation leaves nothing to reject, fall back to the plain average
+    *voltage_mv = (filtered_count > 0) ? (filtered_vol / filtered_count) : avg;
+    return ESP_OK;
+}
+
+// Helper function to query the standby state, standby always wins over the charging state
+static bool is_battery_standby(adc_battery_estimation_ctx_t *ctx)
+{
+    return ctx->standby_detect_cb ? ctx->standby_detect_cb(ctx->standby_detect_user_data) : false;
+}
 
 adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estimation_t *config)
 {
     ESP_RETURN_ON_FALSE(config, NULL, TAG, "Config is NULL");
+    ESP_RETURN_ON_FALSE(config->upper_resistor > 0.0f && config->lower_resistor > 0.0f, NULL, TAG,
+                        "Invalid resistor values: upper_resistor=%.2f, lower_resistor=%.2f",
+                        config->upper_resistor, config->lower_resistor);
 
     adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) calloc(1, sizeof(adc_battery_estimation_ctx_t));
     ESP_RETURN_ON_FALSE(ctx, NULL, TAG, "Failed to allocate memory for context");
@@ -105,7 +150,11 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
     ctx->adc_channel = config->adc_channel;
     ctx->charging_detect_cb = config->charging_detect_cb;
     ctx->charging_detect_user_data = config->charging_detect_user_data;
+    ctx->standby_detect_cb = config->standby_detect_cb;
+    ctx->standby_detect_user_data = config->standby_detect_user_data;
     ctx->is_first_read = true;
+    ctx->voltage_divider_ratio = config->lower_resistor / (config->upper_resistor + config->lower_resistor);
+    ctx->filter_alpha = CONFIG_BATTERY_CAPACITY_LPF_COEFFICIENT / 10.0f;
 
     // Use default battery points if not provided
     if (config->battery_points == NULL || config->battery_points_count == 0) {
@@ -121,13 +170,21 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
         adc_oneshot_unit_init_cfg_t init_cfg = {
             .unit_id = config->internal.adc_unit,
         };
-        ESP_RETURN_ON_FALSE(adc_oneshot_new_unit(&init_cfg, &ctx->adc_handle) == ESP_OK, NULL, TAG, "Failed to create ADC unit");
+        if (adc_oneshot_new_unit(&init_cfg, &ctx->adc_handle) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to create ADC unit");
+            goto err;
+        }
+        // Claim ownership as soon as the unit exists so the error path knows it has to be released
+        ctx->is_adc_handle_owned = true;
 
         adc_oneshot_chan_cfg_t chan_cfg = {
             .atten = config->internal.adc_atten,
             .bitwidth = config->internal.adc_bitwidth,
         };
-        ESP_RETURN_ON_FALSE(adc_oneshot_config_channel(ctx->adc_handle, ctx->adc_channel, &chan_cfg) == ESP_OK, NULL, TAG, "Failed to configure ADC channel");
+        if (adc_oneshot_config_channel(ctx->adc_handle, ctx->adc_channel, &chan_cfg) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to configure ADC channel");
+            goto err;
+        }
 
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
         adc_cali_curve_fitting_config_t cali_config = {
@@ -136,16 +193,21 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
             .atten = config->internal.adc_atten,
             .bitwidth = config->internal.adc_bitwidth,
         };
-        ESP_RETURN_ON_FALSE(adc_cali_create_scheme_curve_fitting(&cali_config, &ctx->adc_cali_handle) == ESP_OK, NULL, TAG, "Failed to create ADC calibration scheme");
+        if (adc_cali_create_scheme_curve_fitting(&cali_config, &ctx->adc_cali_handle) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to create ADC calibration scheme");
+            goto err;
+        }
 #elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
         adc_cali_line_fitting_config_t cali_config = {
             .unit_id = config->internal.adc_unit,
             .atten = config->internal.adc_atten,
             .bitwidth = config->internal.adc_bitwidth,
         };
-        ESP_RETURN_ON_FALSE(adc_cali_create_scheme_line_fitting(&cali_config, &ctx->adc_cali_handle) == ESP_OK, NULL, TAG, "Failed to create ADC calibration scheme");
+        if (adc_cali_create_scheme_line_fitting(&cali_config, &ctx->adc_cali_handle) != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to create ADC calibration scheme");
+            goto err;
+        }
 #endif
-        ctx->is_adc_handle_owned = true;
         ESP_LOGI(TAG, "Use internal ADC unit");
     } else {
         // Use external ADC handle if provided
@@ -155,72 +217,82 @@ adc_battery_estimation_handle_t adc_battery_estimation_create(adc_battery_estima
         ESP_LOGI(TAG, "Use external ADC handle");
     }
 
-    // Validate voltage divider resistors
-    if (config->upper_resistor <= 0.0f || config->lower_resistor <= 0.0f) {
-        ESP_LOGE(TAG, "Invalid resistor values: upper_resistor=%.2f, lower_resistor=%.2f",
-                 config->upper_resistor, config->lower_resistor);
-        return NULL;
-    }
-
-    float total_resistance = config->upper_resistor + config->lower_resistor;
-    if (total_resistance <= 0.0f) {
-        ESP_LOGE(TAG, "Total resistance is zero or negative: %.2f", total_resistance);
-        return NULL;
-    }
-
-    ctx->voltage_divider_ratio = config->lower_resistor / total_resistance;
-    ctx->filter_alpha = CONFIG_BATTERY_CAPACITY_LPF_COEFFICIENT / 10.0f;
-
-#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
-    ctx->battery_state_estimation_index = 0;
-    ctx->last_time_ms = 0;
-#endif
-
     return (adc_battery_estimation_handle_t) ctx;
+
+err:
+    if (ctx->adc_cali_handle) {
+#if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+        adc_cali_delete_scheme_curve_fitting(ctx->adc_cali_handle);
+#elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+        adc_cali_delete_scheme_line_fitting(ctx->adc_cali_handle);
+#endif
+    }
+    if (ctx->adc_handle) {
+        adc_oneshot_del_unit(ctx->adc_handle);
+    }
+    free(ctx);
+    return NULL;
 }
 
 esp_err_t adc_battery_estimation_destroy(adc_battery_estimation_handle_t handle)
 {
-    esp_err_t ret = ESP_OK;
     if (handle == NULL) {
         return ESP_OK;
     }
 
+    esp_err_t ret = ESP_OK;
     adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
+
+    // Delete ADC unit and calibration scheme if owned. Keep going on failure so that the context is
+    // always released and the handle never ends up half destroyed
     if (ctx->is_adc_handle_owned) {
-        printf("delete internal adc unit\n");
-        // Delete ADC unit and calibration scheme if owned
-        ret = adc_oneshot_del_unit(ctx->adc_handle);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to delete ADC unit: %s", esp_err_to_name(ret));
-            return ret;
+        esp_err_t err = ESP_OK;
+
+        err = adc_oneshot_del_unit(ctx->adc_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to delete ADC unit: %s", esp_err_to_name(err));
+            ret = err;
         }
 
+        err = ESP_OK;
 #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
-        ret = adc_cali_delete_scheme_curve_fitting(ctx->adc_cali_handle);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to delete ADC calibration scheme: %s", esp_err_to_name(ret));
-            return ret;
-        }
+        err = adc_cali_delete_scheme_curve_fitting(ctx->adc_cali_handle);
 #elif ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
-        ret = adc_cali_delete_scheme_line_fitting(ctx->adc_cali_handle);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to delete ADC calibration scheme: %s", esp_err_to_name(ret));
-            return ret;
-        }
+        err = adc_cali_delete_scheme_line_fitting(ctx->adc_cali_handle);
 #endif
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to delete ADC calibration scheme: %s", esp_err_to_name(err));
+            ret = err;
+        }
     }
+
     free(ctx);
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t handle, float *capacity)
 {
-    esp_err_t ret = ESP_OK;
     ESP_RETURN_ON_FALSE(handle && capacity, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
     adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
     bool is_charging = false;
+
+    // In standby the charge has been terminated because the battery is full, so the capacity is known
+    // without measuring anything. Returning early also keeps the flat full-charge voltage out of the
+    // trend buffer, which would otherwise make the software estimation flip on noise alone
+    if (is_battery_standby(ctx)) {
+        ctx->last_capacity = 100.0f;
+        ctx->last_charging_state = false;
+        ctx->is_first_read = false;
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+        // Restart the trend analysis, mixing the samples taken before standby with the ones taken
+        // after the charger is unplugged would report charging for one more analysis round
+        ctx->battery_state_estimation_index = 0;
+#endif
+        *capacity = 100.0f;
+        return ESP_OK;
+    }
+
 #if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
     uint64_t current_time_ms = esp_timer_get_time() / 1000;
 #endif
@@ -235,42 +307,8 @@ esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t ha
     }
 #endif
 
-    // Get ADC reading via filtering
-    int vol[CONFIG_ADC_FILTER_WINDOW_SIZE] = {0};
-    int avg = 0, std_vol = 0, filtered_vol = 0, filtered_result = 0, filtered_count = 0;
-    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
-        int adc_raw = 0;
-        ret = adc_oneshot_read(ctx->adc_handle, ctx->adc_channel, &adc_raw);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to read ADC: %s", esp_err_to_name(ret));
-            return ret;
-        }
-
-        ret = adc_cali_raw_to_voltage(ctx->adc_cali_handle, adc_raw, &vol[i]);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Failed to convert ADC raw to voltage: %s", esp_err_to_name(ret));
-            return ret;
-        }
-        avg += vol[i];
-    }
-    avg /= CONFIG_ADC_FILTER_WINDOW_SIZE;
-    filtered_result = avg;
-
-    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
-        std_vol += (vol[i] - avg) * (vol[i] - avg);
-    }
-    std_vol = (int)sqrt(std_vol / (CONFIG_ADC_FILTER_WINDOW_SIZE));
-
-    for (int i = 0; i < CONFIG_ADC_FILTER_WINDOW_SIZE; i++) {
-        if (abs(vol[i] - avg) < std_vol) {
-            filtered_vol += vol[i];
-            filtered_count++;
-        }
-    }
-
-    if (filtered_count > 0) {
-        filtered_result = filtered_vol / filtered_count;
-    }
+    int filtered_result = 0;
+    ESP_RETURN_ON_ERROR(read_filtered_voltage(ctx, &filtered_result), TAG, "Failed to read battery voltage");
 
 #if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
     // Record filtered_result every CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL ms
@@ -338,16 +376,42 @@ esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t ha
     return ESP_OK;
 }
 
+esp_err_t adc_battery_estimation_get_voltage(adc_battery_estimation_handle_t handle, float *voltage)
+{
+    ESP_RETURN_ON_FALSE(handle && voltage, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
+    int filtered_result = 0;
+    ESP_RETURN_ON_ERROR(read_filtered_voltage(ctx, &filtered_result), TAG, "Failed to read battery voltage");
+
+    *voltage = (float)filtered_result / 1000.0f / ctx->voltage_divider_ratio;
+
+    ESP_LOGD(TAG, "Battery voltage: %.3fV", *voltage);
+    return ESP_OK;
+}
+
 esp_err_t adc_battery_estimation_get_charging_state(adc_battery_estimation_handle_t handle, bool *is_charging)
 {
     ESP_RETURN_ON_FALSE(handle && is_charging, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
 
     adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
-    if (ctx->charging_detect_cb) {
+    if (is_battery_standby(ctx)) {
+        *is_charging = false;
+    } else if (ctx->charging_detect_cb) {
         *is_charging = ctx->charging_detect_cb(ctx->charging_detect_user_data);
     } else {
         *is_charging = ctx->last_charging_state;
     }
+
+    return ESP_OK;
+}
+
+esp_err_t adc_battery_estimation_get_standby_state(adc_battery_estimation_handle_t handle, bool *is_standby)
+{
+    ESP_RETURN_ON_FALSE(handle && is_standby, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+
+    adc_battery_estimation_ctx_t *ctx = (adc_battery_estimation_ctx_t *) handle;
+    *is_standby = is_battery_standby(ctx);
 
     return ESP_OK;
 }
