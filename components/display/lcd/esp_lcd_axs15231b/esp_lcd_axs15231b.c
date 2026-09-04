@@ -39,7 +39,7 @@ static esp_err_t panel_axs15231b_invert_color(esp_lcd_panel_t *panel, bool inver
 static esp_err_t panel_axs15231b_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y);
 static esp_err_t panel_axs15231b_swap_xy(esp_lcd_panel_t *panel, bool swap_axes);
 static esp_err_t panel_axs15231b_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap);
-static esp_err_t panel_axs15231b_disp_off(esp_lcd_panel_t *panel, bool off);
+static esp_err_t panel_axs15231b_disp_on_off(esp_lcd_panel_t *panel, bool on);
 
 static esp_err_t touch_axs15231b_read_data(esp_lcd_touch_handle_t tp);
 static bool touch_axs15231b_get_xy(esp_lcd_touch_handle_t tp, uint16_t *x, uint16_t *y, uint16_t *strength, uint8_t *point_num, uint8_t max_point_num);
@@ -147,7 +147,7 @@ esp_err_t esp_lcd_new_panel_axs15231b(const esp_lcd_panel_io_handle_t io, const 
     axs15231b->base.set_gap = panel_axs15231b_set_gap;
     axs15231b->base.mirror = panel_axs15231b_mirror;
     axs15231b->base.swap_xy = panel_axs15231b_swap_xy;
-    axs15231b->base.disp_on_off  = panel_axs15231b_disp_off;
+    axs15231b->base.disp_on_off  = panel_axs15231b_disp_on_off;
     *ret_panel = &(axs15231b->base);
     ESP_LOGD(TAG, "new axs15231b panel @%p", axs15231b);
     ESP_LOGI(TAG, "LCD panel create success, version: %d.%d.%d", ESP_LCD_AXS15231B_VER_MAJOR, ESP_LCD_AXS15231B_VER_MINOR,
@@ -402,15 +402,15 @@ static esp_err_t panel_axs15231b_set_gap(esp_lcd_panel_t *panel, int x_gap, int 
     return ESP_OK;
 }
 
-static esp_err_t panel_axs15231b_disp_off(esp_lcd_panel_t *panel, bool off)
+static esp_err_t panel_axs15231b_disp_on_off(esp_lcd_panel_t *panel, bool on)
 {
     axs15231b_panel_t *axs15231b = __containerof(panel, axs15231b_panel_t, base);
     esp_lcd_panel_io_handle_t io = axs15231b->io;
     int command = 0;
-    if (off) {
-        command = LCD_CMD_DISPOFF;
-    } else {
+    if (on) {
         command = LCD_CMD_DISPON;
+    } else {
+        command = LCD_CMD_DISPOFF;
     }
     tx_param(axs15231b, io, command, NULL, 0);
     return ESP_OK;

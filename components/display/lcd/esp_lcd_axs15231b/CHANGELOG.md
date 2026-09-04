@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v3.0.0 - 2026-07-18
+
+* `panel_axs15231b_disp_off` behaviour was inverted and is now fixed. Update your `esp_lcd_panel_disp_on_off()` usages.
+
 ## v2.1.0 - 2026-01-21
 
 ### Enhancements:
