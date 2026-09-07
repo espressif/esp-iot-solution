@@ -185,6 +185,10 @@ esp_err_t bq27220_unseal(bq27220_handle_t bq_handle);
 /**
  * @brief Set a 16-bit parameter in the BQ27220 device
  *
+ * @note The caller must place the device in FULL ACCESS and confirm CFGUPDATE before calling this function.
+ *       This function only writes and commits the parameter. The caller is responsible for readback verification,
+ *       exiting CFGUPDATE, waiting for reinitialization, and restoring the required security state.
+ *
  * @param bq_handle[in] Handle to the BQ27220 device
  * @param address[in] Parameter address
  * @param value[in] Value to set
