@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v2.0.2 - 2026-9-2
+
+### Enhancements:
+
+* Add opt-in PWM complementary output via the standalone `PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG` (`0x08`), without combining legacy RGB, CW or RGBCW flags. 
+* Preserve legacy fixed phase offsets, divided grayscale ranges and hardware-fade selection when the complementary flag is not set. Complementary output automatically uses software fade with multi-channel writes.
+
 ## v2.0.1 - 2026-4-13
 
 ### Refactor:

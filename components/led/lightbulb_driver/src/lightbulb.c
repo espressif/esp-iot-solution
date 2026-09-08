@@ -703,6 +703,9 @@ lightbulb_handle_t lightbulb_new_pwm_device(lightbulb_config_t *config)
 {
     LIGHTBULB_CHECK(config, "config is null", return NULL);
 
+    /* Propagate hardware CCT mode so the PWM driver can exclude the CCT channel
+     * from complementary compression. */
+    config->driver_conf.pwm.hw_cct = config->capability.enable_hardware_cct;
     hal_context_t hal_ctx = pwm_hal_output_init(&config->driver_conf.pwm, config->gamma_conf);
     if (!hal_ctx) {
         return NULL;
