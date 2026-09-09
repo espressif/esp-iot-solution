@@ -166,10 +166,6 @@ static esp_err_t panel_co5300_del(esp_lcd_panel_t *panel)
     if (co5300->reset_gpio_num >= 0) {
         gpio_reset_pin(co5300->reset_gpio_num);
     }
-
-    if (co5300->del) {
-        ESP_RETURN_ON_ERROR(co5300->del(panel), TAG, "delete MIPI DPI panel failed");
-    }
     ESP_LOGD(TAG, "del co5300 panel @%p", co5300);
     free(co5300);
 

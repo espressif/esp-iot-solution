@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.1.1 - 2026-08-18
+
+### Bugfix:
+
+* Fixed `panel_co5300_del()` calling the wrapped MIPI DPI panel's `del` callback twice, which caused a use-after-free and a double free on panel teardown
+
 ## v2.1.0 - 2026-06-29
 
 ### Enhancements:
