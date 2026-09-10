@@ -111,6 +111,10 @@ examples/bluetooth/ble_services/ble_cts:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
 
+examples/bluetooth/ble_services/ble_custom:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
 examples/bluetooth/ble_services/ble_dis:
   enable:
     - if: SOC_BLE_SUPPORTED == 1

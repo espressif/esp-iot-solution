@@ -229,6 +229,7 @@ typedef struct svc_uuid_t {
     struct chr_uuid_list chrs;
 #endif
     esp_ble_conn_svc_t svc;
+    uint16_t *chr_handles;                              /* Characteristic value handles filled after GATT register */
 } svc_uuid_t;
 SLIST_HEAD(svc_uuid_list_t, svc_uuid_t);
 
@@ -274,6 +275,7 @@ typedef struct esp_ble_conn_link_t {
     SemaphoreHandle_t semaphore;
     QueueHandle_t queue;
     esp_err_t last_read_rc;
+    esp_err_t last_notify_rc;
 #if MYNEWT_VAL(BLE_SM_SC)
     struct ble_sm_sc_oob_data sc_oob_local_store;   /* Per-link local SC OOB backing storage */
     struct ble_sm_sc_oob_data sc_oob_remote_store;  /* Per-link peer SC OOB backing storage */
@@ -534,6 +536,7 @@ static esp_ble_conn_link_t *esp_ble_conn_link_add(uint16_t conn_handle, const bl
     link->gatt_mtu = GATT_DEF_BLE_MTU_SIZE;
     link->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
     link->last_read_rc = ESP_OK;
+    link->last_notify_rc = ESP_OK;
     link->refcount = 0;
     link->removed = false;
     link->peer_addr_type = peer_addr->type;
@@ -1725,6 +1728,87 @@ static esp_ble_conn_character_t *esp_ble_conn_find_character_with_uuid(const ble
     return NULL;
 }
 
+static esp_ble_conn_character_t *esp_ble_conn_find_character_with_handle(uint16_t attr_handle)
+{
+    svc_uuid_t *svc_uuid = NULL;
+
+    if (!s_conn_session || attr_handle == 0) {
+        return NULL;
+    }
+
+    SLIST_FOREACH(svc_uuid, &s_conn_session->uuid_list, next) {
+        if (!svc_uuid->chr_handles) {
+            continue;
+        }
+        for (int i = 0; i < svc_uuid->svc.nu_lookup_count; i++) {
+            if (svc_uuid->chr_handles[i] == attr_handle) {
+                return &svc_uuid->svc.nu_lookup[i];
+            }
+        }
+    }
+
+    return NULL;
+}
+
+static size_t esp_ble_conn_svc_list_count(void)
+{
+    size_t n = 0;
+    svc_uuid_t *svc_uuid = NULL;
+
+    if (!s_conn_session) {
+        return 0;
+    }
+
+    SLIST_FOREACH(svc_uuid, &s_conn_session->uuid_list, next) {
+        n++;
+    }
+
+    return n;
+}
+
+static svc_uuid_t *esp_ble_conn_svc_at_from_oldest(size_t index)
+{
+    size_t n;
+    size_t from_head;
+    size_t i = 0;
+    svc_uuid_t *svc_uuid = NULL;
+
+    n = esp_ble_conn_svc_list_count();
+    if (index >= n) {
+        return NULL;
+    }
+
+    from_head = n - 1 - index;
+    SLIST_FOREACH(svc_uuid, &s_conn_session->uuid_list, next) {
+        if (i == from_head) {
+            return svc_uuid;
+        }
+        i++;
+    }
+
+    return NULL;
+}
+
+static void esp_ble_conn_chr_set_handle(esp_ble_conn_character_t *chr, uint16_t attr_handle)
+{
+    svc_uuid_t *svc_uuid = NULL;
+
+    if (!chr || !s_conn_session) {
+        return;
+    }
+
+    SLIST_FOREACH(svc_uuid, &s_conn_session->uuid_list, next) {
+        if (!svc_uuid->svc.nu_lookup || !svc_uuid->chr_handles) {
+            continue;
+        }
+        if (chr >= svc_uuid->svc.nu_lookup &&
+                chr < svc_uuid->svc.nu_lookup + svc_uuid->svc.nu_lookup_count) {
+            svc_uuid->chr_handles[(int)(chr - svc_uuid->svc.nu_lookup)] = attr_handle;
+            return;
+        }
+    }
+}
+
 static attr_mbuf_t *esp_ble_conn_find_attr_with_uuid(uint8_t type, esp_ble_conn_uuid_t uuid)
 {
     attr_mbuf_t *attr_mbuf = NULL;
@@ -2587,11 +2671,16 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             esp_ble_conn_link_t *notify_link = esp_ble_conn_link_find_by_handle(event->notify_tx.conn_handle);
             if (notify_link && notify_link->semaphore) {
                 if (event->notify_tx.indication) {
-                    if ((event->notify_tx.status == BLE_HS_EDONE) || (event->notify_tx.status == BLE_HS_ETIMEOUT)) {
+                    if (event->notify_tx.status == BLE_HS_EDONE) {
+                        notify_link->last_notify_rc = ESP_OK;
+                        xSemaphoreGive(notify_link->semaphore);
+                    } else if (event->notify_tx.status == BLE_HS_ETIMEOUT) {
+                        notify_link->last_notify_rc = ESP_ERR_TIMEOUT;
                         xSemaphoreGive(notify_link->semaphore);
                     }
                 } else {
                     if (event->notify_tx.status == 0) {
+                        notify_link->last_notify_rc = ESP_OK;
                         xSemaphoreGive(notify_link->semaphore);
                     }
                 }
@@ -2677,19 +2766,20 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             /* Find characteristic by handle */
             attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(char_handle);
             if (attr_mbuf) {
-                /* Find characteristic by UUID */
-                esp_ble_conn_character_t *chr = NULL;
+                esp_ble_conn_character_t *chr = esp_ble_conn_find_character_with_handle(char_handle);
                 svc_uuid_t *svc_uuid = NULL;
 
-                SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
-                    for (int i = 0; i < svc_uuid->svc.nu_lookup_count; i++) {
-                        if (BLE_UUID_CMP(attr_mbuf->type, svc_uuid->svc.nu_lookup[i].uuid, attr_mbuf->uuid)) {
-                            chr = &svc_uuid->svc.nu_lookup[i];
+                if (!chr) {
+                    SLIST_FOREACH(svc_uuid, &conn_session->uuid_list, next) {
+                        for (int i = 0; i < svc_uuid->svc.nu_lookup_count; i++) {
+                            if (BLE_UUID_CMP(attr_mbuf->type, svc_uuid->svc.nu_lookup[i].uuid, attr_mbuf->uuid)) {
+                                chr = &svc_uuid->svc.nu_lookup[i];
+                                break;
+                            }
+                        }
+                        if (chr) {
                             break;
                         }
-                    }
-                    if (chr) {
-                        break;
                     }
                 }
 
@@ -2818,7 +2908,14 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
 
     uint8_t *outbuf = NULL;
     uint16_t outlen = 0;
-    esp_ble_conn_character_t *chr = esp_ble_conn_find_character_with_uuid(ctxt->chr->uuid);
+    esp_ble_conn_character_t *chr = NULL;
+
+    if (ctxt->op == BLE_GATT_ACCESS_OP_READ_CHR || ctxt->op == BLE_GATT_ACCESS_OP_WRITE_CHR) {
+        chr = (esp_ble_conn_character_t *)arg;
+    }
+    if (!chr && ctxt->chr) {
+        chr = esp_ble_conn_find_character_with_uuid(ctxt->chr->uuid);
+    }
 
     switch (ctxt->op) {
         case BLE_GATT_ACCESS_OP_READ_CHR:
@@ -2849,6 +2946,9 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
                 if (chr && chr->uuid_fn) {
                     static const uint8_t empty_byte;
                     (void)chr->uuid_fn(&empty_byte, 0, &outbuf, &outlen, NULL, &att_status);
+                    if (outbuf) {
+                        free(outbuf);
+                    }
                     return att_status;
                 }
                 ESP_LOGD(TAG, "Empty packet");
@@ -3046,8 +3146,12 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
                  ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf),
                  ctxt->chr.def_handle,
                  ctxt->chr.val_handle);
-        chr = esp_ble_conn_find_character_with_uuid(ctxt->chr.chr_def->uuid);
+        chr = (esp_ble_conn_character_t *)ctxt->chr.chr_def->arg;
+        if (!chr) {
+            chr = esp_ble_conn_find_character_with_uuid(ctxt->chr.chr_def->uuid);
+        }
         if (chr) {
+            esp_ble_conn_chr_set_handle(chr, ctxt->chr.val_handle);
             if (chr->uuid_fn) {
                 chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status);
             }
@@ -3139,12 +3243,13 @@ ble_gatt_add_char_dsc(struct ble_gatt_chr_def *characteristics, esp_ble_conn_cha
  * is already allocated while adding corresponding service. Returns 0 on
  * success and returns ESP_ERR_NO_MEM on failure to add characteristic. */
 static int
-ble_gatt_add_characteristics(struct ble_gatt_chr_def *characteristics, esp_ble_conn_character_t *nu_lookup, int index)
+ble_gatt_add_characteristics(struct ble_gatt_chr_def *characteristics, svc_uuid_t *svc_uuid, int index)
 {
     /* Allocate space for the characteristics UUID as well */
     ble_uuid_t *ble_uuid = NULL;
     uint8_t     ble_uuid_len = 0;
     ble_uuid_any_t uuid_any;
+    esp_ble_conn_character_t *nu_lookup = svc_uuid->svc.nu_lookup;
     switch (nu_lookup[index].type) {
         case BLE_CONN_UUID_TYPE_16:
             ble_uuid_init_from_buf(&uuid_any, &nu_lookup[index].uuid.uuid16, 2);
@@ -3173,6 +3278,8 @@ ble_gatt_add_characteristics(struct ble_gatt_chr_def *characteristics, esp_ble_c
     memcpy((void *)(characteristics + index)->uuid, ble_uuid, ble_uuid_len);
     (characteristics + index)->access_cb = esp_ble_conn_access_cb;
     (characteristics + index)->flags = nu_lookup[index].flag;
+    (characteristics + index)->arg = &nu_lookup[index];
+    (characteristics + index)->val_handle = &svc_uuid->chr_handles[index];
 
     return ESP_OK;
 }
@@ -3259,7 +3366,7 @@ esp_ble_conn_populate_gatt_db(esp_ble_conn_session_t *conn_session)
 
         for (int i = 0 ; i < svc_uuid->svc.nu_lookup_count; i++) {
             /* GATT: Add characteristics to the service at index no. i*/
-            rc = ble_gatt_add_characteristics((void *)gatt_svr_svcs[index].characteristics, svc_uuid->svc.nu_lookup, i);
+            rc = ble_gatt_add_characteristics((void *)gatt_svr_svcs[index].characteristics, svc_uuid, i);
             if (rc != 0) {
                 ESP_LOGE(TAG, "Error adding GATT characteristic !!!");
                 return rc;
@@ -3718,6 +3825,8 @@ esp_err_t esp_ble_conn_deinit(void)
     while (!SLIST_EMPTY(&conn_session->uuid_list)) {
         svc_uuid = SLIST_FIRST(&conn_session->uuid_list);
         SLIST_REMOVE_HEAD(&conn_session->uuid_list, next);
+        free(svc_uuid->chr_handles);
+        svc_uuid->chr_handles = NULL;
         esp_ble_conn_del_svc(&svc_uuid->svc);
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
         esp_ble_conn_svc_uuid_del(svc_uuid);
@@ -6090,6 +6199,70 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
     return rc;
 }
 
+static esp_err_t esp_ble_conn_tx_by_attr(uint16_t conn_handle, uint16_t attr_handle,
+                                         const uint8_t *data, uint16_t data_len, bool indicate)
+{
+    esp_err_t rc = ESP_OK;
+    struct os_mbuf *om = NULL;
+    esp_ble_conn_link_t *link = NULL;
+    esp_ble_conn_session_t *conn_session = s_conn_session;
+
+    if (!conn_session || attr_handle == 0 ||
+        conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX ||
+        (data_len > 0 && !data)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    link = esp_ble_conn_link_find_by_handle(conn_handle);
+    if (!link) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    while (xSemaphoreTake(link->semaphore, 0) == pdPASS) {}
+    link->last_notify_rc = ESP_OK;
+
+    om = ble_hs_mbuf_from_flat(data, data_len);
+    if (!om) {
+        ESP_LOGE(TAG, "Failed to allocate mbuf for %s", indicate ? "indicate" : "notify");
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_NO_MEM;
+    }
+
+    if (indicate) {
+        rc = ble_gattc_indicate_custom(conn_handle, attr_handle, om);
+    } else {
+        rc = ble_gattc_notify_custom(conn_handle, attr_handle, om);
+    }
+
+    if (!rc) {
+        ESP_LOGD(TAG, "%s sent, attr_handle = %d", indicate ? "Indicate" : "Notify", attr_handle);
+        if (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
+            rc = ESP_ERR_TIMEOUT;
+        } else if (indicate) {
+            rc = link->last_notify_rc;
+        } else {
+            rc = ESP_OK;
+        }
+    } else {
+        ESP_LOGE(TAG, "Error in sending %s, rc = %d", indicate ? "indicate" : "notify", rc);
+    }
+
+    esp_ble_conn_link_unref(link);
+    return rc;
+}
+
+esp_err_t esp_ble_conn_notify_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                      const uint8_t *data, uint16_t data_len)
+{
+    return esp_ble_conn_tx_by_attr(conn_handle, attr_handle, data, data_len, false);
+}
+
+esp_err_t esp_ble_conn_indicate_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                        const uint8_t *data, uint16_t data_len)
+{
+    return esp_ble_conn_tx_by_attr(conn_handle, attr_handle, data, data_len, true);
+}
+
 esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *inbuff)
 {
     if (!inbuff) {
@@ -6397,6 +6570,52 @@ esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_de
     return rc;
 }
 
+esp_err_t esp_ble_conn_get_chr_handle(uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
+                                      uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
+                                      uint8_t inst, uint16_t *out_handle)
+{
+    size_t svc_count;
+    uint8_t seen = 0;
+
+    if (!s_conn_session || !out_handle || BLE_UUID_TYPE(svc_type) || BLE_UUID_TYPE(chr_type)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    svc_count = esp_ble_conn_svc_list_count();
+    for (size_t s = 0; s < svc_count; s++) {
+        svc_uuid_t *svc = esp_ble_conn_svc_at_from_oldest(s);
+
+        if (!svc || svc->svc.type != svc_type) {
+            continue;
+        }
+        if (!(BLE_UUID_CMP(svc_type, svc->svc.uuid, svc_uuid))) {
+            continue;
+        }
+
+        for (int i = 0; i < svc->svc.nu_lookup_count; i++) {
+            esp_ble_conn_character_t *chr = &svc->svc.nu_lookup[i];
+
+            if (chr->type != chr_type) {
+                continue;
+            }
+            if (!(BLE_UUID_CMP(chr_type, chr->uuid, chr_uuid))) {
+                continue;
+            }
+            if (seen == inst) {
+                uint16_t handle = (svc->chr_handles) ? svc->chr_handles[i] : 0;
+                if (handle == 0) {
+                    return ESP_ERR_INVALID_STATE;
+                }
+                *out_handle = handle;
+                return ESP_OK;
+            }
+            seen++;
+        }
+    }
+
+    return ESP_ERR_NOT_FOUND;
+}
+
 esp_err_t esp_ble_conn_add_svc(const esp_ble_conn_svc_t *svc)
 {
     svc_uuid_t *svc_uuid = NULL;
@@ -6421,6 +6640,15 @@ esp_err_t esp_ble_conn_add_svc(const esp_ble_conn_svc_t *svc)
     if (!svc_uuid->svc.nu_lookup) {
         free(svc_uuid);
         return ESP_ERR_NO_MEM;
+    }
+
+    if (svc->nu_lookup_count > 0) {
+        svc_uuid->chr_handles = calloc(svc->nu_lookup_count, sizeof(uint16_t));
+        if (!svc_uuid->chr_handles) {
+            free(svc_uuid->svc.nu_lookup);
+            free(svc_uuid);
+            return ESP_ERR_NO_MEM;
+        }
     }
 
     svc_uuid->svc.type = svc->type;
@@ -6457,6 +6685,8 @@ esp_err_t esp_ble_conn_remove_svc(const esp_ble_conn_svc_t *svc)
     SLIST_FOREACH_SAFE(svc_uuid, &conn_session->uuid_list, next, svc_uuid_tmp) {
         if (BLE_UUID_CMP(svc->type, svc_uuid->svc.uuid, svc->uuid)) {
             SLIST_REMOVE(&conn_session->uuid_list, svc_uuid, svc_uuid_t, next);
+            free(svc_uuid->chr_handles);
+            svc_uuid->chr_handles = NULL;
             esp_ble_conn_del_svc(&svc_uuid->svc);
             free(svc_uuid);
             break;

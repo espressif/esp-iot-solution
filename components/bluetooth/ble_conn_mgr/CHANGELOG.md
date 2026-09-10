@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.3.1 - 2026.09.09
+
+### Enhancements:
+
+- Add `esp_ble_conn_get_chr_handle()` to resolve a local characteristic value handle by service UUID, characteristic UUID, and instance
+- Add `esp_ble_conn_notify_by_attr_handle()` and `esp_ble_conn_indicate_by_attr_handle()` to send by characteristic value handle; existing UUID-based notify/read/write APIs are unchanged
+
 ## v1.3.0 - 2026.09.02
 
 ### Enhancements:
