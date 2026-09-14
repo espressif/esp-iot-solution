@@ -37,6 +37,7 @@ The component boundary is intentionally narrow.
 - `include/`: public headers
 - `private_include/`: internal private headers
 - `src/`: detector implementations and shared detector runtime
+- `test_apps/`: short runnable detector test apps for knob, space-switch, and inference, each using offline input and local leak checks
 
 ## Public Headers
 
@@ -94,6 +95,7 @@ The inference detector separates compile-time model facts from runtime policy.
 - `input_length`
 - `input_channels`
 - `output_count`
+- `model_preprocess`
 - `model_init`
 - `model_predict`
 
@@ -102,11 +104,20 @@ The inference detector separates compile-time model facts from runtime policy.
 - `model`
 - `window_step`
 - `sample_queue_len`
+- `input_source`
 
 Applications still feed one `imu_gesture_sample_t` at a time in time order.
 
-The detector owns internal window assembly and passes the time-ordered sample
-window directly to `model_predict()` flattened in `[L, C]` order.
+The detector owns raw window assembly and derives each `[C]` row from
+`input_source`:
+
+- `IMU_GESTURE_INFERENCE_INPUT_GYRO`: use gyroscope channels only
+- `IMU_GESTURE_INFERENCE_INPUT_ACCEL`: use accelerometer channels only
+- `IMU_GESTURE_INFERENCE_INPUT_ACCEL_GYRO`: use accelerometer first, then gyroscope
+
+If `model_preprocess` is not `NULL`, the detector calls it once on the full
+assembled `[L, C]` window before `model_predict()`. If it is `NULL`, the raw
+assembled window is passed to `model_predict()` directly.
 
 The detector caches the latest successful inference result, and applications can read it through `imu_gesture_inference_detector_get_last_result()`.
 
@@ -188,3 +199,15 @@ Knob direction is determined from the configured primary gyro axis and `cw_sign`
 Knob posture gating uses the absolute value of the computed plane angle, and the `atan2(accel[first], accel[second])` axis pair can be configured explicitly.
 
 For one-shot inference, the application owns capture start/stop policy and buffer lifetime. The detector only evaluates the provided full sample window.
+
+## Examples
+
+The component now keeps its detector-behavior demos under `test_apps/` instead
+of a component-local behavior test app.
+
+- `test_apps/knob/`
+  Offline recorded knob replay example with a leak check.
+- `test_apps/space_switch/`
+  Offline recorded space-switch replay example with a leak check.
+- `test_apps/inference/`
+  Minimal inference detector example with copied offline model/test input and a leak check.
