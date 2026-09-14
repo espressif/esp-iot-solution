@@ -21,7 +21,9 @@ extern "C" {
  * @brief Create a new CST9220 touch driver
  *
  * @note The I2C panel IO must be initialized before calling this function.
- * @note The driver automatically detects and handles legacy and HYN212 report protocols.
+ * @note Each report is read from `0xD000` in one burst on the `D101` page.
+ *       Current firmware is acknowledged with `0xAB`; the confirmed legacy
+ *       project skips ACK.
  * @note Sleep control is available through the common esp_lcd_touch sleep APIs.
  *
  * @param io LCD panel IO handle created by `esp_lcd_new_panel_io_i2c()`
