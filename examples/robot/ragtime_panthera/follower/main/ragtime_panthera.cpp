@@ -4,28 +4,30 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <stdio.h>
+
 #include <iostream>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "argtable3/argtable3.h"
-#include "esp_log.h"
-#include "esp_err.h"
-#include "esp_console.h"
-#include "esp_app_desc.h"
-#include "nvs_flash.h"
-#include "sdkconfig.h"
-#include "dm_motor.h"
-#include "kinematic.h"
-#include "ui.h"
-#include "usb_camera.h"
+
 #include "app_lcd.h"
 #include "app_manager.h"
 #include "app_serial_flasher.h"
+#include "argtable3/argtable3.h"
+#include "dm_motor.h"
+#include "esp_app_desc.h"
+#include "esp_console.h"
+#include "esp_err.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "kinematic.h"
+#include "nvs_flash.h"
+#include "sdkconfig.h"
+#include "ui.h"
+#include "usb_camera.h"
 #if CONFIG_CONSOLE_CONTROL
 #include "app_console.h"
 #endif
 
-static const char *TAG = "main";
+static const char* TAG = "main";
 
 damiao::Motor_Control* motor_control = nullptr;
 
@@ -38,13 +40,13 @@ extern "C" void app_main(void)
 
 #if CONFIG_ENABLE_UPDATE_C6_FLASH
     // Initialize the serial flasher
-    const loader_esp32_config_t config = {
+    const app_serial_flasher_config_t config = {
         .baud_rate = 115200,
         .uart_port = UART_NUM_1,
         .uart_rx_pin = GPIO_NUM_6,
         .uart_tx_pin = GPIO_NUM_5,
-        .reset_trigger_pin = GPIO_NUM_54,
-        .gpio0_trigger_pin = GPIO_NUM_53,
+        .reset_pin = GPIO_NUM_54,
+        .boot_pin = GPIO_NUM_53,
     };
 
     ret = app_serial_flasher_init(&config);
@@ -71,6 +73,7 @@ extern "C" void app_main(void)
     }
     ESP_LOGI(TAG, "Motor control initialized successfully");
 
+    // Full arm: J1-J4 (DM4340), J5/J6 wrist (DM4310), gripper (DMH3510).
     damiao::Motor* motor1 = new damiao::Motor(damiao::DM4340, 0x01, 0x11);
     damiao::Motor* motor2 = new damiao::Motor(damiao::DM4340, 0x02, 0x12);
     damiao::Motor* motor3 = new damiao::Motor(damiao::DM4340, 0x03, 0x13);
@@ -88,10 +91,10 @@ extern "C" void app_main(void)
     motor_control->disable_all_motors();
 
     // Initialize the LCD
-    app_lcd_init();
-    bsp_display_lock(0);
+    ESP_ERROR_CHECK(app_lcd_init());
+    app_lcd_lock(0);
     ui_panthera_grasp_init();
-    bsp_display_unlock();
+    app_lcd_unlock();
 
     // Initialize the USB camera
     usb_camera_init(640, 480);

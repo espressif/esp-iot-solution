@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -16,6 +16,9 @@
  * @return esp_err_t ESP_OK on success, other error code on failure
  */
 esp_err_t usb_camera_init(size_t width, size_t height);
+
+/** Return whether the camera stream is running. */
+bool usb_camera_is_streaming(void);
 
 /**
  * @brief Get the frame from the USB camera

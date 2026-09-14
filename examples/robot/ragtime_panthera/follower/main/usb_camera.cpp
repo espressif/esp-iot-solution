@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -457,8 +457,10 @@ void uvc_host_driver_event_cb(const uvc_host_driver_event_data_t *event, void *u
 
     if (g_uvc_dev != NULL) {
         ESP_LOGI(TAG, "Creating uvc_task for new device");
-        // Create uvc_task on CPU 1 with priority 7 to ensure it can run
-        BaseType_t ret = xTaskCreatePinnedToCore(uvc_task, "uvc_task", 4096, NULL, 7, NULL, 1);
+        // USB/UVC on core 1 (high prio). LCD decode/refresh stays on core 0.
+        // Core 0, with the rest of the USB host, the JPEG decoder and the LCD.
+        // See the note above usb_lib_task creation below.
+        BaseType_t ret = xTaskCreatePinnedToCore(uvc_task, "uvc_task", 4096, NULL, 7, NULL, 0);
         if (ret != pdPASS) {
             ESP_LOGE(TAG, "Failed to create uvc_task");
             free(g_uvc_dev);
@@ -479,19 +481,35 @@ esp_err_t usb_camera_init(size_t width, size_t height)
     cam_config.desired_width = width;
     cam_config.desired_height = height;
 
-    BaseType_t task_created = xTaskCreatePinnedToCore(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), 15, NULL, 1);
+    // Everything that issues cache-sync operations (USB host ISR and tasks,
+    // JPEG decoder, LCD flush) and everything that pushes heavy memory traffic
+    // (esp-dl inference) must live on the SAME core. On the ESP32-P4, a cache
+    // invalidate/writeback issued from one core occasionally makes the OTHER
+    // core's concurrent access to a valid address fail with a load/store
+    // access fault at 64-byte-line granularity. esp_cache_msync's spinlock
+    // cannot cover it because the victim access is outside any lock. With the
+    // camera streaming this panicked ~12x/min from arbitrary code; with all of
+    // it on core 0 it ran 180 s clean. Core 1 keeps control, CAN and motors.
+    // The USB ISR follows the core that calls usb_host_install(), i.e. this task.
+    BaseType_t task_created = xTaskCreatePinnedToCore(usb_lib_task, "usb_lib", 4096, xTaskGetCurrentTaskHandle(), 15, NULL, 0);
     assert(task_created == pdPASS);
     ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
     uvc_host_driver_config_t default_driver_config = {};
     default_driver_config.driver_task_stack_size = 5 * 1024;
     default_driver_config.driver_task_priority = 16;
-    default_driver_config.xCoreID = 1;
+    default_driver_config.xCoreID = 0;  // same core as the USB host; see usb_lib_task note
     default_driver_config.create_background_task = true;
     default_driver_config.event_cb = uvc_host_driver_event_cb;
     default_driver_config.user_ctx = &cam_config;
     ESP_ERROR_CHECK(uvc_host_install(&default_driver_config));
     return ESP_OK;
+}
+
+bool usb_camera_is_streaming(void)
+{
+    uvc_dev_t *dev = g_uvc_dev;
+    return dev != NULL && dev->is_streaming && dev->frame_queue != NULL;
 }
 
 uvc_host_frame_t *usb_camera_get_frame(void)

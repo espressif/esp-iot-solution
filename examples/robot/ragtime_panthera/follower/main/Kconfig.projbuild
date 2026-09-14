@@ -12,14 +12,14 @@ menu "Panthera Follower Configuration"
         config CAN_TX_NUM
             int "CAN TX Pin"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-            default 7
+            default 21
             help
                 TX Pin of the CAN Transceiver
 
         config CAN_RX_NUM
             int "CAN RX Pin"
             range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-            default 8
+            default 22
             help
                 RX Pin of the CAN Transceiver
     endmenu
@@ -100,6 +100,21 @@ menu "Panthera Follower Configuration"
             help
                 Set to 1 to invert the angle received from ESP-NOW for servo 6 (gripper) (multiplied by -1), 0 to disable
 
+    endmenu
+
+    menu "Grasp Tuning"
+        config GRIPPER_HOLD_SQUEEZE
+            int "Hold squeeze past contact (x1000 radians)"
+            default 30
+            help
+                How far past the contact point the gripper squeezes to hold, in radians * 1000 (e.g. 30 = 0.030 rad).
+                Larger values grip harder but risk crushing soft objects.
+
+        config LIFT_M
+            int "Lift height after grasp (x1000 metres)"
+            default 100
+            help
+                How high the arm lifts straight up after closing the gripper, in metres * 1000 (e.g. 100 = 0.100 m).
     endmenu
 
     menu "Receiver Serial Flash Config"

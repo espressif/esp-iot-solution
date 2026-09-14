@@ -2150,7 +2150,7 @@ build_example_ragtime_panthera_follower:
       optional: false
   parallel:
     matrix:
-      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.1
   before_script:
     - mkdir -p ${EXAMPLE_DIR}/spiffs
     - mv ${EXAMPLE_DIR}/receiver/build/merged-binary.bin ${EXAMPLE_DIR}/spiffs/merged-binary.bin

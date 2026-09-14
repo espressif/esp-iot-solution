@@ -14,7 +14,7 @@ The Onboard Kinematics design of Ragtime Panthera is inspired by the [Matrix_and
 
 ### Onboard Vision Detection
 
-Based on [color_detect](https://github.com/espressif/esp-dl/tree/master/models/color_detect), the system can recognize target objects by color in real-time. The vision system processes JPEG frames from a USB camera and performs color detection. You can also use [esp-detection](https://github.com/espressif/esp-detection) to train custom object detection models.
+Based on [ESP-DL ESPDet-Pico](https://github.com/espressif/esp-dl/tree/master/models/cat_detect) (same preprocess/postprocess as `cat_detect`), the system runs an onboard greencube detector (`greencube_v2_224_esp32p4.espdl`) on JPEG frames from a USB camera. Train custom models with [esp-detection](https://github.com/espressif/esp-detection).
 
 ### Teleoperation
 
@@ -23,6 +23,14 @@ The project operates as a follower device, synchronizing joint angle information
 ### Autonomous Grasping
 
 Combining vision detection, kinematics computation, and motor control, the system can autonomously detect, locate, and grasp target objects.
+
+### Zero Gravity Mode
+
+After **Enable**, the UI **Zero Gravity** switch puts registered arm joints (J1–J6) into MIT mode and runs ~200 Hz gravity feedforward with light MIT velocity damping, matching the Ragtime Panthera `ZeroGraMode` approach. The gripper stays in position mode; any unregistered joint is treated as fixed at zero. Zero-G is mutually exclusive with Sync / Grasp / Go Zero. Support the arm when first enabling; turn Zero-G off before position moves.
+
+### Motor Fault Handling
+
+The DM motor driver reports motor faults and feedback timeouts. On fault or motion timeout the follower aborts sync/grasp commands and resets the UI switches, but leaves motors enabled so the arm keeps holding torque. Use the Enable switch (or `panthera_enable off`) only when a hard disable is intentionally required. CAN bus-off recovery is automatic. Use `panthera_read_position` or `panthera_motor` to inspect faults and `panthera_clear_error` to clear them.
 
 ## Hardware Requirements
 
@@ -38,8 +46,8 @@ Combining vision detection, kinematics computation, and motor control, the syste
 
 ### Prerequisites
 
-- [ESP-IDF Release V5.5](https://github.com/espressif/esp-idf/tree/release/v5.5)
-- Python 3.8+ (for calibration tools)
+- [ESP-IDF Release v6.1](https://github.com/espressif/esp-idf/tree/release/v6.1)
+- Python 3.10+ and [uv](https://github.com/astral-sh/uv) (for calibration and sim tools)
 
 ### Quick Start
 
@@ -111,56 +119,74 @@ robot = DHRobot(
 
 ## Vision Calibration
 
-This project uses an **eye-to-hand** configuration, meaning the camera is fixed at a specific position separate from the robotic arm. To enable the robotic arm to grasp objects detected in the camera view, you need to calibrate the transformation matrix that converts pixel coordinates to real-world spatial coordinates.
+The camera is fixed separately from the arm (eye-to-hand). A 3x3 affine matrix maps pixel coordinates to arm-frame positions. Re-calibrate whenever the camera or arm base moves. Until calibrated the matrix is zeros and every grasp aims at the origin.
 
-### Calibration Process
+### Setup
 
-1. **Collect Calibration Points**: Move the robotic arm to known spatial positions and record:
-   - **B**: The end-effector position in real-world coordinates (meters)
-   - **A**: The corresponding pixel coordinates in the camera image
+Requires [uv](https://github.com/astral-sh/uv). No setup step; deps are declared inline in each script.
 
-2. **Generate Transformation Matrix**: Use the provided calibration script:
+### Steps
+
+1. **Measure tag positions.** Place an AprilTag 36h11 board (ids 0-8) on the table. Measure each tag in the arm's frame (`panthera_fk` prints the same frame) and fill in the `WORLD` table in `tools/coordinate_calib.py`. Keep all tags at the same height.
+
+2. **Capture pixel positions.**
    ```bash
-   python3 tools/generate_vision_matrix.py
+   uv run tools/apriltag_capture.py --size 640x480 --calib-out calib_pixels.json
+   ```
+   Must be 640x480 (what the firmware streams). The camera modes are different fields of view, not crops.
+
+3. **Fit the matrix.**
+   ```bash
+   uv run tools/coordinate_calib.py --pixels calib_pixels.json
+   ```
+   Check the per-tag errors. Aim for RMS under 10 mm. Large errors are usually wrong hand measurements.
+
+4. **Store on device.** Paste the printed command into the console. It takes effect immediately (no reboot needed):
+   ```
+   panthera_set_vision_matrix -1 <m1> -2 <m2> ... -9 <m9>
    ```
 
-3. **Set the Matrix**: Use the console command to store the calibration matrix:
+5. **Verify.**
    ```bash
-   panthera_set_vision_matrix -1 <m1> -2 <m2> -3 <m3> -4 <m4> -5 <m5> -6 <m6> -7 <m7> -8 <m8> -9 <m9>
+   uv run tools/coordinate_calib.py --map 248.7,226.4
    ```
+   Or on the device: `panthera_goto_pixel -u 248.7 -v 226.4`
 
-### Calibration Tips
+### Troubleshooting
 
-- Collect at least 4-6 calibration points for better accuracy
-- Ensure calibration points are well-distributed across the workspace
-- Re-calibrate if the camera position changes
+| Symptom | Fix |
+|---------|-----|
+| `numpy is missing` | Wrong python. Use the one with the deps installed. |
+| `cannot open /dev/video0` | Camera off the bus or held by another program. |
+| Few tags found | Move closer, add light, keep `--decimate` at 1.0. |
+| `WARNING: sampled at 1280x720` | Re-capture at `--size 640x480`. |
+| One tag has huge error | Re-measure that tag's world position. |
 
 ## Console Control
 
 When `CONSOLE_CONTROL` is enabled in the project configuration, you can control the robotic arm directly from the terminal. The following commands are available:
 
+Every UI control has a console command, and both run the same code. `panthera_enable`, `panthera_sync`, `panthera_zero_g`, `panthera_grasp` and `panthera_goto_zero` each drive the switch or button on screen, apply the same guards, and leave the firmware in the same state as a touch would. The console and the screen cannot disagree.
+
 ### Basic Control Commands
 
 | Command | Description | Usage |
 |---------|-------------|-------|
-| `panthera_enable` | Enable or disable all motors | `panthera_enable <on\|off>` |
-| `panthera_goto_zero` | Move all joints to zero position | `panthera_goto_zero` |
-| `panthera_set_zero` | Set current position as zero for all motors | `panthera_set_zero` |
+| `panthera_enable` | Enable or disable all motors, exactly as the UI **Enable** switch does | `panthera_enable <on\|off>` |
+| `panthera_goto_zero` | Move all joints to zero position, as the UI **Go Zero** button does | `panthera_goto_zero` |
+| `panthera_sync` | Enable or disable ESP-NOW leader sync, as the UI **Sync** switch does | `panthera_sync <on\|off>` |
+| `panthera_zero_g` | Enter or leave Zero Gravity, as the UI **Zero Gravity** switch does | `panthera_zero_g <on\|off>` |
+| `panthera_grasp` | Grasp the target the camera currently sees, as the UI **Grasp** button does | `panthera_grasp` |
+| `panthera_set_zero` | Set current position as zero for all motors (**console only**, not on UI — dangerous) | `panthera_set_zero` |
 | `panthera_goto_position` | Move end-effector to specified Cartesian coordinates | `panthera_goto_position -x <x> -y <y> -z <z>` |
-| `panthera_read_position` | Read all joints position info | `panthera_read_position` |
-
-### Vision Matrix Commands
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `panthera_set_vision_matrix` | Set the vision calibration matrix | `panthera_set_vision_matrix -1 <m1> -2 <m2> ... -9 <m9>` |
-| `panthera_get_vision_matrix` | Read and display the current calibration matrix | `panthera_get_vision_matrix` |
-
-### Vision Commands
-
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `panthera_change_color` | Change color detection HSV range | `panthera_change_color --h_min <H> --s_min <S> --v_min <V> --h_max <H> --s_max <S> --v_max <V>`<br>Examples:<br>• Red: `--h_min 170 --s_min 100 --v_min 100 --h_max 10 --s_max 255 --v_max 255`<br>• Yellow: `--h_min 20 --s_min 100 --v_min 100 --h_max 35 --s_max 255 --v_max 255`<br>• Green: `--h_min 35 --s_min 100 --v_min 100 --h_max 85 --s_max 255 --v_max 255`<br>• Blue: `--h_min 100 --s_min 100 --v_min 100 --h_max 130 --s_max 255 --v_max 255` |
+| `panthera_goto_pixel` | Map an image pixel to a world position with the stored vision matrix and move there | `panthera_goto_pixel -u <u> -v <v> [-z <m>] [-n]` |
+| `panthera_read_position` | Read position, fault and online state of all joints | `panthera_read_position` |
+| `panthera_fk` | Forward kinematics from the current J1-J6 angles; disabled or missing joints count as 0 | `panthera_fk` |
+| `panthera_set_vision_matrix` | Store the 3x3 pixel-to-world matrix produced by calibration | `panthera_set_vision_matrix -1 <m1> ... -9 <m9>` |
+| `panthera_get_vision_matrix` | Print the stored vision matrix | `panthera_get_vision_matrix` |
+| `panthera_clear_error` | Clear error state of all motors (re-enable afterwards) | `panthera_clear_error` |
+| `panthera_gripper` | Show or set the gripper close position and contact torque grasp uses (saved to NVS) | `panthera_gripper [-c <rad>] [-t <Nm>]` |
+| `panthera_motor` | Control or inspect one registered motor | `panthera_motor -m <master_id> -a <enable\|disable\|clear\|zero\|status\|pos> [-p <rad>] [-v <rad/s>]` |
 
 ### Example Usage
 
@@ -168,17 +194,46 @@ When `CONSOLE_CONTROL` is enabled in the project configuration, you can control 
 # Enable motors
 panthera_enable on
 
+# Return every joint to its zero position
+panthera_goto_zero
+
+# Follow the leader arm, then stop following
+panthera_sync on
+panthera_sync off
+
+# Hand-guide the arm (support it first), then leave zero gravity
+panthera_zero_g on
+panthera_zero_g off
+
+# Grasp whatever the camera currently sees
+panthera_grasp
+
 # Move to a specific position (in meters)
 panthera_goto_position -x 0.3 -y 0.2 -z 0.1
+
+# Move to where an image pixel maps to, using the stored vision matrix
+panthera_goto_pixel -u 248.7 -v 226.4        # move there
+panthera_goto_pixel -u 248.7 -v 226.4 -n     # print the solution, do not move
+
+# Read the joints, then check where the arm thinks its tip is
+panthera_read_position
+panthera_fk
+
+# Tune how hard grasp closes the gripper (larger = tighter), then grasp again
+panthera_gripper -c 1.5
+panthera_gripper -t 0.4   # hold as soon as the jaws feel 0.4 Nm
+
+# Test a registered motor
+panthera_motor -m 0x11 -a enable
+panthera_motor -m 0x11 -a pos -p 0.5
+panthera_motor -m 0x11 -a status
+panthera_motor -m 0x11 -a disable
 
 # Set calibration matrix
 panthera_set_vision_matrix -1 -0.000002 -2 -0.001861 -3 0.867622 -4 -0.001776 -5 -0.000079 -6 0.450608 -7 0.000000 -8 -0.000000 -9 0.039700
 
 # Verify the matrix
 panthera_get_vision_matrix
-
-# Change color detection HSV range (example: green color)
-panthera_change_color --h_min 35 --s_min 100 --v_min 100 --h_max 85 --s_max 255 --v_max 255
 ```
 
 ## Project Configuration
@@ -193,10 +248,10 @@ Navigate to `(Top) → Panthera Follower Configuration` in `idf.py menuconfig` t
 
 Configure the communication interfaces:
 
-- **`CAN_TX_NUM`**: CAN transceiver TX pin (default: GPIO 24)
-- **`CAN_RX_NUM`**: CAN transceiver RX pin (default: GPIO 25)
+- **`CAN_TX_NUM`**: CAN transceiver TX pin (default: GPIO 21)
+- **`CAN_RX_NUM`**: CAN transceiver RX pin (default: GPIO 22)
 
-**Note**: Ensure these pins match your hardware connections for proper motor communication.
+**Note**: Ensure these pins match your hardware connections for proper motor communication. Do NOT share the CAN pins with the C6 serial link pins (`SERIAL_FLASH_TX/RX_NUM`, GPIO 5/6): installing the ESP-NOW receiver UART would re-mux shared pins and silently break CAN.
 
 ### Leader and Follower Gripper Mapping
 
@@ -245,8 +300,11 @@ idf.py fullclean
 
 ### Motors Not Responding
 
-- Verify CAN transceiver connections (TX/RX pins)
+- Verify CAN transceiver connections (TX/RX pins) and that the CAN pins do not collide with the C6 serial link pins
 - Check motor power supply
+- Verify the motor's MasterID is configured (e.g. 0x11) in the DM host tool — motors with MasterID 0x00 never send feedback
+- Use `panthera_motor -m <master> -a status` to check one motor's feedback age and fault state
+- A repeated "TWAI bus off" log means no node is ACKing frames (wiring/bitrate mismatch); recovery is automatic once the bus is healthy
 - Ensure motors are properly initialized via `panthera_enable on`
 
 ### Vision Detection Not Working
@@ -254,8 +312,6 @@ idf.py fullclean
 - Verify USB camera connection and power
 - Check camera resolution matches expected 640x480
 - Ensure calibration matrix is properly set
-- Adjust HSV color detection parameters if needed
-
 ### Kinematics Errors
 
 - Verify DH parameters match your hardware configuration
@@ -266,5 +322,5 @@ idf.py fullclean
 
 - [Ragtime Panthera](https://github.com/Ragtime-LAB/Ragtime_Panthera) - Original robotic arm project
 - [Matrix_and_Robotics_on_STM32](https://github.com/SJTU-RoboMaster-Team/Matrix_and_Robotics_on_STM32) - Kinematics implementation reference
-- [ESP-DL Color Detection](https://github.com/espressif/esp-dl/tree/master/models/color_detect) - Vision detection model
+- [ESP-DL Cat Detect / ESPDet-Pico](https://github.com/espressif/esp-dl/tree/master/models/cat_detect) - Detection pipeline mirrored by `greencube_detect`
 - [ESP-Detection](https://github.com/espressif/esp-detection) - Custom object detection training

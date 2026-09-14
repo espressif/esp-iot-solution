@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,8 +7,8 @@
 #include <cstdint>
 #include <cmath>
 
-#define DEG2RAD(x) (x * M_PI / 180)
-#define RAD2DEG(x) (x * 180 / M_PI)
+#define DEG2RAD(x) ((x) * M_PI / 180)
+#define RAD2DEG(x) ((x) * 180 / M_PI)
 
 struct Position {
     float x, y, z;
@@ -87,6 +87,8 @@ struct TransformMatrix {
         return data[row][col];
     }
 
+    TransformMatrix operator*(const TransformMatrix &other) const;
+
     void print() const;
 
     Position get_position() const;
@@ -98,30 +100,79 @@ struct TransformMatrix {
     void get_rotation_error(const TransformMatrix &target, float we[3]) const;
 };
 
+struct DHParam {
+    float theta;    /*!< Fixed part of the joint angle (rad) */
+    float d;        /*!< Link offset (m) */
+    float a;        /*!< Link length (m) */
+    float alpha;    /*!< Link twist (rad) */
+    float offset;   /*!< Joint angle offset added to the commanded angle (rad) */
+};
+
+struct JointLimit {
+    float min;      /*!< Lower joint limit (rad) */
+    float max;      /*!< Upper joint limit (rad) */
+};
+
+struct RobotConfig {
+    DHParam dh[6];
+    JointLimit limits[6];
+
+    static RobotConfig ragtime_panthera();
+};
+
+enum class IKStatus {
+    OK,             /*!< Converged: both position and rotation errors within tolerance */
+    NOT_CONVERGED,  /*!< Reached iteration/step-size limit before converging */
+    SINGULAR,       /*!< Jacobian is singular, cannot make progress */
+};
+
+const char *ik_status_to_string(IKStatus status);
+
+struct IKOptions {
+    float pos_tolerance = 5e-3f;    /*!< Position tolerance (m) */
+    float rot_tolerance = 1e-2f;    /*!< Rotation tolerance (rad) */
+    int max_iterations = 100;
+    float damping = 1e-4f;          /*!< Damped-least-squares lambda added to diag(J^T * J) */
+};
+
+struct IKResult {
+    IKStatus status;
+    Joint joints;       /*!< Best solution found; only trust it when status == OK */
+    float pos_error;    /*!< Final position error (m) */
+    float rot_error;    /*!< Final rotation error (rad) */
+    int iterations;
+
+    explicit operator bool() const
+    {
+        return status == IKStatus::OK;
+    }
+};
+
 class Kinematic {
 public:
     static constexpr int NUM_JOINTS = 6;
 
-    Kinematic();
+    Kinematic() : config_(RobotConfig::ragtime_panthera()) {}
+    explicit Kinematic(const RobotConfig &config) : config_(config) {}
     ~Kinematic() = default;
-    void solve_forward_kinematics(const Joint &joint, TransformMatrix &transform_matrix);
-    bool solve_inverse_kinematics(const TransformMatrix &transform_matrix, Joint &joint, float tolerance = 1e-4f, int max_iterations = 100);
-    float dh_matrix[6][5];
-    TransformMatrix calculate_dh_transform(int joint_index, float joint_angle);
-    void matrix_multiply(const TransformMatrix &a, const TransformMatrix &b, TransformMatrix &result);
+
+    /** Convert joint angles to an end-effector pose. */
+    TransformMatrix forward(const Joint &joint) const;
+
+    /** Solve IK from an initial seed; check the returned status before use. */
+    [[nodiscard]] IKResult solve_ik(const TransformMatrix &target, const Joint &seed, const IKOptions &options = {}) const;
+
+    const RobotConfig &config() const
+    {
+        return config_;
+    }
 
 private:
-    void calculate_jacobian(const Joint &joint, float jacobian[6][6]);
-    bool solve_linear_system(float jacobian[6][6], const float error[6], float solution[6], float step);
-    void add_regularization(float jacobian[6][6], float lambda);
-    float normalize_angle(float angle);
-    void matrix_inverse_6x6(const float input[6][6], float output[6][6]);
-    void matrix_multiply_6x6(const float a[6][6], const float b[6][6], float result[6][6]);
-    void matrix_transpose_6x6(const float input[6][6], float output[6][6]);
-    void matrix_vector_multiply_6x6(const float matrix[6][6], const float vector[6], float result[6]);
-    float calculate_determinant_6x6(const float matrix[6][6]);
-    float calculate_determinant_5x5(const float matrix[5][5]);
-    float calculate_determinant_4x4(const float matrix[4][4]);
-    float calculate_determinant_3x3(const float matrix[3][3]);
+    TransformMatrix dh_transform(int joint_index, float joint_angle) const;
+    void calculate_jacobian(const Joint &joint, float jacobian[6][6]) const;
+    void error_twist(const TransformMatrix &current, const TransformMatrix &target, float error[6]) const;
+    float apply_limits(int joint_index, float angle) const;
+    static bool solve_damped_least_squares(const float jacobian[6][6], const float error[6], float damping, float delta[6]);
 
+    RobotConfig config_;
 };

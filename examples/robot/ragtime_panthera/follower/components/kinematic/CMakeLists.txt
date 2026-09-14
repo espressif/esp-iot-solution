@@ -1,5 +1,4 @@
-
 idf_component_register(
-    SRC_DIRS "."
+    SRCS "kinematic.cpp" "gravity_comp.cpp"
     INCLUDE_DIRS "."
 )
