@@ -75,3 +75,5 @@ bq27220_config_t bq27220_cfg = {
 bq27220 = bq27220_create(&bq27220_cfg);
 
 ```
+
+During initialization, the driver verifies all non-learned fields in the configured battery profile. It skips CONFIG UPDATE when the stored profile matches, otherwise it writes the required data-memory ranges, waits for gauge reinitialization, verifies the complete profile, and seals the gauge. `bq27220_create()` returns `NULL` if communication, update, or verification fails.

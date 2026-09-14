@@ -1,0 +1,10 @@
+menu "BQ27220 Configuration"
+
+    config BQ27220_SEAL_SETTLE_MS
+        int "Seal settle time (ms)"
+        range 0 10000
+        default 2000
+        help
+            Time to wait after sealing before accessing the gauge again.
+
+endmenu
