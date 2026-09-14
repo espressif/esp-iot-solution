@@ -14,14 +14,12 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_touch.h"
 #include "esp_log.h"
-#include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "esp_lcd_touch_cst9220.h"
 
 #define CST9220_REG_REPORT              (0xD000)
-#define CST9220_REG_REPORT_CONTINUATION (0xD007)
 #define CST9220_REG_DEBUG_INFO_MODE     (0xD101)
 #define CST9220_REG_SLEEP_MODE          (0xD105)
 #define CST9220_REG_NORMAL_MODE         (0xD109)
@@ -30,19 +28,21 @@
 #define CST9220_REG_CHECKCODE           (0xD1FC)
 #define CST9220_REG_RESOLUTION          (0xD1F8)
 #define CST9220_REG_PROJECT_ID          (0xD204)
+#define CST9220_REG_INFO_CHIP_ID        (0xD224)
+#define CST9220_REG_INFO_CHECKCODE      (0xD228)
 
 #define CST9220_CHIP_ID                 (0x9220)
+#define CST9220_INFO_CHIP_MARKER        (0xCACA)
 #define CST9220_PROJECT_ID_LEGACY       (0x542F)
 #define CST9220_PROJECT_ID_HYN212       (0x6854)
 #define CST9220_REPORT_ACK              (0xAB)
 #define CST9220_REPORT_HEADER_SIZE      (7)
 #define CST9220_POINT_DATA_SIZE         (5)
-#define CST9220_REPORT_BUFFER_SIZE      (CST9220_REPORT_HEADER_SIZE + CST9220_POINT_DATA_SIZE)
+#define CST9220_REPORT_BUFFER_SIZE      (ESP_LCD_TOUCH_CST9220_MAX_POINTS * CST9220_POINT_DATA_SIZE + 5)
 #define CST9220_PROTOCOL_PROBE_RETRIES  (3)
 #define CST9220_RESET_ACTIVE_TIME_MS    (10)
 #define CST9220_RESET_READY_TIME_MS     (100)
 #define CST9220_MODE_SETTLE_TIME_MS     (10)
-#define CST9220_REPORT_ADDRESS_DELAY_US (200)
 
 static const char *TAG = "cst9220";
 
@@ -55,7 +55,6 @@ typedef struct {
     esp_lcd_touch_t base;
     cst9220_protocol_t protocol;
     uint16_t project_id;
-    uint16_t resolution_y;
     bool sleeping;
 } cst9220_touch_t;
 
@@ -72,13 +71,26 @@ static esp_err_t cst9220_read_register(esp_lcd_touch_handle_t tp, uint16_t reg, 
 static esp_err_t cst9220_write_report_ack(esp_lcd_touch_handle_t tp);
 static esp_err_t cst9220_reset(esp_lcd_touch_handle_t tp);
 static esp_err_t cst9220_wake_controller(esp_lcd_touch_handle_t tp);
-static esp_err_t cst9220_detect_protocol(cst9220_touch_t *cst9220);
+static esp_err_t cst9220_enter_normal_mode(esp_lcd_touch_handle_t tp);
+static esp_err_t cst9220_enter_report_page(esp_lcd_touch_handle_t tp);
+static void cst9220_select_protocol(cst9220_touch_t *cst9220);
 static esp_err_t cst9220_read_identity(cst9220_touch_t *cst9220);
 static esp_err_t cst9220_read_report(cst9220_touch_t *cst9220, uint8_t *report, uint8_t *point_num);
 
 static const char *cst9220_protocol_name(cst9220_protocol_t protocol)
 {
     return protocol == CST9220_PROTOCOL_HYN212 ? "HYN212" : "legacy";
+}
+
+static uint16_t cst9220_le16(const uint8_t *data)
+{
+    return (uint16_t)data[0] | ((uint16_t)data[1] << 8);
+}
+
+static uint32_t cst9220_le32(const uint8_t *data)
+{
+    return (uint32_t)data[0] | ((uint32_t)data[1] << 8) |
+           ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
 }
 
 static void cst9220_clear_data(esp_lcd_touch_handle_t tp)
@@ -177,12 +189,6 @@ esp_err_t esp_lcd_touch_new_i2c_cst9220(const esp_lcd_panel_io_handle_t io,
         goto err;
     }
 
-    ret = cst9220_detect_protocol(cst9220);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Touch protocol detection failed: %s", esp_err_to_name(ret));
-        goto err;
-    }
-
     if (config->interrupt_callback != NULL) {
         ret = esp_lcd_touch_register_interrupt_callback(&cst9220->base, config->interrupt_callback);
         if (ret != ESP_OK) {
@@ -229,6 +235,9 @@ static esp_err_t cst9220_enter_sleep(esp_lcd_touch_handle_t tp)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Enter sleep command failed: %s", esp_err_to_name(ret));
         esp_err_t wake_ret = cst9220_wake_controller(tp);
+        if (wake_ret == ESP_OK && cst9220->protocol != CST9220_PROTOCOL_LEGACY) {
+            wake_ret = cst9220_enter_report_page(tp);
+        }
         if (wake_ret != ESP_OK) {
             ESP_LOGE(TAG, "Sleep failure recovery failed: %s", esp_err_to_name(wake_ret));
         }
@@ -251,27 +260,36 @@ static esp_err_t cst9220_exit_sleep(esp_lcd_touch_handle_t tp)
 {
     ESP_RETURN_ON_FALSE(tp != NULL, ESP_ERR_INVALID_ARG, TAG, "Touch controller handle is NULL");
     cst9220_touch_t *cst9220 = (cst9220_touch_t *)tp;
+    const bool was_sleeping = cst9220_is_sleeping(cst9220);
 
-    if (!cst9220_is_sleeping(cst9220)) {
-        return ESP_OK;
+    if (was_sleeping) {
+        esp_err_t ret = cst9220_wake_controller(tp);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Wakeup failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
+        cst9220_set_sleeping(cst9220, false);
     }
 
-    esp_err_t ret = cst9220_wake_controller(tp);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Wakeup failed: %s", esp_err_to_name(ret));
-        return ret;
+    if (cst9220->protocol != CST9220_PROTOCOL_LEGACY) {
+        esp_err_t ret = cst9220_enter_report_page(tp);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Report page entry after wakeup failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
     }
 
     if (tp->config.interrupt_callback != NULL) {
-        ret = gpio_intr_enable(tp->config.int_gpio_num);
+        esp_err_t ret = gpio_intr_enable(tp->config.int_gpio_num);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Interrupt enable after wakeup failed: %s", esp_err_to_name(ret));
             return ret;
         }
     }
 
-    cst9220_set_sleeping(cst9220, false);
-    ESP_LOGI(TAG, "CST9220 exited sleep mode");
+    if (was_sleeping) {
+        ESP_LOGI(TAG, "CST9220 exited sleep mode");
+    }
     return ESP_OK;
 }
 
@@ -292,27 +310,19 @@ static esp_err_t cst9220_read_data(esp_lcd_touch_handle_t tp)
 
     esp_lcd_touch_point_data_t decoded[ESP_LCD_TOUCH_CST9220_MAX_POINTS] = {0};
     uint8_t decoded_points = 0;
-    const uint8_t *point = report;
     for (uint8_t i = 0; i < reported_points; i++) {
         /* Both protocols keep the coordinate and the record count on the
          * release record and only clear the status nibble, so an unfiltered
          * record would hold the last coordinate pressed forever. */
+        const uint8_t *point = &report[i == 0 ? 0 : (i * CST9220_POINT_DATA_SIZE + 2)];
         const uint8_t status = point[0] & 0x0F;
-        const bool active = (status >> 1) == 3;
-        if (active) {
-            const uint16_t raw_y = ((uint16_t)point[2] << 4) | (point[3] & 0x0F);
-            if (cst9220->protocol == CST9220_PROTOCOL_HYN212 && raw_y > cst9220->resolution_y) {
-                ESP_LOGW(TAG, "Ignoring out-of-range HYN212 Y coordinate %u", raw_y);
-            } else {
-                decoded[decoded_points].track_id = point[0] >> 4;
-                decoded[decoded_points].x = ((uint16_t)point[1] << 4) | (point[3] >> 4);
-                decoded[decoded_points].y = cst9220->protocol == CST9220_PROTOCOL_LEGACY ?
-                                            raw_y : (uint16_t)(cst9220->resolution_y - raw_y);
-                decoded[decoded_points].strength = 1;
-                decoded_points++;
-            }
+        if ((status >> 1) == 3) {
+            decoded[decoded_points].track_id = point[0] >> 4;
+            decoded[decoded_points].x = ((uint16_t)point[1] << 4) | (point[3] >> 4);
+            decoded[decoded_points].y = ((uint16_t)point[2] << 4) | (point[3] & 0x0F);
+            decoded[decoded_points].strength = 1;
+            decoded_points++;
         }
-        point += i == 0 ? CST9220_REPORT_HEADER_SIZE : CST9220_POINT_DATA_SIZE;
     }
 
     portENTER_CRITICAL(&tp->data.lock);
@@ -478,113 +488,168 @@ static esp_err_t cst9220_wake_controller(esp_lcd_touch_handle_t tp)
     return cst9220_reset(tp);
 }
 
-static esp_err_t cst9220_detect_protocol(cst9220_touch_t *cst9220)
+static esp_err_t cst9220_enter_normal_mode(esp_lcd_touch_handle_t tp)
 {
-    esp_lcd_touch_handle_t tp = &cst9220->base;
+    esp_err_t ret = cst9220_write_command(tp, CST9220_REG_NORMAL_MODE);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    vTaskDelay(pdMS_TO_TICKS(CST9220_MODE_SETTLE_TIME_MS));
+    return ESP_OK;
+}
 
-    if (cst9220->project_id == CST9220_PROJECT_ID_LEGACY) {
+static esp_err_t cst9220_enter_report_page(esp_lcd_touch_handle_t tp)
+{
+    /* Current firmware is read from the D101 page, matching SensorLib/78. */
+    esp_err_t ret = cst9220_write_command(tp, CST9220_REG_DEBUG_INFO_MODE);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    vTaskDelay(pdMS_TO_TICKS(CST9220_MODE_SETTLE_TIME_MS));
+    return ESP_OK;
+}
+
+static void cst9220_select_protocol(cst9220_touch_t *cst9220)
+{
+    /* Only the confirmed legacy project skips report ACK. Project 0x6854 and
+     * unknown IDs stay on the current-firmware path so a failed D11E probe
+     * cannot stall frames. */
+    switch (cst9220->project_id) {
+    case CST9220_PROJECT_ID_LEGACY:
         cst9220->protocol = CST9220_PROTOCOL_LEGACY;
-        return ESP_OK;
-    }
-    if (cst9220->project_id == CST9220_PROJECT_ID_HYN212) {
+        break;
+    case CST9220_PROJECT_ID_HYN212:
+    default:
         cst9220->protocol = CST9220_PROTOCOL_HYN212;
-        return ESP_OK;
+        break;
     }
+}
 
-    esp_err_t last_error = ESP_ERR_INVALID_RESPONSE;
-
+static bool cst9220_probe_command_mode(esp_lcd_touch_handle_t tp)
+{
     for (uint8_t attempt = 0; attempt < CST9220_PROTOCOL_PROBE_RETRIES; attempt++) {
         uint8_t mode[2] = {0};
-        last_error = cst9220_write_command(tp, CST9220_REG_PROTOCOL_PROBE);
-        if (last_error == ESP_OK) {
+        esp_err_t ret = cst9220_write_command(tp, CST9220_REG_PROTOCOL_PROBE);
+        if (ret == ESP_OK) {
             vTaskDelay(pdMS_TO_TICKS(1));
-            last_error = cst9220_read_register(tp, CST9220_REG_MODE_STATUS, mode, sizeof(mode));
+            ret = cst9220_read_register(tp, CST9220_REG_MODE_STATUS, mode, sizeof(mode));
         }
-        if (last_error == ESP_OK && mode[1] == (uint8_t)CST9220_REG_PROTOCOL_PROBE) {
-            last_error = cst9220_wake_controller(tp);
-            if (last_error != ESP_OK) {
-                return last_error;
-            }
-            cst9220->protocol = CST9220_PROTOCOL_HYN212;
-            return ESP_OK;
-        }
-        if (last_error == ESP_OK) {
-            last_error = ESP_ERR_INVALID_RESPONSE;
+        if (ret == ESP_OK && mode[1] == (uint8_t)CST9220_REG_PROTOCOL_PROBE) {
+            return true;
         }
         vTaskDelay(pdMS_TO_TICKS(1));
     }
+    return false;
+}
 
-    esp_err_t restore_ret = cst9220_wake_controller(tp);
-    if (restore_ret != ESP_OK) {
-        return restore_ret;
+/*
+ * HYN212 / CST923xx images publish the firmware image check code at D228 after
+ * the D11E command-mode handshake. D1FC on those images is the older debug
+ * window and does not report the image checksum.
+ */
+static bool cst9220_read_image_checkcode(esp_lcd_touch_handle_t tp, uint32_t *checkcode, uint32_t *version)
+{
+    uint8_t part_info[8] = {0};
+    uint8_t checksum[4] = {0};
+    uint8_t chip_id[4] = {0};
+
+    if (cst9220_read_register(tp, CST9220_REG_PROJECT_ID, part_info, sizeof(part_info)) != ESP_OK ||
+            cst9220_read_register(tp, CST9220_REG_INFO_CHECKCODE, checksum, sizeof(checksum)) != ESP_OK ||
+            cst9220_read_register(tp, CST9220_REG_INFO_CHIP_ID, chip_id, sizeof(chip_id)) != ESP_OK) {
+        return false;
     }
-    cst9220->protocol = CST9220_PROTOCOL_LEGACY;
-    ESP_LOGW(TAG, "HYN212 protocol probe did not match (%s); using legacy report protocol",
-             esp_err_to_name(last_error));
-    return ESP_OK;
+    if (part_info[3] != chip_id[1] || cst9220_le16(&chip_id[2]) != CST9220_INFO_CHIP_MARKER) {
+        return false;
+    }
+
+    *checkcode = cst9220_le32(checksum);
+    *version = cst9220_le32(&part_info[4]);
+    return true;
 }
 
 static esp_err_t cst9220_read_identity(cst9220_touch_t *cst9220)
 {
     esp_lcd_touch_handle_t tp = &cst9220->base;
-    esp_err_t ret = cst9220_write_command(tp, CST9220_REG_DEBUG_INFO_MODE);
+    const bool command_mode = cst9220_probe_command_mode(tp);
+    esp_err_t ret = ESP_OK;
+
+    if (command_mode) {
+        ret = cst9220_write_command(tp, CST9220_REG_NORMAL_MODE);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Normal mode restore after protocol probe failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+
+    ret = cst9220_enter_report_page(tp);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Debug information mode entry failed: %s", esp_err_to_name(ret));
-        goto exit_mode;
+        goto restore_normal;
     }
-    vTaskDelay(pdMS_TO_TICKS(CST9220_MODE_SETTLE_TIME_MS));
 
     uint8_t data[4] = {0};
-    ret = cst9220_read_register(tp, CST9220_REG_CHECKCODE, data, sizeof(data));
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Checkcode read failed: %s", esp_err_to_name(ret));
-        goto exit_mode;
+    uint32_t checkcode = 0;
+    uint32_t version = 0;
+    const bool image_checkcode = command_mode && cst9220_read_image_checkcode(tp, &checkcode, &version);
+    if (!image_checkcode) {
+        ret = cst9220_read_register(tp, CST9220_REG_CHECKCODE, data, sizeof(data));
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Checkcode read failed: %s", esp_err_to_name(ret));
+            goto restore_normal;
+        }
+        checkcode = cst9220_le32(data);
+        version = 0;
     }
-    const uint32_t checkcode = (uint32_t)data[0] | ((uint32_t)data[1] << 8) |
-                               ((uint32_t)data[2] << 16) | ((uint32_t)data[3] << 24);
 
     ret = cst9220_read_register(tp, CST9220_REG_RESOLUTION, data, sizeof(data));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Resolution read failed: %s", esp_err_to_name(ret));
-        goto exit_mode;
+        goto restore_normal;
     }
-    const uint16_t resolution_x = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
-    const uint16_t resolution_y = (uint16_t)data[2] | ((uint16_t)data[3] << 8);
+    const uint16_t resolution_x = cst9220_le16(data);
+    const uint16_t resolution_y = cst9220_le16(&data[2]);
     if (resolution_x == 0 || resolution_y == 0) {
         ESP_LOGE(TAG, "Invalid controller resolution %ux%u: %s", resolution_x, resolution_y,
                  esp_err_to_name(ESP_ERR_INVALID_RESPONSE));
         ret = ESP_ERR_INVALID_RESPONSE;
-        goto exit_mode;
+        goto restore_normal;
     }
 
     ret = cst9220_read_register(tp, CST9220_REG_PROJECT_ID, data, sizeof(data));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Project information read failed: %s", esp_err_to_name(ret));
-        goto exit_mode;
+        goto restore_normal;
     }
-    const uint16_t project_id = (uint16_t)data[0] | ((uint16_t)data[1] << 8);
-    const uint16_t chip_id = (uint16_t)data[2] | ((uint16_t)data[3] << 8);
+    const uint16_t project_id = cst9220_le16(data);
+    const uint16_t chip_id = cst9220_le16(&data[2]);
     if (chip_id != CST9220_CHIP_ID) {
         ESP_LOGE(TAG, "Unsupported touch controller chip ID 0x%04x: %s", chip_id,
                  esp_err_to_name(ESP_ERR_NOT_SUPPORTED));
         ret = ESP_ERR_NOT_SUPPORTED;
-        goto exit_mode;
+        goto restore_normal;
     }
     cst9220->project_id = project_id;
-    cst9220->resolution_y = resolution_y;
+    cst9220_select_protocol(cst9220);
 
-    ESP_LOGI(TAG, "Controller identified: chip=0x%04x project=0x%04x resolution=%ux%u checkcode=0x%08" PRIx32,
-             chip_id, project_id, resolution_x, resolution_y, checkcode);
+    ESP_LOGI(TAG, "Controller identified: chip=0x%04x project=0x%04x resolution=%ux%u version=%" PRIu32
+             " checkcode=0x%08" PRIx32,
+             chip_id, project_id, resolution_x, resolution_y, version, checkcode);
 
-exit_mode: {
-        esp_err_t exit_ret = cst9220_write_command(tp, CST9220_REG_NORMAL_MODE);
-        if (exit_ret != ESP_OK) {
-            ESP_LOGE(TAG, "Normal mode entry failed: %s", esp_err_to_name(exit_ret));
-            if (ret == ESP_OK) {
-                ret = exit_ret;
-            }
-        } else {
-            vTaskDelay(pdMS_TO_TICKS(CST9220_MODE_SETTLE_TIME_MS));
+    if (cst9220->protocol == CST9220_PROTOCOL_LEGACY) {
+        ret = cst9220_enter_normal_mode(tp);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Legacy normal mode entry failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
+    }
+    return ESP_OK;
+
+restore_normal: {
+        esp_err_t restore_ret = cst9220_enter_normal_mode(tp);
+        if (restore_ret != ESP_OK) {
+            ESP_LOGE(TAG, "Normal mode restore after identification failure: %s",
+                     esp_err_to_name(restore_ret));
         }
     }
     return ret;
@@ -593,69 +658,41 @@ exit_mode: {
 static esp_err_t cst9220_read_report(cst9220_touch_t *cst9220, uint8_t *report, uint8_t *point_num)
 {
     esp_lcd_touch_handle_t tp = &cst9220->base;
-    esp_err_t ret = cst9220_write_command(tp, CST9220_REG_REPORT);
+    esp_err_t ret = cst9220_read_register(tp, CST9220_REG_REPORT, report, CST9220_REPORT_BUFFER_SIZE);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Report address write failed: %s", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Report read failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
-    if (cst9220->protocol == CST9220_PROTOCOL_HYN212) {
-        esp_rom_delay_us(CST9220_REPORT_ADDRESS_DELAY_US);
-        ret = cst9220_write_command(tp, CST9220_REG_REPORT);
+    /* Release the current frame before decoding. Without this write the
+     * controller holds the report until its internal timeout. */
+    if (cst9220->protocol != CST9220_PROTOCOL_LEGACY) {
+        ret = cst9220_write_report_ack(tp);
         if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Second HYN212 report address write failed: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Report ACK failed: %s", esp_err_to_name(ret));
+            *point_num = 0;
             return ret;
         }
     }
 
-    ret = esp_lcd_panel_io_rx_param(tp->io, -1, report, CST9220_REPORT_HEADER_SIZE);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Report header read failed: %s", esp_err_to_name(ret));
-        return ret;
+    if (report[0] == 0) {
+        *point_num = 0;
+        return ESP_OK;
+    }
+    if (report[0] == CST9220_REPORT_ACK || report[CST9220_REPORT_HEADER_SIZE - 1] != CST9220_REPORT_ACK) {
+        ESP_LOGW(TAG, "Malformed report header: first=0x%02x marker=0x%02x",
+                 report[0], report[CST9220_REPORT_HEADER_SIZE - 1]);
+        *point_num = 0;
+        return ESP_OK;
     }
 
-    bool all_zero = true;
-    for (uint8_t i = 0; i < CST9220_REPORT_HEADER_SIZE; i++) {
-        if (report[i] != 0) {
-            all_zero = false;
-            break;
-        }
+    uint8_t reported_points = report[5] & 0x7F;
+    if (reported_points > ESP_LCD_TOUCH_CST9220_MAX_POINTS) {
+        ESP_LOGW(TAG, "Clamping report point count %u to %u",
+                 reported_points, ESP_LCD_TOUCH_CST9220_MAX_POINTS);
+        reported_points = ESP_LCD_TOUCH_CST9220_MAX_POINTS;
     }
 
-    esp_err_t report_ret = ESP_OK;
-    uint8_t reported_points = 0;
-    if (!all_zero) {
-        if (report[0] == CST9220_REPORT_ACK || report[6] != CST9220_REPORT_ACK) {
-            ESP_LOGW(TAG, "Malformed report header: first=0x%02x marker=0x%02x", report[0], report[6]);
-            report_ret = ESP_ERR_INVALID_RESPONSE;
-        } else {
-            reported_points = report[5] & 0x7F;
-            if (reported_points > ESP_LCD_TOUCH_CST9220_MAX_POINTS) {
-                ESP_LOGW(TAG, "Invalid report point count %u", reported_points);
-                report_ret = ESP_ERR_INVALID_RESPONSE;
-                reported_points = 0;
-            }
-        }
-    }
-
-    if (report_ret == ESP_OK && reported_points > 1) {
-        ret = cst9220_read_register(tp, CST9220_REG_REPORT_CONTINUATION,
-                                    &report[CST9220_REPORT_HEADER_SIZE], CST9220_POINT_DATA_SIZE);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "Report continuation read failed: %s", esp_err_to_name(ret));
-            report_ret = ret;
-            reported_points = 0;
-        }
-    }
-
-    if (cst9220->protocol == CST9220_PROTOCOL_HYN212) {
-        ret = cst9220_write_report_ack(tp);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "HYN212 report ACK failed: %s", esp_err_to_name(ret));
-            report_ret = ret;
-        }
-    }
-
-    *point_num = report_ret == ESP_OK ? reported_points : 0;
-    return report_ret;
+    *point_num = reported_points;
+    return ESP_OK;
 }

@@ -9,12 +9,14 @@ Implementation of the CST9220 touch controller with the
 | :--------------: | :---------------------: | :---------------------: |
 |     CST9220      |           I2C           | esp_lcd_touch_cst9220   |
 
-The driver automatically detects the report protocol used by the running firmware:
+The driver selects the report acknowledgement policy from the firmware project ID:
 
-* legacy firmware uses a single report-address write and does not require an end acknowledgement;
-* HYN212 firmware uses two report-address writes and an `0xAB` end acknowledgement;
-* both protocols mark a release by clearing the status nibble while keeping the coordinate and the record count, so records are filtered by their touch status to keep a release from being reported as an active point;
-* HYN212 coordinates are normalized to the legacy coordinate direction, so the same panel configuration works with either firmware.
+* current firmware (project `0x6854` and any unknown ID) stays on the `D101` page after identification, reads the full report from `0xD000` in one burst, and writes `0xAB` immediately;
+* confirmed legacy firmware (project `0x542F`) returns to `D109` after identification, uses the same burst read, and does not send an end acknowledgement;
+* both paths mark a release by clearing the status nibble while keeping the coordinate and the record count, so records are filtered by their touch status to keep a release from being reported as an active point.
+
+The firmware check code is read from `D228` when the controller answers the `D11E`
+command-mode handshake. Older images fall back to `D1FC`.
 
 The component only implements runtime touch operation. Firmware upgrade is not included.
 
@@ -71,12 +73,12 @@ ESP_ERROR_CHECK(esp_lcd_touch_enter_sleep(tp));
 ESP_ERROR_CHECK(esp_lcd_touch_exit_sleep(tp));
 ```
 
-The driver sends the standard CST9220 `D105` sleep command and uses `D109` to return to normal mode. If the normal-mode
-command is unavailable after sleep and a reset GPIO is configured, the driver automatically falls back to a hardware
-reset. No CST9220-specific sleep API is required.
+The driver sends the standard CST9220 `D105` sleep command. Wakeup uses `D109`, or a hardware reset if that command is
+unavailable and a reset GPIO is configured, then returns current firmware to the `D101` page used for reports. No
+CST9220-specific sleep API is required.
 
 ## Report acknowledgement
 
-After each successfully read HYN212 report header, the driver writes `{0xD0, 0x00, 0xAB}`. The acknowledgement is sent
-for touch, release, empty, malformed, and continuation-read failure cases so the controller does not wait for its
-internal report timeout before generating the next interrupt.
+After each successful report read, current firmware is acknowledged with `{0xD0, 0x00, 0xAB}` before the frame is
+decoded. The write is sent for touch, release, empty, and malformed reports so the controller can publish the next
+frame instead of waiting for its internal timeout. Confirmed legacy firmware does not use this acknowledgement.
