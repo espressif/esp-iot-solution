@@ -241,6 +241,12 @@
   - "components/extended_vfs/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_imu_gesture: &patterns-components_imu_gesture
+  - "components/imu_gesture/**/*"
+
+.patterns-components_imu_quaternion: &patterns-components_imu_quaternion
+  - "components/imu_quaternion/**/*"
+
 .patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
   - "components/ir/ir_learn/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -820,6 +826,9 @@
 
 .patterns-example_quickjs_ng: &patterns-example_quickjs_ng
   - "examples/quickjs-ng/**/*"
+
+.patterns-example_sensors_airmouse: &patterns-example_sensors_airmouse
+  - "examples/sensors/airmouse/**/*"
 
 .patterns-example_sensors_sensor_control_led: &patterns-example_sensors_sensor_control_led
   - "examples/sensors/sensor_control_led/**/*"
@@ -2010,6 +2019,22 @@
     - <<: *if-dev-push
       changes: *patterns-example_ota_simple_ota_example
 
+.rules:build:example_sensors_airmouse:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_button
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_gesture
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_quaternion
+    - <<: *if-dev-push
+      changes: *patterns-example_sensors_airmouse
+
 .rules:build:example_sensors_sensor_control_led:
   rules:
     - <<: *if-protected
@@ -3125,6 +3150,28 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_lottie_player
+
+.rules:build:components_imu_gesture_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_gesture
+
+.rules:build:components_imu_quaternion_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_quaternion
 
 .rules:build:components_keyboard_button_test_apps:
   rules:

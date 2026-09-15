@@ -898,6 +898,17 @@ build_example_ota_simple_ota_example:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
 
+build_example_sensors_airmouse:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_sensors_airmouse
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/sensors/airmouse
+    EXAMPLE_CONFIG: "sdkconfig.defaults.*="
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+    IDF_PY_BUILD_JOBS: "2"
+
 build_example_sensors_sensor_control_led:
   extends:
     - .build_examples_template
@@ -1574,6 +1585,24 @@ build_components_expander_io_expander_mcp23017_test_apps:
     - .build_idf_active_release_version_with_pre_release
   variables:
     EXAMPLE_DIR: components/expander/io_expander/mcp23017/test_apps
+
+build_components_imu_gesture_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_gesture_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_gesture/test_apps
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+
+build_components_imu_quaternion_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_quaternion_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_quaternion/test_apps
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_components_keyboard_button_test_apps:
   extends:

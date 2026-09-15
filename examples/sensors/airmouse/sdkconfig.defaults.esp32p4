@@ -1,6 +1,12 @@
 # ESP32-P4 + ESP32-C6 hosted transport defaults
 CONFIG_FREERTOS_HZ=1000
 
+# GPIO defaults for unattended builds; configure the actual wiring at runtime.
+CONFIG_IMU_I2C_SCL=7
+CONFIG_IMU_I2C_SDA=8
+CONFIG_IMU_SDO_PIN=9
+CONFIG_RESET_BUTTON=10
+
 #
 # BT config
 # - ESP32-C6 hosted controller supports BLE 4.2 only in this path
