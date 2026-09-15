@@ -1,0 +1,9 @@
+## IDF Component Manager Manifest File
+version: "0.2.0"
+targets:
+  - esp32s3
+dependencies:
+  idf: ">=5.1"
+  usb_device_uac:
+    version: "1.*"
+    override_path: "../../../../../components/usb/usb_device_uac"

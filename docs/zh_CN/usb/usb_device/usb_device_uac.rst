@@ -35,10 +35,11 @@ USB Device UAC API 参考
 .. code:: c
 
     uac_device_config_t config = {
-        .output_cb = uac_device_output_cb,          // Speaker output callback
-        .input_cb = uac_device_input_cb,            // Microphone input callback
-        .set_mute_cb = uac_device_set_mute_cb,      // Set mute callback
-        .set_volume_cb = uac_device_set_volume_cb,  // Set volume callback
+        .output_cb = uac_device_output_cb,                // Speaker output callback
+        .input_cb = uac_device_input_cb,                  // Microphone input callback
+        .set_mute_cb = uac_device_set_mute_cb,            // Set mute callback
+        .set_volume_cb = uac_device_set_volume_cb,        // Set volume callback
+        .set_volume_db_cb = uac_device_set_volume_db_cb,  // Set volume in dB callback
         .cb_ctx = NULL,
     };
     uac_device_init(&config);
