@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "unity_config.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_timer.h"
 #include "adc_battery_estimation.h"
 #include "driver/gpio.h"
 
@@ -18,6 +19,7 @@
 #define TEST_ADC_ATTEN (ADC_ATTEN_DB_12)
 #define TEST_ADC_CHANNEL (ADC_CHANNEL_1)
 #define TEST_CHARGE_GPIO_NUM (GPIO_NUM_0)
+#define TEST_STANDBY_GPIO_NUM (GPIO_NUM_4)
 #define TEST_RESISTOR_UPPER (460)
 #define TEST_RESISTOR_LOWER (460)
 #define TEST_ESTIMATION_TIME (100)
@@ -33,16 +35,48 @@ bool battery_charging_detect(void *user_data)
     return false;
 }
 
-TEST_CASE("adc battery estimation test", "[internal adc]")
+bool battery_standby_detect(void *user_data)
+{
+    if (gpio_get_level(TEST_STANDBY_GPIO_NUM) == 0) {
+        return true;
+    }
+    return false;
+}
+
+static void test_state_gpio_init(void)
 {
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << TEST_CHARGE_GPIO_NUM),
+        .pin_bit_mask = (1ULL << TEST_CHARGE_GPIO_NUM) | (1ULL << TEST_STANDBY_GPIO_NUM),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config(&io_conf);
+}
+
+static void test_report_battery(adc_battery_estimation_handle_t handle)
+{
+    for (int i = 0; i < TEST_ESTIMATION_TIME; i++) {
+        float capacity = 0;
+        float voltage = 0;
+        bool is_charging = false;
+        bool is_standby = false;
+
+        TEST_ESP_OK(adc_battery_estimation_get_capacity(handle, &capacity));
+        TEST_ESP_OK(adc_battery_estimation_get_voltage(handle, &voltage));
+        TEST_ESP_OK(adc_battery_estimation_get_charging_state(handle, &is_charging));
+        TEST_ESP_OK(adc_battery_estimation_get_standby_state(handle, &is_standby));
+
+        printf("Battery capacity: %.1f%%, voltage: %.3fV, state: %s\n", capacity, voltage,
+               is_standby ? "Standby" : (is_charging ? "Charging" : "Discharging"));
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+}
+
+TEST_CASE("adc battery estimation test", "[internal adc]")
+{
+    test_state_gpio_init();
 
     adc_battery_estimation_t config = {
         .internal = {
@@ -55,34 +89,103 @@ TEST_CASE("adc battery estimation test", "[internal adc]")
         .upper_resistor = TEST_RESISTOR_UPPER,
         .charging_detect_cb = battery_charging_detect,
         .charging_detect_user_data = NULL,
+        .standby_detect_cb = battery_standby_detect,
+        .standby_detect_user_data = NULL,
     };
 
     adc_battery_estimation_handle_t adc_battery_estimation_handle = adc_battery_estimation_create(&config);
     TEST_ASSERT(adc_battery_estimation_handle != NULL);
 
-    for (int i = 0; i < TEST_ESTIMATION_TIME; i++) {
+    test_report_battery(adc_battery_estimation_handle);
+
+    TEST_ESP_OK(adc_battery_estimation_destroy(adc_battery_estimation_handle));
+}
+
+TEST_CASE("adc battery estimation invalid resistor test", "[internal adc]")
+{
+    adc_battery_estimation_t config = {
+        .internal = {
+            .adc_unit = TEST_ADC_UNIT,
+            .adc_bitwidth = TEST_ADC_BITWIDTH,
+            .adc_atten = TEST_ADC_ATTEN,
+        },
+        .adc_channel = TEST_ADC_CHANNEL,
+        .lower_resistor = 0,
+        .upper_resistor = TEST_RESISTOR_UPPER,
+    };
+
+    // Creation must fail without leaking the ADC unit, so a valid creation can still succeed afterwards
+    TEST_ASSERT_NULL(adc_battery_estimation_create(&config));
+
+    config.lower_resistor = TEST_RESISTOR_LOWER;
+    adc_battery_estimation_handle_t adc_battery_estimation_handle = adc_battery_estimation_create(&config);
+    TEST_ASSERT(adc_battery_estimation_handle != NULL);
+
+    TEST_ESP_OK(adc_battery_estimation_destroy(adc_battery_estimation_handle));
+}
+
+#if CONFIG_BATTERY_STATE_SOFTWARE_ESTIMATION
+/* The trend is only analyzed once the sample buffer is full, run one full round plus some margin */
+#define TEST_SOFTWARE_ESTIMATION_ROUND_MS (CONFIG_SOFTWARE_ESTIMATION_SAMPLE_COUNT * CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL)
+#define TEST_SOFTWARE_ESTIMATION_TIME_MS (TEST_SOFTWARE_ESTIMATION_ROUND_MS + CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL)
+
+TEST_CASE("adc battery estimation software estimation test", "[internal adc][software estimation]")
+{
+    /* Leave both detection callbacks unset, so the charging state can only come from the voltage trend.
+     * Plug or unplug the charger while the test runs to see the reported state follow it */
+    adc_battery_estimation_t config = {
+        .internal = {
+            .adc_unit = TEST_ADC_UNIT,
+            .adc_bitwidth = TEST_ADC_BITWIDTH,
+            .adc_atten = TEST_ADC_ATTEN,
+        },
+        .adc_channel = TEST_ADC_CHANNEL,
+        .lower_resistor = TEST_RESISTOR_LOWER,
+        .upper_resistor = TEST_RESISTOR_UPPER,
+    };
+
+    adc_battery_estimation_handle_t adc_battery_estimation_handle = adc_battery_estimation_create(&config);
+    TEST_ASSERT(adc_battery_estimation_handle != NULL);
+
+    printf("Running for %d s, the trend is analyzed every %d samples taken %d s apart\n",
+           TEST_SOFTWARE_ESTIMATION_TIME_MS / 1000, CONFIG_SOFTWARE_ESTIMATION_SAMPLE_COUNT,
+           CONFIG_SOFTWARE_ESTIMATION_SAMPLE_INTERVAL / 1000);
+
+    bool last_charging = false;
+    TEST_ESP_OK(adc_battery_estimation_get_charging_state(adc_battery_estimation_handle, &last_charging));
+
+    int64_t start_ms = esp_timer_get_time() / 1000;
+    int64_t elapsed_ms = 0;
+
+    while (elapsed_ms < TEST_SOFTWARE_ESTIMATION_TIME_MS) {
         float capacity = 0;
-        adc_battery_estimation_get_capacity(adc_battery_estimation_handle, &capacity);
-        printf("Battery capacity: %.1f%%\n", capacity);
+        float voltage = 0;
+        bool is_charging = false;
+
+        TEST_ESP_OK(adc_battery_estimation_get_capacity(adc_battery_estimation_handle, &capacity));
+        TEST_ESP_OK(adc_battery_estimation_get_voltage(adc_battery_estimation_handle, &voltage));
+        TEST_ESP_OK(adc_battery_estimation_get_charging_state(adc_battery_estimation_handle, &is_charging));
+        TEST_ASSERT(capacity >= 0.0f && capacity <= 100.0f);
+
+        elapsed_ms = esp_timer_get_time() / 1000 - start_ms;
+        printf("[%3llds] Battery capacity: %.1f%%, voltage: %.3fV, estimated state: %s%s\n",
+               elapsed_ms / 1000, capacity, voltage, is_charging ? "Charging" : "Discharging",
+               is_charging != last_charging ? " <- state changed" : "");
+        last_charging = is_charging;
+
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
     TEST_ESP_OK(adc_battery_estimation_destroy(adc_battery_estimation_handle));
 }
+#endif
 
 TEST_CASE("adc battery estimation test", "[external adc]")
 {
     adc_oneshot_unit_handle_t adc_handle;
     adc_cali_handle_t adc_cali_handle;
 
-    gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << TEST_CHARGE_GPIO_NUM),
-        .mode = GPIO_MODE_INPUT,
-        .pull_up_en = GPIO_PULLUP_ENABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE,
-    };
-    gpio_config(&io_conf);
+    test_state_gpio_init();
 
     adc_oneshot_unit_init_cfg_t init_cfg = {
         .unit_id = TEST_ADC_UNIT,
@@ -122,17 +225,14 @@ TEST_CASE("adc battery estimation test", "[external adc]")
         .upper_resistor = TEST_RESISTOR_UPPER,
         .charging_detect_cb = battery_charging_detect,
         .charging_detect_user_data = NULL,
+        .standby_detect_cb = battery_standby_detect,
+        .standby_detect_user_data = NULL,
     };
 
     adc_battery_estimation_handle_t adc_battery_estimation_handle = adc_battery_estimation_create(&config);
     TEST_ASSERT(adc_battery_estimation_handle != NULL);
 
-    for (int i = 0; i < TEST_ESTIMATION_TIME; i++) {
-        float capacity = 0;
-        adc_battery_estimation_get_capacity(adc_battery_estimation_handle, &capacity);
-        printf("Battery capacity: %.1f%%\n", capacity);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
+    test_report_battery(adc_battery_estimation_handle);
 
     TEST_ESP_OK(adc_battery_estimation_destroy(adc_battery_estimation_handle));
 
