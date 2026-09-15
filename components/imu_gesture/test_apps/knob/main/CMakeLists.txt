@@ -1,0 +1,9 @@
+idf_component_register(
+    SRCS
+        "knob_main.c"
+    REQUIRES
+        imu_gesture
+        test_data
+    INCLUDE_DIRS
+        "."
+)
