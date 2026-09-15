@@ -229,8 +229,8 @@ static esp_err_t reset(esp_lcd_touch_handle_t tp)
     return ESP_OK;
 }
 
-#define i2c_write(data_p, len)      ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(tp->io, 0, data_p, len), TAG, "Tx failed");
-#define i2c_read(data_p, len)       ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(tp->io, 0, data_p, len), TAG, "Rx failed");
+#define i2c_write(data_p, len)      ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(tp->io, -1, data_p, len), TAG, "Tx failed");
+#define i2c_read(data_p, len)       ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(tp->io, -1, data_p, len), TAG, "Rx failed");
 
 static esp_err_t write_tp_point_mode_cmd(esp_lcd_touch_handle_t tp)
 {
