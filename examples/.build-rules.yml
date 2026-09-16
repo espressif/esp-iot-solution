@@ -392,6 +392,11 @@ examples/ota/simple_ota_example:
   enable:
     - if: IDF_TARGET in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32c61", "esp32", "esp32s3", "esp32h2"]
 
+examples/sensors/airmouse:
+  enable:
+    - if: IDF_TARGET == "esp32c5" and IDF_VERSION >= "5.5" and CONFIG_NAME in ["esp-spot-c5", "sensair-shuttle"]
+    - if: IDF_TARGET == "esp32p4" and IDF_VERSION >= "5.5" and CONFIG_NAME == "defaults"
+
 examples/sensors/sensor_control_led:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)

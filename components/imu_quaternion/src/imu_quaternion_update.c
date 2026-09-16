@@ -5,14 +5,9 @@
  */
 #include <math.h>
 
-#include "esp_log.h"
 #include "imu_quaternion_priv.h"
 
 #include "imu_quaternion_math.h"
-
-static const char *TAG = "IMU_QUAT";
-static const int64_t IMU_QUAT_MAG_DEBUG_LOG_THROTTLE_US = 1000000;
-static int64_t s_last_mag_feedback_log_us = 0;
 
 esp_err_t imu_quat_complementary_update(
     imu_quat_handle_t handle,
@@ -149,30 +144,6 @@ esp_err_t imu_quat_complementary_update(
 
                         mag_ok = true;
                         handle->rejection.mag_reject_count = 0;
-
-                        const int64_t now_us = sample->timestamp_us;
-                        if ((now_us - s_last_mag_feedback_log_us) >=
-                                IMU_QUAT_MAG_DEBUG_LOG_THROTTLE_US) {
-                            ESP_LOGI(
-                                TAG,
-                                "mag yaw feedback: h_meas=[%.3f %.3f %.3f] "
-                                "h_pred=[%.3f %.3f %.3f] err_deg=%.2f "
-                                "yaw_comp=%.5f mag_err=[%.5f %.5f %.5f] "
-                                "acc_ignored=%s mag_ignored=false",
-                                measured_heading_body[0],
-                                measured_heading_body[1],
-                                measured_heading_body[2],
-                                predicted_heading_body[0],
-                                predicted_heading_body[1],
-                                predicted_heading_body[2],
-                                mag_error_deg,
-                                yaw_component,
-                                mag_error[0],
-                                mag_error[1],
-                                mag_error[2],
-                                handle->rejection.accel_ignored ? "true" : "false");
-                            s_last_mag_feedback_log_us = now_us;
-                        }
                     }
                 }
             }

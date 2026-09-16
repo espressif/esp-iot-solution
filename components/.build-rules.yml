@@ -87,6 +87,18 @@ components/i2c_bus/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3","esp32c6"]
 
+components/imu_gesture/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
+components/imu_gesture/test_apps/inference:
+  enable:
+    - if: INCLUDE_DEFAULT == 1 and IDF_VERSION >= "5.3"
+
+components/imu_quaternion/test_apps:
+  enable:
+    - if: INCLUDE_DEFAULT == 1
+
 components/ir/ir_learn/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3"]
