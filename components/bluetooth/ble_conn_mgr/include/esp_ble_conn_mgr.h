@@ -1887,6 +1887,42 @@ esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
 esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff);
 
 /**
+ * @brief Send a notification on a specific connection using a characteristic value handle.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] attr_handle Characteristic value handle from `esp_ble_conn_get_chr_handle()`.
+ * @param[in] data        Notify payload; may be NULL when `data_len` is 0.
+ * @param[in] data_len    Notify payload length.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_TIMEOUT if completion is not received within wait timeout
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_notify_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                             const uint8_t *data, uint16_t data_len);
+
+/**
+ * @brief Send an indication on a specific connection using a characteristic value handle.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] attr_handle Characteristic value handle from `esp_ble_conn_get_chr_handle()`.
+ * @param[in] data        Indicate payload; may be NULL when `data_len` is 0.
+ * @param[in] data_len    Indicate payload length.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_TIMEOUT if confirmation is not received within wait timeout
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_indicate_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                               const uint8_t *data, uint16_t data_len);
+
+/**
  * @brief This api is typically used to read actively
  *
  * @param[in]  outbuf The pointer to store read data.
@@ -1966,6 +2002,31 @@ esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_da
  */
 esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_desc_t desc,
                                            const esp_ble_conn_data_t *inbuff);
+
+/**
+ * @brief   Get the GATT value handle of a local characteristic.
+ *
+ * `inst` selects the Nth matching (service UUID, characteristic UUID) pair in
+ * `esp_ble_conn_add_svc()` order. Use 0 when the pair is unique.
+ *
+ * @param[in]  svc_type    Service UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  svc_uuid    Service UUID
+ * @param[in]  chr_type    Characteristic UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  chr_uuid    Characteristic UUID
+ * @param[in]  inst        0-based index among matches
+ * @param[out] out_handle  Pointer to store the characteristic value handle
+ *
+ * @note Call after `ESP_BLE_CONN_EVENT_STARTED`.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if the UUID type is invalid or out_handle is NULL
+ *  - ESP_ERR_INVALID_STATE if the characteristic is not registered yet
+ *  - ESP_ERR_NOT_FOUND if no matching characteristic exists
+ */
+esp_err_t esp_ble_conn_get_chr_handle(uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
+                                      uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
+                                      uint8_t inst, uint16_t *out_handle);
 
 /**
  * @brief This api is typically used to add service actively
