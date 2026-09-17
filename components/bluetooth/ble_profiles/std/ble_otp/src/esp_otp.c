@@ -79,6 +79,7 @@ typedef enum {
 } otp_session_state_t;
 
 typedef struct {
+    bool in_use;
     uint16_t conn_id;
     uint16_t coc_cid;
     esp_ble_conn_l2cap_coc_chan_t coc_chan;
@@ -90,6 +91,9 @@ typedef struct {
     otp_transfer_dir_t direction;
     uint32_t tx_len;
     uint32_t rx_len;
+    uint16_t tx_pending_len;     /* Published before send; consumed by return path or TX_UNSTALLED */
+    uint32_t tx_pending_seq;
+    uint32_t tx_next_seq;
 
     otp_transfer_state_t state;
     otp_eof_reason_t eof_reason;
@@ -276,18 +280,28 @@ static uint64_t otp_id_to_u64(const esp_ble_ots_id_t *id)
 static void otp_ctx_init(otp_transfer_ctx_t *ctx, uint16_t conn_id)
 {
     memset(ctx, 0, sizeof(*ctx));
+    ctx->in_use = true;
     ctx->conn_id = conn_id;
     ctx->object_size = BLE_OTP_OBJECT_SIZE_UNKNOWN;
 }
 
+static void otp_ctx_clear(otp_transfer_ctx_t *ctx)
+{
+    memset(ctx, 0, sizeof(*ctx));
+    ctx->conn_id = BLE_CONN_HANDLE_INVALID;
+    ctx->object_size = BLE_OTP_OBJECT_SIZE_UNKNOWN;
+}
+
+/* Slot occupancy is tracked by `in_use`, not by conn_id: handle 0 is the first
+ * connection a device accepts, so a peripheral's only link is usually 0. */
 static otp_transfer_ctx_t *otp_ctx_get(uint16_t conn_id, bool create)
 {
-    if (conn_id == 0) {
+    if (conn_id == BLE_CONN_HANDLE_INVALID) {
         return NULL;
     }
 
     for (size_t i = 0; i < OTP_MAX_CONNECTIONS; i++) {
-        if (s_otp.transfers[i].conn_id == conn_id) {
+        if (s_otp.transfers[i].in_use && s_otp.transfers[i].conn_id == conn_id) {
             return &s_otp.transfers[i];
         }
     }
@@ -297,7 +311,7 @@ static otp_transfer_ctx_t *otp_ctx_get(uint16_t conn_id, bool create)
     }
 
     for (size_t i = 0; i < OTP_MAX_CONNECTIONS; i++) {
-        if (s_otp.transfers[i].conn_id == 0) {
+        if (!s_otp.transfers[i].in_use) {
             otp_ctx_init(&s_otp.transfers[i], conn_id);
             return &s_otp.transfers[i];
         }
@@ -353,6 +367,92 @@ static void otp_try_complete(otp_transfer_ctx_t *ctx)
     otp_fill_transfer_info(ctx, &evt.transfer_complete.transfer_info);
     evt.transfer_complete.success = true;
     otp_post_event(BLE_OTP_EVENT_TRANSFER_COMPLETE, &evt, sizeof(evt));
+}
+
+typedef struct {
+    bool data_sent;
+    bool error;
+    bool eof;
+    bool complete;
+    uint16_t data_len;
+    esp_ble_otp_transfer_info_t info;
+} otp_tx_completion_t;
+
+/* Caller holds s_otp.lock. expected_seq=0 claims whichever SDU is pending. */
+static bool otp_tx_complete_locked(otp_transfer_ctx_t *ctx, uint32_t expected_seq,
+                                   int status, bool rollback,
+                                   otp_tx_completion_t *completion)
+{
+    if (ctx == NULL || completion == NULL || ctx->tx_pending_len == 0 ||
+            (expected_seq != 0 && ctx->tx_pending_seq != expected_seq)) {
+        return false;
+    }
+
+    memset(completion, 0, sizeof(*completion));
+    completion->data_len = ctx->tx_pending_len;
+    ctx->tx_pending_len = 0;
+    ctx->tx_pending_seq = 0;
+
+    if (rollback) {
+        ctx->tx_len -= completion->data_len;
+        return true;
+    }
+
+    otp_fill_transfer_info(ctx, &completion->info);
+    if (status != 0) {
+        ctx->last_error = ESP_FAIL;
+        ctx->state = OTP_STATE_ERROR;
+        ctx->session_state = OTP_SESSION_ERROR;
+        completion->error = true;
+        return true;
+    }
+
+    completion->data_sent = true;
+    if (ctx->direction == OTP_DIR_READ && ctx->object_size != BLE_OTP_OBJECT_SIZE_UNKNOWN &&
+            ctx->tx_len >= ctx->object_size && !ctx->eof_reported) {
+        ctx->eof_reason = OTP_EOF_BY_SIZE;
+        ctx->eof_reported = 1;
+        ctx->state = OTP_STATE_EOF;
+        ctx->session_state = OTP_SESSION_BUSY;
+        completion->eof = true;
+        if (ctx->oacp_result == BLE_OTS_OACP_RSP_SUCCESS) {
+            ctx->state = OTP_STATE_COMPLETED;
+            ctx->session_state = OTP_SESSION_IDLE;
+            completion->complete = true;
+        }
+    }
+    return true;
+}
+
+static void otp_post_tx_completion(const otp_tx_completion_t *completion)
+{
+    if (completion == NULL) {
+        return;
+    }
+
+    esp_ble_otp_event_data_t evt = {0};
+    if (completion->error) {
+        evt.transfer_error.transfer_info = completion->info;
+        evt.transfer_error.error = ESP_FAIL;
+        otp_post_event(BLE_OTP_EVENT_TRANSFER_ERROR, &evt, sizeof(evt));
+        return;
+    }
+    if (completion->data_sent) {
+        evt.transfer_data_sent.transfer_info = completion->info;
+        evt.transfer_data_sent.data_len = completion->data_len;
+        otp_post_event(BLE_OTP_EVENT_TRANSFER_DATA_SENT, &evt, sizeof(evt));
+    }
+    if (completion->eof) {
+        memset(&evt, 0, sizeof(evt));
+        evt.transfer_eof.transfer_info = completion->info;
+        otp_post_event(BLE_OTP_EVENT_TRANSFER_EOF, &evt, sizeof(evt));
+    }
+    if (completion->complete) {
+        memset(&evt, 0, sizeof(evt));
+        evt.transfer_complete.transfer_info = completion->info;
+        evt.transfer_complete.success = true;
+        otp_post_event(BLE_OTP_EVENT_TRANSFER_COMPLETE, &evt, sizeof(evt));
+    }
 }
 
 static int otp_l2cap_event_handler(esp_ble_conn_l2cap_coc_event_t *event, void *arg)
@@ -534,7 +634,29 @@ static int otp_l2cap_event_handler(esp_ble_conn_l2cap_coc_event_t *event, void *
         otp_unlock();
         esp_ble_conn_l2cap_coc_recv_ready(event->receive.chan, s_otp.config.l2cap_coc_mtu);
         break;
-    case ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED:
+    case ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED: {
+        /* A flow-controlled SDU has now been fully transmitted.
+         * Claim it under the same protocol used by the send return path, then
+         * post only from the snapshot: the context slot may be reused. */
+        if (!otp_lock()) {
+            ESP_LOGW(TAG, "L2CAP CoC unstalled: lock timeout for handle=%u", event->tx_unstalled.conn_handle);
+            break;
+        }
+        ctx = otp_ctx_get(event->tx_unstalled.conn_handle, false);
+        int unstall_status = event->tx_unstalled.status;
+        otp_tx_completion_t completion = {0};
+        bool claimed = otp_tx_complete_locked(ctx, 0, unstall_status, false, &completion);
+        otp_unlock();
+
+        if (!claimed) {
+            break;
+        }
+        if (completion.error) {
+            ESP_LOGE(TAG, "L2CAP CoC unstalled with status=%d", unstall_status);
+        }
+        otp_post_tx_completion(&completion);
+        break;
+    }
     default:
         break;
     }
@@ -704,20 +826,26 @@ static void otp_conn_event_handler(void *handler_args, esp_event_base_t base, in
             }
         }
         break;
-    case ESP_BLE_CONN_EVENT_DISC_COMPLETE:
-        if (s_otp.config.role == BLE_OTP_ROLE_CLIENT && s_otp.config.auto_discover_ots) {
-            uint16_t conn_handle = 0;
-            if (esp_ble_conn_get_conn_handle(&conn_handle) == ESP_OK) {
-                esp_ble_otp_client_discover_ots(conn_handle);
-            }
+    case ESP_BLE_CONN_EVENT_DISC_COMPLETE: {
+        /* event_data is the discovered link. get_conn_handle() returns the first
+         * connection (often the phone/NUS ACL, handle 0) and must not be used. */
+        uint16_t conn_handle = BLE_CONN_HANDLE_INVALID;
+        if (event_data) {
+            conn_handle = *(const uint16_t *)event_data;
+        }
+        if (s_otp.config.role == BLE_OTP_ROLE_CLIENT && s_otp.config.auto_discover_ots &&
+                conn_handle != BLE_CONN_HANDLE_INVALID) {
+            (void)esp_ble_otp_client_discover_ots(conn_handle);
         }
         break;
+    }
     case ESP_BLE_CONN_EVENT_DISCONNECTED: {
-        if (otp_lock()) {
-            for (size_t i = 0; i < OTP_MAX_CONNECTIONS; i++) {
-                if (s_otp.transfers[i].conn_id != 0) {
-                    otp_ctx_init(&s_otp.transfers[i], 0);
-                }
+        /* Drop only the link that went away; other links may be mid-transfer. */
+        const esp_ble_conn_event_data_t *evt = event_data;
+        if (evt && otp_lock()) {
+            otp_transfer_ctx_t *ctx = otp_ctx_get(evt->disconnected.conn_handle, false);
+            if (ctx) {
+                otp_ctx_clear(ctx);
             }
             otp_unlock();
         }
@@ -841,11 +969,10 @@ esp_err_t esp_ble_otp_client_discover_ots(uint16_t conn_handle)
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (conn_handle == 0) {
+    /* Handle 0 is a valid ACL (first connection). Only 0xFFFF is unused. */
+    if (conn_handle == BLE_CONN_HANDLE_INVALID) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    otp_ctx_get(conn_handle, true);
 
     uint8_t cccd_indicate[2] = {0x02, 0x00};
     esp_ble_conn_data_t sub = {
@@ -867,7 +994,8 @@ esp_err_t esp_ble_otp_client_discover_ots(uint16_t conn_handle)
     esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
 
     esp_ble_ots_feature_t feature = {0};
-    if (esp_ble_otp_client_read_feature(conn_handle, &feature) == ESP_OK) {
+    esp_err_t rc = esp_ble_otp_client_read_feature(conn_handle, &feature);
+    if (rc == ESP_OK) {
         if (ctx) {
             ctx->ots_feature = feature;
             ctx->feature_valid = true;
@@ -875,16 +1003,19 @@ esp_err_t esp_ble_otp_client_discover_ots(uint16_t conn_handle)
         }
         esp_ble_otp_event_data_t otp_event = {0};
         memcpy(&otp_event.ots_discovered.feature, &feature, sizeof(feature));
+        otp_event.ots_discovered.conn_handle = conn_handle;
         otp_post_event(BLE_OTP_EVENT_OTS_DISCOVERED, &otp_event, sizeof(otp_event));
-    } else {
-        if (ctx) {
-            ctx->ots_state = OTP_OTS_STATE_FAILED;
-        }
-        esp_ble_otp_event_data_t otp_event = {0};
-        otp_post_event(BLE_OTP_EVENT_OTS_DISCOVERY_FAILED, &otp_event, sizeof(otp_event));
+        return ESP_OK;
     }
 
-    return ESP_OK;
+    if (ctx) {
+        ctx->ots_state = OTP_OTS_STATE_FAILED;
+    }
+    esp_ble_otp_event_data_t otp_event = {0};
+    otp_event.ots_discovery_failed.conn_handle = conn_handle;
+    otp_event.ots_discovery_failed.error = rc;
+    otp_post_event(BLE_OTP_EVENT_OTS_DISCOVERY_FAILED, &otp_event, sizeof(otp_event));
+    return rc;
 }
 
 esp_err_t esp_ble_otp_client_read_feature(uint16_t conn_handle, esp_ble_ots_feature_t *feature)
@@ -905,6 +1036,24 @@ esp_err_t esp_ble_otp_client_read_feature(uint16_t conn_handle, esp_ble_ots_feat
     return rc;
 }
 
+/* The OLCP indication carrying the result is handled on another task and can
+ * land before the caller returns from the control point write, so the pending
+ * state has to be armed first and only undone if the write never went out. */
+static void otp_olcp_mark_selecting(otp_transfer_ctx_t *ctx)
+{
+    if (ctx) {
+        ctx->objsel_state = OTP_OBJSEL_SELECTING;
+        ctx->meta_state = OTP_META_UNKNOWN;
+    }
+}
+
+static void otp_olcp_selecting_rollback(otp_transfer_ctx_t *ctx, esp_err_t rc)
+{
+    if (rc != ESP_OK && ctx && ctx->objsel_state == OTP_OBJSEL_SELECTING) {
+        ctx->objsel_state = OTP_OBJSEL_ERROR;
+    }
+}
+
 esp_err_t esp_ble_otp_client_select_first(uint16_t conn_handle)
 {
     if (!otp_client_ready()) {
@@ -912,10 +1061,9 @@ esp_err_t esp_ble_otp_client_select_first(uint16_t conn_handle)
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_FIRST };
+    otp_olcp_mark_selecting(ctx);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK && ctx) {
-        ctx->objsel_state = OTP_OBJSEL_SELECTING;
-    }
+    otp_olcp_selecting_rollback(ctx, rc);
     return rc;
 }
 
@@ -926,10 +1074,9 @@ esp_err_t esp_ble_otp_client_select_last(uint16_t conn_handle)
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_LAST };
+    otp_olcp_mark_selecting(ctx);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK && ctx) {
-        ctx->objsel_state = OTP_OBJSEL_SELECTING;
-    }
+    otp_olcp_selecting_rollback(ctx, rc);
     return rc;
 }
 
@@ -940,10 +1087,9 @@ esp_err_t esp_ble_otp_client_select_previous(uint16_t conn_handle)
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_PREVIOUS };
+    otp_olcp_mark_selecting(ctx);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK && ctx) {
-        ctx->objsel_state = OTP_OBJSEL_SELECTING;
-    }
+    otp_olcp_selecting_rollback(ctx, rc);
     return rc;
 }
 
@@ -954,10 +1100,9 @@ esp_err_t esp_ble_otp_client_select_next(uint16_t conn_handle)
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_NEXT };
+    otp_olcp_mark_selecting(ctx);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK && ctx) {
-        ctx->objsel_state = OTP_OBJSEL_SELECTING;
-    }
+    otp_olcp_selecting_rollback(ctx, rc);
     return rc;
 }
 
@@ -976,11 +1121,12 @@ esp_err_t esp_ble_otp_client_select_by_id(uint16_t conn_handle, const esp_ble_ot
     }
     uint8_t buf[1 + sizeof(object_id->id)] = { BLE_OTS_OLCP_GO_TO };
     memcpy(&buf[1], object_id->id, sizeof(object_id->id));
+    /* Arm the pending state before the write. The OLCP indication can be
+     * handled the moment the write completes, and it advances this state;
+     * assigning afterwards would put the selection back to SELECTING. */
+    otp_olcp_mark_selecting(ctx);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK && ctx) {
-        ctx->objsel_state = OTP_OBJSEL_SELECTING;
-        ctx->meta_state = OTP_META_UNKNOWN;
-    }
+    otp_olcp_selecting_rollback(ctx, rc);
     return rc;
 }
 
@@ -1387,15 +1533,49 @@ esp_err_t esp_ble_otp_client_delete_object(uint16_t conn_handle)
         return ESP_ERR_NOT_SUPPORTED;
     }
     uint8_t buf[1] = { BLE_OTS_OACP_DELETE };
-    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
-    if (rc == ESP_OK) {
-        if (ctx) {
-            ctx->state = OTP_STATE_OACP_PENDING;
-            ctx->oacp_opcode = BLE_OTS_OACP_DELETE;
-        }
-        otp_post_oacp_started(conn_handle, BLE_OTS_OACP_DELETE);
+    if (ctx) {
+        ctx->state = OTP_STATE_OACP_PENDING;
+        ctx->oacp_opcode = BLE_OTS_OACP_DELETE;
     }
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    if (rc != ESP_OK) {
+        if (ctx && ctx->state == OTP_STATE_OACP_PENDING) {
+            ctx->state = OTP_STATE_ERROR;
+        }
+        return rc;
+    }
+    otp_post_oacp_started(conn_handle, BLE_OTS_OACP_DELETE);
     return rc;
+}
+
+static void otp_oacp_arm_transfer(otp_transfer_ctx_t *ctx, uint8_t opcode, otp_transfer_dir_t direction,
+                                  uint32_t offset, uint32_t object_size)
+{
+    if (!ctx) {
+        return;
+    }
+
+    ctx->state = OTP_STATE_OACP_PENDING;
+    ctx->direction = direction;
+    ctx->object_offset = offset;
+    ctx->tx_len = 0;
+    ctx->rx_len = 0;
+    ctx->eof_reason = OTP_EOF_NONE;
+    ctx->eof_reported = 0;
+    ctx->abort_requested = 0;
+    ctx->execute_requested = 0;
+    ctx->oacp_opcode = opcode;
+    ctx->oacp_result = 0;
+    ctx->object_size = object_size;
+    ctx->session_state = OTP_SESSION_BUSY;
+}
+
+static void otp_oacp_disarm_transfer(otp_transfer_ctx_t *ctx)
+{
+    if (ctx && ctx->state == OTP_STATE_OACP_PENDING) {
+        ctx->state = OTP_STATE_ERROR;
+        ctx->session_state = OTP_SESSION_IDLE;
+    }
 }
 
 static esp_err_t otp_start_transfer(otp_transfer_ctx_t *ctx)
@@ -1431,39 +1611,26 @@ esp_err_t esp_ble_otp_client_read_object(uint16_t conn_handle, uint32_t offset, 
     if (ctx->meta_state != OTP_META_VALID) {
         return ESP_ERR_INVALID_STATE;
     }
+    uint32_t object_size = length;
+    if (length == 0) {
+        esp_ble_ots_size_t size = {0};
+        uint16_t out_len = 0;
+        object_size = (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
+                                      sizeof(size), &out_len) == ESP_OK)
+                      ? size.current_size : BLE_OTP_OBJECT_SIZE_UNKNOWN;
+    }
+
     uint8_t buf[1 + 8] = {0};
     buf[0] = BLE_OTS_OACP_READ;
     memcpy(&buf[1], &offset, sizeof(offset));
     memcpy(&buf[1 + sizeof(offset)], &length, sizeof(length));
+    /* The OACP indication starts the transfer from this context, and it can be
+     * handled before the write call returns, so publish the context first. */
+    otp_oacp_arm_transfer(ctx, BLE_OTS_OACP_READ, OTP_DIR_READ, offset, object_size);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc != ESP_OK) {
+        otp_oacp_disarm_transfer(ctx);
         return rc;
-    }
-    if (ctx) {
-        ctx->state = OTP_STATE_OACP_PENDING;
-        ctx->direction = OTP_DIR_READ;
-        ctx->object_offset = offset;
-        ctx->tx_len = 0;
-        ctx->rx_len = 0;
-        ctx->eof_reason = OTP_EOF_NONE;
-        ctx->eof_reported = 0;
-        ctx->abort_requested = 0;
-        ctx->execute_requested = 0;
-        ctx->oacp_opcode = BLE_OTS_OACP_READ;
-        ctx->oacp_result = 0;
-        ctx->session_state = OTP_SESSION_BUSY;
-        if (length != 0) {
-            ctx->object_size = length;
-        } else {
-            esp_ble_ots_size_t size = {0};
-            uint16_t out_len = 0;
-            if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
-                               sizeof(size), &out_len) == ESP_OK) {
-                ctx->object_size = size.current_size;
-            } else {
-                ctx->object_size = BLE_OTP_OBJECT_SIZE_UNKNOWN;
-            }
-        }
     }
     otp_post_oacp_started(conn_handle, BLE_OTS_OACP_READ);
     return ESP_OK;
@@ -1542,27 +1709,14 @@ esp_err_t esp_ble_otp_client_write_object(uint16_t conn_handle, uint32_t offset,
     memcpy(&buf[1], &offset, sizeof(offset));
     memcpy(&buf[1 + sizeof(offset)], &length, sizeof(length));
     buf[1 + sizeof(offset) + sizeof(length)] = (uint8_t)mode;
+    /* The OACP indication starts the transfer from this context, and it can be
+     * handled before the write call returns, so publish the context first. */
+    otp_oacp_arm_transfer(ctx, BLE_OTS_OACP_WRITE, OTP_DIR_WRITE, offset,
+                          length ? length : size.current_size);
     esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc != ESP_OK) {
+        otp_oacp_disarm_transfer(ctx);
         return rc;
-    }
-    if (ctx) {
-        ctx->state = OTP_STATE_OACP_PENDING;
-        ctx->direction = OTP_DIR_WRITE;
-        ctx->object_offset = offset;
-        ctx->tx_len = 0;
-        ctx->rx_len = 0;
-        ctx->eof_reason = OTP_EOF_NONE;
-        ctx->eof_reported = 0;
-        ctx->abort_requested = 0;
-        ctx->execute_requested = 0;
-        ctx->oacp_opcode = BLE_OTS_OACP_WRITE;
-        ctx->oacp_result = 0;
-        ctx->object_size = size.current_size;
-        ctx->session_state = OTP_SESSION_BUSY;
-        if (length != 0) {
-            ctx->object_size = length;
-        }
     }
     otp_post_oacp_started(conn_handle, BLE_OTS_OACP_WRITE);
     return ESP_OK;
@@ -1674,28 +1828,50 @@ esp_err_t esp_ble_otp_client_send_data(const esp_ble_otp_transfer_info_t *transf
         .data = (uint8_t *)data,
         .len = data_len,
     };
-    esp_err_t rc = esp_ble_conn_l2cap_coc_send(transfer_info->channel, &sdu);
-    if (rc == ESP_OK) {
-        otp_transfer_ctx_t *ctx = otp_ctx_get(transfer_info->conn_handle, false);
-        if (ctx) {
-            ctx->tx_len += data_len;
-            esp_ble_otp_event_data_t evt = {0};
-            otp_fill_transfer_info(ctx, &evt.transfer_data_sent.transfer_info);
-            evt.transfer_data_sent.data_len = data_len;
-            otp_post_event(BLE_OTP_EVENT_TRANSFER_DATA_SENT, &evt, sizeof(evt));
-            if (ctx->direction == OTP_DIR_READ && ctx->object_size != BLE_OTP_OBJECT_SIZE_UNKNOWN &&
-                    ctx->tx_len >= ctx->object_size && !ctx->eof_reported) {
-                ctx->eof_reason = OTP_EOF_BY_SIZE;
-                ctx->eof_reported = 1;
-                ctx->state = OTP_STATE_EOF;
-                ctx->session_state = OTP_SESSION_BUSY;
-                otp_fill_transfer_info(ctx, &evt.transfer_eof.transfer_info);
-                otp_post_event(BLE_OTP_EVENT_TRANSFER_EOF, &evt, sizeof(evt));
-                otp_try_complete(ctx);
-            }
-        }
+
+    /*
+     * Publish the pending SDU before calling into L2CAP. NimBLE may replenish
+     * credits and invoke TX_UNSTALLED synchronously from coc_send(), before it
+     * returns ESP_ERR_NOT_FINISHED. The callback and return path use the
+     * sequence as a single-completion claim, so a reentrant next send cannot
+     * be mistaken for this SDU.
+     */
+    if (!otp_lock()) {
+        return ESP_FAIL;
     }
-    return rc;
+    otp_transfer_ctx_t *ctx = otp_ctx_get(transfer_info->conn_handle, false);
+    if (ctx == NULL || ctx->tx_pending_len != 0) {
+        otp_unlock();
+        return ESP_ERR_INVALID_STATE;
+    }
+    uint32_t pending_seq = ++ctx->tx_next_seq;
+    if (pending_seq == 0) {
+        pending_seq = ++ctx->tx_next_seq;
+    }
+    ctx->tx_pending_seq = pending_seq;
+    ctx->tx_pending_len = data_len;
+    ctx->tx_len += data_len;
+    otp_unlock();
+
+    esp_err_t rc = esp_ble_conn_l2cap_coc_send(transfer_info->channel, &sdu);
+    otp_tx_completion_t completion = {0};
+    bool claimed = false;
+
+    if (!otp_lock()) {
+        return rc == ESP_ERR_NOT_FINISHED ? ESP_OK : rc;
+    }
+    ctx = otp_ctx_get(transfer_info->conn_handle, false);
+    if (rc == ESP_OK) {
+        claimed = otp_tx_complete_locked(ctx, pending_seq, 0, false, &completion);
+    } else if (rc != ESP_ERR_NOT_FINISHED) {
+        (void)otp_tx_complete_locked(ctx, pending_seq, 0, true, &completion);
+    }
+    otp_unlock();
+
+    if (claimed) {
+        otp_post_tx_completion(&completion);
+    }
+    return rc == ESP_ERR_NOT_FINISHED ? ESP_OK : rc;
 }
 
 esp_err_t esp_ble_otp_client_disconnect_transfer_channel(const esp_ble_otp_transfer_info_t *transfer_info)
@@ -1901,7 +2077,7 @@ esp_err_t esp_ble_otp_init(const esp_ble_otp_config_t *config)
     }
 
     for (size_t i = 0; i < OTP_MAX_CONNECTIONS; i++) {
-        otp_ctx_init(&s_otp.transfers[i], 0);
+        otp_ctx_clear(&s_otp.transfers[i]);
     }
 
     s_otp.inited = true;
