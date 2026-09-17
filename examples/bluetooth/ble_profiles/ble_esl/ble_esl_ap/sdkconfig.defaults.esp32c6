@@ -1,0 +1,2 @@
+# ESP32-C6 target defaults for BLE ESL AP product example.
+# Default build is test mode 1; see sdkconfig.defaults.

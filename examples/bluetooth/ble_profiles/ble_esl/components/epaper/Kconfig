@@ -1,0 +1,45 @@
+menu "E-paper Display Pin Configuration"
+
+config EPAPER_PIN_NUM_DC
+    int "E-paper DC Pin Number"
+    default 1 if IDF_TARGET_ESP32H4
+    default 20
+    help
+      Select the pin number for connecting E-paper DC pin
+
+config EPAPER_PIN_NUM_RST
+    int "E-paper RST Pin Number"
+    default 16 if IDF_TARGET_ESP32H4
+    default 19
+    help
+      Select the pin number for connecting E-paper RST pin
+
+config EPAPER_PIN_NUM_CS
+    int "E-paper CS Pin Number"
+    default 0 if IDF_TARGET_ESP32H4
+    default 21
+    help
+      Select the pin number for connecting E-paper CS pin
+
+config EPAPER_PIN_NUM_BUSY
+    int "E-paper BUSY Pin Number"
+    default 17 if IDF_TARGET_ESP32H4
+    default 22
+    help
+      Select the pin number for connecting E-paper BUSY pin
+
+config EPAPER_PIN_NUM_MOSI
+    int "E-paper MOSI Pin Number"
+    default 38 if IDF_TARGET_ESP32H4
+    default 18
+    help
+      Select the pin number for connecting E-paper MOSI pin
+
+config EPAPER_PIN_NUM_SCLK
+    int "E-paper SCLK Pin Number"
+    default 39 if IDF_TARGET_ESP32H4
+    default 15
+    help
+      Select the pin number for connecting E-paper SCLK pin
+
+endmenu

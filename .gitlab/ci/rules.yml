@@ -651,9 +651,11 @@
 
 .patterns-example_bluetooth_ble_esl_tag: &patterns-example_bluetooth_ble_esl_tag
   - "examples/bluetooth/ble_profiles/ble_esl/ble_esl_tag/**/*"
+  - "examples/bluetooth/ble_profiles/ble_esl/components/**/*"
 
 .patterns-example_bluetooth_ble_esl_ap: &patterns-example_bluetooth_ble_esl_ap
   - "examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap/**/*"
+  - "examples/bluetooth/ble_profiles/ble_esl/components/**/*"
 
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"

@@ -1,31 +1,118 @@
-menu "Example Configuration"
+menu "BLE ESL AP Product Example"
 
-    config EXAMPLE_BLE_ADV_NAME
-        string "AP advertisement name"
-        default "ESP_ESL_AP"
+    choice ESL_AP_OPERATION_MODE
+        prompt "AP operation mode"
+        default ESL_AP_MODE_WITH_APP
         help
-            Local name used in AP advertising.
+            AP + phone app is the default for this profile backport (mode 2:
+            e-paper upload/display/refresh via the existing Android App).
+            Standalone auto-scan is optional and not required for mode 2.
 
-    config EXAMPLE_TAG_ADV_NAME
-        string "Target Tag advertisement name"
-        default "ESP_ESL_TAG"
-        help
-            Connect to the first scanned device with this GAP name.
+        config ESL_AP_MODE_STANDALONE
+            bool "Standalone AP (no phone gateway)"
 
-    config EXAMPLE_BLE_SUB_ADV
-        string "Subsequent advertisement data"
-        default "ESL_AP"
-        help
-            Extra subsequent advertisement payload text.
+        config ESL_AP_MODE_WITH_APP
+            bool "AP + phone app (NUS JSONL gateway)"
+            select BT_NIMBLE_DYNAMIC_SERVICE if BT_NIMBLE_ENABLED
+            help
+                NUS is registered after ble_conn_mgr starts the NimBLE host.
+                Dynamic GATT (BT_NIMBLE_DYNAMIC_SERVICE) is required; static
+                ble_gatts_add_svcs() returns BLE_HS_EBUSY at that point.
+    endchoice
 
-    config EXAMPLE_ESL_ID
-        hex "ESL ID written during association"
+    config ESL_AP_AUTO_CONNECT_UNASSOCIATED
+        bool "Automatically connect to unassociated tags"
+        depends on ESL_AP_MODE_STANDALONE
+        default n
+
+    config ESL_AP_DEFAULT_ESL_ID
+        hex "Default ESL ID"
         range 0x00 0xFE
         default 0x00
 
-    config EXAMPLE_ESL_GROUP_ID
-        int "ESL Group ID written during association"
-        range 0 127
+    config ESL_AP_DEFAULT_GROUP_ID
+        hex "Default Group ID (PAwR subevent index)"
+        range 0x00 0x7F
+        default 0x00
+
+    config ESL_AP_DEFAULT_DISPLAY_INDEX
+        int "Default display index"
+        range 0 255
         default 0
+
+    config ESL_AP_DEFAULT_IMAGE_INDEX
+        int "Default image index for first OTS transfer"
+        range 0 3
+        default 0
+
+    config ESL_AP_DEFAULT_IMAGE_ID
+        int "Default image manager image ID"
+        range 1 999
+        default 1
+
+    config ESL_AP_PAWR_INTERVAL_MIN
+        int "PAwR interval min (1.25 ms units)"
+        range 6 65535
+        default 320
+
+    config ESL_AP_PAWR_INTERVAL_MAX
+        int "PAwR interval max (1.25 ms units)"
+        range 6 65535
+        default 320
+
+    config ESL_AP_PAWR_NUM_SUBEVENTS
+        int "PAwR subevents"
+        range 1 128
+        default 4
+        help
+            Number of PAwR subevents per interval. ESL group_id maps 1:1 to
+            the subevent index, so this must be > max group_id in use.
+
+    config ESL_AP_PAWR_SUBEVENT_INTERVAL
+        hex "PAwR subevent interval (1.25 ms units)"
+        default 0x50
+
+    config ESL_AP_PAWR_RESPONSE_SLOT_DELAY
+        hex "PAwR response slot delay"
+        default 0x28
+
+    config ESL_AP_PAWR_RESPONSE_SLOT_SPACING
+        hex "PAwR response slot spacing"
+        default 0x50
+
+    config ESL_AP_PAWR_NUM_RESPONSE_SLOTS
+        int "PAwR response slots"
+        range 1 255
+        default 3
+
+    config ESL_AP_AUTO_PING_INTERVAL_SEC
+        int "Auto PAwR ping interval (seconds, 0=disable)"
+        range 0 3600
+        default 15
+
+    config ESL_AP_RECOVERY_PROBE_DELAY_MS
+        int "OBSOLETE: recovery probe delay (unused)"
+        range 500 10000
+        default 2000
+
+    config ESL_AP_LED_COLOR_RED
+        int "Default LED red level (0-3)"
+        range 0 3
+        default 3
+
+    config ESL_AP_LED_COLOR_GREEN
+        int "Default LED green level (0-3)"
+        range 0 3
+        default 0
+
+    config ESL_AP_LED_COLOR_BLUE
+        int "Default LED blue level (0-3)"
+        range 0 3
+        default 0
+
+    config ESL_AP_LED_BRIGHTNESS
+        int "Default LED brightness (0-3)"
+        range 0 3
+        default 3
 
 endmenu
