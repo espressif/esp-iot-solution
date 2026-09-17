@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.1.0"
 description: BLE standard profile support for Electronic Shelf Label Profile
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/std/ble_esl
 issues: https://github.com/espressif/esp-iot-solution/issues

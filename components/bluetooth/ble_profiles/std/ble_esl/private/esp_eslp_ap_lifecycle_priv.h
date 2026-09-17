@@ -20,12 +20,28 @@ esp_err_t eslp_ap_lifecycle_deinit(void);
 esp_err_t eslp_ap_lifecycle_on_configured(uint16_t conn_handle, const esp_ble_esl_address_t *addr,
                                           const esp_ble_esl_key_material_t *resp_key);
 esp_err_t eslp_ap_lifecycle_on_sync_transferred(uint16_t conn_handle);
-esp_err_t eslp_ap_lifecycle_on_disconnected(uint16_t conn_handle);
+esp_err_t eslp_ap_lifecycle_begin_update_complete(uint16_t conn_handle);
+esp_err_t eslp_ap_lifecycle_confirm_update_complete(uint16_t conn_handle);
+
+/**
+ * Drop the Update Complete pending mark after the GATT write failed.
+ *
+ * If a Tag 0x13 teardown arrived before the write result, this settles that
+ * disconnect as a failed Update Complete instead of committing SYNCHRONIZED.
+ */
+esp_err_t eslp_ap_lifecycle_cancel_update_complete(uint16_t conn_handle);
+bool eslp_ap_lifecycle_keeps_sync_without_past(uint16_t conn_handle);
+esp_err_t eslp_ap_lifecycle_on_disconnected(uint16_t conn_handle, uint16_t reason);
 esp_err_t eslp_ap_lifecycle_on_connected(uint16_t conn_handle, const esp_ble_esl_address_t *addr);
 esp_err_t eslp_ap_lifecycle_note_sync_activity(uint16_t conn_handle);
 
 esp_err_t eslp_ap_lifecycle_get_conn(const esp_ble_esl_address_t *addr, uint16_t *out_conn);
 esp_err_t eslp_ap_lifecycle_get_address(uint16_t conn_handle, esp_ble_esl_address_t *out_addr);
+esp_err_t eslp_ap_lifecycle_forget(const esp_ble_esl_address_t *addr);
+
+esp_err_t eslp_ap_lifecycle_restore(const esp_ble_esl_address_t *addr,
+                                    const uint8_t ble_addr[6], uint8_t ble_addr_type,
+                                    const esp_ble_esl_key_material_t *resp_key);
 
 /**
  * @brief Decrypt a PAwR response using tracked Tag Response Keys

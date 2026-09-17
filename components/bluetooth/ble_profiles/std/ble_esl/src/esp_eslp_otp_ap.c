@@ -50,6 +50,7 @@ typedef struct {
 
 static bool s_inited;
 static bool s_ots_discovered;
+static uint16_t s_ots_conn = BLE_CONN_HANDLE_INVALID;
 static eslp_ap_image_xfer_t s_xfer;
 
 static void eslp_ap_xfer_finish(esp_err_t status);
@@ -73,9 +74,11 @@ static void eslp_ap_conn_event_handler(void *handler_args, esp_event_base_t base
     if (id == ESP_BLE_CONN_EVENT_DISCONNECTED) {
         const esp_ble_conn_event_data_t *ev = event_data;
         uint16_t conn = ev ? ev->disconnected.conn_handle : BLE_CONN_HANDLE_INVALID;
-        /* Single-connection OTS discovery flag: clear when the xfer/discovered peer drops. */
-        if (!s_xfer.active || eslp_ap_xfer_matches_conn(conn)) {
+        /* Single-connection OTS discovery flag: clear only when that peer drops.
+         * Phone/NUS disconnect (conn=0) must not wipe Tag OTS on conn=1. */
+        if (conn == s_ots_conn) {
             s_ots_discovered = false;
+            s_ots_conn = BLE_CONN_HANDLE_INVALID;
         }
         if (eslp_ap_xfer_matches_conn(conn)) {
             eslp_ap_xfer_finish(ESP_ERR_INVALID_STATE);
@@ -136,13 +139,18 @@ static void eslp_ap_otp_event_handler(void *handler_args, esp_event_base_t base,
     switch (id) {
     case BLE_OTP_EVENT_OTS_DISCOVERED:
         s_ots_discovered = true;
-        ESP_LOGI(TAG, "OTS discovered on peer");
+        s_ots_conn = evt->ots_discovered.conn_handle;
+        ESP_LOGI(TAG, "OTS discovered on peer conn=%u", s_ots_conn);
         break;
 
     case BLE_OTP_EVENT_OTS_DISCOVERY_FAILED:
-        s_ots_discovered = false;
-        if (s_xfer.active) {
-            ESP_LOGE(TAG, "OTS discovery failed during transfer");
+        if (evt->ots_discovery_failed.conn_handle == s_ots_conn) {
+            s_ots_discovered = false;
+            s_ots_conn = BLE_CONN_HANDLE_INVALID;
+        }
+        if (s_xfer.active && s_xfer.conn_handle == evt->ots_discovery_failed.conn_handle) {
+            ESP_LOGE(TAG, "OTS discovery failed during transfer conn=%u",
+                     evt->ots_discovery_failed.conn_handle);
             eslp_ap_xfer_finish(ESP_FAIL);
         }
         break;
@@ -209,8 +217,12 @@ static void eslp_ap_otp_event_handler(void *handler_args, esp_event_base_t base,
         s_xfer.mtu = evt->transfer_channel_connected.transfer_info.mtu;
         s_xfer.phase = ESLP_XFER_SENDING;
         s_xfer.progress = 0;
-        if (eslp_ap_send_next_chunk() != ESP_OK) {
-            eslp_ap_xfer_finish(ESP_FAIL);
+        {
+            esp_err_t sret = eslp_ap_send_next_chunk();
+            if (sret != ESP_OK) {
+                ESP_LOGE(TAG, "first chunk failed: %s", esp_err_to_name(sret));
+                eslp_ap_xfer_finish(ESP_FAIL);
+            }
         }
         break;
 
@@ -220,7 +232,10 @@ static void eslp_ap_otp_event_handler(void *handler_args, esp_event_base_t base,
             break;
         }
         if (s_xfer.progress < s_xfer.data_len) {
-            if (eslp_ap_send_next_chunk() != ESP_OK) {
+            esp_err_t sret = eslp_ap_send_next_chunk();
+            if (sret != ESP_OK) {
+                ESP_LOGE(TAG, "chunk at %lu failed: %s",
+                         (unsigned long)s_xfer.progress, esp_err_to_name(sret));
                 eslp_ap_xfer_finish(ESP_FAIL);
             }
         } else {
@@ -261,9 +276,16 @@ esp_err_t esp_ble_eslp_ap_transfer_image(const esp_ble_eslp_ap_image_transfer_t 
     if (s_xfer.active) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (!s_ots_discovered) {
-        ESP_LOGW(TAG, "OTS not discovered yet; call after BLE_OTP_EVENT_OTS_DISCOVERED");
-        return ESP_ERR_INVALID_STATE;
+    if (!s_ots_discovered || s_ots_conn != params->conn_handle) {
+        ESP_LOGI(TAG, "OTS not ready on conn=%u, discovering", params->conn_handle);
+        esp_err_t dret = esp_ble_otp_client_discover_ots(params->conn_handle);
+        if (dret != ESP_OK) {
+            ESP_LOGW(TAG, "OTS discover failed conn=%u: %s",
+                     params->conn_handle, esp_err_to_name(dret));
+            return dret;
+        }
+        s_ots_discovered = true;
+        s_ots_conn = params->conn_handle;
     }
 
     memset(&s_xfer, 0, sizeof(s_xfer));
@@ -298,17 +320,24 @@ esp_err_t eslp_otp_ap_init(void)
 
     memset(&s_xfer, 0, sizeof(s_xfer));
     s_ots_discovered = false;
+    s_ots_conn = BLE_CONN_HANDLE_INVALID;
 
     esp_err_t ret = esp_ble_conn_l2cap_coc_mem_init();
     if (ret != ESP_OK) {
         return ret;
     }
 
+    /* Do not auto-discover OTS on DISC_COMPLETE. That handler runs on the
+     * conn_mgr event loop and blocks on CCCD writes/reads of the same Tag ACL
+     * that configure_tag() is writing (ADDRESS / AP_SYNC_KEY / RESP_KEY).
+     * NimBLE allows one GATT client procedure per connection; the race made
+     * RESP_KEY hang until WAIT_DURATION and the queued image transfer never
+     * started. transfer_image() discovers OTS lazily when it actually needs it. */
     esp_ble_otp_config_t otp_cfg = {
         .role = BLE_OTP_ROLE_CLIENT,
         .psm = BLE_OTP_PSM_DEFAULT,
         .l2cap_coc_mtu = BLE_OTP_L2CAP_COC_MTU_DEFAULT,
-        .auto_discover_ots = true,
+        .auto_discover_ots = false,
     };
     ret = esp_ble_otp_init(&otp_cfg);
     if (ret != ESP_OK) {
@@ -346,6 +375,7 @@ esp_err_t eslp_otp_ap_deinit(void)
     (void)esp_event_handler_unregister(BLE_OTP_EVENTS, ESP_EVENT_ANY_ID, eslp_ap_otp_event_handler);
     (void)esp_ble_otp_deinit();
     s_ots_discovered = false;
+    s_ots_conn = BLE_CONN_HANDLE_INVALID;
     s_inited = false;
     return ESP_OK;
 }

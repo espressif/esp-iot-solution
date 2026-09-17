@@ -486,3 +486,45 @@ void eslp_otp_tag_clear_images(void)
     }
     eslp_select_object(s_current_index < CONFIG_BLE_ESL_MAX_IMAGES ? s_current_index : 0);
 }
+
+esp_err_t esp_ble_eslp_image_snapshot(uint8_t image_index, uint8_t *out, uint32_t out_cap, uint32_t *out_len)
+{
+    const uint8_t *data = NULL;
+    uint32_t len = 0;
+    esp_err_t ret = esp_ble_eslp_get_image(image_index, &data, &len);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    if (out == NULL || out_len == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len > out_cap) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    memcpy(out, data, len);
+    *out_len = len;
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_eslp_image_restore(uint8_t image_index, const uint8_t *data, uint32_t len)
+{
+    if (!s_inited || data == NULL) {
+        return s_inited ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
+    }
+    if (image_index >= CONFIG_BLE_ESL_MAX_IMAGES || !s_images[image_index].buffer) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (len == 0 || len > CONFIG_BLE_ESL_MAX_IMAGE_SIZE) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    memcpy(s_images[image_index].buffer, data, len);
+    s_images[image_index].current_size = len;
+    s_images[image_index].state = ESLP_IMG_VALID;
+    eslp_apply_object_to_ots(image_index);
+    return ESP_OK;
+}
+
+void esp_ble_eslp_image_invalidate_all(void)
+{
+    eslp_otp_tag_clear_images();
+}
