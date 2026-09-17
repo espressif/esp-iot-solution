@@ -1,5 +1,28 @@
 # ChangeLog
 
+## v1.3.2 - 2026.09.10
+
+### Bug Fixes:
+
+- Preserve the public GATT Read compatibility path: `esp_ble_conn_read()` and `esp_ble_conn_read_by_handle()` accept `data == NULL` and return a borrowed pointer to the internal read cache (caller must not `free()` it). Caller-owned buffers continue to receive a bounded/truncated copy under the connection lock.
+- `esp_ble_conn_pawr_subev_data_set()`: skip idle subevents; use an empty mbuf for zero-length payloads that still listen for responses.
+- Honor `include_service_uuid` / `adv_uuid16` on extended advertising.
+- `ESP_BLE_CONN_EVENT_DISC_COMPLETE` now posts `uint16_t conn_handle`.
+- Do not auto-restart advertising while PAwR owns the instance or a periodic sync is held (avoids `ble_gap_*` `rc=15` / starved `AUX_CONNECT_REQ`).
+- `esp_ble_conn_connect_with_synced()`: cancel GAP discovery first (`BLE_HS_EBUSY` while scan is active).
+- Do not cache the `DATA_RECEIVE` payload pointer (handler `free()` caused a double-free).
+- Handle PAwR PAST via `BLE_GAP_EVENT_PERIODIC_TRANSFER_V2`.
+- `esp_ble_conn_l2cap_coc_send()`: do not free an SDU NimBLE already owns.
+- Serialize GATT procedures per link; give the per-link semaphore on ATT errors instead of waiting out `WAIT_DURATION`.
+- Key the attribute cache by connection; local GATT server values use `BLE_CONN_ATTR_LOCAL_CONN` (defined even when L2CAP CoC is off).
+- ROLE_BOTH: skip GATT client discovery on incoming (peripheral) connections.
+- Log expected races at debug (`ESP_ERR_NOT_FOUND`, MTU `EALREADY`, rediscovery).
+- Central connect: 2 s supervision timeout, 1M+2M initiator PHY, ATT MTU exchange, and `esp_ble_conn_connect_cancel()` aborts in-flight `ble_gap_ext_connect`.
+
+### Enhancements:
+
+- `esp_ble_conn_connect_with_synced()`: initiate a PAwR `AUX_CONNECT_REQ` to a synchronized peer (needed for OTS after PAST).
+
 ## v1.3.1 - 2026.09.09
 
 ### Enhancements:

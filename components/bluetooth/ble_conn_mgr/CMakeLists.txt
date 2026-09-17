@@ -17,6 +17,7 @@ list(APPEND priv_includes   "src/priv_includes")
 
 list(APPEND req "bt")
 list(APPEND req "nvs_flash")
+list(APPEND req "esp_timer")
 
 idf_component_register(SRCS "${srcs}"
                        INCLUDE_DIRS "${include}"

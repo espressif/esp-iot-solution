@@ -104,6 +104,12 @@ typedef struct {
 } blecm_evt_connected_t;
 
 typedef struct {
+    int status;
+    uint8_t peer_addr[6];
+    uint8_t peer_addr_type;
+} blecm_evt_connect_failed_t;
+
+typedef struct {
     uint16_t conn_handle;
     uint16_t reason;
     uint8_t peer_addr[6];
@@ -124,6 +130,8 @@ _Static_assert(sizeof(blecm_evt_passkey_action_t) == sizeof(((esp_ble_conn_event
                "passkey_action event layout");
 _Static_assert(sizeof(blecm_evt_connected_t) == sizeof(((esp_ble_conn_event_data_t *)0)->connected),
                "connected event layout");
+_Static_assert(sizeof(blecm_evt_connect_failed_t) == sizeof(((esp_ble_conn_event_data_t *)0)->connect_failed),
+               "connect_failed event layout");
 _Static_assert(sizeof(blecm_evt_disconnected_t) == sizeof(((esp_ble_conn_event_data_t *)0)->disconnected),
                "disconnected event layout");
 _Static_assert(sizeof(blecm_evt_mtu_update_t) == sizeof(((esp_ble_conn_event_data_t *)0)->mtu_update),
@@ -149,6 +157,13 @@ static void esp_ble_conn_gatt_schema_commit_nvs(uint32_t ver);
 
 /* BLE disconnect reason sentinel value: indicates no disconnect has occurred yet */
 #define BLE_CONN_DISCONNECT_REASON_INVALID 0xFFFF
+/* Owner key for attribute values held by the local GATT server. Independent of
+ * L2CAP CoC: GATT register / access / notify always need this, including
+ * peripheral-only examples that leave BLE_L2CAP_COC_MAX_NUM at 0. Remote
+ * (client) reads are cached under their own connection handle: an ATT handle
+ * is only unique within one GATT database, and the local server's handles
+ * overlap with every peer's. */
+#define BLE_CONN_ATTR_LOCAL_CONN BLE_CONN_HANDLE_INVALID
 
 #if MYNEWT_VAL(BLE_L2CAP_COC_MAX_NUM) >= 1
 #define L2CAP_COC_MTU CONFIG_BLE_CONN_MGR_L2CAP_COC_MTU
@@ -159,10 +174,6 @@ static void esp_ble_conn_gatt_schema_commit_nvs(uint32_t ver);
  */
 #define L2CAP_COC_MTU_MIN 23
 #define L2CAP_COC_MTU_MAX L2CAP_COC_MTU
-/* BLE connection handle valid range: 0x0000 - 0x0EFF. Invalid sentinel: BLE_CONN_HANDLE_INVALID (from esp_ble_conn_mgr.h) */
-#ifndef BLE_CONN_HANDLE_MAX
-#define BLE_CONN_HANDLE_MAX 0x0EFF
-#endif
 /* BLE L2CAP CoC PSM range for LE: 0x0001 - 0x00FF
  * Per Bluetooth Core Specification Vol 3, Part A, Section 4.2.22 (SPSM for LE Credit Based Flow Control)
  * - 0x0001 - 0x007F: Fixed Bluetooth SIG-defined services
@@ -241,6 +252,7 @@ typedef struct attr_mbuf_t {
     uint8_t *outbuf;                                    /* Data buffer as read or write for characteristics */
     uint16_t outlen;                                    /* Data length as read or write for characteristics */
     uint16_t attr_handle;                               /* Executed handle when characteristic is read or written */
+    uint16_t conn_handle;                               /* Owning link, or BLE_CONN_ATTR_LOCAL_CONN for the local GATT server */
     uint8_t type;                                       /* Type of the UUID */
     esp_ble_conn_uuid_t uuid;                           /* Universal UUID, to be used for any-UUID static allocation */
 } attr_mbuf_t;
@@ -273,9 +285,11 @@ typedef struct esp_ble_conn_link_t {
     uint16_t refcount;
     bool removed;
     SemaphoreHandle_t semaphore;
+    SemaphoreHandle_t op_mutex;                    /* Serializes GATT procedures that wait on `semaphore` */
     QueueHandle_t queue;
     esp_err_t last_read_rc;
     esp_err_t last_notify_rc;
+    esp_err_t last_write_rc;
 #if MYNEWT_VAL(BLE_SM_SC)
     struct ble_sm_sc_oob_data sc_oob_local_store;   /* Per-link local SC OOB backing storage */
     struct ble_sm_sc_oob_data sc_oob_remote_store;  /* Per-link peer SC OOB backing storage */
@@ -329,7 +343,8 @@ typedef struct esp_ble_conn_session_t {
 
     uint8_t                     ext_adv_handle;         /* NimBLE ext-adv set index; must be < BLE_ADV_INSTANCES */
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
-    uint16_t                    periodic_sync_handle;   /* Periodic sync handle; 0 when not synced */
+    uint16_t                    periodic_sync_handle;   /* Last periodic sync handle from the stack */
+    bool                        periodic_sync_active;   /* True while a sync is held (handle 0 is valid) */
 #endif
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC)
     uint8_t                     secondary_adv_max_skip; /* Secondary advertising maximum skip */
@@ -401,10 +416,16 @@ _Static_assert(offsetof(esp_ble_conn_sc_oob_data_t, c) == offsetof(struct ble_sm
 /* Keep legacy API behavior: report the most recent disconnection reason. */
 static uint16_t s_last_disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
 static uint16_t s_last_disconnect_conn_handle = BLE_CONN_HANDLE_INVALID;
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+static SemaphoreHandle_t s_connect_cancel_sem;
+static volatile bool s_connect_cancelling;
+static bool esp_ble_conn_on_outgoing_connect_failed(ble_addr_t *addr);
+#endif
 #define BLE_CONN_MGR_LIST_LOCK_TIMEOUT_MS 2000
 #define BLE_CONN_EVENT_WAIT_TIMEOUT_MS 5000
 
 static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg);
+static void esp_ble_conn_attr_cache_purge(uint16_t conn_handle);
 static void esp_ble_conn_gap_chr_changed(uint16_t uuid);
 static esp_err_t esp_ble_conn_refresh_adv_if_active(esp_ble_conn_session_t *conn_session);
 
@@ -433,10 +454,41 @@ static void esp_ble_conn_link_free(esp_ble_conn_link_t *link)
     if (link->semaphore) {
         vSemaphoreDelete(link->semaphore);
     }
+    if (link->op_mutex) {
+        vSemaphoreDelete(link->op_mutex);
+    }
     if (link->queue) {
         vQueueDelete(link->queue);
     }
     free(link);
+}
+
+/* One outstanding GATT procedure per link. NimBLE allows only one anyway, and
+ * `semaphore` is a single binary semaphore: with two tasks in flight, a
+ * completion meant for one of them is consumed by the other, which then waits
+ * out the full WAIT_DURATION. */
+static bool esp_ble_conn_link_op_begin(esp_ble_conn_link_t *link)
+{
+    if (!link || !link->op_mutex) {
+        return false;
+    }
+
+    if (xSemaphoreTake(link->op_mutex, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
+        ESP_LOGW(TAG, "Timed out waiting for an in-flight GATT procedure on conn=%d", link->conn_handle);
+        return false;
+    }
+
+    /* A previous procedure may have timed out and been answered afterwards. */
+    while (xSemaphoreTake(link->semaphore, 0) == pdPASS) {}
+
+    return true;
+}
+
+static void esp_ble_conn_link_op_end(esp_ble_conn_link_t *link)
+{
+    if (link && link->op_mutex) {
+        xSemaphoreGive(link->op_mutex);
+    }
 }
 
 static void esp_ble_conn_link_unref(esp_ble_conn_link_t *link)
@@ -537,27 +589,21 @@ static esp_ble_conn_link_t *esp_ble_conn_link_add(uint16_t conn_handle, const bl
     link->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
     link->last_read_rc = ESP_OK;
     link->last_notify_rc = ESP_OK;
+    link->last_write_rc = ESP_OK;
     link->refcount = 0;
     link->removed = false;
     link->peer_addr_type = peer_addr->type;
     memcpy(link->peer_addr, peer_addr->val, sizeof(link->peer_addr));
     link->semaphore = xSemaphoreCreateBinary();
+    link->op_mutex = xSemaphoreCreateMutex();
     link->queue = xQueueCreate(1, sizeof(esp_ble_conn_event_ctx_t));
-    if (!link->semaphore || !link->queue) {
-        if (link->semaphore) {
-            vSemaphoreDelete(link->semaphore);
-        }
-        if (link->queue) {
-            vQueueDelete(link->queue);
-        }
-        free(link);
+    if (!link->semaphore || !link->op_mutex || !link->queue) {
+        esp_ble_conn_link_free(link);
         return NULL;
     }
 
     if (!esp_ble_conn_mgr_lock()) {
-        vSemaphoreDelete(link->semaphore);
-        vQueueDelete(link->queue);
-        free(link);
+        esp_ble_conn_link_free(link);
         return NULL;
     }
     SLIST_FOREACH(exist, &s_mgr_ctx.link_list, next) {
@@ -612,6 +658,7 @@ static void esp_ble_conn_link_remove(uint16_t conn_handle, uint16_t reason)
         should_free = true;
     }
     esp_ble_conn_mgr_unlock();
+    esp_ble_conn_attr_cache_purge(conn_handle);
     if (should_free) {
         esp_ble_conn_link_free(link);
     }
@@ -828,7 +875,7 @@ typedef struct {
 static void esp_ble_conn_disc_chrs(esp_ble_conn_disc_ctx_t *ctx);
 static void esp_ble_conn_disc_dscs(esp_ble_conn_disc_ctx_t *ctx);
 
-static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, const ble_uuid_t *ble_uuid, uint16_t outlen, uint8_t *outbuf);
+static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t conn_handle, uint16_t attr_handle, const ble_uuid_t *ble_uuid, uint16_t outlen, uint8_t *outbuf);
 
 static void esp_ble_conn_disc_complete(esp_ble_conn_disc_ctx_t *ctx, int rc)
 {
@@ -837,7 +884,8 @@ static void esp_ble_conn_disc_complete(esp_ble_conn_disc_ctx_t *ctx, int rc)
         ble_gap_terminate(ctx->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     } else {
         ESP_LOGD(TAG, "Service discovery complete; rc=%d, conn_handle=%d", rc, ctx->conn_handle);
-        esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISC_COMPLETE, NULL, 0, portMAX_DELAY);
+        esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DISC_COMPLETE,
+                       &ctx->conn_handle, sizeof(ctx->conn_handle), portMAX_DELAY);
     }
     free(ctx);
 }
@@ -920,7 +968,8 @@ static esp_err_t esp_ble_conn_svc_add(esp_ble_conn_session_t *conn_session, cons
 
     svc = esp_ble_conn_svc_find(conn_session, gatt_svc->start_handle, &prev);
     if (svc != NULL) {
-        ESP_LOGW(TAG, "Service already discovered, start handle=%d", gatt_svc->start_handle);
+        /* Expected when a known peer reconnects and is discovered again. */
+        ESP_LOGD(TAG, "Service already discovered, start handle=%d", gatt_svc->start_handle);
         return ESP_OK;
     }
 
@@ -1443,13 +1492,15 @@ static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
 {
     esp_ble_conn_link_t *exist_link = NULL;
     esp_err_t rc = ESP_OK;
+    /* 31.25–32.5 ms interval, latency 1. Supervision must survive dual ACL
+     * (phone NUS + Tag) plus scan; 200 ms (20) dropped the Tag link under load. */
     struct ble_gap_conn_params conn_params = {
         .scan_itvl = 0x12,
         .scan_window = 0x11,
         .itvl_min = 25,
         .itvl_max = 26,
         .latency = 1,
-        .supervision_timeout = 20
+        .supervision_timeout = 200
     };
 
     if (!addr || !s_conn_session) {
@@ -1495,9 +1546,11 @@ static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
     }
 
 #if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP
+    /* Default peripheral extended adv uses 1M primary + 2M AUX. A 1M-only
+     * initiator never sends AUX_CONNECT_REQ on that secondary PHY. */
     rc = ble_gap_ext_connect(s_conn_session->own_addr_type, addr, 30000,
-                             BLE_GAP_LE_PHY_1M_MASK,
-                             &conn_params, NULL, NULL,
+                             BLE_GAP_LE_PHY_1M_MASK | BLE_GAP_LE_PHY_2M_MASK,
+                             &conn_params, &conn_params, NULL,
                              esp_ble_conn_gap_event, s_conn_session);
 #else
     rc = ble_gap_connect(s_conn_session->own_addr_type, addr, 30000, &conn_params, esp_ble_conn_gap_event, s_conn_session);
@@ -1580,7 +1633,7 @@ static esp_err_t esp_ble_conn_on_complete(esp_ble_conn_session_t *conn_session, 
         return BLE_ATT_ERR_UNLIKELY;
     }
 
-    return esp_ble_conn_on_gatts_attr_value_set(attr_handle, &chr->chr.uuid.u, data_len, data_buf);
+    return esp_ble_conn_on_gatts_attr_value_set(conn_handle, attr_handle, &chr->chr.uuid.u, data_len, data_buf);
 }
 
 static esp_err_t esp_ble_conn_on_write(uint16_t conn_handle,
@@ -1593,8 +1646,13 @@ static esp_err_t esp_ble_conn_on_write(uint16_t conn_handle,
 
     ESP_LOGD(TAG, "Write complete; status=%d conn_handle=%d attr_handle=%d\n",
                 error->status, conn_handle, attr->handle);
-    if (!error->status) {
-        if (link && link->semaphore) {
+    if (error->status) {
+        ESP_LOGW(TAG, "GATT write failed; status=%d conn_handle=%d attr_handle=%d",
+                 error->status, conn_handle, attr->handle);
+    }
+    if (link) {
+        link->last_write_rc = error->status ? ESP_FAIL : ESP_OK;
+        if (link->semaphore) {
             xSemaphoreGive(link->semaphore);
         }
     }
@@ -1662,12 +1720,13 @@ static esp_err_t esp_ble_conn_on_read(uint16_t conn_handle,
 }
 
 /* Remove the only pending entry (used when connect fails; NimBLE event has no peer_addr) */
-static void esp_ble_conn_pending_remove_first(void)
+static bool esp_ble_conn_pending_remove_first(ble_addr_t *addr)
 {
     esp_ble_conn_pending_t *pending = NULL;
+    bool pending_removed = false;
 
     if (!esp_ble_conn_mgr_lock()) {
-        return;
+        return false;
     }
     if (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
         pending = SLIST_FIRST(&s_mgr_ctx.pending_list);
@@ -1675,8 +1734,26 @@ static void esp_ble_conn_pending_remove_first(void)
     }
     esp_ble_conn_mgr_unlock();
     if (pending) {
+        pending_removed = true;
+        if (addr) {
+            addr->type = pending->peer_addr_type;
+            memcpy(addr->val, pending->peer_addr, sizeof(addr->val));
+        }
         free(pending);
     }
+    return pending_removed;
+}
+
+static bool esp_ble_conn_on_outgoing_connect_failed(ble_addr_t *addr)
+{
+    bool pending_removed = esp_ble_conn_pending_remove_first(addr);
+    if (s_connect_cancelling) {
+        s_connect_cancelling = false;
+        if (s_connect_cancel_sem) {
+            xSemaphoreGive(s_connect_cancel_sem);
+        }
+    }
+    return pending_removed;
 }
 #endif
 
@@ -1809,12 +1886,12 @@ static void esp_ble_conn_chr_set_handle(esp_ble_conn_character_t *chr, uint16_t 
     }
 }
 
-static attr_mbuf_t *esp_ble_conn_find_attr_with_uuid(uint8_t type, esp_ble_conn_uuid_t uuid)
+static attr_mbuf_t *esp_ble_conn_find_attr_with_uuid(uint16_t conn_handle, uint8_t type, esp_ble_conn_uuid_t uuid)
 {
     attr_mbuf_t *attr_mbuf = NULL;
 
     SLIST_FOREACH(attr_mbuf, &s_conn_session->mbuf_list, next) {
-        if (!attr_mbuf) {
+        if (!attr_mbuf || attr_mbuf->conn_handle != conn_handle) {
             continue;
         }
 
@@ -1826,12 +1903,13 @@ static attr_mbuf_t *esp_ble_conn_find_attr_with_uuid(uint8_t type, esp_ble_conn_
     return NULL;
 }
 
-static attr_mbuf_t *esp_ble_conn_find_attr_with_handle(uint16_t attr_handle)
+static attr_mbuf_t *esp_ble_conn_find_attr_with_handle(uint16_t conn_handle, uint16_t attr_handle)
 {
     attr_mbuf_t *attr_mbuf = NULL;
 
     SLIST_FOREACH(attr_mbuf, &s_conn_session->mbuf_list, next) {
-        if (attr_mbuf && attr_mbuf->attr_handle == attr_handle) {
+        if (attr_mbuf && attr_mbuf->conn_handle == conn_handle &&
+                attr_mbuf->attr_handle == attr_handle) {
             return attr_mbuf;
         }
     }
@@ -1839,11 +1917,32 @@ static attr_mbuf_t *esp_ble_conn_find_attr_with_handle(uint16_t attr_handle)
     return NULL;
 }
 
-static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, const ble_uuid_t *ble_uuid, uint16_t outlen, uint8_t *outbuf)
+static void esp_ble_conn_attr_cache_purge(uint16_t conn_handle)
 {
-    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(attr_handle);
+    attr_mbuf_t *attr_mbuf = NULL;
+    attr_mbuf_t *tmp = NULL;
+
+    if (!s_conn_session || !esp_ble_conn_mgr_lock()) {
+        return;
+    }
+
+    SLIST_FOREACH_SAFE(attr_mbuf, &s_conn_session->mbuf_list, next, tmp) {
+        if (attr_mbuf->conn_handle != conn_handle) {
+            continue;
+        }
+        SLIST_REMOVE(&s_conn_session->mbuf_list, attr_mbuf, attr_mbuf_t, next);
+        free(attr_mbuf->outbuf);
+        free(attr_mbuf);
+    }
+    esp_ble_conn_mgr_unlock();
+}
+
+static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t conn_handle, uint16_t attr_handle, const ble_uuid_t *ble_uuid, uint16_t outlen, uint8_t *outbuf)
+{
+    attr_mbuf_t *attr_mbuf = NULL;
     uint8_t type = 0;
     esp_ble_conn_uuid_t uuid;
+    esp_err_t rc = ESP_OK;
 
     switch (ble_uuid->type) {
         case BLE_UUID_TYPE_16:
@@ -1862,13 +1961,20 @@ static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, cons
             break;
     }
 
+    if (!esp_ble_conn_mgr_lock()) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    attr_mbuf = esp_ble_conn_find_attr_with_handle(conn_handle, attr_handle);
     if (!attr_mbuf) {
         attr_mbuf = calloc(1, sizeof(attr_mbuf_t));
         if (!attr_mbuf) {
             ESP_LOGE(TAG, "Failed to allocate memory for storing outbuf and outlen");
-            return ESP_ERR_NO_MEM;
+            rc = ESP_ERR_NO_MEM;
+            goto out;
         }
         SLIST_INSERT_HEAD(&s_conn_session->mbuf_list, attr_mbuf, next);
+        attr_mbuf->conn_handle = conn_handle;
         attr_mbuf->attr_handle = attr_handle;
         attr_mbuf->type = type;
         memcpy(&attr_mbuf->uuid, &uuid, sizeof(uuid));
@@ -1877,17 +1983,22 @@ static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, cons
             free(attr_mbuf->outbuf);
             attr_mbuf->outbuf = NULL;
         }
+        /* A peer may re-enumerate and reuse a handle for another characteristic. */
+        attr_mbuf->type = type;
+        memcpy(&attr_mbuf->uuid, &uuid, sizeof(uuid));
     }
 
     attr_mbuf->outbuf = outbuf;
     attr_mbuf->outlen = outlen;
 
-    return ESP_OK;
+out:
+    esp_ble_conn_mgr_unlock();
+    return rc;
 }
 
-static esp_err_t esp_ble_conn_on_gatts_attr_value_get(uint16_t attr_handle, uint16_t *outlen, uint8_t **outbuf)
+static esp_err_t esp_ble_conn_on_gatts_attr_value_get(uint16_t conn_handle, uint16_t attr_handle, uint16_t *outlen, uint8_t **outbuf)
 {
-    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(attr_handle);
+    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(conn_handle, attr_handle);
 
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Outbuf with handle %d not found", attr_handle);
@@ -1898,6 +2009,35 @@ static esp_err_t esp_ble_conn_on_gatts_attr_value_get(uint16_t attr_handle, uint
     *outlen = attr_mbuf->outlen;
 
     return ESP_OK;
+}
+
+/* PAwR lives on ext_adv_handle independently of ACL. The AP may pause the
+ * train (stop ext adv) for an unassociated connect, but the instance stays
+ * reserved: auto-restarting advertising on connect-fail races resume_pawr
+ * and NimBLE logs ble_gap_* rc=15 (EBUSY). */
+static bool esp_ble_conn_pawr_owns_instance(esp_ble_conn_session_t *conn_session)
+{
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP) && BLE_CONN_MGR_NIMBLE_USE_EXT_GAP
+    return conn_session && conn_session->pawr_params_set;
+#else
+    (void)conn_session;
+    return false;
+#endif
+}
+
+/* A peripheral holding a periodic sync (PAST/PAwR) must not connectable-
+ * advertise: on a single radio that starves sync reception, so the AP's
+ * PAwR AUX_CONNECT_REQ never reaches the peer. Handle 0 is a valid sync
+ * handle, so occupancy is tracked with a separate flag. */
+static bool esp_ble_conn_periodic_sync_held(esp_ble_conn_session_t *conn_session)
+{
+#if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP && \
+    (defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER))
+    return conn_session && conn_session->periodic_sync_active;
+#else
+    (void)conn_session;
+    return false;
+#endif
 }
 
 #if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP && defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV) && defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV)
@@ -1931,6 +2071,11 @@ static void esp_ble_conn_periodic_advertise(esp_ble_conn_session_t *conn_session
 #endif
 
     rc = ble_gap_periodic_adv_configure(conn_session->ext_adv_handle, &adv_params);
+    if (rc == BLE_HS_EBUSY || rc == BLE_HS_EALREADY) {
+        ESP_LOGW(TAG, "Periodic advertising already configured on instance %u rc=%d, keep it",
+                 (unsigned)conn_session->ext_adv_handle, rc);
+        return;
+    }
     if (rc) {
         ESP_LOGE(TAG, "Configure periodic advertising error; rc=%d", rc);
         return;
@@ -2074,7 +2219,12 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
         /* The instance is still enabled, which ble_gap_ext_adv_configure()
            refuses to reprogram. Stop it and take one more run: returning here
            leaves the instance advertising with the previous parameters, which
-           is harder to notice than a failure to advertise at all. */
+           is harder to notice than a failure to advertise at all.
+
+           Only disable the instance once it is known to be enabled. A PAwR
+           train shares this instance, and toggling its enable state under a
+           configured periodic train upsets the controller's subevent
+           scheduler. */
         int stop_rc = ble_gap_ext_adv_stop(conn_session->ext_adv_handle);
         /* EALREADY means the set ended between the two calls (a connection, or
            duration expiry). The disable was still sent, so the retry is valid. */
@@ -2106,8 +2256,8 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
     }
 
     memset(&fields, 0, sizeof(fields));
-#if !defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
     fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+#if !defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
     fields.tx_pwr_lvl_is_present = 1;
     fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
 #endif
@@ -2115,6 +2265,26 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
     if (fields.name) {
         fields.name_len = strlen((const char *)fields.name);
         fields.name_is_complete = 1;
+    }
+
+    ble_uuid16_t adv_uuid16;
+    ble_uuid128_t adv_uuid128;
+    if (!conn_session->adv_data_buf && conn_session->adv_data_auto_include_uuid) {
+        if (conn_session->adv_data_auto_uuid_type == 0 ||
+                conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_16) {
+            adv_uuid16 = (ble_uuid16_t)BLE_UUID16_INIT(conn_session->adv_data_auto_uuid16);
+            fields.uuids16 = &adv_uuid16;
+            fields.num_uuids16 = 1;
+            fields.uuids16_is_complete = 1;
+        } else if (conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_128) {
+            memset(&adv_uuid128, 0, sizeof(adv_uuid128));
+            adv_uuid128.u.type = BLE_UUID_TYPE_128;
+            memcpy(adv_uuid128.value, conn_session->adv_data_auto_uuid128,
+                   sizeof(adv_uuid128.value));
+            fields.uuids128 = &adv_uuid128;
+            fields.num_uuids128 = 1;
+            fields.uuids128_is_complete = 1;
+        }
     }
 
     if (conn_session->adv_data_buf) {
@@ -2224,6 +2394,13 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
 
 static esp_err_t esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
 {
+    /* Defense in depth: never start connectable ADV while a periodic sync is
+     * held. NimBLE's internal slave 0x3e path can still bypass this; disable
+     * CONFIG_BT_NIMBLE_ENABLE_CONN_REATTEMPT on synced peripherals. */
+    if (esp_ble_conn_periodic_sync_held(conn_session)) {
+        ESP_LOGD(TAG, "Refuse advertise; periodic sync held");
+        return ESP_OK;
+    }
 #if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP
     esp_err_t err = esp_ble_conn_ext_adv_handle_assign(conn_session, conn_session->adv_params_cfg.adv_handle);
     if (err != ESP_OK) {
@@ -2321,7 +2498,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             if (ed->sid == (uint8_t)BLE_CONN_MGR_EXT_PSI_AUTO_SID) {
                 /* One active sync per session; NimBLE returns EALREADY if already synced, EBUSY if create is in flight.
                  * Do not break out of EXT_DISC: apps still need SCAN_RESULT for extended ADV reassembly / filtering. */
-                if (conn_session->periodic_sync_handle == 0 && !s_periodic_sync_create_pending) {
+                if (!conn_session->periodic_sync_active && !s_periodic_sync_create_pending) {
                     ble_addr_t per_addr;
                     struct ble_gap_periodic_sync_params params;
                     int sync_rc;
@@ -2488,12 +2665,26 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
 
                 conn_data.type = chr->chr.uuid.u.type;
                 ble_uuid_flat(&chr->chr.uuid.u, &conn_data.uuid);
-                rc = esp_ble_conn_on_gatts_attr_value_set(event->notify_rx.attr_handle, &chr->chr.uuid.u, conn_data.data_len, conn_data.data);
-                /* On success, ownership passes to app (handler must free conn_data.data). On failure, clear attr cache and free buffer. */
+                /* Cache a copy. The event payload is a pointer; the handler
+                 * must free(conn_data.data). Storing that same pointer in the
+                 * attr cache made the next indication (or disconnect purge)
+                 * free it a second time — ESL ECP LED_STATE after a second
+                 * image transfer hit tlsf "block already marked as free". */
+                uint8_t *cache_copy = NULL;
+                if (conn_data.data_len > 0 && conn_data.data) {
+                    cache_copy = malloc(conn_data.data_len);
+                    if (cache_copy) {
+                        memcpy(cache_copy, conn_data.data, conn_data.data_len);
+                    }
+                }
+                (void)esp_ble_conn_on_gatts_attr_value_set(event->notify_rx.conn_handle,
+                                                           event->notify_rx.attr_handle,
+                                                           &chr->chr.uuid.u,
+                                                           cache_copy ? conn_data.data_len : 0,
+                                                           cache_copy);
                 if (esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_DATA_RECEIVE,
                                    &conn_data, sizeof(conn_data), portMAX_DELAY) != ESP_OK) {
                     ESP_LOGE(TAG, "Failed to post DATA_RECEIVE event");
-                    esp_ble_conn_on_gatts_attr_value_set(event->notify_rx.attr_handle, &chr->chr.uuid.u, 0, NULL);
                     free(conn_data.data);
                 }
             }
@@ -2512,6 +2703,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             if (event->periodic_sync.status != 0) {
                 ESP_LOGW(TAG, "Periodic sync establishment failed; status=%u", (unsigned)event->periodic_sync.status);
                 conn_session->periodic_sync_handle = 0;
+                conn_session->periodic_sync_active = false;
             } else {
                 periodic_sync.sync_handle = event->periodic_sync.sync_handle;
                 periodic_sync.sid = event->periodic_sync.sid;
@@ -2520,6 +2712,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 periodic_sync.adv_clk_accuracy = event->periodic_sync.adv_clk_accuracy;
                 memcpy(periodic_sync.adv_addr, event->periodic_sync.adv_addr.val, 6);
                 conn_session->periodic_sync_handle = event->periodic_sync.sync_handle;
+                conn_session->periodic_sync_active = true;
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP) && MYNEWT_VAL(BLE_PERIODIC_ADV_WITH_RESPONSES)
                 periodic_sync.num_subevents = event->periodic_sync.num_subevents;
                 periodic_sync.subevent_interval = event->periodic_sync.subevent_interval;
@@ -2576,15 +2769,30 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             esp_ble_conn_periodic_sync_lost_t periodic_sync_lost;
             memcpy(&periodic_sync_lost, &event->periodic_sync_lost, sizeof(esp_ble_conn_periodic_sync_lost_t));
             conn_session->periodic_sync_handle = 0;
+            conn_session->periodic_sync_active = false;
             /* NimBLE has already torn down the sync; ble_gap_periodic_adv_sync_terminate would return ENOTCONN. */
             if (esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST, &periodic_sync_lost,
                                sizeof(esp_ble_conn_periodic_sync_lost_t), portMAX_DELAY) != ESP_OK) {
                 ESP_LOGE(TAG, "Failed to post PERIODIC_SYNC_LOST");
             }
+            /* Sync acquisition suppresses connectable advertising (a synced
+             * peripheral must stay on the periodic train). Losing that train
+             * — AP reboot, sync timeout — has to bring advertising back, or
+             * the peer stays Unsynchronized and invisible to ACL connect.
+             * A PAwR advertiser owns this instance and must not be restarted. */
+            if (!esp_ble_conn_pawr_owns_instance(conn_session)) {
+                ESP_LOGI(TAG, "Periodic sync lost; restart connectable advertising");
+                (void)esp_ble_conn_advertise(conn_session);
+            }
             break;
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER) && MYNEWT_VAL(BLE_PERIODIC_ADV_SYNC_TRANSFER)
         case BLE_GAP_EVENT_PERIODIC_TRANSFER:
-            ESP_LOGD(TAG, "BLE_GAP_EVENT_PERIODIC_TRANSFER");
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP) && MYNEWT_VAL(BLE_PERIODIC_ADV_WITH_RESPONSES)
+        /* A PAwR train is handed over with the V2 event, the only one carrying
+         * the subevent layout the receiver needs before it can pick a subevent. */
+        case BLE_GAP_EVENT_PERIODIC_TRANSFER_V2:
+#endif
+            ESP_LOGD(TAG, "BLE_GAP_EVENT_PERIODIC_TRANSFER type=%u", event->type);
             {
                 esp_ble_conn_periodic_transfer_t transfer;
                 memset(&transfer, 0, sizeof(transfer));
@@ -2599,6 +2807,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                     transfer.adv_clk_accuracy = event->periodic_transfer.adv_clk_accuracy;
                     memcpy(transfer.adv_addr, event->periodic_transfer.adv_addr.val, 6);
                     conn_session->periodic_sync_handle = event->periodic_transfer.sync_handle;
+                    conn_session->periodic_sync_active = true;
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP) && MYNEWT_VAL(BLE_PERIODIC_ADV_WITH_RESPONSES)
                     transfer.num_subevents = event->periodic_transfer.num_subevents;
                     transfer.subevent_interval = event->periodic_transfer.subevent_interval;
@@ -2707,15 +2916,44 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 if (rc != ESP_OK) {
                     ESP_LOGE(TAG, "No open connection with the specified handle");
                 } else {
+                    ESP_LOGI(TAG, "BLE_GAP_EVENT_CONNECT success; conn_handle=%u peer_addr_type=%u peer_addr=" MACSTR,
+                             (unsigned)event->connect.conn_handle, (unsigned)desc.peer_ota_addr.type,
+                             MAC2STR(desc.peer_ota_addr.val));
                     conn_session->connect_cb(event, arg);
                 }
             } else {
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
                 /* Remove pending for failed connection (NimBLE connect event has no peer_addr) */
-                esp_ble_conn_pending_remove_first();
+                ble_addr_t failed_addr = {0};
+                bool pending_removed = esp_ble_conn_on_outgoing_connect_failed(&failed_addr);
+                if (pending_removed) {
+                    blecm_evt_connect_failed_t cfe = {
+                        .status = event->connect.status,
+                        .peer_addr_type = failed_addr.type,
+                    };
+                    memcpy(cfe.peer_addr, failed_addr.val, sizeof(cfe.peer_addr));
+                    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONNECT_FAILED,
+                                   &cfe, sizeof(cfe), portMAX_DELAY);
+                    ESP_LOGW(TAG, "BLE_GAP_EVENT_CONNECT failed; status=%d hci_status=0x%02x conn_handle=%u pending_addr_type=%u pending_addr=" MACSTR,
+                             event->connect.status,
+                             (event->connect.status >= 0x200 && event->connect.status <= 0x2ff) ?
+                             (unsigned)(event->connect.status - 0x200) : 0xffu,
+                             (unsigned)event->connect.conn_handle,
+                             (unsigned)failed_addr.type, MAC2STR(failed_addr.val));
+                } else {
+                    ESP_LOGW(TAG, "BLE_GAP_EVENT_CONNECT failed; status=%d conn_handle=%u no pending peer",
+                             event->connect.status, (unsigned)event->connect.conn_handle);
+                }
 #endif
-                /* Connection failed; resume advertising. */
-                esp_ble_conn_advertise(conn_session);
+                /* Outgoing connect retries (e.g. 0x3e) must not tear down PAwR,
+                 * and a synced peripheral must stay quiet for AUX_CONNECT_REQ.
+                 * pawr_params_set remains true while the train is paused. */
+                if (esp_ble_conn_pawr_owns_instance(conn_session) ||
+                        esp_ble_conn_periodic_sync_held(conn_session)) {
+                    ESP_LOGD(TAG, "Skip adv restart after connect fail; PAwR/sync still active");
+                } else {
+                    esp_ble_conn_advertise(conn_session);
+                }
             }
             break;
 
@@ -2723,8 +2961,15 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             ESP_LOGD(TAG, "disconnect; reason=%d ", event->disconnect.reason);
             conn_session->disconnect_cb(event, arg);
 
-            /* Connection terminated; resume advertising. */
-            esp_ble_conn_advertise(conn_session);
+            /* Connection terminated; resume advertising unless PAwR owns this
+             * instance (AP, including while paused) or this peripheral still
+             * holds a periodic sync (Tag). */
+            if (esp_ble_conn_pawr_owns_instance(conn_session) ||
+                    esp_ble_conn_periodic_sync_held(conn_session)) {
+                ESP_LOGD(TAG, "Skip adv restart after disconnect; PAwR/sync still active");
+            } else {
+                esp_ble_conn_advertise(conn_session);
+            }
             break;
 
         case BLE_GAP_EVENT_CONN_UPDATE:
@@ -2754,6 +2999,13 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 break;
             }
 #endif
+            /* A synced peripheral must stay quiet (see disconnect path).
+             * PAwR AP owns instance 0 even while the train is paused. */
+            if (esp_ble_conn_pawr_owns_instance(conn_session) ||
+                    esp_ble_conn_periodic_sync_held(conn_session)) {
+                ESP_LOGD(TAG, "Skip adv restart after adv complete; PAwR/sync still active");
+                break;
+            }
             esp_ble_conn_advertise(conn_session);
             break;
         case BLE_GAP_EVENT_SUBSCRIBE:
@@ -2764,7 +3016,7 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
             bool indicate_enable = event->subscribe.cur_indicate != 0;
 
             /* Find characteristic by handle */
-            attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(char_handle);
+            attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(BLE_CONN_ATTR_LOCAL_CONN, char_handle);
             if (attr_mbuf) {
                 esp_ble_conn_character_t *chr = esp_ble_conn_find_character_with_handle(char_handle);
                 svc_uuid_t *svc_uuid = NULL;
@@ -2922,10 +3174,10 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
             ESP_LOGD(TAG, "Read attempted for characteristic UUID = %s, attr_handle = %d",
                             ble_uuid_to_str(ctxt->chr->uuid, buf), attr_handle);
             if (chr && chr->uuid_fn && !chr->uuid_fn(NULL, 0, &outbuf, &outlen, NULL, &att_status)) {
-                esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf);
+                esp_ble_conn_on_gatts_attr_value_set(BLE_CONN_ATTR_LOCAL_CONN, attr_handle, ctxt->chr->uuid, outlen, outbuf);
             }
 
-            if (esp_ble_conn_on_gatts_attr_value_get(attr_handle, &outlen, &outbuf) != 0) {
+            if (esp_ble_conn_on_gatts_attr_value_get(BLE_CONN_ATTR_LOCAL_CONN, attr_handle, &outlen, &outbuf) != 0) {
                 ESP_LOGE(TAG, "Failed to read characteristic with attr_handle = %d", attr_handle);
                 return ESP_IOT_ATT_INTERNAL_ERROR;
             }
@@ -2992,7 +3244,7 @@ static int esp_ble_conn_access_cb(uint16_t conn_handle, uint16_t attr_handle, st
                 ESP_LOGE(TAG, "Error getting character from uuid buffers");
             }
 
-            if (esp_ble_conn_on_gatts_attr_value_set(attr_handle, ctxt->chr->uuid, outlen, outbuf) != 0) {
+            if (esp_ble_conn_on_gatts_attr_value_set(BLE_CONN_ATTR_LOCAL_CONN, attr_handle, ctxt->chr->uuid, outlen, outbuf) != 0) {
                 ESP_LOGE(TAG, "Failed to read characteristic with attr_handle = %d", attr_handle);
                 if (data_buf) {
                     free(data_buf);
@@ -3158,7 +3410,7 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
         } else {
             ESP_LOGD(TAG, "No characteristic(%s) found", ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf));
         }
-        esp_ble_conn_on_gatts_attr_value_set(ctxt->chr.val_handle, ctxt->chr.chr_def->uuid, outlen, outbuf);
+        esp_ble_conn_on_gatts_attr_value_set(BLE_CONN_ATTR_LOCAL_CONN, ctxt->chr.val_handle, ctxt->chr.chr_def->uuid, outlen, outbuf);
         break;
 
     case BLE_GATT_REGISTER_OP_DSC:
@@ -3416,10 +3668,12 @@ static void esp_ble_conn_connect_cb(struct ble_gap_event *event, void *arg)
     struct ble_gap_conn_desc desc = {0};
     esp_ble_conn_link_t *link = NULL;
     bool desc_found = false;
+    bool outgoing = false;
 
     if (ble_gap_conn_find(event->connect.conn_handle, &desc) == 0) {
         desc_found = true;
-        if (!esp_ble_conn_pending_remove(&desc.peer_ota_addr)) {
+        outgoing = esp_ble_conn_pending_remove(&desc.peer_ota_addr);
+        if (!outgoing) {
             ESP_LOGD(TAG, "Connected peer not in pending list, may be incoming connect");
         }
         link = esp_ble_conn_link_add(event->connect.conn_handle, &desc.peer_ota_addr);
@@ -3435,14 +3689,37 @@ static void esp_ble_conn_connect_cb(struct ble_gap_event *event, void *arg)
     }
 
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
-    /* Perform service discovery with per-connection context. */
-    esp_ble_conn_disc_ctx_t *disc_ctx = calloc(1, sizeof(esp_ble_conn_disc_ctx_t));
-    if (disc_ctx) {
-        disc_ctx->conn_session = conn_session;
-        disc_ctx->conn_handle = event->connect.conn_handle;
-        esp_ble_conn_disc_svcs(disc_ctx);
+    /* Exchange MTU before GATT writes. Default ATT MTU 23 cannot carry ESL
+     * key material (24 bytes) or OTS image objects. */
+    {
+        uint16_t pref = MYNEWT_VAL(BLE_ATT_PREFERRED_MTU);
+        if (pref < 27) {
+            pref = 247;
+        }
+        int mtu_rc = ble_att_set_preferred_mtu(pref);
+        if (mtu_rc == 0) {
+            mtu_rc = ble_gattc_exchange_mtu(event->connect.conn_handle, NULL, NULL);
+        }
+        if (mtu_rc != 0 && mtu_rc != BLE_HS_EALREADY) {
+            ESP_LOGW(TAG, "MTU exchange start failed conn=%d rc=%d",
+                     event->connect.conn_handle, mtu_rc);
+        }
+    }
+
+    /* Discover GATT only on outgoing (central) links. Incoming phone/NUS
+     * connections share uuid_list; mixing handle ranges from two peers makes
+     * ESL writes hit the wrong characteristic and hang until timeout. */
+    if (outgoing) {
+        esp_ble_conn_disc_ctx_t *disc_ctx = calloc(1, sizeof(esp_ble_conn_disc_ctx_t));
+        if (disc_ctx) {
+            disc_ctx->conn_session = conn_session;
+            disc_ctx->conn_handle = event->connect.conn_handle;
+            esp_ble_conn_disc_svcs(disc_ctx);
+        } else {
+            ESP_LOGE(TAG, "Failed to allocate discovery context for conn_handle=%d", event->connect.conn_handle);
+        }
     } else {
-        ESP_LOGE(TAG, "Failed to allocate discovery context for conn_handle=%d", event->connect.conn_handle);
+        ESP_LOGI(TAG, "Skip GATT client discovery on incoming conn=%d", event->connect.conn_handle);
     }
 #endif
 
@@ -3625,6 +3902,24 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
         memcpy(conn_session->per_adv_data_buf,  config->periodic_adv_data, conn_session->per_adv_data_len);
     }
 #endif
+
+    /* Custom extended_adv_data already contains the full AD. Otherwise keep
+     * include_service_uuid so ext_advertise can put the UUID in AD fields
+     * (legacy auto-build below is compiled out when EXTENDED_ADV is on). */
+    if (!config->extended_adv_data && config->include_service_uuid) {
+        conn_session->adv_data_auto_include_uuid = true;
+        if (config->adv_uuid_type == 0 || config->adv_uuid_type == BLE_CONN_UUID_TYPE_16) {
+            conn_session->adv_data_auto_uuid_type = BLE_CONN_UUID_TYPE_16;
+            conn_session->adv_data_auto_uuid16 = config->adv_uuid16;
+        } else if (config->adv_uuid_type == BLE_CONN_UUID_TYPE_128) {
+            conn_session->adv_data_auto_uuid_type = BLE_CONN_UUID_TYPE_128;
+            memcpy(conn_session->adv_data_auto_uuid128, config->adv_uuid128,
+                   sizeof(conn_session->adv_data_auto_uuid128));
+        } else {
+            ESP_LOGE(TAG, "Unsupported UUID type: %d", config->adv_uuid_type);
+            goto ble_init_error;
+        }
+    }
 
 #else
     uint8_t offset = 0;
@@ -4453,28 +4748,43 @@ esp_err_t esp_ble_conn_pawr_subev_data_set(uint8_t num_subevents, const esp_ble_
         return ESP_ERR_INVALID_ARG;
     }
 
-    params = calloc(num_subevents, sizeof(*params));
+    /* Compact out idle slots (no payload and no response listen). Submitting
+     * those to HCI is CMD_DISALLOWED on ESP32-C6 and can assert in
+     * pawrBcast_hal_sched_subevent. Controller skips unfilled DATA_REQ slots. */
+    const esp_ble_conn_pawr_subev_data_t *active[CONFIG_BLE_CONN_MGR_PAWR_MAX_SUBEV_SET];
+    uint8_t n_active = 0;
+    for (i = 0; i < num_subevents; i++) {
+        if (items[i].data_len == 0 && items[i].response_slot_count == 0) {
+            continue;
+        }
+        active[n_active++] = &items[i];
+    }
+    if (n_active == 0) {
+        return ESP_OK;
+    }
+
+    params = calloc(n_active, sizeof(*params));
     if (!params) {
         return ESP_ERR_NO_MEM;
     }
 
-    for (i = 0; i < num_subevents; i++) {
-        params[i].subevent = items[i].subevent;
-        params[i].response_slot_start = items[i].response_slot_start;
-        params[i].response_slot_count = items[i].response_slot_count;
-        params[i].data = NULL;
-
-        if (items[i].data_len > 0) {
-            if (!items[i].data) {
+    for (i = 0; i < n_active; i++) {
+        params[i].subevent = active[i]->subevent;
+        params[i].response_slot_start = active[i]->response_slot_start;
+        params[i].response_slot_count = active[i]->response_slot_count;
+        /* NimBLE's ble_gap_calc_periodic_adv_data_size() uses OS_MBUF_PKTLEN
+         * unconditionally; a NULL mbuf Load-faults. Always pass a pkthdr. */
+        params[i].data = os_msys_get_pkthdr(active[i]->data_len, 0);
+        if (!params[i].data) {
+            ret = ESP_ERR_NO_MEM;
+            goto cleanup;
+        }
+        if (active[i]->data_len > 0) {
+            if (!active[i]->data) {
                 ret = ESP_ERR_INVALID_ARG;
                 goto cleanup;
             }
-            params[i].data = os_msys_get_pkthdr(items[i].data_len, 0);
-            if (!params[i].data) {
-                ret = ESP_ERR_NO_MEM;
-                goto cleanup;
-            }
-            rc = os_mbuf_append(params[i].data, items[i].data, items[i].data_len);
+            rc = os_mbuf_append(params[i].data, active[i]->data, active[i]->data_len);
             if (rc != 0) {
                 ret = ESP_FAIL;
                 goto cleanup;
@@ -4483,7 +4793,7 @@ esp_err_t esp_ble_conn_pawr_subev_data_set(uint8_t num_subevents, const esp_ble_
     }
 
     /* NimBLE frees params[i].data on return; do not free the mbufs after this call. */
-    rc = ble_gap_set_periodic_adv_subev_data(s_conn_session->ext_adv_handle, num_subevents, params);
+    rc = ble_gap_set_periodic_adv_subev_data(s_conn_session->ext_adv_handle, n_active, params);
     free(params);
     if (rc != 0) {
         ESP_LOGE(TAG, "set periodic adv subev data failed; rc=%d", rc);
@@ -4493,7 +4803,7 @@ esp_err_t esp_ble_conn_pawr_subev_data_set(uint8_t num_subevents, const esp_ble_
 
 cleanup:
     /* Failures before calling NimBLE still own the mbufs. */
-    for (i = 0; i < num_subevents; i++) {
+    for (i = 0; i < n_active; i++) {
         if (params[i].data) {
             os_mbuf_free_chain(params[i].data);
             params[i].data = NULL;
@@ -4630,6 +4940,7 @@ esp_err_t esp_ble_conn_periodic_sync_terminate(uint16_t sync_handle)
     }
     if (s_conn_session && s_conn_session->periodic_sync_handle == sync_handle) {
         s_conn_session->periodic_sync_handle = 0;
+        s_conn_session->periodic_sync_active = false;
     }
     return ESP_OK;
 }
@@ -4671,6 +4982,12 @@ esp_err_t esp_ble_conn_periodic_sync_set_info(uint16_t conn_handle, uint16_t ser
     }
 
     rc = ble_gap_periodic_adv_sync_set_info(s_conn_session->ext_adv_handle, conn_handle, service_data);
+    if (rc == BLE_HS_ENOTCONN) {
+        /* The peer closed the link first; the caller decides whether that is
+         * expected, so do not report it as a failure of this device. */
+        ESP_LOGD(TAG, "periodic sync set info: conn=%u is gone", (unsigned)conn_handle);
+        return ESP_ERR_NOT_FOUND;
+    }
     if (rc != 0) {
         ESP_LOGE(TAG, "periodic sync set info failed; rc=%d", rc);
         return ESP_FAIL;
@@ -4841,6 +5158,12 @@ esp_err_t esp_ble_conn_mtu_update(uint16_t conn_handle, uint16_t mtu)
     }
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     rc = ble_gattc_exchange_mtu(conn_handle, NULL, NULL);
+    if (rc == BLE_HS_EALREADY) {
+        /* The stack starts one exchange per link on connect, so a caller that
+         * asks again just rides on it and waits for the same MTU event. */
+        ESP_LOGD(TAG, "MTU exchange already running on conn=%u", (unsigned)conn_handle);
+        return ESP_OK;
+    }
     if (rc != 0) {
         ESP_LOGW(TAG, "ble_gattc_exchange_mtu failed; rc=%d", rc);
         return ESP_FAIL;
@@ -4943,10 +5266,16 @@ esp_err_t esp_ble_conn_disconnect(void)
 
     rc = ble_gap_terminate(link->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     if (rc != 0) {
+        bool gone = (rc == BLE_HS_ENOTCONN);
+        if (gone) {
+            ESP_LOGD(TAG, "Terminate: conn_handle=%u is already disconnected",
+                     (unsigned)link->conn_handle);
+        } else {
+            ESP_LOGE(TAG, "Failed to terminate connection; conn_handle=%u, rc=%d",
+                     (unsigned)link->conn_handle, rc);
+        }
         esp_ble_conn_link_unref(link);
-        ESP_LOGE(TAG, "Failed to terminate connection; conn_handle=%u, rc=%d",
-                 (unsigned)link->conn_handle, rc);
-        return ESP_FAIL;
+        return gone ? ESP_ERR_NOT_FOUND : ESP_FAIL;
     }
 
     if (link->queue && xQueueReceive(link->queue, &event_ctx, pdMS_TO_TICKS(BLE_CONN_EVENT_WAIT_TIMEOUT_MS)) == pdTRUE &&
@@ -4972,11 +5301,149 @@ esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_
     memcpy(addr.val, peer_addr, sizeof(addr.val));
     return esp_ble_conn_do_connect(&addr);
 }
+
+esp_err_t esp_ble_conn_connect_with_synced(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                           uint8_t subevent)
+{
+#if !MYNEWT_VAL(BLE_PERIODIC_ADV_WITH_RESPONSES)
+    (void)peer_addr;
+    (void)peer_addr_type;
+    (void)subevent;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    ble_addr_t addr = {0};
+    esp_ble_conn_link_t *exist_link = NULL;
+    int rc;
+
+    if (!peer_addr || !s_conn_session) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    addr.type = peer_addr_type;
+    memcpy(addr.val, peer_addr, sizeof(addr.val));
+
+    if (esp_ble_conn_link_count() >= CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS) {
+        ESP_LOGW(TAG, "Reach max connections=%d, skip PAwR connect", CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS);
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    exist_link = esp_ble_conn_link_find_by_peer_addr(addr.val, addr.type);
+    if (exist_link) {
+        esp_ble_conn_link_unref(exist_link);
+        ESP_LOGD(TAG, "Peer already connected, skip PAwR connect");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (esp_ble_conn_pending_find(&addr)) {
+        ESP_LOGD(TAG, "Peer already pending, skip PAwR connect");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (esp_ble_conn_mgr_lock()) {
+        if (!SLIST_EMPTY(&s_mgr_ctx.pending_list)) {
+            esp_ble_conn_mgr_unlock();
+            ESP_LOGW(TAG, "Connection attempt already in progress, skip PAwR connect");
+            return ESP_ERR_INVALID_STATE;
+        }
+        esp_ble_conn_mgr_unlock();
+    }
+
+    /* Same as do_connect(): NimBLE returns BLE_HS_EBUSY (15) from
+     * ble_gap_connect_with_synced() while discovery is active. ESL AP
+     * recovery keeps scan running, so image transfer must cancel it first. */
+    rc = ble_gap_disc_cancel();
+    if (rc && rc != BLE_HS_EALREADY) {
+        ESP_LOGW(TAG, "Failed to cancel scan before PAwR connect; rc=%d", rc);
+    }
+
+    rc = esp_ble_conn_pending_add(&addr);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Failed to add pending PAwR connect context");
+        return rc;
+    }
+
+    rc = ble_gap_connect_with_synced(s_conn_session->own_addr_type,
+                                     s_conn_session->ext_adv_handle,
+                                     subevent,
+                                     &addr,
+                                     30000,
+                                     BLE_GAP_LE_PHY_1M_MASK,
+                                     NULL, NULL, NULL,
+                                     esp_ble_conn_gap_event, s_conn_session);
+    if (rc) {
+        esp_ble_conn_pending_remove(&addr);
+        ESP_LOGE(TAG, "PAwR connect_with_synced failed; subevent=%u addr=" MACSTR " rc=%d",
+                 (unsigned)subevent, MAC2STR(addr.val), rc);
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI(TAG, "PAwR connect_with_synced started handle=%u subevent=%u addr=" MACSTR,
+             (unsigned)s_conn_session->ext_adv_handle, (unsigned)subevent, MAC2STR(addr.val));
+    return ESP_OK;
+#endif
+}
+
+esp_err_t esp_ble_conn_connect_cancel(void)
+{
+    int rc;
+
+    if (!s_conn_session) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (s_connect_cancel_sem == NULL) {
+        s_connect_cancel_sem = xSemaphoreCreateBinary();
+        if (s_connect_cancel_sem == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    (void)xSemaphoreTake(s_connect_cancel_sem, 0);
+
+    if (!ble_gap_conn_active()) {
+        /* Procedure may already have ended while BLE_GAP_EVENT_CONNECT is still
+         * queued. Leave pending so a late success still runs GATT discovery;
+         * a failure event removes it. */
+        return ESP_OK;
+    }
+
+    s_connect_cancelling = true;
+    rc = ble_gap_conn_cancel();
+    if (rc != 0 && rc != BLE_HS_EALREADY) {
+        s_connect_cancelling = false;
+        ESP_LOGW(TAG, "ble_gap_conn_cancel rc=%d; keep pending until CONNECT event", rc);
+        return ESP_FAIL;
+    }
+
+    if (xSemaphoreTake(s_connect_cancel_sem, pdMS_TO_TICKS(1000)) != pdTRUE) {
+        s_connect_cancelling = false;
+        /* Controller may still complete the ACL. Pending stays until the
+         * CONNECT failure event, or until success so discovery can run. */
+        ESP_LOGW(TAG, "GAP connect cancel timed out; keep pending until CONNECT event");
+        return ESP_ERR_TIMEOUT;
+    }
+
+    ESP_LOGI(TAG, "Cancelled leftover GAP connect");
+    return ESP_OK;
+}
 #else
 esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type)
 {
     (void)peer_addr;
     (void)peer_addr_type;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t esp_ble_conn_connect_with_synced(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                           uint8_t subevent)
+{
+    (void)peer_addr;
+    (void)peer_addr_type;
+    (void)subevent;
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t esp_ble_conn_connect_cancel(void)
+{
     return ESP_ERR_NOT_SUPPORTED;
 }
 #endif /* CONFIG_BLE_CONN_MGR_ROLE_CENTRAL || CONFIG_BLE_CONN_MGR_ROLE_BOTH */
@@ -4990,6 +5457,11 @@ esp_err_t esp_ble_conn_disconnect_by_handle(uint16_t conn_handle)
     }
 
     rc = ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    if (rc == BLE_HS_ENOTCONN) {
+        /* Already gone, usually because the peer disconnected first. */
+        ESP_LOGD(TAG, "Terminate: conn_handle=%u is already disconnected", (unsigned)conn_handle);
+        return ESP_ERR_NOT_FOUND;
+    }
     if (rc != 0) {
         ESP_LOGE(TAG, "Failed to terminate connection; conn_handle=%u, rc=%d", (unsigned)conn_handle, rc);
         return ESP_FAIL;
@@ -6017,33 +6489,27 @@ esp_err_t esp_ble_conn_l2cap_coc_send(esp_ble_conn_l2cap_coc_chan_t chan,
         return ESP_ERR_NO_MEM;
     }
 
-    /* Send data. Note: On success, mbuf ownership is transferred to NimBLE.
-     * On failure, mbuf ownership remains with caller and must be freed.
-     */
+    /* ble_l2cap_send() rejects an oversized or overlapping SDU before taking
+     * it; in every other outcome the SDU is stored in the channel and NimBLE
+     * owns the buffer, freeing it once the last fragment goes out or on its
+     * own error path. Freeing it here in those cases is a double free. */
     rc = ble_l2cap_send(nimble_chan, sdu_tx);
+    if (rc != 0 && rc != BLE_HS_ESTALLED) {
+        ESP_LOGE(TAG, "L2CAP CoC send rejected, rc=%d len=%u", rc, sdu->len);
+        os_mbuf_free_chain(sdu_tx);
+        return (rc == BLE_HS_EBADDATA) ? ESP_ERR_INVALID_SIZE : ESP_ERR_INVALID_STATE;
+    }
+
+    if (rc == BLE_HS_ESTALLED) {
+        /* Queued and partially sent; the rest follows once the peer grants
+         * credits, ending with ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED. */
+        ESP_LOGD(TAG, "L2CAP CoC stalled, SDU queued until credits arrive");
+        return ESP_ERR_NOT_FINISHED;
+    }
+
     if (rc != 0) {
-        /* Convert NimBLE error codes to ESP error codes */
-        if (rc == BLE_HS_ESTALLED) {
-            ESP_LOGD(TAG, "L2CAP CoC channel stalled, wait for TX_UNSTALLED event");
-            /* Note: When stalled, mbuf ownership may have been transferred.
-             * However, we still need to free it here as the send failed.
-             * The stack will handle retransmission on TX_UNSTALLED event.
-             */
-            os_mbuf_free_chain(sdu_tx);
-            return ESP_ERR_NOT_FINISHED;
-        } else if (rc == BLE_HS_ENOTCONN) {
-            ESP_LOGE(TAG, "L2CAP CoC channel not connected");
-            os_mbuf_free_chain(sdu_tx);
-            return ESP_ERR_INVALID_STATE;
-        } else if (rc == BLE_HS_EAGAIN) {
-            ESP_LOGD(TAG, "L2CAP CoC send would block, rc=%d", rc);
-            os_mbuf_free_chain(sdu_tx);
-            return ESP_ERR_NOT_FINISHED;
-        } else {
-            ESP_LOGE(TAG, "L2CAP CoC send failed, rc=%d", rc);
-            os_mbuf_free_chain(sdu_tx);
-            return ESP_FAIL;
-        }
+        ESP_LOGE(TAG, "L2CAP CoC send failed, rc=%d", rc);
+        return ESP_FAIL;
     }
 
     return ESP_OK;
@@ -6174,7 +6640,8 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
         return ESP_ERR_INVALID_ARG;
     }
 
-    attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
+    /* Notifications are sent from the local GATT database. */
+    attr_mbuf = esp_ble_conn_find_attr_with_uuid(BLE_CONN_ATTR_LOCAL_CONN, inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
@@ -6187,7 +6654,13 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
         return ESP_ERR_NO_MEM;
     }
 
-    rc = ble_gattc_notify_custom(conn_handle, attr_mbuf->attr_handle, om);
+    if (!esp_ble_conn_link_op_begin(link)) {
+        os_mbuf_free_chain(om);
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_TIMEOUT;
+    }
+
+    rc = ble_gatts_notify_custom(conn_handle, attr_mbuf->attr_handle, om);
     if (!rc) {
         ESP_LOGD(TAG, "Notify sent, attr_handle = %d", attr_mbuf->attr_handle);
         rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
@@ -6195,6 +6668,7 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
         ESP_LOGE(TAG, "Error in sending notify, rc = %d", rc);
     }
 
+    esp_ble_conn_link_op_end(link);
     esp_ble_conn_link_unref(link);
     return rc;
 }
@@ -6229,9 +6703,9 @@ static esp_err_t esp_ble_conn_tx_by_attr(uint16_t conn_handle, uint16_t attr_han
     }
 
     if (indicate) {
-        rc = ble_gattc_indicate_custom(conn_handle, attr_handle, om);
+        rc = ble_gatts_indicate_custom(conn_handle, attr_handle, om);
     } else {
-        rc = ble_gattc_notify_custom(conn_handle, attr_handle, om);
+        rc = ble_gatts_notify_custom(conn_handle, attr_handle, om);
     }
 
     if (!rc) {
@@ -6291,9 +6765,6 @@ esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t 
     if (!link) {
         return ESP_ERR_INVALID_ARG;
     }
-    /* Drain any stale signal and reset per-request status before issuing a new read. */
-    while (xSemaphoreTake(link->semaphore, 0) == pdPASS) {}
-    link->last_read_rc = ESP_OK;
 
     switch (inbuff->type) {
         case BLE_CONN_UUID_TYPE_16:
@@ -6314,6 +6785,12 @@ esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t 
             return ESP_ERR_INVALID_ARG;
     }
 
+    if (!esp_ble_conn_link_op_begin(link)) {
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_TIMEOUT;
+    }
+    link->last_read_rc = ESP_OK;
+
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     svc_uuid_t *svc = NULL;
     chr_uuid_t *chr = NULL;
@@ -6327,6 +6804,7 @@ esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t 
 
     if (!chr) {
         ESP_LOGE(TAG, "Incorrect uuid %s in read", ble_uuid_to_str(ble_uuid, buf));
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
@@ -6334,35 +6812,65 @@ esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t 
     rc = ble_gattc_read(conn_handle, chr->chr.val_handle, esp_ble_conn_on_read, conn_session);
     if (rc) {
         ESP_LOGE(TAG, "Error in reading data, rc = %d", rc);
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return rc;
     }
 
     if (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) {
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_TIMEOUT;
     }
     if (link->last_read_rc != ESP_OK) {
         esp_err_t read_rc = link->last_read_rc;
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return read_rc;
     }
 #endif
-    attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
+    if (!esp_ble_conn_mgr_lock()) {
+        esp_ble_conn_link_op_end(link);
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_TIMEOUT;
+    }
+
+#if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
+    attr_mbuf = esp_ble_conn_find_attr_with_uuid(conn_handle, inbuff->type, inbuff->uuid);
+#else
+    attr_mbuf = esp_ble_conn_find_attr_with_uuid(BLE_CONN_ATTR_LOCAL_CONN, inbuff->type, inbuff->uuid);
+#endif
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in read", ble_uuid_to_str(ble_uuid, buf));
+        esp_ble_conn_mgr_unlock();
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (attr_mbuf->outlen > 0 && !attr_mbuf->outbuf) {
+        esp_ble_conn_mgr_unlock();
+        esp_ble_conn_link_op_end(link);
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* data == NULL keeps the historical borrowed-pointer contract: return the
+     * cache entry under the connection lock. Callers must not free() it; the
+     * pointer becomes invalid after disconnect purge, another read that
+     * replaces the cache, or deinit. Caller-owned buffers receive a bounded copy. */
     if (!inbuff->data) {
         inbuff->data = attr_mbuf->outbuf;
         inbuff->data_len = attr_mbuf->outlen;
     } else {
         inbuff->data_len = MIN(attr_mbuf->outlen, inbuff->data_len);
-        memcpy(inbuff->data, attr_mbuf->outbuf, inbuff->data_len);
+        if (inbuff->data_len > 0) {
+            memcpy(inbuff->data, attr_mbuf->outbuf, inbuff->data_len);
+        }
     }
+    esp_ble_conn_mgr_unlock();
 
+    esp_ble_conn_link_op_end(link);
     esp_ble_conn_link_unref(link);
     return rc;
 }
@@ -6422,6 +6930,15 @@ esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_
         return ESP_ERR_NO_MEM;
     }
 
+    if (!esp_ble_conn_link_op_begin(link)) {
+        os_mbuf_free_chain(om);
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_TIMEOUT;
+    }
+    /* Publish this operation's initial result before submission: NimBLE may
+     * invoke esp_ble_conn_on_write() synchronously from ble_gattc_write(). */
+    link->last_write_rc = ESP_OK;
+
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     svc_uuid_t *svc = NULL;
     chr_uuid_t *chr = NULL;
@@ -6438,32 +6955,38 @@ esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_
         if (om) {
             os_mbuf_free_chain(om);
         }
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     chr_val_handle = chr->chr.val_handle;
     rc = ble_gattc_write(conn_handle, chr_val_handle, om, esp_ble_conn_on_write, conn_session);
 #else
-    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
+    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(BLE_CONN_ATTR_LOCAL_CONN, inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in sending", ble_uuid_to_str(ble_uuid, buf));
         if (om) {
             os_mbuf_free_chain(om);
         }
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     chr_val_handle = attr_mbuf->attr_handle;
-    rc = ble_gattc_indicate_custom(conn_handle, chr_val_handle, om);
+    rc = ble_gatts_indicate_custom(conn_handle, chr_val_handle, om);
 #endif
 
     if (!rc) {
         ESP_LOGD(TAG, "Sent data, attr_handle = %d", chr_val_handle);
         rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        if (rc == ESP_OK && link->last_write_rc != ESP_OK) {
+            rc = link->last_write_rc;
+        }
     } else {
         ESP_LOGE(TAG, "Error in sending data, rc = %d", rc);
     }
 
+    esp_ble_conn_link_op_end(link);
     esp_ble_conn_link_unref(link);
     return rc;
 }
@@ -6523,6 +7046,14 @@ esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_de
         return ESP_ERR_NO_MEM;
     }
 
+    if (!esp_ble_conn_link_op_begin(link)) {
+        os_mbuf_free_chain(om);
+        esp_ble_conn_link_unref(link);
+        return ESP_ERR_TIMEOUT;
+    }
+    /* The write callback can run before ble_gattc_write() returns. */
+    link->last_write_rc = ESP_OK;
+
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_CENTRAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     svc_uuid_t *svc = NULL;
     dsc_uuid_t *dsc = NULL;
@@ -6539,6 +7070,7 @@ esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_de
         if (om) {
             os_mbuf_free_chain(om);
         }
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
@@ -6546,26 +7078,31 @@ esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_de
     handle = dsc->dsc.handle;
     rc = ble_gattc_write(conn_handle, dsc->dsc.handle, om, esp_ble_conn_on_write, conn_session);
 #else
-    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(inbuff->type, inbuff->uuid);
+    attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_uuid(BLE_CONN_ATTR_LOCAL_CONN, inbuff->type, inbuff->uuid);
     if (!attr_mbuf) {
         ESP_LOGE(TAG, "Incorrect uuid %s in descriptors", ble_uuid_to_str(ble_uuid, buf));
         if (om) {
             os_mbuf_free_chain(om);
         }
+        esp_ble_conn_link_op_end(link);
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
     }
     handle = attr_mbuf->attr_handle;
-    rc = ble_gattc_indicate_custom(conn_handle, handle, om);
+    rc = ble_gatts_indicate_custom(conn_handle, handle, om);
 #endif
 
     if (!rc) {
         ESP_LOGD(TAG, "Descriptors data, attr_handle = %d", handle);
         rc = (xSemaphoreTake(link->semaphore, pdMS_TO_TICKS(CONFIG_BLE_CONN_MGR_WAIT_DURATION * 1000)) != pdPASS) ? ESP_ERR_TIMEOUT : ESP_OK;
+        if (rc == ESP_OK && link->last_write_rc != ESP_OK) {
+            rc = link->last_write_rc;
+        }
     } else {
         ESP_LOGE(TAG, "Error in descriptors data, rc = %d", rc);
     }
 
+    esp_ble_conn_link_op_end(link);
     esp_ble_conn_link_unref(link);
     return rc;
 }
