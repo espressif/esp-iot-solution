@@ -124,11 +124,7 @@ static void show_next_frame(image_player_ctx_t *player)
 
 static void image_timer_cb(lv_timer_t *timer)
 {
-#if LVGL_VERSION_MAJOR >= 9
     image_player_ctx_t *player = (image_player_ctx_t *)lv_timer_get_user_data(timer);
-#else
-    image_player_ctx_t *player = (image_player_ctx_t *)timer->user_data;
-#endif
     show_next_frame(player);
 }
 
@@ -227,7 +223,7 @@ static void start_image_player(lv_display_t *disp, lv_indev_t *encoder)
         return;
     }
 
-    lv_obj_t *screen = lv_disp_get_scr_act(disp);
+    lv_obj_t *screen = lv_display_get_screen_active(disp);
 
     lv_coord_t hres = lv_display_get_horizontal_resolution(disp);
     lv_coord_t vres = lv_display_get_vertical_resolution(disp);

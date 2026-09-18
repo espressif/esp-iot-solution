@@ -168,7 +168,7 @@ static void on_click(lv_event_t *e)
 
 static void create_ui(lv_indev_t *encoder)
 {
-    lv_obj_t *scr = lv_disp_get_scr_act(s_disp);
+    lv_obj_t *scr = lv_display_get_screen_active(s_disp);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x202020), 0);
 
     s_info_label = lv_label_create(scr);

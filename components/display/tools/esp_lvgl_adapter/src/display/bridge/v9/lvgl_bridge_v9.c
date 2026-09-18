@@ -29,9 +29,7 @@
 #include "display_manager.h"
 #include "lvgl_port_ppa.h"
 #include "display_te_sync.h"
-#if LVGL_VERSION_MAJOR >= 9
-#include "lvgl_private.h"
-#endif
+#include "lvgl_port_private.h"
 #include "lvgl_port_alignment.h"
 #include "common/display_bridge_common.h"
 

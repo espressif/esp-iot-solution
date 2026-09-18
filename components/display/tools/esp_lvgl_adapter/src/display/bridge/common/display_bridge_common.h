@@ -16,12 +16,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "lvgl.h"
+#include "lvgl_port_private.h"
 #include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
-#if LVGL_VERSION_MAJOR >= 9
-#include "lvgl_private.h"
-#endif
 #include "adapter_internal.h"
 #include "esp_attr.h"
 
@@ -401,7 +398,7 @@ struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapte
 /**
  * @brief Initialize runtime information from configuration
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared runtime metadata initialization for LVGL v8 and v9.
  *
  * @param runtime Runtime info structure to initialize
  * @param cfg Display runtime configuration
@@ -489,7 +486,7 @@ esp_err_t display_bridge_release_hw_resource(void);
 /**
  * @brief DMA2D completion callback
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  */
 #ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 bool display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
@@ -504,7 +501,7 @@ bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
 /**
  * @brief Synchronous DMA2D copy operation
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  *
  * @param trans_desc DMA transfer descriptor
  * @param timeout_ms Timeout in milliseconds
@@ -626,7 +623,7 @@ void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t
  * Releases hardware resources (PPA, DMA2D) with reference counting and
  * frees the bridge structure. Safe to call with NULL pointer.
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  *
  * @param bridge Display bridge structure to destroy
  */

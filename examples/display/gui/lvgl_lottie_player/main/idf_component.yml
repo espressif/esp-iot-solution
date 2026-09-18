@@ -3,7 +3,7 @@ dependencies:
     version: ">=5.5.0"
 
   lvgl/lvgl:
-    version: "^9"
+    version: ">=9.6,<10"
     public: true
 
   espressif/esp_lvgl_adapter:
