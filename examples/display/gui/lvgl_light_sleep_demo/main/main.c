@@ -678,7 +678,7 @@ static void create_demo_ui(void)
         return;
     }
 
-    lv_obj_t *scr = lv_scr_act();
+    lv_obj_t *scr = lv_display_get_screen_active(lv_display_get_default());
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x101820), 0);
     lv_obj_set_style_bg_grad_color(scr, lv_color_hex(0x1C2A3A), 0);
     lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, 0);

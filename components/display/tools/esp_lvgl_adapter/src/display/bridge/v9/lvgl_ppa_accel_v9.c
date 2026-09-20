@@ -13,25 +13,15 @@
 
 #include "lvgl_port_alignment.h"
 #include "esp_log.h"
-#include "lvgl.h"
-#include "lvgl_private.h"
-#include "src/draw/sw/blend/lv_draw_sw_blend.h"
-#include "src/draw/sw/blend/lv_draw_sw_blend_private.h"
-#include "src/draw/sw/blend/lv_draw_sw_blend_to_rgb565.h"
-#include "src/draw/sw/blend/lv_draw_sw_blend_to_rgb888.h"
-#include "src/draw/lv_draw.h"
-#include "src/draw/lv_draw_buf.h"
+#include "lvgl_port_draw_private.h"
 #include "driver/ppa.h"
 #include "esp_cache.h"
 #include "esp_private/esp_cache_private.h"
 #include "esp_memory_utils.h"
 #include "common/display_bridge_common.h"
-#include "stdlib/lv_mem.h"
-#include "misc/lv_color.h"
 
 static ppa_client_handle_t s_blend_handle = NULL;
 static ppa_client_handle_t s_fill_handle = NULL;
-static bool s_handler_registered = false;
 
 static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
 static void lv_draw_ppa_v9_handler_rgb888(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
@@ -80,15 +70,11 @@ void lvgl_port_ppa_v9_init(lv_display_t *display)
 
 static void lvgl_port_ppa_v9_register_handler(lv_color_format_t cf)
 {
-    if (s_handler_registered) {
-        return;
-    }
     if (cf == LV_COLOR_FORMAT_RGB888) {
         lv_draw_sw_register_blend_handler(&s_custom_handler_rgb888);
-    } else {
+    } else if (cf == LV_COLOR_FORMAT_RGB565) {
         lv_draw_sw_register_blend_handler(&s_custom_handler);
     }
-    s_handler_registered = true;
 }
 
 static size_t ppa_get_cache_line_size(const void *addr)

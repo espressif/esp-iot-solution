@@ -13,5 +13,4 @@ dependencies:
     override_path: "../../../../../components/display/tools/esp_lv_present"
     public: true
   hw_init:
-    version: "*"
-    override_path: "../../common/hw_init"
+    path: "../../common/hw_init"

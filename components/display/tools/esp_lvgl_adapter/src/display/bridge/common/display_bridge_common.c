@@ -763,7 +763,7 @@ static inline void s_dma2d_uninstall(void *handle)
 /**
  * @brief Initialize runtime information from configuration
  *
- * This function is 100% identical in both v8 and v9 implementations
+ * Shared runtime metadata initialization for the LVGL v8 and v9 bridges.
  */
 esp_err_t display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *runtime,
                                            const esp_lv_adapter_display_runtime_config_t *cfg)
@@ -785,7 +785,7 @@ esp_err_t display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t
     /* Derive panel framebuffer pixel size from the configured framebuffer geometry. */
     size_t total_pixels = (size_t)runtime->hor_res * runtime->ver_res;
     uint8_t color_bytes = 0;
-    uint8_t lvgl_color_bytes = 0;
+    size_t lvgl_color_bytes = 0;
 
     if (runtime->frame_buffer_size && total_pixels) {
         if ((runtime->frame_buffer_size % total_pixels) != 0 &&
@@ -797,17 +797,26 @@ esp_err_t display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t
         color_bytes = runtime->frame_buffer_size / total_pixels;
     }
 
+#if LVGL_VERSION_MAJOR >= 9
+    if (cfg->lv_disp) {
+        lv_color_format_t color_format = lv_display_get_color_format(cfg->lv_disp);
+        if (color_format != LV_COLOR_FORMAT_I1) {
+            lvgl_color_bytes = lv_color_format_get_size(color_format);
+        }
+    }
+#else
     if (LV_COLOR_DEPTH % 8 == 0) {
         lvgl_color_bytes = LV_COLOR_DEPTH / 8;
     } else if (cfg->base.profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE) {
         ESP_LOGE(TAG, "LV_COLOR_DEPTH=%d is not supported for non-monochrome display", LV_COLOR_DEPTH);
         return ESP_ERR_INVALID_ARG;
     }
+#endif
 
     if (cfg->base.profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
             color_bytes && lvgl_color_bytes && color_bytes != lvgl_color_bytes) {
-        ESP_LOGE(TAG, "LVGL/LCD color depth mismatch: LV_COLOR_DEPTH=%d (%u bytes), framebuffer_size=%zu, panel=%ux%u, panel_color_bytes=%u",
-                 LV_COLOR_DEPTH, lvgl_color_bytes, runtime->frame_buffer_size,
+        ESP_LOGE(TAG, "LVGL/LCD color size mismatch: LVGL=%zu bytes, framebuffer_size=%zu, panel=%ux%u, panel_color_bytes=%u",
+                 lvgl_color_bytes, runtime->frame_buffer_size,
                  runtime->hor_res, runtime->ver_res, color_bytes);
         return ESP_ERR_INVALID_ARG;
     }

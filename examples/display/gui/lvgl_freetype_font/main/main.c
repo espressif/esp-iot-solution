@@ -149,7 +149,7 @@ static esp_err_t init_fonts(void)
 
 static void create_freetype_screen(void)
 {
-    lv_obj_t *scr = lv_scr_act();
+    lv_obj_t *scr = lv_display_get_screen_active(lv_display_get_default());
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x364F6B), 0);
 
     lv_obj_t *label_title = lv_label_create(scr);

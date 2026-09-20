@@ -28,7 +28,11 @@ void handoff_lvgl_screen_create(lv_display_t *display, int cycle, int cycles)
     s_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(s_screen, lv_color_hex(0x481C1C), 0);
     lv_obj_set_style_bg_opa(s_screen, LV_OPA_COVER, 0);
+#if LV_VERSION_CHECK(9, 6, 0)
+    lv_obj_set_scrollable(s_screen, false);
+#else
     lv_obj_remove_flag(s_screen, LV_OBJ_FLAG_SCROLLABLE);
+#endif
 
     lv_obj_t *title = lv_label_create(s_screen);
     lv_label_set_text(title, "LVGL exclusive");

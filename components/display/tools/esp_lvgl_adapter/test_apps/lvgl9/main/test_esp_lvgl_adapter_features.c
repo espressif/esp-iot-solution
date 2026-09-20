@@ -277,7 +277,7 @@ TEST_CASE("adapter basic demo", "[adapter][basic]")
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
 
-    lv_obj_t *scr = lv_disp_get_scr_act(s_disp);
+    lv_obj_t *scr = lv_display_get_screen_active(s_disp);
     lv_obj_clean(scr);
 
     lv_obj_t *title = lv_label_create(scr);
@@ -299,7 +299,7 @@ TEST_CASE("adapter basic demo", "[adapter][basic]")
     vTaskDelay(pdMS_TO_TICKS(TEST_DISPLAY_TIME_MS));
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
-    lv_obj_clean(lv_disp_get_scr_act(s_disp));
+    lv_obj_clean(lv_display_get_screen_active(s_disp));
     esp_lv_adapter_unlock();
     ESP_LOGI(TAG, "Basic adapter test completed");
 }
@@ -316,8 +316,8 @@ TEST_CASE("adapter image decode", "[adapter][decode]")
     };
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
-    lv_obj_clean(lv_disp_get_scr_act(s_disp));
-    lv_obj_t *img = lv_img_create(lv_scr_act());
+    lv_obj_clean(lv_display_get_screen_active(s_disp));
+    lv_obj_t *img = lv_img_create(lv_display_get_screen_active(s_disp));
     lv_obj_center(img);
     esp_lv_adapter_unlock();
 
@@ -332,7 +332,7 @@ TEST_CASE("adapter image decode", "[adapter][decode]")
     }
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
-    lv_obj_clean(lv_disp_get_scr_act(s_disp));
+    lv_obj_clean(lv_display_get_screen_active(s_disp));
     esp_lv_adapter_unlock();
     ESP_LOGI(TAG, "Image decoder test completed");
 }
@@ -406,7 +406,7 @@ TEST_CASE("adapter freetype font", "[adapter][freetype]")
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
 
-    lv_obj_t *scr = lv_disp_get_scr_act(s_disp);
+    lv_obj_t *scr = lv_display_get_screen_active(s_disp);
     lv_obj_clean(scr);
     lv_obj_set_style_bg_color(scr, lv_color_hex(0x30363D), 0);
 
@@ -432,7 +432,7 @@ TEST_CASE("adapter freetype font", "[adapter][freetype]")
     vTaskDelay(pdMS_TO_TICKS(TEST_DISPLAY_TIME_MS));
 
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
-    lv_obj_clean(lv_disp_get_scr_act(s_disp));
+    lv_obj_clean(lv_display_get_screen_active(s_disp));
     esp_lv_adapter_unlock();
 
     ESP_LOGI(TAG, "Cleaning up fonts");

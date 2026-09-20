@@ -26,10 +26,7 @@
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_mipi_dsi.h"
 #endif
-#include "lvgl.h"
-#if LVGL_VERSION_MAJOR >= 9
-#include "lvgl_private.h"
-#endif
+#include "lvgl_port_private.h"
 #include "adapter_internal.h"
 #include "display_bridge.h"
 #include "bridge/common/display_bridge_common.h"
