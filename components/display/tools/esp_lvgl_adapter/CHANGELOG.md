@@ -4,6 +4,7 @@
 
 * Add LVGL 9.6 compatibility for public/private headers, FreeType integration, and display color-format detection.
 * Keep the existing LVGL v8 and v9 bridge paths and compatibility range.
+* Require ESP-IDF >= 5.5.5.
 
 ## v0.7.0 (2026-08-14)
 

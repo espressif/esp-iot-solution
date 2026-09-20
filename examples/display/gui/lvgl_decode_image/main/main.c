@@ -253,7 +253,11 @@ static void start_image_player(lv_display_t *disp, lv_indev_t *encoder)
 #if HW_USE_ENCODER
         lv_obj_t *hidden = lv_obj_create(screen);
         lv_obj_set_size(hidden, 1, 1);
+#if LV_VERSION_CHECK(9, 6, 0)
+        lv_obj_set_hidden(hidden, true);
+#else
         lv_obj_add_flag(hidden, LV_OBJ_FLAG_HIDDEN);
+#endif
         lv_group_add_obj(group, hidden);
 
         lv_obj_add_event_cb(btn, on_format_button, LV_EVENT_KEY, &s_player);

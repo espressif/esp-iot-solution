@@ -76,7 +76,7 @@ dependencies:
 
 ### Requirements
 
-- **ESP-IDF**: >= 5.5
+- **ESP-IDF**: >= 5.5.5
 - **LVGL**: 8.x or 9.x (auto-detected)
 - **Optional dependencies**: Required only if corresponding Kconfig options are enabled
 
@@ -775,7 +775,7 @@ esp_lv_adapter_deinit();
 
 ## Compatibility
 
-- **ESP-IDF**: >= 5.5
+- **ESP-IDF**: >= 5.5.5
 - **LVGL**: >= 8, < 10 (v8/v9 supported)
 
 ### ESP-IDF Patches

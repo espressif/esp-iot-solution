@@ -1,6 +1,6 @@
 dependencies:
   idf:
-    version: ">=6.0"
+    version: ">=6.1"
   lvgl/lvgl:
     version: ">=9,<10"
     public: true
@@ -16,5 +16,4 @@ dependencies:
     version: "*"
     public: true
   hw_init:
-    version: "*"
-    override_path: "../../common/hw_init"
+    path: "../../common/hw_init"

@@ -4,7 +4,7 @@ This document helps you migrate projects from `esp_lvgl_port` to `esp_lvgl_adapt
 
 ## Scope
 
-- ESP-IDF >= 5.5
+- ESP-IDF >= 5.5.5
 - LVGL v8 or v9
 - `esp_lcd` / `esp_lcd_touch` based drivers
 

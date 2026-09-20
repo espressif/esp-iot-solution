@@ -39,7 +39,7 @@ The panel is selected by the `Hardware Configuration` Kconfig choice (ESP32-P4
 defaults to the EK79007 1024x600 MIPI-DSI panel). LCD bring-up reuses
 `examples/display/gui/common/hw_init`. Scene JSON lives in `scenes/`.
 `scenes/DejaVuSans.ttf` is vendored with the example (DejaVu license next to
-it). Requires ESP-IDF >= 6.0, `espressif/esp-gsp`,
+it). Requires ESP-IDF >= 6.1, `espressif/esp-gsp`,
 `espressif/esp_lv_present`, and the GSPC host tool:
 
 ```sh

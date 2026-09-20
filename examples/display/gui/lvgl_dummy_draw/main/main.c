@@ -182,8 +182,13 @@ static void create_ui(lv_indev_t *encoder)
     lv_obj_remove_style_all(s_touch_layer);
     lv_obj_set_size(s_touch_layer, LV_PCT(100), LV_PCT(100));
     lv_obj_set_style_bg_opa(s_touch_layer, LV_OPA_TRANSP, 0);
+#if LV_VERSION_CHECK(9, 6, 0)
+    lv_obj_set_scrollable(s_touch_layer, false);
+    lv_obj_set_clickable(s_touch_layer, true);
+#else
     lv_obj_clear_flag(s_touch_layer, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(s_touch_layer, LV_OBJ_FLAG_CLICKABLE);
+#endif
     lv_obj_add_event_cb(s_touch_layer, on_click, LV_EVENT_CLICKED, NULL);
     lv_obj_move_foreground(s_info_label);
 
