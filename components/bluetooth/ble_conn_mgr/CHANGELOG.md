@@ -1,5 +1,18 @@
 # ChangeLog
 
+## v1.3.3 - 2026.10.28
+
+### Enhancements:
+
+- Post `conn_handle` with `ESP_BLE_CONN_EVENT_DISC_COMPLETE`
+- Add `esp_ble_conn_get_peer_chr_handle()` to resolve a discovered peer characteristic value handle
+
+### Bug Fixes:
+
+- Isolate discovered GATT services, characteristics, descriptors, and read caches by connection; peer-handle lookup and synchronous disconnect cleanup no longer reuse or remove another link's data
+- Fix central reconnection stalling forever after a connect attempt reported through `BLE_GAP_EVENT_DISCONNECT`, which leaked the pending connect context. Scan start remains application-owned; Peripheral/Both still resume advertising unless PAwR or a periodic sync holds the instance
+- Log unknown notify/indicate attribute handles, "already advertising" and "scan start while connecting" at debug level instead of error
+
 ## v1.3.2 - 2026.09.10
 
 ### Bug Fixes:

@@ -416,7 +416,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_CONNECTED            = 3,    /*!< When a new connection was established, the event comes */
     ESP_BLE_CONN_EVENT_DISCONNECTED         = 4,    /*!< When a connection was terminated, the event comes */
     ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When notification, indication, or peripheral write data (uuid_fn NULL) is delivered to the application, the event comes */
-    ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When the ble discover service complete, the event comes */
+    ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When peer GATT discovery completes; event_data is disc_complete.conn_handle */
 
     ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< Periodic advertising report; see esp_ble_conn_periodic_report_t. */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST   = 8,    /*!< When the periodic sync lost, the event comes */
@@ -770,6 +770,9 @@ typedef struct {
             uint8_t peer_addr[6];                         /*!< Pending peer address */
             uint8_t peer_addr_type;                       /*!< Pending peer address type */
         } connect_failed;                                /*!< ESP_BLE_CONN_EVENT_CONNECT_FAILED */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle whose GATT discovery finished */
+        } disc_complete;                                  /*!< ESP_BLE_CONN_EVENT_DISC_COMPLETE */
         struct {
             uint16_t conn_handle;                         /*!< Connection handle */
             uint16_t reason;                              /*!< Disconnect reason (stack/HCI error code) */
@@ -2086,6 +2089,32 @@ esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_de
 esp_err_t esp_ble_conn_get_chr_handle(uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
                                       uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
                                       uint8_t inst, uint16_t *out_handle);
+
+/**
+ * @brief   Get the GATT value handle of a discovered (peer) characteristic.
+ *
+ * Looks up the service discovery table owned by `conn_handle`. Discovery
+ * results from other live links are isolated, and the table is discarded when
+ * that link disconnects. Call after `ESP_BLE_CONN_EVENT_DISC_COMPLETE` for the
+ * requested link. `conn_handle` must still be live.
+ *
+ * @param[in]  conn_handle Connection handle of the discovered peer
+ * @param[in]  svc_type    Service UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  svc_uuid    Service UUID
+ * @param[in]  chr_type    Characteristic UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  chr_uuid    Characteristic UUID
+ * @param[out] out_handle  Pointer to store the peer characteristic value handle
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if parameters are invalid
+ *  - ESP_ERR_NOT_FOUND if the link or characteristic is not found
+ *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
+ */
+esp_err_t esp_ble_conn_get_peer_chr_handle(uint16_t conn_handle,
+                                           uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
+                                           uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
+                                           uint16_t *out_handle);
 
 /**
  * @brief This api is typically used to add service actively
