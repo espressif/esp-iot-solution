@@ -1,8 +1,8 @@
 dependencies:
-  idf: ">=4.3"
+  idf: ">=5.0"
   esp_flux:
-    version: "*"
+    version: ">=0.1.0"
     override_path: "../../../../components/esp_flux"
-  ble_session_manager:
-    version: "*"
-    path: "../../common_components/ble_session_manager"
+  ble_conn_mgr:
+    version: "^1.3.3"
+    override_path: "../../../../components/bluetooth/ble_conn_mgr"
