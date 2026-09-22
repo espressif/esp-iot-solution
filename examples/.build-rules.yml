@@ -1,27 +1,26 @@
-# Note: All operators are binary operators. For more than two operands, you may use the nested parentheses trick.
-# For example:
-#    *  A == 1 or (B == 2 and C in [1,2,3])
-#    *  (A == 1 and B == 2) or (C not in ["3", "4", 5])
+# Note: idf_build_apps if-clauses do not support parentheses.
+# Use IDF_VERSION >= "x.y" for version floors, or multiple - if: entries for OR.
+# Example: IDF_TARGET in ["esp32s3"] and IDF_VERSION >= "5.5"
 
 examples/ai/esp_dl/emotion_recognition:
   enable:
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR > 5 or (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5))
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION >= "5.5"
 
 examples/ai/esp_dl/human_activity_recognition:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR > 5 or (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5))
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and IDF_VERSION >= "5.5"
 
 examples/ai/esp_dl/self_learning_classification:
   enable:
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR > 5 or (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5))
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION >= "5.5"
 
 examples/ai/esp_dl/touchpad_digit_recognition:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3
 
 examples/ai/xiaozhi_chat:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5
 
 examples/audio/wav_player:
   enable:
@@ -172,7 +171,7 @@ examples/esp_local_controller:
 
 examples/bluetooth/ble_uart_service:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/bluetooth/ble_adv/bthome/dimmer:
   enable:
@@ -184,20 +183,20 @@ examples/bluetooth/ble_adv/bthome/bulb:
 
 examples/weaver/led_light:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/weaver/imu_gesture:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/mcp/mcp_server:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 examples/mcp/mcp_client:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4)
-    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4
+    - if: IDF_TARGET in ["esp32","esp32c2","esp32c3","esp32c6","esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/network_provisioner:
   enable:
@@ -249,7 +248,7 @@ examples/display/lcd/qspi_with_ram:
 
 examples/display/lcd/qspi_without_ram:
   enable:
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32s3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3
 
 examples/display/lcd/rgb_lcd_8bit:
   enable:
@@ -269,43 +268,43 @@ examples/display/gui/gsp_lvgl_present_handoff:
 
 examples/display/gui/lvgl_common_demo:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_decode_image:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_dummy_draw:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_freetype_font:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_multi_screen:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_light_sleep_demo:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_mono_demo:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_eaf_player:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_fs_assets:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4","esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/display/gui/lvgl_lottie_player:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
 
 examples/extended_vfs/gpio/gpio_simple:
   enable:
@@ -399,7 +398,7 @@ examples/sensors/airmouse:
 
 examples/sensors/sensor_control_led:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4)
+    - if: IDF_TARGET in ["esp32","esp32s2"] and IDF_VERSION_MAJOR == 4 and IDF_VERSION_MINOR == 4
 
 examples/sensors/sensor_hub_monitor:
   enable:
@@ -409,17 +408,17 @@ examples/usb/device/bootloader_uf2:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
   disable:
-    - if: IDF_TARGET in ["esp32s2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 3)
+    - if: IDF_TARGET in ["esp32s2"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 3
       temporary: true
       reason: ESP32-S2 may encounter toolchain errors when using IDF versions below 5.3.
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
       temporary: true
       reason: "see AEG-2895 for more details"
 
 examples/usb/device/usb_dongle:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3"]
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5
 
 examples/touch/touch_button:
   enable:
@@ -459,7 +458,7 @@ examples/usb/device/usb_uac:
 examples/usb/device/usb_dual_uvc_device:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32s2"]
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION >= "5.3"
   disable:
     - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
       temporary: true
@@ -471,8 +470,8 @@ examples/usb/device/usb_webcam:
 
 examples/usb/device/usb_extend_screen:
   enable:
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
-    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION >= "5.5"
+    - if: IDF_TARGET in ["esp32s3"] and IDF_VERSION >= "5.3"
 
 examples/usb/device/usb_hid_device:
   enable:
@@ -520,7 +519,7 @@ examples/usb/device/usb_uf2_ota:
 
 examples/usb/host/usb_camera_lcd_display:
   enable:
-    - if: IDF_TARGET in ["esp32s3","esp32p4"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32s3","esp32p4"] and IDF_VERSION >= "5.5"
 
 examples/usb/host/usb_camera_mic_spk:
   enable:
@@ -529,7 +528,7 @@ examples/usb/host/usb_camera_mic_spk:
 examples/usb/host/usb_audio_player:
   enable:
     - if: IDF_TARGET in ["esp32s2","esp32s3","esp32p4"]
-    - if: IDF_TARGET == "esp32s31" and ((IDF_VERSION_MAJOR > 6) or (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR >= 1))
+    - if: IDF_TARGET == "esp32s31" and IDF_VERSION >= "6.1"
 
 examples/usb/host/usb_cdc_4g_module:
   enable:
@@ -569,11 +568,11 @@ examples/utilities/xz_decompress_file:
 
 examples/utilities/adc_tp_calibration:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s2"] and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 0)
+    - if: IDF_TARGET in ["esp32","esp32s2"] and IDF_VERSION_MAJOR >= 5
 
 examples/vision/opencv/color_tracker:
   enable:
-    - if: IDF_TARGET in ["esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
+    - if: IDF_TARGET in ["esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4
 
 examples/gprof/gprof_simple:
   enable:
