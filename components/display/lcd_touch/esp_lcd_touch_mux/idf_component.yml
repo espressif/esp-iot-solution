@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.2"
+  espressif/esp_lcd_touch: ">=1.2.1,<2.0.0"
+description: Physical and injected input multiplexer for esp_lcd_touch
+version: 0.1.0
