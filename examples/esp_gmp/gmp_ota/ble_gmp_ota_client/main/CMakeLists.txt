@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "main.c"
     INCLUDE_DIRS "."
-    REQUIRES nvs_flash freertos bt esp_gmp esp_flux ble_session_manager gmp_ota_common spiffs
+    REQUIRES nvs_flash freertos bt esp_gmp esp_flux ble_conn_mgr gmp_ota_common spiffs
 )
 
 set(OTA_IMAGE "${CMAKE_CURRENT_SOURCE_DIR}/../spiffs/ota_image.bin")
