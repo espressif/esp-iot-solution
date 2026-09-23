@@ -15,6 +15,12 @@
 `esp_gmp -> GMP Flux adapter -> esp_flux` 建立可靠消息通道。
 File Transfer profile 本身不依赖或访问 BLE/Flux。
 
+BLE 连接管理（扫描、广播、GATT 服务注册、服务发现与重连）由 `ble_conn_mgr`
+组件负责：sender 以 central 角色运行（`CONFIG_BLE_CONN_MGR_ROLE_CENTRAL`），
+receiver 以 peripheral 角色运行（`CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL`），并在
+可连接广播包中携带文件传输服务 UUID。sender 只有收到这个 UUID 才连接。
+任意一端复位或链路断开后都会自动重新建链。
+
 **范围说明：** 示例与 profile worker 按单链路验证。`sessions[]` 仅为预留结构，
 本版本不支持并发多链路文件传输。
 

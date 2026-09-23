@@ -19,7 +19,7 @@ idf_component_register(
         wear_levelling
         esp_gmp
         esp_flux
-        ble_session_manager
+        ble_conn_mgr
 )
 
 fatfs_create_spiflash_image(storage ../storage FLASH_IN_PROJECT PRESERVE_TIME ONE_FAT)
