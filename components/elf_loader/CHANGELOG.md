@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v1.3.4 - 2026-09-29
+
+* Fixed ESP32-S3 PSRAM ELF relocation deadlock under multicore load by using ranged thread-safe cache synchronization
+* Fixed alignment of ELF data sections in allocated memory
+
 ## v1.3.3 - 2026-07-28
 
 * Fixed intermittent crash during long-term ELF execution from PSRAM on ESP32-S31 (use full cache flush instead of ranged API)

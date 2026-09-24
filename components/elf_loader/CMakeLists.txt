@@ -30,8 +30,12 @@ endif()
 
 set(priv_req spi_flash)
 
-if(CONFIG_IDF_TARGET_ESP32P4)
+if(IDF_TARGET STREQUAL "esp32p4")
     list(APPEND priv_req esp_mm)
+elseif(IDF_TARGET STREQUAL "esp32s3")
+    if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2")
+        list(APPEND priv_req esp_mm)
+    endif()
 endif()
 
 idf_component_register(SRCS ${srcs}
