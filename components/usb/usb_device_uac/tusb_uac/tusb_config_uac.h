@@ -51,7 +51,15 @@ extern "C" {
 // MIC IN EP (device-to-host = TX): keep EP size aligned to one complete audio frame.
 #define CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_IN    ((CFG_TUD_AUDIO_FUNC_1_MAX_SAMPLE_RATE / 1000 * CFG_TUD_AUDIO_FUNC_1_FORMAT_1_FRAME_SZ_TX) + CFG_TUD_AUDIO_FUNC_1_FORMAT_1_FRAME_SZ_TX)
 
-#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ      CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_IN * (MIC_INTERVAL_MS + 1)
+// EP-IN FIFO: TinyUSB flow control needs >= 4 packets, and the refill gate
+// (waits for MIC_INTERVAL_MS of free space) needs depth > 2*MIC_INTERVAL_MS
+// to be able to reach the depth/2 setpoint.
+#if (2 * MIC_INTERVAL_MS + 2) > 4
+#define UAC_MIC_FIFO_PACKETS  (2 * MIC_INTERVAL_MS + 2)
+#else
+#define UAC_MIC_FIFO_PACKETS  4
+#endif
+#define CFG_TUD_AUDIO_FUNC_1_EP_IN_SW_BUF_SZ      CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_IN * UAC_MIC_FIFO_PACKETS
 #define CFG_TUD_AUDIO_FUNC_1_EP_IN_SZ_MAX         CFG_TUD_AUDIO_FUNC_1_FORMAT_1_EP_SZ_IN  // Maximum EP IN size for all AS alternate settings used
 
 // EP and buffer size - for isochronous EP´s, the buffer and EP size are equal (different sizes would not make sense)
