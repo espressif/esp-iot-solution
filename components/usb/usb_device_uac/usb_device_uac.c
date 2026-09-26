@@ -2,10 +2,21 @@
  * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
+ *
+ * Speaker RX path note: the EP OUT software FIFO is drained by usb_spk_task()
+ * (paced by the blocking I2S write in the user's output callback), NOT by
+ * tud_audio_rx_done_isr(). With AUDIO_FEEDBACK_METHOD_FIFO_COUNT the FIFO
+ * level is the measured variable of the feedback loop, so it must reflect
+ * the host-vs-device clock difference. Draining it at packet arrival pace
+ * pins the level near one packet and makes the feedback blind to the real
+ * clock drift, which then accumulates in the I2S DMA buffer and surfaces as
+ * periodic audio dropouts. See the accompanying PR/issue for the analysis.
  */
 
 #include <string.h>
 #include <inttypes.h>
+#include <stddef.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_check.h"
@@ -52,7 +63,6 @@ typedef struct {
     uint8_t spk_buf[CFG_TUD_AUDIO_FUNC_1_EP_OUT_SW_BUF_SZ];      // Buffer for speaker data
     uint8_t *mic_buf_write;                                      // Pointer to the buffer to write to
     uint8_t *mic_buf_read;                                       // Pointer to the buffer to read from
-    int spk_data_size;                                           // Speaker data size received in the last frame
     int mic_data_size;
     int spk_itf_num;
     int mic_itf_num;
@@ -71,6 +81,10 @@ static uac_device_t *s_uac_device = NULL;
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 #define UAC_ENTER_CRITICAL()    portENTER_CRITICAL(&s_mux)
 #define UAC_EXIT_CRITICAL()     portEXIT_CRITICAL(&s_mux)
+
+/* Only one audio function is compiled in (CFG_TUD_AUDIO == 1), the
+ * function id used with the tud_audio_n_* APIs is therefore always 0. */
+#define UAC_FUNC_ID             0
 
 static void usb_phy_init(void)
 {
@@ -315,7 +329,9 @@ bool tud_audio_set_itf_close_EP_cb(uint8_t rhport, tusb_control_request_t const 
 #if SPEAK_CHANNEL_NUM
     if (s_uac_device->spk_itf_num == itf && alt == 0) {
         TU_LOG2("Speaker interface closed");
-        s_uac_device->spk_data_size = 0;
+        /* TinyUSB already cleared the EP OUT FIFO and closed the endpoints
+         * before invoking this callback, so no stale data can leak into the
+         * next playback. The spk task notices spk_active == false and parks. */
         s_uac_device->spk_active = false;
     }
 #endif
@@ -341,7 +357,6 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
 
 #if SPEAK_CHANNEL_NUM
     if (s_uac_device->spk_itf_num == itf && alt != 0) {
-        s_uac_device->spk_data_size = 0;
         s_uac_device->spk_resolution = spk_resolutions_per_format[alt - 1];
         s_uac_device->spk_active = true;
         s_uac_device->spk_bytes_per_ms = s_uac_device->current_sample_rate / 1000 * SPEAK_CHANNEL_NUM * CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_RX;
@@ -369,39 +384,23 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
 bool tud_audio_rx_done_isr(uint8_t rhport, uint16_t n_bytes_received, uint8_t func_id, uint8_t ep_out, uint8_t cur_alt_setting)
 {
     (void)rhport;
+    (void)n_bytes_received;
+    (void)func_id;
     (void)ep_out;
     (void)cur_alt_setting;
 
-    static bool new_play = false;
-    static int64_t last_time = 0;
-    int64_t now = esp_timer_get_time();
-
-    /**
-     * @brief If no data is received for a certain period, it is considered as the initiation
-     *        of a new audio transmission. At this point, the FIFO data is cleared, and a segment
-     *        of data is buffered in the I2S.
-     */
-    if (now - last_time > 100 * CONFIG_UAC_SPK_NEW_PLAY_INTERVAL) {
-        new_play = true;
-        tud_audio_n_clear_ep_out_ff(func_id);
+#if SPEAK_CHANNEL_NUM
+    /* Do NOT read from the EP OUT FIFO here!
+     * The FIFO level is the feedback signal for the host clock
+     * synchronisation (AUDIO_FEEDBACK_METHOD_FIFO_COUNT measures it right
+     * before this callback). Draining it at packet arrival pace decouples
+     * the feedback from the real I2S consumption rate and causes periodic
+     * dropouts. usb_spk_task() drains the FIFO at the DAC's pace instead. */
+    if (s_uac_device != NULL && s_uac_device->spk_task_handle != NULL) {
+        xTaskNotifyGive(s_uac_device->spk_task_handle);
     }
-    last_time = now;
+#endif
 
-    int bytes_remained = tud_audio_n_available(func_id);
-
-    size_t bytes_require = s_uac_device->spk_bytes_per_ms;
-
-    if (new_play) {
-        /*!< Buffer a segment of data in the I2S and control the data size to be half of the UAC FIFO size. */
-        bytes_require = SPK_INTERVAL_MS * s_uac_device->spk_bytes_per_ms / 2;
-        if (bytes_remained < bytes_require) {
-            return true;
-        }
-        new_play = false;
-    }
-
-    s_uac_device->spk_data_size = tud_audio_n_read(func_id, s_uac_device->spk_buf, bytes_require);
-    xTaskNotifyGive(s_uac_device->spk_task_handle);
     return true;
 }
 
@@ -433,21 +432,74 @@ bool tud_audio_tx_done_isr(uint8_t rhport, uint16_t n_bytes_sent, uint8_t func_i
 #if SPEAK_CHANNEL_NUM
 static void usb_spk_task(void *pvParam)
 {
+    (void)pvParam;
+    /* This task is the ONLY reader of the EP OUT FIFO. The I2S write
+     * inside output_cb blocks when the DMA buffers are full, so the drain
+     * rate equals the DAC's real consumption rate and the FIFO level carries
+     * the host-vs-device clock error for the feedback endpoint. */
+    bool priming = true;          /* build an initial backlog before feeding I2S */
+    int64_t fifo_empty_since = 0; /* detect long dry periods -> rebuild cushion */
+    /* Fallback poll interval, never below one FreeRTOS tick: for
+     * CONFIG_FREERTOS_HZ < 100, pdMS_TO_TICKS(10) rounds to zero and the
+     * timed waits below would degenerate into a no-block busy-poll.
+     * At the default 100 Hz, 10 ms is exactly one tick anyway. */
+    const TickType_t poll_ticks = (pdMS_TO_TICKS(10) == 0) ? 1 : pdMS_TO_TICKS(10);
+
     while (1) {
         if (s_uac_device->spk_active == false) {
-            ulTaskNotifyTake(pdFAIL, portMAX_DELAY);
+            /* Park until the host opens the streaming interface (alt != 0). */
+            ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+            priming = true;
+            fifo_empty_since = 0;
             continue;
         }
-        // clear the notification
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        if (s_uac_device->spk_data_size == 0) {
+
+        uint16_t avail = tud_audio_n_available(UAC_FUNC_ID);
+
+        if (avail == 0) {
+            const int64_t now = esp_timer_get_time();
+            if (fifo_empty_since == 0) {
+                fifo_empty_since = now;
+            } else if ((now - fifo_empty_since) > 100000) { /* > 100 ms without data */
+                priming = true; /* rebuild the DMA cushion when data resumes */
+            }
+            /* Wait for the next USB packet (10 ms poll as a fallback; the
+             * packet notification wakes us within ~1 ms). */
+            ulTaskNotifyTake(pdTRUE, poll_ticks);
             continue;
         }
-        // playback the data from the ring buffer chunk by chunk
-        if (s_uac_device->user_cfg.output_cb) {
-            s_uac_device->user_cfg.output_cb((uint8_t *)s_uac_device->spk_buf, s_uac_device->spk_data_size, s_uac_device->user_cfg.cb_ctx);
+        fifo_empty_since = 0;
+
+        if (priming) {
+            /* Let a ~20 ms backlog build up (clamped to half the FIFO) so the
+             * I2S DMA carries a cushion and the feedback controller starts
+             * from a sane operating point. */
+            size_t prime_target = 20U * s_uac_device->spk_bytes_per_ms;
+            const size_t half_fifo = sizeof(s_uac_device->spk_buf) / 2;
+            if (prime_target > half_fifo) {
+                prime_target = half_fifo;
+            }
+            if (avail < prime_target) {
+                ulTaskNotifyTake(pdTRUE, poll_ticks);
+                continue;
+            }
+            priming = false;
         }
-        s_uac_device->spk_data_size = 0;
+
+        /* Move at most ~4 ms per i2s write so back-pressure stays granular. */
+        size_t chunk = avail;
+        const size_t max_chunk = 4U * s_uac_device->spk_bytes_per_ms;
+        if (chunk > max_chunk) {
+            chunk = max_chunk;
+        }
+        if (chunk > sizeof(s_uac_device->spk_buf)) {
+            chunk = sizeof(s_uac_device->spk_buf);
+        }
+
+        uint16_t n = tud_audio_n_read(UAC_FUNC_ID, s_uac_device->spk_buf, (uint16_t)chunk);
+        if (n > 0 && s_uac_device->user_cfg.output_cb) {
+            s_uac_device->user_cfg.output_cb((uint8_t *)s_uac_device->spk_buf, n, s_uac_device->user_cfg.cb_ctx);
+        }
     }
 }
 #endif
@@ -543,4 +595,20 @@ esp_err_t uac_device_init(uac_device_config_t *config)
 
     ESP_LOGI(TAG, "UAC Device Start, Version: %d.%d.%d", USB_DEVICE_UAC_VER_MAJOR, USB_DEVICE_UAC_VER_MINOR, USB_DEVICE_UAC_VER_PATCH);
     return ESP_OK;
+}
+
+size_t uac_device_spk_fifo_level(void)
+{
+    if (s_uac_device == NULL) {
+        return 0;
+    }
+    return (size_t)tud_audio_n_available(UAC_FUNC_ID);
+}
+
+size_t uac_device_spk_fifo_size(void)
+{
+    if (s_uac_device == NULL) {
+        return 0;
+    }
+    return sizeof(s_uac_device->spk_buf);
 }
