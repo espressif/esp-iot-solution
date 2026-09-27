@@ -1031,6 +1031,17 @@ build_example_usb_device_usb_extend_screen:
     IDF_TARGET: esp32p4
     EXAMPLE_APPEND_ARGS: "-t esp32p4"
 
+build_example_usb_device_usb_extend_screen_esp32s31:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_usb_device_usb_extend_screen
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/usb/device/usb_extend_screen
+    EXAMPLE_BOARD: esp32_s31_korvo_1
+    IDF_TARGET: esp32s31
+    EXAMPLE_APPEND_ARGS: "-t esp32s31"
+
 build_example_usb_device_usb_webcam:
   extends:
     - .build_examples_template
