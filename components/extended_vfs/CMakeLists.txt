@@ -33,14 +33,21 @@ endif()
 
 set(priv_reqs "")
 
-if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
+set(_extended_vfs_idf_ver_ok FALSE)
+if(DEFINED IDF_VERSION_MAJOR AND NOT "${IDF_VERSION_MAJOR}" STREQUAL "" AND
+   DEFINED IDF_VERSION_MINOR AND NOT "${IDF_VERSION_MINOR}" STREQUAL "")
+    set(_extended_vfs_idf_ver_ok TRUE)
+endif()
+
+if(_extended_vfs_idf_ver_ok AND
+   "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
     list(APPEND priv_reqs
          esp_driver_gpio
          esp_driver_i2c
          esp_driver_ledc
          esp_driver_spi)
 else()
-    # ESP-IDF < 5.3 uses legacy driver
+    # ESP-IDF < 5.3, or version vars unavailable — legacy driver
     list(APPEND priv_reqs driver)
 endif()
 
