@@ -104,9 +104,12 @@ static bool te_second_drawbuf_fits(
     }
     size_t reserved = DEFAULT_STAGING_BUFFERS * drawbuf_bytes +
                       DOUBLE_DRAWBUF_HEADROOM_BYTES;
-    /* Compose buffers fall back to internal RAM after the drawbufs. */
+    /* Compose buffers fall back to internal RAM after the drawbufs. Query the
+     * same capabilities used by te_render.c, not SPIRAM alone. */
     size_t compose_bytes = (size_t)width * height * color_bytes;
-    if (heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM) < compose_bytes) {
+    const uint32_t compose_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA |
+                                  MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED;
+    if (heap_caps_get_largest_free_block(compose_caps) < compose_bytes) {
         reserved += compose_bytes *
                     (config->te_compose_buffers >= 2 ? 2U : 1U);
     }
@@ -130,8 +133,8 @@ static esp_display_present_drawbuf_info_t resolve_drawbuf_info(
     uint16_t lines = resolve_staging_lines(
                          width, height, color_bytes, config->lines);
     size_t drawbuf_bytes = (size_t)lines * width * color_bytes;
-    /* A second full-size drawbuf lets the async worker copy one band while
-     * the next renders; the worker needs a second core to overlap. */
+    /* A second bounded drawbuf lets the async worker copy one band while the
+     * next renders; the worker needs a second core to overlap. */
     bool second_fits;
     bool optional_second = false;
     if (profile->fb == ESP_DISPLAY_PRESENT_FB_REPAIR) {

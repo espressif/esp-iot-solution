@@ -131,6 +131,14 @@ esp_err_t present_fb_switch_commit(
         if (frame->fb.transform == NULL && panel_pixels != frame->fb.draw_fb) {
             return ESP_ERR_INVALID_STATE;
         }
+        if (frame->fb.single_pending_switch &&
+                frame->tracker.pool.retire_sem != NULL) {
+            esp_err_t wait_ret =
+                esp_display_present_tracker_pool_wait_retired(&frame->tracker);
+            if (wait_ret != ESP_OK) {
+                return wait_ret;
+            }
+        }
     } else if (uses_pipeline) {
         esp_err_t wait_ret = esp_display_present_tracker_wait_pending(
                                  &frame->tracker);

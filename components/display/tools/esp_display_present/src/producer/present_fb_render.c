@@ -313,6 +313,8 @@ esp_err_t esp_display_present_fb_create(
     frame->fb.submit_gate_enabled =
         frame->profile.frame_done_release ==
         ESP_DISPLAY_PRESENT_FRAME_DONE_RELEASE_SUBMIT;
+    frame->fb.single_pending_switch =
+        info->hw.panel_interface == ESP_DISPLAY_PRESENT_PANEL_IF_RGB;
     if (config->drawbuf_pool != NULL) {
         frame->fb.drawbuf_pool = *config->drawbuf_pool;
     }

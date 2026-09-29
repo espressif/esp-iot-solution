@@ -77,7 +77,10 @@ esp_err_t present_async_copy_init(present_async_copy_t *copy,
     }
     copy->jobs = xQueueCreate(pool->count, sizeof(present_async_copy_job_t));
     if (copy->jobs == NULL) {
-        return ESP_ERR_NO_MEM;
+        /* The worker is an optional overlap optimization. Keep the normal
+         * synchronous blit path available when its queue cannot be created. */
+        ESP_LOGW(TAG, "no async-copy queue; tile copies stay inline");
+        return ESP_OK;
     }
     for (uint8_t index = 0; index < pool->count; ++index) {
         copy->idle[index] =
@@ -92,6 +95,7 @@ void present_async_copy_deinit(present_async_copy_t *copy)
     if (copy == NULL) {
         return;
     }
+    (void)present_async_copy_drain(copy);
     if (copy->task != NULL) {
         vTaskDelete(copy->task);
     }

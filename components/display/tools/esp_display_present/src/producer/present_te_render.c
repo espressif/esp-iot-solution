@@ -182,6 +182,13 @@ esp_err_t esp_display_present_te_compose_stop(
     if (te_compose->stopped) {
         return ESP_OK;
     }
+    if (esp_display_present_tracker_get_building_frame(
+                &te_compose->tracker) != 0) {
+        /* A queued tile may still be owned by the copy worker even though no
+         * panel transfer ticket exists yet. The producer must cancel/drain
+         * that frame before endpoint teardown can release its buffers. */
+        return ESP_ERR_INVALID_STATE;
+    }
     if (esp_display_present_tracker_get_pending_transfer_tickets(
                 &te_compose->tracker) != 0 ||
             present_te_pool_has_inflight(&te_compose->pool)) {

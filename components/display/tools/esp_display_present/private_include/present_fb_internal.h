@@ -59,6 +59,12 @@ struct esp_display_present_fb_endpoint {
          * is acquired immediately before transform, after VSYNC recycles it. */
         bool defer_draw_acquire_until_transform;
         bool submit_gate_enabled;
+        /**
+         * Some RGB drivers report frame-done only when the DMA switches
+         * buffers, so a second switch requested before the first lands would
+         * retire one buffer late. Keep at most one switch outstanding.
+         */
+        bool single_pending_switch;
         /** Optional PPA SRM client for partition_rotate tile blits. */
         void *ppa_handle;
         /** Tile copies overlap rendering when the drawbuf pool has two. */

@@ -41,7 +41,7 @@ esp_err_t present_async_copy_init(present_async_copy_t *copy,
                                   const esp_display_present_drawbuf_pool_t *pool,
                                   bool allow);
 
-/** Release worker resources. Callers must have drained it first. */
+/** Drain pending work and release worker resources. */
 void present_async_copy_deinit(present_async_copy_t *copy);
 
 /** Wait until drawbuf @p slot is no longer read or written by the worker. */
