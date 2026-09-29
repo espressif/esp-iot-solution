@@ -594,6 +594,28 @@ build_example_display_gui_gsp_lvgl_present_handoff:
     # GSPC archives live on Espressif CDN, not GitHub.
     GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
 
+build_example_display_gui_gsp_showcase:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_gsp_showcase
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/display/gui/gsp_showcase
+    EXAMPLE_PYTHON_DEPS: esp-gsp-tools
+    GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
+
+build_example_display_gui_gsp_showcase_qspi:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_gsp_showcase
+    - .build_idf_ge_than_v6_1
+  variables:
+    GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
+  script:
+    - pip install esp-gsp-tools
+    - cd examples/display/gui/gsp_showcase
+    - idf.py -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.qspi' set-target esp32s3 build
+
 build_example_display_gui_lvgl_common_demo:
   extends:
     - .build_examples_template

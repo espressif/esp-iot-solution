@@ -12,4 +12,5 @@ dependencies:
     public: true
 
   example_lvgl_init:
-    path: "../../common/example_lvgl_init"
+    version: "*"
+    override_path: "../../common/example_lvgl_init"

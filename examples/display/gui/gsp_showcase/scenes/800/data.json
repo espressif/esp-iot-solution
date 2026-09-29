@@ -1,0 +1,342 @@
+{
+  "screen": "data",
+  "w": 800,
+  "h": 480,
+  "screen_bg": "#0D1524",
+  "font": "../DejaVuSans.ttf",
+  "default_font_size": 14,
+  "swipe": true,
+  "objects": [
+    {
+      "type": "label",
+      "parent": -1,
+      "x": 28,
+      "y": 14,
+      "w": 586,
+      "h": 34,
+      "text": "ESP-GSP / Interactive showcase",
+      "font_size": 23,
+      "fg_color": "#F3F7FF"
+    },
+    {
+      "type": "label",
+      "parent": -1,
+      "x": 617,
+      "y": 24,
+      "w": 156,
+      "h": 19,
+      "text": "SWIPE  /  PULL DOWN",
+      "font_size": 12,
+      "text_align": "right",
+      "fg_color": "#8DA4C0"
+    },
+    {
+      "type": "button",
+      "parent": -1,
+      "x": 28,
+      "y": 60,
+      "w": 172,
+      "h": 38,
+      "text": "Controls",
+      "font_size": 14,
+      "bg_color": "#25364C",
+      "fg_color": "#DCE8F7",
+      "radius": 9,
+      "callback": "nav_controls"
+    },
+    {
+      "type": "button",
+      "parent": -1,
+      "x": 215,
+      "y": 60,
+      "w": 172,
+      "h": 38,
+      "text": "Images",
+      "font_size": 14,
+      "bg_color": "#25364C",
+      "fg_color": "#DCE8F7",
+      "radius": 9,
+      "callback": "nav_media"
+    },
+    {
+      "type": "button",
+      "parent": -1,
+      "x": 402,
+      "y": 60,
+      "w": 172,
+      "h": 38,
+      "text": "Motion",
+      "font_size": 14,
+      "bg_color": "#25364C",
+      "fg_color": "#DCE8F7",
+      "radius": 9,
+      "callback": "nav_motion"
+    },
+    {
+      "type": "button",
+      "parent": -1,
+      "x": 588,
+      "y": 60,
+      "w": 184,
+      "h": 38,
+      "text": "Data & Layout",
+      "font_size": 14,
+      "bg_color": "#2563EB",
+      "fg_color": "#FFFFFF",
+      "radius": 9,
+      "callback": "nav_data"
+    },
+    {
+      "type": "container",
+      "parent": -1,
+      "x": 28,
+      "y": 120,
+      "w": 469,
+      "h": 322,
+      "bg_color": "#17243A",
+      "radius": 14,
+      "border_color": "#314864",
+      "border_width": 1
+    },
+    {
+      "type": "label",
+      "parent": 6,
+      "x": 19,
+      "y": 14,
+      "w": 430,
+      "h": 27,
+      "text": "Live data and Chart",
+      "font_size": 20,
+      "fg_color": "#F3F7FF"
+    },
+    {
+      "type": "label",
+      "parent": 6,
+      "name": "sample_readout",
+      "x": 301,
+      "y": 18,
+      "w": 148,
+      "h": 24,
+      "text": "Sample 0",
+      "bind": "sample_readout",
+      "font_charset": "Sample 0123456789",
+      "font_size": 15,
+      "text_align": "right",
+      "fg_color": "#38BDF8"
+    },
+    {
+      "type": "chart",
+      "parent": 6,
+      "name": "trend",
+      "x": 19,
+      "y": 62,
+      "w": 431,
+      "h": 184,
+      "grid_lines": 4,
+      "bg_color": "#142033",
+      "fg_color": "#38BDF8",
+      "border_color": "#314864",
+      "border_width": 1,
+      "radius": 8,
+      "series": [
+        {
+          "name": "temperature",
+          "points": [
+            12,
+            18,
+            25,
+            19,
+            32,
+            38,
+            31,
+            46,
+            42,
+            51,
+            49,
+            62
+          ],
+          "color": "#38BDF8"
+        }
+      ]
+    },
+    {
+      "type": "progress",
+      "parent": 6,
+      "name": "sample_progress",
+      "x": 19,
+      "y": 270,
+      "w": 431,
+      "h": 19,
+      "value": 0,
+      "bg_color": "#31445E",
+      "fg_color": "#35C996",
+      "radius": 9
+    },
+    {
+      "type": "container",
+      "parent": -1,
+      "x": 513,
+      "y": 120,
+      "w": 259,
+      "h": 322,
+      "bg_color": "#17243A",
+      "radius": 14,
+      "border_color": "#314864",
+      "border_width": 1
+    },
+    {
+      "type": "label",
+      "parent": 11,
+      "x": 16,
+      "y": 14,
+      "w": 228,
+      "h": 27,
+      "text": "Scrollable List",
+      "font_size": 20,
+      "fg_color": "#F3F7FF"
+    },
+    {
+      "type": "list",
+      "parent": 11,
+      "name": "devices",
+      "x": 16,
+      "y": 54,
+      "w": 228,
+      "h": 184,
+      "items": [
+        "Display / ESP-GSP",
+        "Sensor / Temperature",
+        "Controller / Lighting",
+        "Player / Animation",
+        "Storage / Media",
+        "Network / Telemetry",
+        "Panel / Touch",
+        "System / Status"
+      ],
+      "item_height": 39,
+      "snap_to_item": true,
+      "font_size": 13,
+      "bg_color": "#142033",
+      "fg_color": "#E2E8F0",
+      "border_color": "#314864",
+      "border_width": 1,
+      "radius": 9
+    },
+    {
+      "type": "button",
+      "parent": 11,
+      "x": 16,
+      "y": 258,
+      "w": 228,
+      "h": 43,
+      "text": "Open message box",
+      "font_size": 14,
+      "bg_color": "#2563EB",
+      "fg_color": "#FFFFFF",
+      "radius": 9,
+      "events": [
+        {
+          "event": "click",
+          "action": "show",
+          "target_name": "help_dialog"
+        }
+      ]
+    },
+    {
+      "type": "msgbox",
+      "parent": -1,
+      "name": "help_dialog",
+      "title": "JSON overlay",
+      "text": "This dialog and its open action are declared in JSON.",
+      "buttons": [
+        "Close"
+      ],
+      "w": 250,
+      "h": 192,
+      "font_size": 14,
+      "dismissable": true,
+      "hidden": true,
+      "bg_color": "#17243A",
+      "fg_color": "#E2E8F0",
+      "button_color": "#2563EB"
+    },
+    {
+      "type": "label",
+      "parent": -1,
+      "x": 28,
+      "y": 454,
+      "w": 744,
+      "h": 18,
+      "text": "Drag the list to scroll. Swipe outside the list to change the full screen.",
+      "font_size": 12,
+      "fg_color": "#8199B6"
+    },
+    {
+      "type": "drawer",
+      "parent": -1,
+      "name": "quick_drawer",
+      "x": 0,
+      "y": 0,
+      "w": 800,
+      "h": 198,
+      "edge": "top",
+      "open": false,
+      "bg_color": "#17243A"
+    },
+    {
+      "type": "label",
+      "parent_name": "quick_drawer",
+      "x": 28,
+      "y": 22,
+      "w": 469,
+      "h": 34,
+      "text": "Quick Panel",
+      "font_size": 23,
+      "fg_color": "#F3F7FF"
+    },
+    {
+      "type": "label",
+      "parent_name": "quick_drawer",
+      "x": 28,
+      "y": 66,
+      "w": 547,
+      "h": 27,
+      "text": "Drag this panel up to close it.",
+      "font_size": 14,
+      "fg_color": "#BBD0EB"
+    },
+    {
+      "type": "toggle",
+      "parent_name": "quick_drawer",
+      "x": 31,
+      "y": 124,
+      "w": 63,
+      "h": 31,
+      "checked": true,
+      "bg_color": "#35445F",
+      "fg_color": "#35C996",
+      "knob_color": "#FFFFFF"
+    },
+    {
+      "type": "button",
+      "parent_name": "quick_drawer",
+      "x": 632,
+      "y": 121,
+      "w": 133,
+      "h": 40,
+      "text": "Close",
+      "font_size": 14,
+      "bg_color": "#35445F",
+      "fg_color": "#FFFFFF",
+      "radius": 9,
+      "events": [
+        {
+          "event": "click",
+          "action": "drawer_close",
+          "target_name": "quick_drawer",
+          "animated": true
+        }
+      ]
+    }
+  ]
+}

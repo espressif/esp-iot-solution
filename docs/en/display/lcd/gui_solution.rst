@@ -3,6 +3,22 @@ GUI Optimization Solutions
 
 :link_to_translation:`zh_CN:[中文]`
 
+.. _ESP GSP:
+
+ESP-GSP
+-------
+
+ESP-GSP is an independent embedded UI framework. Its compiler turns scene
+descriptions and assets into a bundle; the C API connects controls, images,
+animations and application state. It supports ESP-IDF display integration and
+both device and PC simulation workflows.
+
+Component Link: https://components.espressif.com/components/espressif/esp-gsp
+
+Related Example:
+
+- :example:`display/gui/gsp_showcase`
+
 .. _ESP LVGL Adapter:
 
 ESP LVGL Adapter
@@ -30,7 +46,7 @@ ESP Display Present
 
 ``esp_display_present`` sends renderer pixels to an ``esp_lcd`` panel. The
 application owns the panel and the presenter. LVGL 9, GSP, or a custom GUI
-take exclusive producer turns. It is not a second LVGL adapter.
+take exclusive producer turns.
 
 ``esp_lv_present`` only installs the LVGL 9 flush path on an existing presenter.
 

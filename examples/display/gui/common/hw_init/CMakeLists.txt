@@ -22,7 +22,7 @@ endif()
 
 set(include_dirs "." "lcd" "input" "helpers")
 
-set(component_requires driver;esp_lcd;esp_lvgl_adapter)
+set(component_requires driver;esp_lcd)
 
 if(CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI)
     list(APPEND component_requires esp_lcd_ek79007)
@@ -45,16 +45,7 @@ endif()
 
 if(CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM)
     list(APPEND component_requires espressif__esp_lcd_gc9a01)
-    if("espressif__knob" IN_LIST build_components)
-        list(APPEND component_requires espressif__knob)
-    elseif("knob" IN_LIST build_components)
-        list(APPEND component_requires knob)
-    endif()
-    if("espressif__button" IN_LIST build_components)
-        list(APPEND component_requires espressif__button)
-    elseif("button" IN_LIST build_components)
-        list(APPEND component_requires button)
-    endif()
+    list(APPEND component_requires espressif__knob espressif__button)
 endif()
 
 idf_component_register(

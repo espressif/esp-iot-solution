@@ -56,8 +56,9 @@ static const ili9341_lcd_init_cmd_t vendor_specific_init_default[] = {
     {0, (uint8_t []){0}, 0xff, 0},
 };
 
-esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode, esp_lv_adapter_rotation_t rotation)
+esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, uint8_t frame_buffer_count, hw_rotation_t rotation)
 {
+    (void)frame_buffer_count;
     ESP_LOGD(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = {
         .sclk_io_num = HW_LCD_PCLK,

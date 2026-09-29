@@ -1,0 +1,10 @@
+dependencies:
+  idf:
+    version: ">=6.1"
+  espressif/esp-gsp:
+    version: "1.5.*"
+  espressif/esp_display_present:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_display_present"
+  hw_init:
+    path: "../../common/hw_init"

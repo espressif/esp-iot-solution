@@ -12,5 +12,9 @@ dependencies:
     version: "*"
     override_path: "../../../../../components/display/tools/esp_lv_present"
     public: true
+  espressif/esp_lvgl_adapter:
+    version: "*"
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
   hw_init:
-    path: "../../common/hw_init"
+    version: "*"
+    override_path: "../../common/hw_init"

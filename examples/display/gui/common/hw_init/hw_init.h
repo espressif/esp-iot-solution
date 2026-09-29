@@ -6,10 +6,10 @@
 
 #pragma once
 
+#include <stdint.h>
 #include "esp_log.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_io.h"
-#include "esp_lv_adapter_display.h"
 #include "driver/gpio.h"
 #include "sdkconfig.h"
 
@@ -49,10 +49,18 @@ extern "C" {
 #define HW_USE_ENCODER  0
 #endif
 
+typedef enum {
+    HW_ROTATE_0 = 0,
+    HW_ROTATE_90 = 90,
+    HW_ROTATE_180 = 180,
+    HW_ROTATE_270 = 270,
+} hw_rotation_t;
+
+/** frame_buffer_count is used by RGB and MIPI panels; IO panels ignore it. */
 esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle,
                       esp_lcd_panel_io_handle_t *io_handle,
-                      esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode,
-                      esp_lv_adapter_rotation_t rotation);
+                      uint8_t frame_buffer_count,
+                      hw_rotation_t rotation);
 esp_err_t hw_lcd_deinit(void);
 int hw_lcd_get_te_gpio(void);
 
@@ -60,7 +68,7 @@ int hw_lcd_get_te_gpio(void);
 #include "esp_lcd_touch.h"
 
 esp_err_t hw_touch_init(esp_lcd_touch_handle_t *touch_handle,
-                        esp_lv_adapter_rotation_t rotation);
+                        hw_rotation_t rotation);
 esp_err_t hw_touch_deinit(void);
 
 #endif

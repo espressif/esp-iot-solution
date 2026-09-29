@@ -43,6 +43,21 @@ static esp_lv_adapter_rotation_t get_configured_rotation(void)
 #endif
 }
 
+static hw_rotation_t hw_rotation_from_adapter(esp_lv_adapter_rotation_t rotation)
+{
+    switch (rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        return HW_ROTATE_90;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        return HW_ROTATE_180;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        return HW_ROTATE_270;
+    case ESP_LV_ADAPTER_ROTATE_0:
+    default:
+        return HW_ROTATE_0;
+    }
+}
+
 /* ---------------------------------------------------------------------------
  * Step 8 helper: FPS monitor task (only compiled when Kconfig option is on)
  * -------------------------------------------------------------------------*/
@@ -108,7 +123,8 @@ esp_err_t example_lvgl_init(example_lvgl_ctx_t *ctx)
     const esp_lv_adapter_rotation_t panel_rotation = ctx->rotation;
 #endif
     ESP_RETURN_ON_ERROR(hw_lcd_init(&ctx->panel, &ctx->panel_io,
-                                    ctx->tear_mode, panel_rotation),
+                                    esp_lv_adapter_get_required_frame_buffer_count(ctx->tear_mode, panel_rotation),
+                                    hw_rotation_from_adapter(panel_rotation)),
                         TAG, "hw_lcd_init failed");
     /* ── Step 4: LVGL adapter init ─────────────────────────────────────── */
     esp_lv_adapter_config_t adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
@@ -159,7 +175,7 @@ esp_err_t example_lvgl_init(example_lvgl_ctx_t *ctx)
 #if HW_USE_TOUCH
     ESP_LOGI(TAG, "Initializing touch panel");
     esp_lcd_touch_handle_t touch_handle = NULL;
-    ESP_RETURN_ON_ERROR(hw_touch_init(&touch_handle, ctx->rotation),
+    ESP_RETURN_ON_ERROR(hw_touch_init(&touch_handle, hw_rotation_from_adapter(ctx->rotation)),
                         TAG, "hw_touch_init failed");
 
     esp_lv_adapter_touch_config_t touch_cfg =

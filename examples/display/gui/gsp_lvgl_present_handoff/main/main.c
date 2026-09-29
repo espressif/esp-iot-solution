@@ -37,7 +37,9 @@ void app_main(void)
     const bool swap_bytes = true;
 #endif
 
-    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io, tear_mode, ESP_LV_ADAPTER_ROTATE_0));
+    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io,
+                                esp_lv_adapter_get_required_frame_buffer_count(tear_mode, ESP_LV_ADAPTER_ROTATE_0),
+                                HW_ROTATE_0));
 
     const uint8_t bpp = hw_lcd_get_bits_per_pixel();
     const int te_gpio = hw_lcd_get_te_gpio();
@@ -65,7 +67,7 @@ void app_main(void)
 
     esp_lcd_touch_handle_t touch = NULL;
 #if HW_USE_TOUCH
-    (void)hw_touch_init(&touch, ESP_LV_ADAPTER_ROTATE_0);
+    (void)hw_touch_init(&touch, HW_ROTATE_0);
 #endif
 
     /* The app owns the presenter. GSP and LVGL borrow it in turn. */
