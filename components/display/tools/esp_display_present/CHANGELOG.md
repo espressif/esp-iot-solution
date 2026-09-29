@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-09-28
+
+- Overlap partition and TE tile copies with rendering when a second draw buffer
+  is available; worker allocation falls back to synchronous copies.
+- Fix RGB panels locking fast producers to every other refresh.
+- Speed up `DOUBLE_DIRECT` damage sync and the RGB565 byte swap.
+
 ## 1.0.2 - 2026-09-04
 
 - Host the component in esp-iot-solution under `components/display/tools/esp_display_present`.

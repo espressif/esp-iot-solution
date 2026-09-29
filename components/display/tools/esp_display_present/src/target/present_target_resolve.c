@@ -12,12 +12,20 @@
 #include "esp_display_present_panel.h"
 #include "esp_display_present_pipeline_policy.h"
 #include "esp_display_present_profile.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
 
 static const char *TAG = "present_target_resolve";
 
 #define DEFAULT_STAGING_BYTES (32U * 1024U)
 #define DEFAULT_STAGING_BUFFERS 2U
+/*
+ * Internal DMA heap a default second drawbuf must leave free once both
+ * drawbufs are allocated, for the renderer task and pools created after the
+ * target.
+ */
+#define DOUBLE_DRAWBUF_HEADROOM_BYTES (128U * 1024U)
 
 static bool mode_is_valid(esp_display_present_mode_t mode)
 {
@@ -67,6 +75,47 @@ static uint16_t resolve_staging_lines(uint16_t width, uint16_t height,
     return (uint16_t)(lines < height ? lines : height);
 }
 
+static bool internal_heap_spares(size_t reserved_bytes)
+{
+    return heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA) >=
+           reserved_bytes;
+}
+
+static bool fb_repair_second_drawbuf_fits(
+    const esp_display_present_drawbuf_config_t *config, size_t drawbuf_bytes)
+{
+    if (portNUM_PROCESSORS < 2) {
+        return false;
+    }
+    return config->in_psram ||
+           internal_heap_spares(DEFAULT_STAGING_BUFFERS * drawbuf_bytes +
+                                DOUBLE_DRAWBUF_HEADROOM_BYTES);
+}
+
+static bool te_second_drawbuf_fits(
+    const esp_display_present_drawbuf_config_t *config, uint16_t width,
+    uint16_t height, uint8_t color_bytes, size_t drawbuf_bytes)
+{
+    if (portNUM_PROCESSORS < 2) {
+        return false;
+    }
+    if (config->in_psram) {
+        return true;
+    }
+    size_t reserved = DEFAULT_STAGING_BUFFERS * drawbuf_bytes +
+                      DOUBLE_DRAWBUF_HEADROOM_BYTES;
+    /* Compose buffers fall back to internal RAM after the drawbufs. Query the
+     * same capabilities used by te_render.c, not SPIRAM alone. */
+    size_t compose_bytes = (size_t)width * height * color_bytes;
+    const uint32_t compose_caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA |
+                                  MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED;
+    if (heap_caps_get_largest_free_block(compose_caps) < compose_bytes) {
+        reserved += compose_bytes *
+                    (config->te_compose_buffers >= 2 ? 2U : 1U);
+    }
+    return internal_heap_spares(reserved);
+}
+
 static esp_display_present_drawbuf_info_t resolve_drawbuf_info(
     const esp_display_present_profile_t *profile,
     uint16_t width,
@@ -81,16 +130,30 @@ static esp_display_present_drawbuf_info_t resolve_drawbuf_info(
             0
         };
     }
-    uint8_t default_buffers =
-        profile->storage == ESP_DISPLAY_PRESENT_STORAGE_GRAM &&
-        profile->sync != ESP_DISPLAY_PRESENT_SYNC_TE
-        ? DEFAULT_STAGING_BUFFERS : 1;
+    uint16_t lines = resolve_staging_lines(
+                         width, height, color_bytes, config->lines);
+    size_t drawbuf_bytes = (size_t)lines * width * color_bytes;
+    /* A second bounded drawbuf lets the async worker copy one band while the
+     * next renders; the worker needs a second core to overlap. */
+    bool second_fits;
+    bool optional_second = false;
+    if (profile->fb == ESP_DISPLAY_PRESENT_FB_REPAIR) {
+        second_fits = fb_repair_second_drawbuf_fits(config, drawbuf_bytes);
+        optional_second = second_fits;
+    } else if (profile->sync == ESP_DISPLAY_PRESENT_SYNC_TE) {
+        second_fits = te_second_drawbuf_fits(config, width, height,
+                                             color_bytes, drawbuf_bytes);
+        optional_second = second_fits;
+    } else {
+        second_fits = true;
+    }
+    uint8_t default_buffers = second_fits ? DEFAULT_STAGING_BUFFERS : 1;
     return (esp_display_present_drawbuf_info_t) {
-        .lines = resolve_staging_lines(
-                     width, height, color_bytes, config->lines),
-                 .buffers = config->buffers != 0
-                            ? config->buffers : default_buffers,
-                            .in_psram = config->in_psram,
+        .lines = lines,
+        .buffers = config->buffers != 0
+                   ? config->buffers : default_buffers,
+                   .in_psram = config->in_psram,
+                   .optional_second = config->buffers == 0 && optional_second,
     };
 }
 

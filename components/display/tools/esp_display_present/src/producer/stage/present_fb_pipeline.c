@@ -131,6 +131,14 @@ esp_err_t present_fb_switch_commit(
         if (frame->fb.transform == NULL && panel_pixels != frame->fb.draw_fb) {
             return ESP_ERR_INVALID_STATE;
         }
+        if (frame->fb.single_pending_switch &&
+                frame->tracker.pool.retire_sem != NULL) {
+            esp_err_t wait_ret =
+                esp_display_present_tracker_pool_wait_retired(&frame->tracker);
+            if (wait_ret != ESP_OK) {
+                return wait_ret;
+            }
+        }
     } else if (uses_pipeline) {
         esp_err_t wait_ret = esp_display_present_tracker_wait_pending(
                                  &frame->tracker);
@@ -236,6 +244,11 @@ static esp_err_t fb_commit_with_barrier(
         return ESP_ERR_INVALID_ARG;
     }
     esp_display_present_fb_lease_t *lease = &frame->lease.valet;
+    esp_err_t copy_ret = present_async_copy_drain(&frame->fb.async_copy);
+    if (copy_ret != ESP_OK) {
+        present_fb_invalidate_lease(frame, lease);
+        return copy_ret;
+    }
     const esp_display_present_area_t *rendered_areas =
         ctx->repair.rendered_areas;
     size_t rendered_area_count = ctx->repair.rendered_area_count;
@@ -265,8 +278,23 @@ static esp_err_t fb_commit_with_barrier(
         return ESP_ERR_INVALID_STATE;
     }
 
+    void *display_before = frame->fb.disp_fb;
     esp_err_t ret = present_fb_switch_commit(
                         frame, lease->frame_id, panel_pixels, barrier);
+    if (present_fb_tracks_direct_history(frame)) {
+        present_buffer_repair_view_t view = present_fb_repair_view(
+                                                frame, display_before,
+                                                panel_pixels);
+        present_buffer_repair_record_draw(
+            &frame->repair.state, &view,
+            submit != NULL &&
+            submit->coverage == ESP_DISPLAY_PRESENT_COVERAGE_AREAS
+            ? rendered_areas : NULL,
+            submit != NULL &&
+            submit->coverage == ESP_DISPLAY_PRESENT_COVERAGE_AREAS
+            ? rendered_area_count : 0,
+            ret == ESP_OK);
+    }
     if (ret == ESP_OK) {
         ++frame->submitted_frames;
     }

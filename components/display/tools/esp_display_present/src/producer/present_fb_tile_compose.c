@@ -41,6 +41,8 @@ esp_err_t esp_display_present_fb_acquire_drawbuf(
     if (ret != ESP_OK) {
         return ret;
     }
+    present_async_copy_wait_slot(&surface->fb.async_copy,
+                                 surface->fb.next_drawbuf);
     return present_stage_acquire_tile(
                &surface->fb.drawbuf_pool, &surface->fb.next_drawbuf,
                surface->color_bytes, area, pixel_format, out_region);
@@ -78,5 +80,15 @@ esp_err_t esp_display_present_fb_write_partition(
         .rotation = surface->rotation,
         .ppa_handle = surface->fb.ppa_handle,
     };
+    if (present_async_copy_submit(&surface->fb.async_copy, surface->target,
+                                  &dst, region, false) == ESP_OK) {
+        return ESP_OK;
+    }
+    /* Row-span cache invalidation in a queued blit would drop an inline
+     * CPU copy into the same rows, so never run both at once. */
+    esp_err_t ret = present_async_copy_drain(&surface->fb.async_copy);
+    if (ret != ESP_OK) {
+        return ret;
+    }
     return present_target_blit_region(surface->target, &dst, region);
 }

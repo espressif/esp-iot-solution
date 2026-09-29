@@ -99,7 +99,14 @@ typedef struct {
 /** Shared producer drawbuf policy for every partition rendering mode. */
 typedef struct {
     uint16_t lines; /**< Preferred height of each partition draw buffer. */
-    uint8_t buffers; /**< Number of partition draw buffers. */
+    /**
+     * Number of partition draw buffers (1 or 2). 0 selects two for GRAM
+     * without TE, and for FB repair and TE only on multi-core targets whose
+     * internal DMA heap keeps 128 KiB free after both; two buffers overlap
+     * tile copies with rendering at the cost of one more buffer and a 4 KiB
+     * worker stack.
+     */
+    uint8_t buffers;
     bool in_psram; /**< Allocate draw buffers in PSRAM when possible. */
     /**
      * TE_SYNC full-screen compose buffers. 0/1 keeps the synchronous,

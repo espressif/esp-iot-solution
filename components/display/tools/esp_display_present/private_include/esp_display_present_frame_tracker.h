@@ -103,6 +103,8 @@ typedef struct {
         STAILQ_HEAD(esp_display_present_tracker_free_list,
                     esp_display_present_tracker_buf) free_queue;
         SemaphoreHandle_t avail_sem;
+        /** Given on every retire; lets a producer wait for the queue to drain. */
+        SemaphoreHandle_t retire_sem;
         esp_display_present_tracker_buf_t *elems;
         uint8_t elem_count;
         /** Free-buffer acquire budget; resolved from config at pool init. */
@@ -358,6 +360,10 @@ bool esp_display_present_tracker_pool_retire_isr(
 
 bool IRAM_ATTR esp_display_present_tracker_pool_has_inflight(
     const esp_display_present_frame_tracker_t *tracker);
+
+/** Block until every committed buffer has been retired by the ISR. */
+esp_err_t esp_display_present_tracker_pool_wait_retired(
+    esp_display_present_frame_tracker_t *tracker);
 
 #ifdef __cplusplus
 }

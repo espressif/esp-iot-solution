@@ -86,6 +86,18 @@ dependencies:
 `DOUBLE_DIRECT` 仅定义为 0°。整帧旋转应使用 FULL 模式，旋转脏区渲染应使用
 PARTIAL 模式。
 
+## 分区绘制缓冲区
+
+PARTIAL 和 `TE_SYNC` 使用有界绘制缓冲区（默认约 32 KiB）。有两个缓冲区时，
+可选 worker 会拷贝上一条带（包括 RGB565 字节交换），同时生产者渲染下一条带。
+`drawbuf.buffers = 0` 时，无 TE 的 GRAM 默认使用两个；FB repair 和 `TE_SYNC`
+仅在内存允许时使用两个，单核芯片保持一个。设置 `drawbuf.buffers = 1` 可保持
+单缓冲路径；worker 分配失败会回退到同步拷贝。
+
+RGB 面板上，只有前一次帧缓冲区切换生效后才请求下一次切换，因为部分 RGB 驱动只在
+DMA 切换缓冲区时报告完成。等待期间第三个帧缓冲区仍可继续渲染，因此快于刷新率
+的生产者仍能达到刷新率。
+
 ## TE 模式下的 SPI/QSPI 配置
 
 `ESP_DISPLAY_PRESENT_MODE_TE_SYNC` 可以让渲染与正在进行的整帧传输重叠，
@@ -119,7 +131,8 @@ PARTIAL 模式。
 
 Presenter 只允许一个帧生产者。其他任务可以请求停止，但帧获取、提交和取消
 调用必须保持串行。传输中的硬件任务可能使删除操作暂时返回
-`ESP_ERR_INVALID_STATE`；此时应保留对象，等待生产者停止后重试。
+`ESP_ERR_INVALID_STATE`；此时应保留对象，等待生产者停止后重试。停止前必须提交
+或取消已提交的绘制工作；stop 不会接管生产者持有的帧。
 
 `private_include/` 下的头文件和 `src/` 下的文件均为实现细节，不提供公共兼容性
 承诺。内部帧/生命周期转移表及缓冲区所有权不变量见

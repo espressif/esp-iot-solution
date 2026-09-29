@@ -934,6 +934,12 @@ esp_err_t esp_display_present_tracker_init_pool(
     if (create_avail_sem) {
         tracker->pool.avail_sem = xSemaphoreCreateCounting(frame_buffer_count, 0);
         ESP_RETURN_ON_FALSE(tracker->pool.avail_sem, ESP_ERR_NO_MEM, TAG, "failed to create pipeline semaphore");
+        tracker->pool.retire_sem = xSemaphoreCreateBinary();
+        if (!tracker->pool.retire_sem) {
+            vSemaphoreDelete(tracker->pool.avail_sem);
+            tracker->pool.avail_sem = NULL;
+            return ESP_ERR_NO_MEM;
+        }
     }
 
     tracker->pool.elem_count = frame_buffer_count;
@@ -942,6 +948,10 @@ esp_err_t esp_display_present_tracker_init_pool(
         if (tracker->pool.avail_sem) {
             vSemaphoreDelete(tracker->pool.avail_sem);
             tracker->pool.avail_sem = NULL;
+        }
+        if (tracker->pool.retire_sem) {
+            vSemaphoreDelete(tracker->pool.retire_sem);
+            tracker->pool.retire_sem = NULL;
         }
         return ESP_ERR_NO_MEM;
     }
@@ -974,6 +984,10 @@ void esp_display_present_tracker_deinit_pool(
     if (tracker->pool.avail_sem) {
         vSemaphoreDelete(tracker->pool.avail_sem);
         tracker->pool.avail_sem = NULL;
+    }
+    if (tracker->pool.retire_sem) {
+        vSemaphoreDelete(tracker->pool.retire_sem);
+        tracker->pool.retire_sem = NULL;
     }
 
     STAILQ_INIT(&tracker->pool.inflight_queue);
@@ -1151,6 +1165,9 @@ bool IRAM_ATTR esp_display_present_tracker_pool_retire_isr(
     if (sem) {
         xSemaphoreGiveFromISR(sem, &wake);
     }
+    if (elem != NULL && tracker->pool.retire_sem != NULL) {
+        xSemaphoreGiveFromISR(tracker->pool.retire_sem, &wake);
+    }
     if (wake == pdTRUE) {
         portYIELD_FROM_ISR();
     }
@@ -1167,4 +1184,27 @@ bool esp_display_present_tracker_pool_has_inflight(
     bool pending = STAILQ_FIRST(&tracker->pool.inflight_queue) != NULL;
     portEXIT_CRITICAL_ISR((portMUX_TYPE *)&tracker->lock);
     return pending;
+}
+
+esp_err_t esp_display_present_tracker_pool_wait_retired(
+    esp_display_present_frame_tracker_t *tracker)
+{
+    if (tracker == NULL || tracker->pool.retire_sem == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    const TickType_t timeout_ticks =
+        pdMS_TO_TICKS(tracker->pool.acquire_timeout_ms);
+    const TickType_t start = xTaskGetTickCount();
+    while (esp_display_present_tracker_pool_has_inflight(tracker)) {
+        if (esp_display_present_tracker_switch_closing(tracker)) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        TickType_t waited = xTaskGetTickCount() - start;
+        if (waited >= timeout_ticks) {
+            return ESP_ERR_TIMEOUT;
+        }
+        (void)xSemaphoreTake(tracker->pool.retire_sem,
+                             timeout_ticks - waited);
+    }
+    return ESP_OK;
 }

@@ -90,6 +90,21 @@ a guarantee for every panel driver or board.
 `DOUBLE_DIRECT` is defined only at 0°. Use a FULL mode for complete-frame
 rotation or a PARTIAL mode for rotated dirty rendering.
 
+## Partition draw buffers
+
+PARTIAL and `TE_SYNC` use bounded draw buffers (about 32 KiB by default).
+With two buffers, an optional worker copies the previous band, including the
+RGB565 byte swap, while the producer renders the next band. With
+`drawbuf.buffers = 0`, GRAM without TE defaults to two; FB repair and `TE_SYNC`
+use two only when memory permits, while single-core targets keep one. Set
+`drawbuf.buffers = 1` to retain the single-buffer path. Worker allocation
+failures fall back to synchronous copies.
+
+On RGB panels, a framebuffer switch is requested only after the previous one
+has taken effect, because some RGB drivers report completion only when their
+DMA switches buffers. The third framebuffer keeps rendering meanwhile, so
+producers faster than the refresh rate still reach it.
+
 ## SPI/QSPI configuration for TE mode
 
 `ESP_DISPLAY_PRESENT_MODE_TE_SYNC` overlaps rendering with an in-flight
@@ -130,7 +145,8 @@ alive until quiesce succeeds, then turn the panel off and delete the presenter.
 The presenter has one frame producer. Another task may request stop, but frame
 acquire, submit, and cancel calls must remain serialized. In-flight hardware
 work may temporarily make deletion return `ESP_ERR_INVALID_STATE`; retain the
-object and retry after the producer has stopped.
+object and retry after the producer has stopped. Commit or cancel submitted
+work before stopping; stop does not take ownership of a producer's frame.
 
 Headers under `private_include/` and files under `src/` are implementation
 details and carry no public compatibility promise.

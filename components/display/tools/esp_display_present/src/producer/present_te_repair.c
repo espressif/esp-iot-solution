@@ -34,6 +34,12 @@ esp_err_t esp_display_present_te_compose_repair(
     if (out_repaired != NULL) {
         *out_repaired = false;
     }
+    if (te != NULL) {
+        esp_err_t copy_ret = present_async_copy_drain(&te->async_copy);
+        if (copy_ret != ESP_OK) {
+            return copy_ret;
+        }
+    }
     if (te == NULL || ctx == NULL || !te->repair.enabled ||
             !te->has_active_buffer || te->display_buffer == NULL) {
         return te != NULL ? ESP_OK : ESP_ERR_INVALID_ARG;

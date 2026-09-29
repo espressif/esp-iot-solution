@@ -58,6 +58,31 @@ esp_err_t present_buffer_repair_create(
 
 void present_buffer_repair_destroy(present_buffer_repair_state_t *state);
 
+/**
+ * DIRECT seed: before the producer draws into view->draw_buffer, copy from
+ * view->display_buffer only the pixels that changed since the draw buffer
+ * was last presented, excluding @p dirty_areas that the producer redraws.
+ * With @p sync false (full-coverage frame) nothing is copied. Either way the
+ * draw buffer stops being a baseline until present_buffer_repair_record_draw().
+ */
+esp_err_t present_buffer_repair_begin_draw(
+    present_buffer_repair_state_t *state,
+    const present_buffer_repair_view_t *view,
+    const esp_display_present_area_t *dirty_areas,
+    size_t dirty_area_count,
+    bool sync);
+
+/**
+ * DIRECT commit: record @p drawn_areas (none = full surface) as the change
+ * set of view->draw_buffer. @p committed false forgets all history.
+ */
+void present_buffer_repair_record_draw(
+    present_buffer_repair_state_t *state,
+    const present_buffer_repair_view_t *view,
+    const esp_display_present_area_t *drawn_areas,
+    size_t drawn_area_count,
+    bool committed);
+
 esp_err_t present_buffer_repair_apply(
     present_buffer_repair_state_t *state,
     const present_buffer_repair_view_t *view,

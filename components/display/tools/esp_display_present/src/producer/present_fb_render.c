@@ -103,12 +103,17 @@ static const char *present_mode_name(esp_display_present_mode_t mode)
 
 static esp_err_t create_partial_storage(esp_display_present_fb_endpoint_t *frame)
 {
-    if (!present_fb_requires_repair(frame)) {
+    bool direct = present_fb_previous_readable(frame) &&
+                  !fb_uses_transform(frame) &&
+                  frame->fb.frame_buffer_count >= 2;
+    if (!present_fb_requires_repair(frame) && !direct) {
         return ESP_OK;
     }
+    /* DIRECT only seeds after a presented frame, so its display buffer is
+     * always a valid copy source. */
     return present_buffer_repair_create(
                &frame->repair.state, frame->fb.frame_buffer_count,
-               frame->max_damage_areas, false, false);
+               frame->max_damage_areas, false, direct);
 }
 
 static void destroy_partial_storage(esp_display_present_fb_endpoint_t *frame)
@@ -134,6 +139,7 @@ static void fb_create_fail_cleanup(esp_display_present_fb_endpoint_t *frame)
         esp_display_present_transform_delete(frame->fb.transform);
         frame->fb.transform = NULL;
     }
+    present_async_copy_deinit(&frame->fb.async_copy);
     esp_display_present_ppa_close_tile_client(&frame->fb.ppa_handle);
     destroy_partial_storage(frame);
     esp_display_present_tracker_deinit_pool(&frame->tracker);
@@ -307,8 +313,17 @@ esp_err_t esp_display_present_fb_create(
     frame->fb.submit_gate_enabled =
         frame->profile.frame_done_release ==
         ESP_DISPLAY_PRESENT_FRAME_DONE_RELEASE_SUBMIT;
+    frame->fb.single_pending_switch =
+        info->hw.panel_interface == ESP_DISPLAY_PRESENT_PANEL_IF_RGB;
     if (config->drawbuf_pool != NULL) {
         frame->fb.drawbuf_pool = *config->drawbuf_pool;
+    }
+    ret = present_async_copy_init(&frame->fb.async_copy,
+                                  &frame->fb.drawbuf_pool,
+                                  present_fb_requires_repair(frame));
+    if (ret != ESP_OK) {
+        fb_create_fail_cleanup(frame);
+        return ret;
     }
     esp_display_present_tracker_init_frame(
         &frame->tracker, config->submit_task, false);
@@ -316,7 +331,7 @@ esp_err_t esp_display_present_fb_create(
     ESP_LOGI(TAG,
              "surface: mode=%s contract=%s storage=%s areas=%u retain=%u"
              " previous=%u repair=%u buffers=%u size=%ux%u physical=%ux%u"
-             " rotate=%d ppa=%u",
+             " rotate=%d ppa=%u async_copy=%u",
              present_mode_name(frame->profile.mode),
              fb_contract_name(frame->profile.fb),
              fb_uses_transform(frame) ? "transform"
@@ -333,7 +348,8 @@ esp_err_t esp_display_present_fb_create(
              (unsigned)frame->width, (unsigned)frame->height,
              (unsigned)frame->physical_width,
              (unsigned)frame->physical_height, (int)info->hw.rotation,
-             frame->fb.ppa_handle != NULL ? 1U : 0U);
+             frame->fb.ppa_handle != NULL ? 1U : 0U,
+             (unsigned)frame->fb.async_copy.enabled);
     return ESP_OK;
 }
 
@@ -411,6 +427,7 @@ esp_err_t esp_display_present_fb_delete(
         esp_display_present_transform_delete(frame->fb.transform);
         frame->fb.transform = NULL;
     }
+    present_async_copy_deinit(&frame->fb.async_copy);
     esp_display_present_ppa_close_tile_client(&frame->fb.ppa_handle);
     destroy_partial_storage(frame);
     esp_display_present_tracker_deinit_pool(&frame->tracker);
@@ -497,14 +514,27 @@ esp_err_t esp_display_present_fb_prepare(
     size_t dirty_count = request != NULL ? request->dirty_area_count : 0;
     if (frame->profile.fb != ESP_DISPLAY_PRESENT_FB_DIRECT ||
             fb_uses_transform(frame) ||
-            dirty_count == 0 ||
-            frame->submitted_frames == 0 ||
             frame->fb.disp_fb == NULL ||
             frame->fb.draw_fb == NULL ||
             frame->fb.disp_fb == frame->fb.draw_fb) {
         return ESP_OK;
     }
-    copy_full_surface(frame, frame->fb.disp_fb, frame->fb.draw_fb);
+    /* Scroll, empty dirty and the first frame are planned as full-coverage
+     * rasters, so the previous frame is not needed in draw_fb. */
+    bool sync = dirty_count != 0 && frame->submitted_frames != 0 &&
+                !request->has_scroll;
+    if (present_fb_tracks_direct_history(frame)) {
+        present_buffer_repair_view_t view = present_fb_repair_view(
+                                                frame, frame->fb.disp_fb,
+                                                frame->fb.draw_fb);
+        return present_buffer_repair_begin_draw(
+                   &frame->repair.state, &view,
+                   sync ? request->dirty_areas : NULL,
+                   sync ? dirty_count : 0, sync);
+    }
+    if (sync) {
+        copy_full_surface(frame, frame->fb.disp_fb, frame->fb.draw_fb);
+    }
     return ESP_OK;
 }
 

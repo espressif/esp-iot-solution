@@ -29,6 +29,7 @@ idf_component_register(
         "src/producer/present_tile_acquire.c"
         "src/producer/stage/present_transfer_wait.c"
         "src/producer/present_fb_tile_compose.c"
+        "src/producer/present_async_copy.c"
         "src/target/present_target_region.c"
         "src/producer/stage/present_fb_pipeline.c"
         "src/producer/present_buffer_repair.c"

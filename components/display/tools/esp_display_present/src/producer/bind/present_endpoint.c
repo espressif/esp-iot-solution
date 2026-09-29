@@ -12,6 +12,9 @@
 #include "esp_display_present_gram.h"
 #include "esp_display_present_fb.h"
 #include "esp_display_present_te_compose.h"
+#include "esp_log.h"
+
+static const char *TAG = "present_endpoint";
 
 static uint16_t drawbuf_lines_for_bytes(
     uint16_t width,
@@ -110,6 +113,13 @@ static esp_err_t create_partition_drawbuf(
     esp_err_t ret = esp_display_present_drawbuf_pool_alloc(
                         &binding->drawbuf_pool, target_info->hw.width, lines,
                         target_info->hw.color_bytes, buffer_count, in_psram);
+    if (ret == ESP_ERR_NO_MEM && buffer_count > 1 &&
+            target_info->drawbuf.optional_second) {
+        ESP_LOGW(TAG, "no memory for a second draw buffer; using one");
+        ret = esp_display_present_drawbuf_pool_alloc(
+                  &binding->drawbuf_pool, target_info->hw.width, lines,
+                  target_info->hw.color_bytes, 1, in_psram);
+    }
     if (ret == ESP_OK) {
         binding->caps.drawbuf_bytes = binding->drawbuf_pool.bytes;
     }
