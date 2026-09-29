@@ -74,6 +74,7 @@ typedef struct {
              *   This flag is only valid for the RGB interface.
              */
 #endif
+        unsigned int supports_madctl_mv: 1;         /*<! Enable MADCTL.MV for validated SPI/QSPI modules. Default is 0. */
     } flags;
 } st77922_vendor_config_t;
 
