@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.1 - 2026-9-18
+
+### bugfix:
+
+- Change `tristate` to `bool` in the vendored `xz-embedded` Kconfig, since ESP-IDF has no loadable module support
+
 ## v1.1.0 - 2025-3-25
 
 ### Features:
