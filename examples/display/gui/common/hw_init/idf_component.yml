@@ -4,6 +4,10 @@ dependencies:
   idf:
     version: ">=5.5.5"
 
+  espressif/esp_lcd_touch:
+    version: "^1"
+    public: true
+
   espressif/button:
     version: "^4"
     public: true

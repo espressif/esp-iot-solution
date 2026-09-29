@@ -60,10 +60,12 @@ static const char *TAG = "example";
 #endif
 
 // Color depth configuration
-#if CONFIG_LV_COLOR_DEPTH_32
+#if CONFIG_LV_COLOR_DEPTH == 32 || CONFIG_LV_COLOR_DEPTH_32
 #define LCD_BIT_PER_PIXEL              (24)
-#elif CONFIG_LV_COLOR_DEPTH_16
+#elif CONFIG_LV_COLOR_DEPTH == 16 || CONFIG_LV_COLOR_DEPTH_16
 #define LCD_BIT_PER_PIXEL              (16)
+#else
+#error "Unsupported LVGL color depth; expected 16 or 32"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
