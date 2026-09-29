@@ -65,6 +65,10 @@ Presentation mode should normally remain ``ESP_DISPLAY_PRESENT_MODE_AUTO``.
 Accurate panel class, framebuffer, TE, rotation, and byte-order information in
 the target configuration lets the component select the correct path.
 
+When internal RAM allows, PARTIAL and TE modes use a second draw buffer so
+tile copies overlap rendering. Set ``drawbuf.buffers = 1`` to keep a single
+draw buffer on memory-constrained applications.
+
 Before Display Off or panel teardown, stop frame production and call
 ``esp_display_presenter_quiesce()``. Keep the panel IO and its completion ISR
 alive until quiesce succeeds, then turn the panel off and delete the presenter.

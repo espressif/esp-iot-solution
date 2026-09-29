@@ -22,6 +22,22 @@ hardware, it must not be returned by generic cancellation. Only completion of
 the matching ticket may retire it. Duplicate, stale, or out-of-order completion
 must not manufacture a free buffer.
 
+## Draw-buffer copy worker
+
+With two partition draw buffers, an optional worker copies a submitted band
+after `submit` while the producer renders the next one. Slot reuse, repair,
+commit, cancel and teardown all drain the worker before touching or releasing
+its buffers; submitted TE work must be committed or cancelled before stop.
+
+## Ordered framebuffer switches
+
+Ordered PARTIAL commits retire the previous display buffer from the inflight
+FIFO when the panel reports frame done. Some RGB drivers fire that event only
+when the DMA switches buffers, so a second switch requested before the first
+took effect would let one event stand for two switches and keep a skipped
+buffer inflight. RGB commits therefore wait until the FIFO is empty before
+requesting the next switch.
+
 ## Lifecycle
 
 | State | Meaning | Invariant |

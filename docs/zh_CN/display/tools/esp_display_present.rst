@@ -61,6 +61,9 @@ FULL         重绘完整逻辑表面
 呈现模式通常应保持 ``ESP_DISPLAY_PRESENT_MODE_AUTO``。在目标配置中提供准确的
 面板类型、Framebuffer、TE、旋转和字节序信息，组件即可选择正确路径。
 
+内部 RAM 充足时，PARTIAL 和 TE 模式会使用第二个绘制缓冲区，使条带拷贝与渲染
+重叠。内存紧张的应用可设置 ``drawbuf.buffers = 1`` 保持单个绘制缓冲区。
+
 关屏或拆除面板前，先停止帧生产并调用 ``esp_display_presenter_quiesce()``。
 在 quiesce 成功之前必须保持面板 IO 和完成中断有效，然后再关屏并删除 Presenter。
 
