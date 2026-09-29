@@ -10,6 +10,8 @@
 
 #include "bmm150.h"
 #include "i2c_bus.h"
+#include "driver/i2c_master.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +57,57 @@ BMM150_INTF_RET_TYPE bmm150_i2c_write(uint8_t reg_addr, const uint8_t *reg_data,
 void bmm150_delay(uint32_t period_us, void *intf_ptr);
 
 /**
+ * @brief Bind a BMM150 device to a native I2C master bus.
+ *
+ * The caller owns the bus. Release the device with
+ * bmm150_interface_deinit_device().
+ *
+ * @param[out] dev BMM150 device.
+ * @param[in] bus Native I2C master bus.
+ * @param[in] i2c_addr 7-bit I2C address.
+ * @param[in] scl_speed_hz Device clock in Hz.
+ *
+ * @return ESP_OK on success, otherwise an ESP error code.
+ */
+esp_err_t bmm150_interface_init_from_master_bus(struct bmm150_dev *dev, i2c_master_bus_handle_t bus,
+                                                uint8_t i2c_addr, uint32_t scl_speed_hz);
+
+/**
+ * @brief Bind a BMM150 device to an `i2c_bus` handle.
+ *
+ * The device uses the bus clock. Release it with
+ * bmm150_interface_deinit_device().
+ *
+ * @param[out] dev BMM150 device.
+ * @param[in] bus I2C bus.
+ * @param[in] i2c_addr 7-bit I2C address.
+ *
+ * @return ESP_OK on success, otherwise an ESP error code.
+ */
+esp_err_t bmm150_interface_init_from_i2c_bus(struct bmm150_dev *dev, i2c_bus_handle_t bus, uint8_t i2c_addr);
+
+/**
+ * @brief Release the I2C device of one sensor. The bus is not deleted.
+ *
+ * On a removal error the context is kept and transfers stay blocked, so the
+ * call can be retried. `dev` is only cleared once removal succeeds.
+ *
+ * @param[in,out] dev Structure instance of bmm150_dev.
+ *
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG when `dev` has no context,
+ *         or the device-removal error.
+ */
+esp_err_t bmm150_interface_deinit_device(struct bmm150_dev *dev);
+
+/**
  *  @brief Function to select the I2C interface and bind ESP platform callbacks.
+ *
+ *  Uses the bus and address of the file-level setters below, so it drives a
+ *  single sensor. A later call replaces that device, including after `dev` is
+ *  zeroed to probe another address. `dev` must stay valid until
+ *  bmm150_interface_deinit() or that later call. For several sensors, use
+ *  bmm150_interface_init_from_master_bus() or
+ *  bmm150_interface_init_from_i2c_bus() instead.
  *
  *  @param[in] dev : Structure instance of bmm150_dev
  *
@@ -78,15 +130,20 @@ void bmm150_error_codes_print_result(const char api_name[], int8_t rslt);
 /**
  * @brief Deinitializes the ESP peripheral driver.
  *
- * - For I2C: removes the device from the bus and clears the bus handle,
- *   without deinitializing the I2C bus.
+ * - For I2C: removes the device created by bmm150_interface_init() and clears
+ *   the bus handle, without deinitializing the I2C bus. On a removal error the
+ *   context is kept and a later init or deinit retries it.
+ *
+ * Sensors created through the instance APIs are not affected.
  *
  * @return void
  */
 void bmm150_interface_deinit(void);
 
 /**
- *  @brief Set I2C bus handle for ESP32 platform
+ *  @brief Set I2C bus handle for bmm150_interface_init()
+ *
+ *  Takes effect on the next bmm150_interface_init().
  *
  *  @param[in] bus_handle : I2C bus handle
  *

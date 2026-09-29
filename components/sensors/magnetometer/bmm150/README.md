@@ -23,23 +23,21 @@ The sensor can be reached over two paths, which decide the API to use:
 
 | Path       | Wiring                                 | Extra dependency                    | Entry point                                          |
 | ---------- | -------------------------------------- | ----------------------------------- | ---------------------------------------------------- |
-| Direct I2C | BMM150 on the host I2C bus             | none                                | [common/bmm150_common.h](./common/bmm150_common.h)   |
+| Direct I2C | BMM150 on the host I2C bus, `i2c_bus` or native `i2c_master` | none              | [common/bmm150_common.h](./common/bmm150_common.h)   |
 | BMI270 AUX | BMM150 on the BMI270 auxiliary I2C bus | `espressif/bmi270_sensor` >= 0.2.1  | [bmm150_aux_adapter.h](./bmm150_aux_adapter.h)       |
 
 Both paths share the Bosch API in [bmm150.h](./bmm150.h) for configuration and data readout. Magnetometer data is reported as `float` in micro-tesla, because the component builds the SensorAPI with `BMM150_USE_FLOATING_POINT`.
 
 ### Direct I2C
 
-Bind the ESP platform callbacks to an `i2c_bus` handle, then use the Bosch API:
+Bind the ESP platform callbacks, then use the Bosch API. Address is `0x10`, `0x11`, `0x12` or `0x13`, depending on CSB and SDO. The I2C state lives in `dev->intf_ptr`, so several sensors can share one bus:
 
 ```c
 struct bmm150_dev dev;
 struct bmm150_settings settings = {0};
 struct bmm150_mag_data data;
 
-bmm150_set_i2c_bus_handle(i2c_bus);
-bmm150_set_i2c_address(BMM150_DEFAULT_I2C_ADDRESS);
-bmm150_interface_init(&dev);
+bmm150_interface_init_from_master_bus(&dev, bus, BMM150_DEFAULT_I2C_ADDRESS, 400000);
 bmm150_init(&dev);
 
 settings.preset_mode = BMM150_PRESETMODE_REGULAR;
@@ -48,7 +46,13 @@ settings.pwr_mode = BMM150_POWERMODE_NORMAL;
 bmm150_set_op_mode(&settings, &dev);
 
 bmm150_read_mag_data(&data, &dev);
+
+bmm150_interface_deinit_device(&dev);
 ```
+
+The caller selects the device clock and keeps the bus. Multiple sensors can share one bus, and each device must be released with `bmm150_interface_deinit_device()`. Native I2C requires `CONFIG_I2C_BUS_BACKWARD_CONFIG` to be disabled.
+
+The existing file-level APIs remain available for single-sensor applications.
 
 ### BMI270 AUX
 

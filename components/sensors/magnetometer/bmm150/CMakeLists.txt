@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "bmm150.c" "common/bmm150_common.c"
     INCLUDE_DIRS "." "common"
-    REQUIRES "i2c_bus" "esp_timer"
+    REQUIRES "i2c_bus" "esp_timer" "esp_driver_i2c"
 )
 
 target_compile_definitions(${COMPONENT_LIB} PUBLIC BMM150_USE_FLOATING_POINT)
