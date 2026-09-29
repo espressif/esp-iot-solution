@@ -22,6 +22,9 @@
 
 static const char *TAG = "SPD2010";
 
+#define SPD2010_MAX_TOUCH_POINTS       (10)
+#define SPD2010_MAX_PACKET_SIZE        (4 + SPD2010_MAX_TOUCH_POINTS * 6)
+
 typedef struct {
     uint8_t none0;
     uint8_t none1;
@@ -200,12 +203,12 @@ static esp_err_t del(esp_lcd_touch_handle_t tp)
     /* Reset GPIO pin settings */
     if (tp->config.int_gpio_num != GPIO_NUM_NC) {
         gpio_reset_pin(tp->config.int_gpio_num);
-    }
-    if (tp->config.rst_gpio_num != GPIO_NUM_NC) {
-        gpio_reset_pin(tp->config.rst_gpio_num);
         if (tp->config.interrupt_callback) {
             gpio_isr_handler_remove(tp->config.int_gpio_num);
         }
+    }
+    if (tp->config.rst_gpio_num != GPIO_NUM_NC) {
+        gpio_reset_pin(tp->config.rst_gpio_num);
     }
     /* Release memory */
     free(tp);
@@ -229,8 +232,9 @@ static esp_err_t reset(esp_lcd_touch_handle_t tp)
     return ESP_OK;
 }
 
-#define i2c_write(data_p, len)      ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(tp->io, 0, data_p, len), TAG, "Tx failed");
-#define i2c_read(data_p, len)       ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(tp->io, 0, data_p, len), TAG, "Rx failed");
+/* The register address is sent as a separate data-only transaction. */
+#define i2c_write(data_p, len)      ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_param(tp->io, -1, data_p, len), TAG, "Tx failed");
+#define i2c_read(data_p, len)       ESP_RETURN_ON_ERROR(esp_lcd_panel_io_rx_param(tp->io, -1, data_p, len), TAG, "Rx failed");
 
 static esp_err_t write_tp_point_mode_cmd(esp_lcd_touch_handle_t tp)
 {
@@ -314,9 +318,12 @@ static esp_err_t read_tp_status_length(esp_lcd_touch_handle_t tp, tp_status_t *t
 
 static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, tp_touch_t *touch)
 {
-    uint8_t sample_data[4 + (10 * 6)]; // 4 Bytes Header + 10 Finger * 6 Bytes
+    uint8_t sample_data[SPD2010_MAX_PACKET_SIZE]; // 4 Bytes Header + 10 Finger * 6 Bytes
     uint8_t i, offset;
     uint8_t check_id;
+
+    ESP_RETURN_ON_FALSE(tp_status->read_len >= 5 && tp_status->read_len <= sizeof(sample_data),
+                        ESP_ERR_INVALID_RESPONSE, TAG, "invalid HDP length: %" PRIu16, tp_status->read_len);
 
     sample_data[0] = 0x00;
     sample_data[1] = 0x03;
@@ -329,7 +336,11 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
     check_id = sample_data[4];
 
     if ((check_id <= 0x0A) && tp_status->status_low.pt_exist) {
+        ESP_RETURN_ON_FALSE(((tp_status->read_len - 4) % 6) == 0,
+                            ESP_ERR_INVALID_RESPONSE, TAG, "invalid HDP point payload length: %" PRIu16, tp_status->read_len);
         touch->touch_num = ((tp_status->read_len - 4) / 6);
+        ESP_RETURN_ON_FALSE(touch->touch_num <= SPD2010_MAX_TOUCH_POINTS,
+                            ESP_ERR_INVALID_RESPONSE, TAG, "too many touch points: %u", touch->touch_num);
         touch->gesture = 0x00;
 
         for (i = 0; i < touch->touch_num; i++) {
@@ -341,16 +352,18 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
         }
 
         /* For slide gesture recognize */
-        if ((touch->rpt[0].weight != 0) && (touch->down != 1)) {
-            touch->down = 1;
-            touch->up = 0 ;
-            touch->down_x = touch->rpt[0].x;
-            touch->down_y = touch->rpt[0].y;
-        } else if ((touch->rpt[0].weight == 0) && (touch->down == 1)) {
-            touch->up = 1;
-            touch->down = 0;
-            touch->up_x = touch->rpt[0].x;
-            touch->up_y = touch->rpt[0].y;
+        if (touch->touch_num > 0) {
+            if ((touch->rpt[0].weight != 0) && (touch->down != 1)) {
+                touch->down = 1;
+                touch->up = 0;
+                touch->down_x = touch->rpt[0].x;
+                touch->down_y = touch->rpt[0].y;
+            } else if ((touch->rpt[0].weight == 0) && (touch->down == 1)) {
+                touch->up = 1;
+                touch->down = 0;
+                touch->up_x = touch->rpt[0].x;
+                touch->up_y = touch->rpt[0].y;
+            }
         }
 
         /* Dump Log */
@@ -362,6 +375,8 @@ static esp_err_t read_tp_hdp(esp_lcd_touch_handle_t tp, tp_status_t *tp_status, 
                      touch->rpt[finger_num].weight);
         }
     } else if ((check_id == 0xF6) && tp_status->status_low.gesture) {
+        ESP_RETURN_ON_FALSE(tp_status->read_len >= 7, ESP_ERR_INVALID_RESPONSE, TAG,
+                            "invalid gesture packet length: %" PRIu16, tp_status->read_len);
         touch->touch_num = 0x00;
         touch->up = 0;
         touch->down = 0;
@@ -393,7 +408,12 @@ static esp_err_t read_tp_hdp_status(esp_lcd_touch_handle_t tp, tp_hdp_status_t *
 
 static esp_err_t Read_HDP_REMAIN_DATA(esp_lcd_touch_handle_t tp, tp_hdp_status_t *tp_hdp_status)
 {
-    uint8_t sample_data[32];
+    uint8_t sample_data[SPD2010_MAX_PACKET_SIZE];
+
+    ESP_RETURN_ON_FALSE(tp_hdp_status->next_packet_len > 0 &&
+                        tp_hdp_status->next_packet_len <= sizeof(sample_data),
+                        ESP_ERR_INVALID_RESPONSE, TAG, "invalid remaining HDP length: %" PRIu16,
+                        tp_hdp_status->next_packet_len);
 
     sample_data[0] = 0x00;
     sample_data[1] = 0x03;
@@ -419,11 +439,15 @@ static esp_err_t read_fw_version(esp_lcd_touch_handle_t tp)
     i2c_read(&sample_data[0], 18);
     esp_rom_delay_us(200);
 
-    Dummy = ((sample_data[0] << 24) | (sample_data[1] << 16) | (sample_data[3] << 8) | (sample_data[0]));
-    DVer = ((sample_data[5] << 8) | (sample_data[4]));
-    PID = ((sample_data[9] << 24) | (sample_data[8] << 16) | (sample_data[7] << 8) | (sample_data[6]));
-    ICName_L = ((sample_data[13] << 24) | (sample_data[12] << 16) | (sample_data[11] << 8) | (sample_data[10]));    // "2010"
-    ICName_H = ((sample_data[17] << 24) | (sample_data[16] << 16) | (sample_data[15] << 8) | (sample_data[14]));    // "SPD"
+    Dummy = ((uint32_t)sample_data[0] << 24) | ((uint32_t)sample_data[1] << 16) |
+            ((uint32_t)sample_data[2] << 8) | sample_data[3];
+    DVer = ((uint16_t)sample_data[5] << 8) | sample_data[4];
+    PID = ((uint32_t)sample_data[9] << 24) | ((uint32_t)sample_data[8] << 16) |
+          ((uint32_t)sample_data[7] << 8) | sample_data[6];
+    ICName_L = ((uint32_t)sample_data[13] << 24) | ((uint32_t)sample_data[12] << 16) |
+               ((uint32_t)sample_data[11] << 8) | sample_data[10];    // "2010"
+    ICName_H = ((uint32_t)sample_data[17] << 24) | ((uint32_t)sample_data[16] << 16) |
+               ((uint32_t)sample_data[15] << 8) | sample_data[14];    // "SPD"
 
     ESP_LOGD(TAG, "Dummy[%"PRIu32"], DVer[%"PRIu16"], PID[%"PRIu32"], Name[%"PRIu32"-%"PRIu32"]", Dummy, DVer, PID, ICName_H, ICName_L);
 

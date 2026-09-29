@@ -65,3 +65,5 @@ Get one X and Y coordinates with strength of touch.
         ESP_LOGI(TAG, "Touch position: [%d, %d], strength %d, count %d", points[0].x, points[0].y, points[0].strength, touch_cnt);
     }
 ```
+
+The SPD2010 driver returns raw coordinates from its internal read callback. Use `esp_lcd_touch_get_data()` (or the deprecated `esp_lcd_touch_get_coordinates()`) to apply the configured `swap_xy`, `mirror_x`, and `mirror_y` adjustments through the common `esp_lcd_touch` component. Do not call the driver callback or read `tp->data.coords` directly when coordinate transformation is required.

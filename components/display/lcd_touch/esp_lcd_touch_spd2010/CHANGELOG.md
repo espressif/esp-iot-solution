@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v2.1.0 - 2026-09-29
+
+### Bugfix:
+
+* Fix SPD2010 I2C transactions with no command/control phase by using the `-1` panel-IO command sentinel.
+* Validate HDP packet lengths and avoid accessing a missing first touch point.
+* Keep coordinate transformation in the common `esp_lcd_touch` API instead of duplicating it in the raw driver callback.
+
 ## v2.0.1 - 2026-04-21
 
 ### Changes:
