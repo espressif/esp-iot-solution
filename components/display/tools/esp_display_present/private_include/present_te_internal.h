@@ -11,6 +11,7 @@
 #include "esp_display_present_drawbuf.h"
 #include "esp_display_present_te.h"
 #include "esp_display_present_target.h"
+#include "present_async_copy.h"
 #include "present_buffer_repair.h"
 #include "present_te_pool.h"
 
@@ -45,6 +46,8 @@ struct esp_display_present_te_compose {
     esp_display_present_drawbuf_pool_t drawbuf_pool;
     uint8_t next_drawbuf;
     void *ppa_handle;
+    /** Swap + tile copies overlap rendering when the drawbuf pool has two. */
+    present_async_copy_t async_copy;
 
     struct {
         uint8_t *pixels;

@@ -11,6 +11,7 @@
 
 #include "present_te_internal.h"
 #include "present_mode_internal.h"
+#include "present_rgb565_swap.h"
 #include "present_target_internal.h"
 
 #include <stdlib.h>
@@ -27,6 +28,7 @@ static const char *TAG = "present_te";
 
 static void release_buffers(esp_display_present_te_compose_t *te_compose)
 {
+    present_async_copy_deinit(&te_compose->async_copy);
     present_te_compose_repair_destroy(te_compose);
     present_te_pool_deinit(&te_compose->pool);
     if (te_compose->te_ctx != NULL) {
@@ -150,7 +152,14 @@ esp_err_t esp_display_present_te_compose_create(
     }
     (void)esp_display_present_ppa_try_open_tile_client(te_compose->rotation,
                                                        &te_compose->ppa_handle);
-    ESP_LOGI(TAG, "te_compose: logical=%ux%u physical=%ux%u rotate=%d ppa=%u buffers=%u pipeline=%u",
+    ret = present_async_copy_init(&te_compose->async_copy,
+                                  &te_compose->drawbuf_pool, true);
+    if (ret != ESP_OK) {
+        release_buffers(te_compose);
+        free(te_compose);
+        return ret;
+    }
+    ESP_LOGI(TAG, "te_compose: logical=%ux%u physical=%ux%u rotate=%d ppa=%u buffers=%u pipeline=%u async_copy=%u",
              (unsigned)te_compose->logical_width,
              (unsigned)te_compose->logical_height,
              (unsigned)te_compose->draw.width,
@@ -158,7 +167,8 @@ esp_err_t esp_display_present_te_compose_create(
              (int)te_compose->rotation,
              te_compose->ppa_handle != NULL ? 1U : 0U,
              (unsigned)te_compose->compose_buffer_count,
-             (unsigned)present_te_pool_enabled(&te_compose->pool));
+             (unsigned)present_te_pool_enabled(&te_compose->pool),
+             (unsigned)te_compose->async_copy.enabled);
     *out_endpoint = te_compose;
     return ESP_OK;
 }
@@ -288,6 +298,8 @@ esp_err_t esp_display_present_te_compose_acquire_drawbuf(
     if (te_compose == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
+    present_async_copy_wait_slot(&te_compose->async_copy,
+                                 te_compose->next_drawbuf);
     return present_stage_acquire_tile(
                &te_compose->drawbuf_pool, &te_compose->next_drawbuf,
                te_compose->draw.color_bytes, area, pixel_format, out_region);
@@ -301,6 +313,7 @@ void esp_display_present_te_compose_cancel_frame(present_frame_ctx_t *ctx)
     if (te_compose == NULL || frame_id == 0) {
         return;
     }
+    (void)present_async_copy_drain(&te_compose->async_copy);
     if (esp_display_present_tracker_get_building_frame(
                 &te_compose->tracker) == frame_id) {
         esp_display_present_tracker_rollback_frame(
@@ -359,22 +372,29 @@ esp_err_t esp_display_present_te_compose_submit_drawbuf(
         .rotation = te_compose->rotation,
         .ppa_handle = te_compose->ppa_handle,
     };
-    if (te_compose->draw.panel_byte_order) {
-        /*
-         * Panel wire order is big-endian RGB565. Swap the tile in place
-         * before the rotate/copy hop: byte order is pixel-local, so it
-         * commutes with the placement and no FB sweep is needed after the
-         * blit. create() rejects swap unless color_bytes == 2, and the
-         * stride check above guarantees the tile rows are contiguous.
-         */
-        uint16_t *pixels = region->surface.pixels;
-        size_t count =
-            (size_t)region->surface.width * region->surface.height;
-        for (size_t index = 0; index < count; ++index) {
-            pixels[index] = (uint16_t)__builtin_bswap16(pixels[index]);
-        }
+    /*
+     * Panel wire order is big-endian RGB565. Swap the tile in place before
+     * the rotate/copy hop: byte order is pixel-local, so it commutes with the
+     * placement and no FB sweep is needed after the blit. create() rejects
+     * swap unless color_bytes == 2, and the stride check above guarantees
+     * the tile rows are contiguous.
+     */
+    if (present_async_copy_submit(&te_compose->async_copy, ctx->target, &dst,
+                                  region, te_compose->draw.panel_byte_order) ==
+            ESP_OK) {
+        return ESP_OK;
     }
-    ret = present_target_blit_region(ctx->target, &dst, region);
+    /* A queued blit invalidates its row span afterwards, which would drop
+     * an inline CPU copy into the same rows, so never run both at once. */
+    ret = present_async_copy_drain(&te_compose->async_copy);
+    if (ret == ESP_OK) {
+        if (te_compose->draw.panel_byte_order) {
+            present_rgb565_swap_in_place(
+                region->surface.pixels,
+                (size_t)region->surface.width * region->surface.height);
+        }
+        ret = present_target_blit_region(ctx->target, &dst, region);
+    }
     if (ret != ESP_OK) {
         esp_display_present_tracker_rollback_frame(
             ctx->tracker, frame_id,

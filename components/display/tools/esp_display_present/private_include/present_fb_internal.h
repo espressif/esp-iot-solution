@@ -8,6 +8,7 @@
 
 #include <string.h>
 
+#include "esp_display_present_blit.h"
 #include "esp_display_present_fb.h"
 #include "esp_display_present_frame_tracker.h"
 #include "esp_display_present_panel.h"
@@ -17,6 +18,7 @@
 #include "present_buffer_repair.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "present_async_copy.h"
 
 struct esp_display_present_fb_endpoint {
     esp_display_present_target_t *target;
@@ -59,6 +61,8 @@ struct esp_display_present_fb_endpoint {
         bool submit_gate_enabled;
         /** Optional PPA SRM client for partition_rotate tile blits. */
         void *ppa_handle;
+        /** Tile copies overlap rendering when the drawbuf pool has two. */
+        present_async_copy_t async_copy;
     } fb;
     struct {
         present_buffer_repair_state_t state;
@@ -109,6 +113,38 @@ static inline bool present_fb_previous_readable(
 {
     return surface != NULL &&
            surface->profile.fb == ESP_DISPLAY_PRESENT_FB_DIRECT;
+}
+
+/** DIRECT without a transform tracks per-buffer damage history. */
+static inline bool present_fb_tracks_direct_history(
+    const esp_display_present_fb_endpoint_t *surface)
+{
+    return present_fb_previous_readable(surface) &&
+           surface->fb.transform == NULL &&
+           surface->repair.state.enabled;
+}
+
+static inline present_buffer_repair_view_t present_fb_repair_view(
+    const esp_display_present_fb_endpoint_t *surface,
+    void *display_buffer,
+    void *draw_buffer)
+{
+    present_buffer_repair_view_t view = {
+        .target = surface->target,
+        .buffer_count = surface->fb.frame_buffer_count,
+        .display_buffer = display_buffer,
+        .draw_buffer = draw_buffer,
+        .logical_width = surface->width,
+        .logical_height = surface->height,
+        .physical_width = surface->physical_width,
+        .physical_height = surface->physical_height,
+        .physical_stride_bytes = surface->physical_stride_bytes,
+        .color_bytes = surface->color_bytes,
+    };
+    for (uint8_t index = 0; index < view.buffer_count; ++index) {
+        view.buffers[index] = surface->fb.frame_buffers[index];
+    }
+    return view;
 }
 
 static inline void present_fb_invalidate_lease(
@@ -219,6 +255,9 @@ static inline void present_fb_cancel_frame_stage(
 {
     esp_display_present_fb_endpoint_t *surface =
         ctx != NULL ? ctx->mode_ctx : NULL;
+    if (surface != NULL) {
+        (void)present_async_copy_drain(&surface->fb.async_copy);
+    }
     if (surface != NULL &&
             present_fb_lease_is_valid(surface, &surface->lease.valet)) {
         present_fb_invalidate_lease(surface, &surface->lease.valet);

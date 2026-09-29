@@ -250,7 +250,17 @@ esp_err_t esp_display_present_te_compose_commit_frame(
     }
 
     bool submitted_any = false;
-    esp_err_t ret = ESP_OK;
+    /* Every queued tile must be in the compose buffer before the push
+     * writes it back and hands it to the panel DMA. */
+    esp_err_t ret = present_async_copy_drain(&te_compose->async_copy);
+    if (ret != ESP_OK) {
+        esp_display_present_tracker_rollback_frame(
+            &te_compose->tracker, frame_id,
+            te_compose->building_previous_frame, false);
+        te_compose->building_previous_frame = 0;
+        te_compose->has_active_buffer = false;
+        return ret;
+    }
     if (present_te_pool_enabled(&te_compose->pool)) {
         ret = esp_display_present_tracker_publish_frame(
                   &te_compose->tracker, frame_id,

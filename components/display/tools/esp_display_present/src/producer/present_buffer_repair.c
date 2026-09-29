@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include "esp_display_present_blit.h"
-#include "esp_display_present_cache.h"
 #include "esp_display_present_dirty.h"
 #include "esp_log.h"
 
@@ -140,9 +139,9 @@ static esp_err_t copy_areas(const present_buffer_repair_view_t *view,
     if (count == 0) {
         return ESP_OK;
     }
-    esp_display_present_cache_msync_framebuffer(
-        view->draw_buffer,
-        view->physical_stride_bytes * view->physical_height);
+    /* No whole-buffer writeback here: the DMA2D copy writes back and
+     * invalidates the rows it touches, and CPU copies stay in cache until
+     * the commit/push writes back the whole draw buffer before scanout. */
     esp_display_present_blit_plane_t destination = {
         .pixels = view->draw_buffer,
         .width = view->physical_width,
@@ -257,6 +256,92 @@ void present_buffer_repair_destroy(present_buffer_repair_state_t *state)
     free(state->dirty_joined);
     free(state->unrendered);
     memset(state, 0, sizeof(*state));
+}
+
+esp_err_t present_buffer_repair_begin_draw(
+    present_buffer_repair_state_t *state,
+    const present_buffer_repair_view_t *view,
+    const esp_display_present_area_t *dirty_areas,
+    size_t dirty_area_count,
+    bool sync)
+{
+    if (state == NULL || view == NULL || view->target == NULL ||
+            view->display_buffer == NULL || view->draw_buffer == NULL ||
+            (dirty_areas == NULL) != (dirty_area_count == 0)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    uint8_t target = buffer_index(view, view->draw_buffer);
+    uint8_t source = buffer_index(view, view->display_buffer);
+    bool diff = state->enabled && target != UINT8_MAX &&
+                source != UINT8_MAX && target != source &&
+                state->buffers[target].valid &&
+                state->buffers[source].valid &&
+                state->buffers[source].revision == state->revision;
+    /* The producer is about to overwrite this buffer; it only becomes a
+     * trusted baseline again at record_draw(), so a cancelled frame falls
+     * back to a complement copy. */
+    if (state->enabled && target != UINT8_MAX) {
+        state->buffers[target].valid = false;
+    }
+    if (!sync) {
+        return ESP_OK;
+    }
+
+    const esp_display_present_area_t *copy = NULL;
+    uint16_t copy_count = 0;
+    if (diff) {
+        uint16_t current_count = capture_current(
+                                     state, view, dirty_areas,
+                                     dirty_area_count);
+        diff = esp_display_present_subtract_area_list(
+                   state->buffers[target].areas, state->buffers[target].count,
+                   state->current, current_count, state->repair,
+                   state->repair_capacity, &copy_count) == ESP_OK;
+        copy = state->repair;
+    }
+    if (!diff) {
+        esp_err_t ret = build_complement(state, view, dirty_areas,
+                                         dirty_area_count, &copy_count);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+        copy = state->unrendered;
+    }
+    return copy_areas(view, copy, copy_count);
+}
+
+void present_buffer_repair_record_draw(
+    present_buffer_repair_state_t *state,
+    const present_buffer_repair_view_t *view,
+    const esp_display_present_area_t *drawn_areas,
+    size_t drawn_area_count,
+    bool committed)
+{
+    if (state == NULL || view == NULL || !state->enabled) {
+        return;
+    }
+    uint8_t target = buffer_index(view, view->draw_buffer);
+    if (!committed || target == UINT8_MAX) {
+        reset_to(state, view->buffer_count, UINT8_MAX);
+        return;
+    }
+    const esp_display_present_area_t full = {
+        .x1 = 0, .y1 = 0,
+        .x2 = view->logical_width - 1,
+        .y2 = view->logical_height - 1,
+    };
+    const esp_display_present_area_t *current = &full;
+    uint16_t current_count = 1;
+    if (drawn_area_count != 0) {
+        current_count = capture_current(state, view, drawn_areas,
+                                        drawn_area_count);
+        current = state->current;
+        if (current_count < drawn_area_count) {
+            current = &full;
+            current_count = 1;
+        }
+    }
+    commit_diff(state, view->buffer_count, target, current, current_count);
 }
 
 esp_err_t present_buffer_repair_apply(

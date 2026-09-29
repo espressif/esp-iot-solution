@@ -109,6 +109,10 @@ esp_err_t esp_display_present_fb_repair_complement(present_frame_ctx_t *ctx,
         return ESP_ERR_INVALID_ARG;
     }
     *out_repaired = false;
+    esp_err_t copy_ret = present_async_copy_drain(&frame->fb.async_copy);
+    if (copy_ret != ESP_OK) {
+        return copy_ret;
+    }
     const esp_display_present_fb_lease_t *lease = &frame->lease.valet;
     if (!present_fb_lease_is_valid(frame, lease)) {
         return ESP_ERR_INVALID_ARG;

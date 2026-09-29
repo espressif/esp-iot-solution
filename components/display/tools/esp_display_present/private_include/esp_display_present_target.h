@@ -49,6 +49,8 @@ typedef struct {
     uint8_t buffers;
     uint8_t te_compose_buffers;
     bool in_psram;
+    /** The second buffer came from the default policy; drop it if it cannot be allocated. */
+    bool optional_second;
 } esp_display_present_drawbuf_info_t;
 
 /** Resolved immutable target contract shared by presentation producers. */

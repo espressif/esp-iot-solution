@@ -16,6 +16,7 @@
 #include "esp_display_present_hw.h"
 #include "esp_display_present_ppa.h"
 #include "esp_display_present_rotate.h"
+#include "present_rgb565_swap.h"
 #include "soc/soc_caps.h"
 
 /* IDF exposes 2D-DMA framebuffer copies under two names depending on
@@ -112,12 +113,8 @@ static void copy_axis_sw(void *dst_fb, size_t dst_stride_bytes,
         const uint8_t *in = src_row + (size_t)row * src_stride_bytes;
         uint8_t *out = dst_base + (size_t)row * dst_stride_bytes;
         if (swap_rgb565) {
-            const uint16_t *in16 = (const uint16_t *)in;
-            uint16_t *out16 = (uint16_t *)out;
-            size_t count = row_bytes / 2U;
-            for (size_t index = 0; index < count; ++index) {
-                out16[index] = (uint16_t)__builtin_bswap16(in16[index]);
-            }
+            present_rgb565_swap_copy((uint16_t *)out, (const uint16_t *)in,
+                                     row_bytes / 2U);
         } else {
             memcpy(out, in, row_bytes);
         }

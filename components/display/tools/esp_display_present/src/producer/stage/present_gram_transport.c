@@ -11,6 +11,7 @@
 
 #include "present_gram_internal.h"
 #include "present_mode_internal.h"
+#include "present_rgb565_swap.h"
 #include "present_transfer_wait.h"
 
 #include <inttypes.h>
@@ -64,12 +65,9 @@ static int find_free_buffer(const esp_display_present_gram_endpoint_t *ctx)
 
 static void swap_rgb565(const esp_display_presenter_region_t *region)
 {
-    uint16_t *pixels = region->surface.pixels;
-    size_t count =
-        (size_t)region->surface.width * region->surface.height;
-    for (size_t index = 0; index < count; ++index) {
-        pixels[index] = (uint16_t)__builtin_bswap16(pixels[index]);
-    }
+    present_rgb565_swap_in_place(
+        region->surface.pixels,
+        (size_t)region->surface.width * region->surface.height);
 }
 
 esp_err_t esp_display_present_gram_create(
