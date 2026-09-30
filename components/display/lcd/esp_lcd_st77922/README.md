@@ -140,6 +140,23 @@ void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * ar
 }
 ```
 
+### MADCTL MV axis swap
+
+`esp_lcd_panel_swap_xy()` returns `ESP_ERR_NOT_SUPPORTED` by default. The ST77922 specification describes the `MADCTL.MV` bit inconsistently, and its behavior is not guaranteed across modules or initialization sequences.
+
+For a SPI/QSPI module that has been validated to exchange its address axes with `MADCTL.MV`, opt in explicitly through the vendor configuration:
+
+```c
+const st77922_vendor_config_t vendor_config = {
+    .flags = {
+        .use_qspi_interface = 1,
+        .supports_madctl_mv = 1,
+    },
+};
+```
+
+Only enable this flag after confirming the panel's visual orientation with the exact initialization sequence. It is ignored by the RGB and MIPI-DSI implementations; software rotation remains the portable fallback.
+
 ### RGB Interface
 
 ```c

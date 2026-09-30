@@ -725,35 +725,54 @@
   - "examples/display/gui/gsp_lvgl_present_handoff/**/*"
   - "examples/display/gui/common/hw_init/**/*"
 
+.patterns-example_display_gui_gsp_showcase: &patterns-example_display_gui_gsp_showcase
+  - "examples/display/gui/gsp_showcase/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
+
 .patterns-example_display_gui_lvgl_common_demo: &patterns-example_display_gui_lvgl_common_demo
   - "examples/display/gui/lvgl_common_demo/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_decode_image: &patterns-example_display_gui_lvgl_decode_image
   - "examples/display/gui/lvgl_decode_image/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_dummy_draw: &patterns-example_display_gui_lvgl_dummy_draw
   - "examples/display/gui/lvgl_dummy_draw/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_freetype_font: &patterns-example_display_gui_lvgl_freetype_font
   - "examples/display/gui/lvgl_freetype_font/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_multi_screen: &patterns-example_display_gui_lvgl_multi_screen
   - "examples/display/gui/lvgl_multi_screen/**/*"
 
 .patterns-example_display_gui_lvgl_light_sleep_demo: &patterns-example_display_gui_lvgl_light_sleep_demo
   - "examples/display/gui/lvgl_light_sleep_demo/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_mono_demo: &patterns-example_display_gui_lvgl_mono_demo
   - "examples/display/gui/lvgl_mono_demo/**/*"
 
 .patterns-example_display_gui_lvgl_eaf_player: &patterns-example_display_gui_lvgl_eaf_player
   - "examples/display/gui/lvgl_eaf_player/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_fs_assets: &patterns-example_display_gui_lvgl_fs_assets
   - "examples/display/gui/lvgl_fs_assets/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_lottie_player: &patterns-example_display_gui_lvgl_lottie_player
   - "examples/display/gui/lvgl_lottie_player/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_esp_painter_demo: &patterns-example_display_gui_esp_painter_demo
   - "examples/display/gui/esp_painter_demo/**/*"
@@ -1486,6 +1505,20 @@
       changes: *patterns-components_display_tools_esp_display_present
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_present
+
+.rules:build:example_display_gui_gsp_showcase:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_gsp_showcase
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
 
 .rules:build:example_display_gui_lvgl_common_demo:
   rules:

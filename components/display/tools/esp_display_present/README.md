@@ -71,6 +71,27 @@ Presentation mode should normally remain `ESP_DISPLAY_PRESENT_MODE_AUTO`.
 Accurate panel class, framebuffer, TE, rotation, and byte-order information in
 the target configuration lets the component select the correct path.
 
+## Panel initialization
+
+Before creating the panel, set its explicit type, mode, rotation and TE
+configuration, then query the minimum number of panel framebuffers:
+
+```c
+uint8_t panel_fb_count;
+ESP_ERROR_CHECK(esp_display_present_get_required_frame_buffer_count(
+    &target, &panel_fb_count));
+```
+
+Use this count for the RGB/MIPI driver's `num_fbs`, then fill `target.hw.panel`
+and `target.hw.io` and create the presenter with the same target configuration.
+Keep `target.fb.frame_buffer_count = 0` when using driver-owned buffers; that
+field counts supplied framebuffer addresses, not the panel's allocation.
+IO/GRAM returns 0 because draw buffers and TE compose buffers are separate.
+The query does not access handles or allocate memory. Unsupported static policy
+combinations are rejected; actual driver and buffer checks happen at creation.
+For a runtime mode matrix, allocate the maximum requirement of its supported
+cases.
+
 ## Presentation modes
 
 | Mode | Target and buffers | Producer contract | Rotation and validation |

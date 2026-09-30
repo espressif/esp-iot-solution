@@ -96,7 +96,7 @@ idf.py add-dependency "espressif/esp_lv_present"
 
 ```yml
 dependencies:
-  espressif/esp_lv_present: "^0.1.0"
+  espressif/esp_lv_present: "^0.1.1"
 ```
 
 本仓库内使用：

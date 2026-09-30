@@ -99,6 +99,8 @@ static lv_coord_t example_get_button_bottom_offset(void);
 static lv_coord_t example_get_button_radius(void);
 static esp_lv_adapter_rotation_t get_configured_rotation(void);
 static esp_lv_adapter_tear_avoid_mode_t get_default_tear_mode(void);
+static hw_rotation_t get_hw_rotation(void);
+static esp_err_t init_lcd_hardware(void);
 
 static bool example_uses_auto_sleep(void)
 {
@@ -235,6 +237,28 @@ static esp_lv_adapter_tear_avoid_mode_t get_default_tear_mode(void)
 #endif
 }
 
+static hw_rotation_t get_hw_rotation(void)
+{
+    switch (s_rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        return HW_ROTATE_90;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        return HW_ROTATE_180;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        return HW_ROTATE_270;
+    case ESP_LV_ADAPTER_ROTATE_0:
+    default:
+        return HW_ROTATE_0;
+    }
+}
+
+static esp_err_t init_lcd_hardware(void)
+{
+    return hw_lcd_init(&s_panel_handle, &s_panel_io_handle,
+                       esp_lv_adapter_get_required_frame_buffer_count(s_tear_mode, s_rotation),
+                       get_hw_rotation());
+}
+
 static void action_button_event_cb(lv_event_t *e)
 {
     if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
@@ -350,7 +374,7 @@ static esp_err_t example_register_touch_input(void)
     }
 
     if (!s_touch_handle) {
-        ESP_RETURN_ON_ERROR(hw_touch_init(&s_touch_handle, s_rotation), TAG, "Touch init failed");
+        ESP_RETURN_ON_ERROR(hw_touch_init(&s_touch_handle, get_hw_rotation()), TAG, "Touch init failed");
     }
 
     esp_lv_adapter_touch_config_t touch_cfg = ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(s_disp, s_touch_handle);
@@ -368,7 +392,7 @@ static esp_err_t recover_failed_light_sleep_cycle(bool panel_handles_valid, bool
     esp_err_t first_err = ESP_OK;
 
     if (!panel_handles_valid) {
-        esp_err_t ret = hw_lcd_init(&s_panel_handle, &s_panel_io_handle, s_tear_mode, s_rotation);
+        esp_err_t ret = init_lcd_hardware();
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "LCD restore failed: %s", esp_err_to_name(ret));
             first_err = ret;
@@ -468,7 +492,7 @@ static esp_err_t run_full_light_sleep_cycle(void)
     s_last_wake_causes = example_get_wakeup_causes_bitmap();
     s_user_sleep_cycles++;
 
-    ret = hw_lcd_init(&s_panel_handle, &s_panel_io_handle, s_tear_mode, s_rotation);
+    ret = init_lcd_hardware();
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "LCD reinit failed: %s", esp_err_to_name(ret));
         return ret;
@@ -727,7 +751,7 @@ void app_main(void)
     s_tear_mode = get_default_tear_mode();
 
     // Initialize LCD hardware
-    ESP_ERROR_CHECK(hw_lcd_init(&s_panel_handle, &s_panel_io_handle, s_tear_mode, s_rotation));
+    ESP_ERROR_CHECK(init_lcd_hardware());
     ESP_ERROR_CHECK(configure_pm_for_auto_sleep());
 
     // Initialize adapter

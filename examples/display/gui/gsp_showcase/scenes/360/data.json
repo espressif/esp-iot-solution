@@ -1,0 +1,23 @@
+{
+  "screen": "data", "w": 360, "h": 360, "screen_bg": "#0D1524",
+  "font": "../DejaVuSans.ttf", "default_font_size": 13, "swipe": true,
+  "objects": [
+    {"type":"label","parent":-1,"x":12,"y":7,"w":336,"h":27,"text":"ESP-GSP Showcase","font_size":21,"fg_color":"#F3F7FF"},
+    {"type":"button","parent":-1,"x":10,"y":40,"w":80,"h":32,"text":"Ctrl","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_controls"},
+    {"type":"button","parent":-1,"x":97,"y":40,"w":80,"h":32,"text":"Image","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_media"},
+    {"type":"button","parent":-1,"x":184,"y":40,"w":80,"h":32,"text":"Motion","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_motion"},
+    {"type":"button","parent":-1,"x":271,"y":40,"w":79,"h":32,"text":"Data","font_size":12,"bg_color":"#2563EB","fg_color":"#FFFFFF","radius":8,"callback":"nav_data"},
+    {"type":"container","parent":-1,"name":"panel","x":9,"y":83,"w":342,"h":247,"bg_color":"#17243A","border_color":"#314864","border_width":1,"radius":12},
+    {"type":"label","parent_name":"panel","x":14,"y":11,"w":310,"h":24,"text":"Live data and List","font_size":18,"fg_color":"#F3F7FF"},
+    {"type":"chart","parent_name":"panel","name":"trend","x":14,"y":48,"w":205,"h":138,"grid_lines":3,"bg_color":"#142033","fg_color":"#38BDF8","border_color":"#314864","border_width":1,"radius":7,"series":[{"name":"temperature","points":[12,18,25,19,32,38,31,46,42,51,49,62],"color":"#38BDF8"}]},
+    {"type":"label","parent_name":"panel","name":"sample_readout","x":15,"y":195,"w":115,"h":24,"text":"Sample 0","bind":"sample_readout","font_charset":"Sample 0123456789","font_size":13,"fg_color":"#F3F7FF"},
+    {"type":"progress","parent_name":"panel","name":"sample_progress","x":15,"y":223,"w":203,"h":10,"value":0,"bg_color":"#31445E","fg_color":"#35C996","radius":5},
+    {"type":"list","parent_name":"panel","name":"devices","x":229,"y":48,"w":99,"h":186,"items":["Display","Sensor","Player","Storage","Network","Panel"],"item_height":29,"snap_to_item":true,"font_size":11,"bg_color":"#142033","fg_color":"#E2E8F0","border_color":"#314864","border_width":1,"radius":7},
+    {"type":"label","parent":-1,"x":12,"y":338,"w":336,"h":17,"text":"Drag List to scroll; swipe outside it.","font_size":11,"fg_color":"#8DA4C0"},
+    {"type":"drawer","parent":-1,"name":"quick_drawer","x":0,"y":0,"w":360,"h":150,"edge":"top","open":false,"bg_color":"#17243A"},
+    {"type":"label","parent_name":"quick_drawer","x":15,"y":13,"w":290,"h":28,"text":"Quick Panel","font_size":20,"fg_color":"#FFFFFF"},
+    {"type":"label","parent_name":"quick_drawer","x":15,"y":48,"w":300,"h":24,"text":"Drag up to close","font_size":13,"fg_color":"#BBD0EB"},
+    {"type":"toggle","parent_name":"quick_drawer","x":18,"y":99,"w":54,"h":28,"checked":true,"bg_color":"#35445F","fg_color":"#35C996","knob_color":"#FFFFFF"},
+    {"type":"button","parent_name":"quick_drawer","x":235,"y":96,"w":108,"h":36,"text":"Close","font_size":13,"bg_color":"#35445F","fg_color":"#FFFFFF","radius":8,"events":[{"event":"click","action":"drawer_close","target_name":"quick_drawer","animated":true}]}
+  ]
+}

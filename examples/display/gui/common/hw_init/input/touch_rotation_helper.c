@@ -6,7 +6,7 @@
 
 #include "touch_rotation_helper.h"
 
-void touch_get_rotation_flags(touch_rotation_type_t type, esp_lv_adapter_rotation_t rotation,
+void touch_get_rotation_flags(touch_rotation_type_t type, hw_rotation_t rotation,
                               bool *swap_xy, bool *mirror_x, bool *mirror_y)
 {
     bool swap = false;
@@ -16,22 +16,22 @@ void touch_get_rotation_flags(touch_rotation_type_t type, esp_lv_adapter_rotatio
         x_mirror = true;
         y_mirror = true;
         switch (rotation) {
-        case ESP_LV_ADAPTER_ROTATE_90:
+        case HW_ROTATE_90:
             swap = true;
             x_mirror = false;
             y_mirror = true;
             break;
-        case ESP_LV_ADAPTER_ROTATE_180:
+        case HW_ROTATE_180:
             swap = false;
             x_mirror = false;
             y_mirror = false;
             break;
-        case ESP_LV_ADAPTER_ROTATE_270:
+        case HW_ROTATE_270:
             swap = true;
             x_mirror = true;
             y_mirror = false;
             break;
-        case ESP_LV_ADAPTER_ROTATE_0:
+        case HW_ROTATE_0:
         default:
             swap = false;
             x_mirror = true;
@@ -42,22 +42,22 @@ void touch_get_rotation_flags(touch_rotation_type_t type, esp_lv_adapter_rotatio
         x_mirror = false;
         y_mirror = false;
         switch (rotation) {
-        case ESP_LV_ADAPTER_ROTATE_90:
+        case HW_ROTATE_90:
             swap = true;
             x_mirror = true;
             y_mirror = false;
             break;
-        case ESP_LV_ADAPTER_ROTATE_180:
+        case HW_ROTATE_180:
             swap = false;
             x_mirror = true;
             y_mirror = true;
             break;
-        case ESP_LV_ADAPTER_ROTATE_270:
+        case HW_ROTATE_270:
             swap = true;
             x_mirror = false;
             y_mirror = true;
             break;
-        case ESP_LV_ADAPTER_ROTATE_0:
+        case HW_ROTATE_0:
         default:
             swap = false;
             x_mirror = false;

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "esp_display_present.h"
 #include "esp_display_present_profile.h"
-
-#include <string.h>
+#include "esp_display_present_te.h"
 
 static bool panel_uses_gram_storage(
     esp_display_present_panel_interface_t panel_interface)
@@ -29,7 +29,7 @@ static esp_display_present_mode_t resolve_mode(
     return ESP_DISPLAY_PRESENT_MODE_TRIPLE_PARTIAL;
 }
 
-esp_err_t esp_display_present_profile_resolve(
+static esp_err_t resolve_profile(
     esp_display_present_mode_t requested_mode,
     esp_display_present_panel_interface_t panel_interface,
     bool te_enabled,
@@ -107,10 +107,9 @@ esp_err_t esp_display_present_profile_resolve(
     return ESP_OK;
 }
 
-esp_err_t esp_display_present_profile_validate(
+static esp_err_t validate_profile(
     const esp_display_present_profile_t *profile,
     esp_display_present_panel_interface_t panel_interface,
-    bool has_io,
     bool te_enabled,
     esp_display_present_rotation_t rotation)
 {
@@ -122,9 +121,6 @@ esp_err_t esp_display_present_profile_validate(
     bool te = profile->sync == ESP_DISPLAY_PRESENT_SYNC_TE;
 
     if (uses_gram_storage) {
-        if (!has_io) {
-            return ESP_ERR_NOT_SUPPORTED;
-        }
         /*
          * Plain GRAM direct output cannot rotate because SUBMIT immediately
          * kicks the rendered tile to the panel.  TE composes tiles into a
@@ -155,4 +151,81 @@ esp_err_t esp_display_present_profile_validate(
         return ESP_ERR_NOT_SUPPORTED;
     }
     return ESP_OK;
+}
+
+static esp_err_t resolve_panel_interface(
+    const esp_display_present_target_config_t *config,
+    esp_display_present_panel_interface_t *out_panel_interface)
+{
+    switch (config->hw.panel_type) {
+    case ESP_DISPLAY_PRESENT_PANEL_MIPI_DSI:
+        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_MIPI_DSI;
+        return ESP_OK;
+    case ESP_DISPLAY_PRESENT_PANEL_RGB:
+        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_RGB;
+        return ESP_OK;
+    case ESP_DISPLAY_PRESENT_PANEL_IO:
+        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_OTHER;
+        return ESP_OK;
+    case ESP_DISPLAY_PRESENT_PANEL_AUTO:
+        if (config->hw.io == NULL) {
+            return ESP_ERR_NOT_SUPPORTED;
+        }
+        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_OTHER;
+        return ESP_OK;
+    default:
+        return ESP_ERR_INVALID_ARG;
+    }
+}
+
+esp_err_t esp_display_present_profile_resolve(
+    const esp_display_present_target_config_t *config,
+    esp_display_present_panel_interface_t *out_panel_interface,
+    esp_display_present_profile_t *out_profile)
+{
+    if (config == NULL || out_panel_interface == NULL || out_profile == NULL ||
+            config->fb.mode < ESP_DISPLAY_PRESENT_MODE_NONE ||
+            config->fb.mode > ESP_DISPLAY_PRESENT_MODE_AUTO ||
+            (config->hw.rotation != ESP_DISPLAY_PRESENT_ROTATE_0 &&
+             config->hw.rotation != ESP_DISPLAY_PRESENT_ROTATE_90 &&
+             config->hw.rotation != ESP_DISPLAY_PRESENT_ROTATE_180 &&
+             config->hw.rotation != ESP_DISPLAY_PRESENT_ROTATE_270)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_err_t ret = resolve_panel_interface(config, out_panel_interface);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    const bool te_enabled = config->hw.te_enabled &&
+                            esp_display_present_te_sync_is_enabled(&config->hw.te_sync);
+    ret = resolve_profile(config->fb.mode, *out_panel_interface, te_enabled,
+                          out_profile);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    return validate_profile(out_profile, *out_panel_interface, te_enabled,
+                            config->hw.rotation);
+}
+
+esp_err_t esp_display_present_get_required_frame_buffer_count(
+    const esp_display_present_target_config_t *config,
+    uint8_t *out_count)
+{
+    if (out_count != NULL) {
+        *out_count = 0;
+    }
+    if (config == NULL || out_count == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (config->hw.panel_type == ESP_DISPLAY_PRESENT_PANEL_AUTO) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    esp_display_present_panel_interface_t panel_interface;
+    esp_display_present_profile_t profile;
+    esp_err_t ret = esp_display_present_profile_resolve(
+                        config, &panel_interface, &profile);
+    if (ret == ESP_OK) {
+        *out_count = profile.frame_buffer_count;
+    }
+    return ret;
 }

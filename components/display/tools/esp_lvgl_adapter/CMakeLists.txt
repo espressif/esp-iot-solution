@@ -270,8 +270,18 @@ function(esp_lv_adapter_ensure_lvgl_freertos_stack_caps_hook)
         message(FATAL_ERROR "esp_lvgl_adapter: partially configured LVGL FreeRTOS stack caps hook")
     endif()
 
-    set(_lv_freertos_include "#include \"atomic.h\"")
-    set(_lv_freertos_include_hook "#include \"atomic.h\"\n#if defined(ESP_PLATFORM) && defined(LV_FREERTOS_TASK_STACK_ALLOC_CAPS)\n    #include \"freertos/idf_additions.h\"\n#endif")
+    # LVGL 9.6 uses the ESP-qualified atomic header, while older LVGL 9
+    # releases use the unqualified compatibility header.
+    string(FIND "${_lv_freertos_content}" "#include <freertos/atomic.h>" _lv_freertos_atomic_angle_pos)
+    string(FIND "${_lv_freertos_content}" "#include \"atomic.h\"" _lv_freertos_atomic_quote_pos)
+    if(NOT _lv_freertos_atomic_angle_pos EQUAL -1)
+        set(_lv_freertos_include "#include <freertos/atomic.h>")
+    elseif(NOT _lv_freertos_atomic_quote_pos EQUAL -1)
+        set(_lv_freertos_include "#include \"atomic.h\"")
+    else()
+        message(FATAL_ERROR "esp_lvgl_adapter: unsupported LVGL FreeRTOS atomic include layout")
+    endif()
+    set(_lv_freertos_include_hook "${_lv_freertos_include}\n#if defined(ESP_PLATFORM) && defined(LV_FREERTOS_TASK_STACK_ALLOC_CAPS)\n    #include \"freertos/idf_additions.h\"\n#endif")
     set(_lv_thread_create [[    BaseType_t xTaskCreateStatus = xTaskCreate(
                                        prvRunThread,
                                        name,

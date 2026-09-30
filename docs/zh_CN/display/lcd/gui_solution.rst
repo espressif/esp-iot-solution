@@ -3,6 +3,21 @@ GUI 优化解决方案
 
 :link_to_translation:`en:[English]`
 
+.. _ESP GSP:
+
+ESP-GSP
+-------
+
+ESP-GSP 是独立的嵌入式 UI 框架。编译器将场景描述和资源生成 Bundle，
+C API 用于连接控件、图片、动画与应用状态，并支持 ESP-IDF 显示接入
+与 PC 模拟器开发流程。
+
+组件链接：https://components.espressif.com/components/espressif/esp-gsp
+
+相关示例：
+
+- :example:`display/gui/gsp_showcase`
+
 .. _ESP LVGL Adapter:
 
 ESP LVGL Adapter
@@ -29,7 +44,7 @@ ESP Display Present
 -------------------------
 
 ``esp_display_present`` 把渲染器像素送到 ``esp_lcd`` 面板。应用持有面板和
-Presenter，LVGL 9、GSP 或自绘 GUI 轮流独占生产。它不是第二套 LVGL 适配层。
+Presenter，LVGL 9、GSP 或自绘 GUI 轮流独占生产。
 
 ``esp_lv_present`` 只在已有 Presenter 上安装 LVGL 9 的 flush 路径。
 

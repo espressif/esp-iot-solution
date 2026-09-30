@@ -51,22 +51,10 @@ typedef struct {
 } esp_display_present_profile_t;
 
 /**
- * Resolve the present profile from mode + panel interface.
- * GRAM vs FB storage is derived from @p panel_interface.
+ * Resolve and validate the static presentation policy without accessing
+ * hardware. Runtime AUTO panel detection uses only IO handle presence.
  */
 esp_err_t esp_display_present_profile_resolve(
-    esp_display_present_mode_t requested_mode,
-    esp_display_present_panel_interface_t panel_interface,
-    bool te_enabled,
+    const esp_display_present_target_config_t *config,
+    esp_display_present_panel_interface_t *out_panel_interface,
     esp_display_present_profile_t *out_profile);
-
-/**
- * Check that a resolved profile is usable with the attached panel wiring.
- * @p has_io is true when a panel-IO handle is available (required for GRAM).
- */
-esp_err_t esp_display_present_profile_validate(
-    const esp_display_present_profile_t *profile,
-    esp_display_present_panel_interface_t panel_interface,
-    bool has_io,
-    bool te_enabled,
-    esp_display_present_rotation_t rotation);

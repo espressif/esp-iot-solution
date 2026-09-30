@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.7.2 (2026-09-29)
+
+* Fix the LVGL FreeRTOS PSRAM-stack hook for LVGL 9.6's ESP-qualified `freertos/atomic.h` include while retaining compatibility with older LVGL 9 releases.
+
 ## v0.7.1 (2026-09-18)
 
 * Add LVGL 9.6 compatibility for public/private headers, FreeType integration, and display color-format detection.

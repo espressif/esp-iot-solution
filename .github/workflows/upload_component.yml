@@ -15,13 +15,17 @@ jobs:
       - name: Copy common components to examples
         run: |
           mkdir -p examples/display/gui/lvgl_common_demo/components/
-          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_common_demo/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_common_demo/components/
           mkdir -p examples/display/gui/lvgl_decode_image/components/
-          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_decode_image/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_decode_image/components/
           mkdir -p examples/display/gui/lvgl_dummy_draw/components/
-          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_dummy_draw/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_dummy_draw/components/
           mkdir -p examples/display/gui/lvgl_freetype_font/components/
-          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_freetype_font/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_freetype_font/components/
+          mkdir -p examples/display/gui/lvgl_lottie_player/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_lottie_player/components/
+          mkdir -p examples/display/gui/lvgl_present_benchmark/components/
+          cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_present_benchmark/components/
           mkdir -p examples/display/gui/lvgl_light_sleep_demo/components/
           cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_light_sleep_demo/components/
           mkdir -p examples/usb/host/usb_cdc_4g_module/components/

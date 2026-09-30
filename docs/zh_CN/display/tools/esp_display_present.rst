@@ -40,7 +40,15 @@ ESP Display Present
 包含 ``esp_display_present.h`` 即可使用公共 API。配置和共享类型分别定义在
 ``esp_display_present_config.h`` 和 ``esp_display_present_types.h`` 中。
 
-主要对象为 ``esp_display_presenter_t``。渲染器按以下顺序工作：
+主要对象为 ``esp_display_presenter_t``。
+
+面板初始化前，使用 ``esp_display_present_get_required_frame_buffer_count()``，
+按明确的面板类型、模式、旋转和 TE 配置查询驱动的 ``num_fbs``。
+查询与创建共用静态策略，不访问面板句柄。IO/GRAM 返回 0，绘制缓冲和
+TE compose 缓冲另行管理。创建面板后填入句柄，用同一目标配置创建 Presenter。
+使用驱动自有缓冲时，保持 ``target.fb.frame_buffer_count = 0``。
+
+渲染器随后按以下顺序工作：
 
 1. 使用 ``esp_display_present_target_config_t`` 创建 Presenter
 2. 获取帧契约

@@ -2,7 +2,7 @@ components/audio/adc_mic/test_apps:
   enable:
     - if: SOC_ADC_DMA_SUPPORTED == 1
   disable:
-    - if: IDF_TARGET in ["esp32h2"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET == "esp32h2" and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 0
 
 components/audio/pwm_audio/test_apps:
   enable:
@@ -27,7 +27,7 @@ components/touch/touch_button_sensor/test_apps:
   enable:
     - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
   disable:
-    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5 and CONFIG_NAME == "p4rev3"
 
 components/touch/touch_proximity_sensor/test_apps:
   enable:
@@ -51,7 +51,7 @@ components/usb/usb_stream/test_apps:
 
 components/usb/usb_stream/examples/usb_stream_lcd_display:
   enable:
-    - if: IDF_TARGET == "esp32s3" and (IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 0)
+    - if: IDF_TARGET == "esp32s3" and IDF_VERSION_MAJOR >= 5 and IDF_VERSION_MINOR >= 0
 
 components/usb/usb_stream/examples/usb_stream_mic_spk:
   enable:
@@ -73,7 +73,7 @@ components/usb/iot_usbh_cdc/test_apps:
   enable:
     - if: SOC_USB_OTG_SUPPORTED == 1
   disable:
-    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5 and CONFIG_NAME == "p4rev3"
 
 components/usb/iot_usbh_modem/test_apps:
   enable:
@@ -294,21 +294,24 @@ components/display/tools/esp_lv_present/test_apps:
 components/display/tools/esp_lv_decoder/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and IDF_VERSION_MAJOR == 6
-    - if: IDF_TARGET in ["esp32s3","esp32c3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3)
+    - if: IDF_TARGET in ["esp32s3", "esp32c3", "esp32p4"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 3
   disable:
-    - if: (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5) and CONFIG_NAME == "p4rev3"
+    - if: IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 5 and CONFIG_NAME == "p4rev3"
 
 components/display/tools/esp_lvgl_adapter/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and IDF_VERSION_MAJOR == 6
 
 components/display/tools/esp_lvgl_adapter/benchmark:
   enable:
-    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and ((IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5) or IDF_VERSION_MAJOR == 6)
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and IDF_VERSION_MAJOR == 6
 
 components/expander/io_expander/mcp23017/test_apps:
   enable:
-    - if: INCLUDE_DEFAULT == 1 and (IDF_VERSION_MAJOR >= 6 or (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 2))
+    - if: INCLUDE_DEFAULT == 1 and IDF_VERSION_MAJOR >= 6
+    - if: INCLUDE_DEFAULT == 1 and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 2
 
 components/keyboard_button/test_apps:
   enable:
@@ -365,6 +368,10 @@ components/protocomm_ext/test_apps:
 components/network_provisioner/test_apps:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61"] and IDF_VERSION >= "5.3"
+
+examples/display/gui/gsp_showcase:
+  enable:
+    - if: IDF_TARGET in ["esp32p4", "esp32s3", "esp32s31", "esp32c3"]
 
 components/esp_local_controller/test_apps:
   enable:

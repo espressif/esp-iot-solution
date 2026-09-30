@@ -68,6 +68,23 @@ dependencies:
 呈现模式通常应保持为 `ESP_DISPLAY_PRESENT_MODE_AUTO`。在目标配置中准确提供
 面板类型、帧缓冲区、TE、旋转和字节序信息，组件即可选择正确路径。
 
+## 面板初始化
+
+创建面板前，明确配置面板类型、模式、旋转及 TE，再查询所需的最少面板帧缓冲数量：
+
+```c
+uint8_t panel_fb_count;
+ESP_ERROR_CHECK(esp_display_present_get_required_frame_buffer_count(
+    &target, &panel_fb_count));
+```
+
+将结果用于 RGB/MIPI 驱动的 `num_fbs`，随后填入 `target.hw.panel` 和
+`target.hw.io`，使用同一配置创建 Presenter。使用驱动自有缓冲时，保持
+`target.fb.frame_buffer_count = 0`；该字段表示传入的有效缓冲地址数量，
+不表示面板分配数量。IO/GRAM 返回 0，绘制缓冲与 TE compose 缓冲另行管理。
+查询不访问句柄或分配内存，会拒绝不支持的静态策略组合；实际驱动和缓冲检查
+仍在创建阶段完成。运行多个模式时，应按所有支持的测试组合取最大需求。
+
 ## 呈现模式
 
 | 模式 | 目标与缓冲区 | 生产者契约 | 旋转与验证情况 |

@@ -1,0 +1,33 @@
+{
+  "screen": "data",
+  "w": 1024,
+  "h": 600,
+  "screen_bg": "#0D1524",
+  "font": "DejaVuSans.ttf",
+  "default_font_size": 18,
+  "swipe": true,
+  "objects": [
+    {"type":"label","parent":-1,"x":36,"y":18,"w":750,"h":42,"text":"ESP-GSP / Interactive showcase","font_size":30,"fg_color":"#F3F7FF"},
+    {"type":"label","parent":-1,"x":790,"y":30,"w":200,"h":24,"text":"SWIPE  /  PULL DOWN","font_size":15,"text_align":"right","fg_color":"#8DA4C0"},
+    {"type":"button","parent":-1,"x":36,"y":75,"w":220,"h":48,"text":"Controls","font_size":18,"bg_color":"#25364C","fg_color":"#DCE8F7","radius":12,"callback":"nav_controls"},
+    {"type":"button","parent":-1,"x":275,"y":75,"w":220,"h":48,"text":"Images","font_size":18,"bg_color":"#25364C","fg_color":"#DCE8F7","radius":12,"callback":"nav_media"},
+    {"type":"button","parent":-1,"x":514,"y":75,"w":220,"h":48,"text":"Motion","font_size":18,"bg_color":"#25364C","fg_color":"#DCE8F7","radius":12,"callback":"nav_motion"},
+    {"type":"button","parent":-1,"x":753,"y":75,"w":235,"h":48,"text":"Data & Layout","font_size":18,"bg_color":"#2563EB","fg_color":"#FFFFFF","radius":12,"callback":"nav_data"},
+    {"type":"container","parent":-1,"x":36,"y":150,"w":600,"h":402,"bg_color":"#17243A","radius":18,"border_color":"#314864","border_width":1},
+    {"type":"label","parent":6,"x":24,"y":18,"w":550,"h":34,"text":"Live data and Chart","font_size":25,"fg_color":"#F3F7FF"},
+    {"type":"label","parent":6,"name":"sample_readout","x":385,"y":22,"w":190,"h":30,"text":"Sample 0","bind":"sample_readout","font_charset":"Sample 0123456789","font_size":19,"text_align":"right","fg_color":"#38BDF8"},
+    {"type":"chart","parent":6,"name":"trend","x":24,"y":77,"w":552,"h":230,"grid_lines":4,"bg_color":"#142033","fg_color":"#38BDF8","border_color":"#314864","border_width":1,"radius":10,"series":[{"name":"temperature","points":[12,18,25,19,32,38,31,46,42,51,49,62],"color":"#38BDF8"}]},
+    {"type":"progress","parent":6,"name":"sample_progress","x":24,"y":337,"w":552,"h":24,"value":0,"bg_color":"#31445E","fg_color":"#35C996","radius":12},
+    {"type":"container","parent":-1,"x":656,"y":150,"w":332,"h":402,"bg_color":"#17243A","radius":18,"border_color":"#314864","border_width":1},
+    {"type":"label","parent":11,"x":20,"y":18,"w":292,"h":34,"text":"Scrollable List","font_size":25,"fg_color":"#F3F7FF"},
+    {"type":"list","parent":11,"name":"devices","x":20,"y":68,"w":292,"h":230,"items":["Display / ESP-GSP","Sensor / Temperature","Controller / Lighting","Player / Animation","Storage / Media","Network / Telemetry","Panel / Touch","System / Status"],"item_height":50,"snap_to_item":true,"font_size":16,"bg_color":"#142033","fg_color":"#E2E8F0","border_color":"#314864","border_width":1,"radius":12},
+    {"type":"button","parent":11,"x":20,"y":322,"w":292,"h":54,"text":"Open message box","font_size":18,"bg_color":"#2563EB","fg_color":"#FFFFFF","radius":12,"events":[{"event":"click","action":"show","target_name":"help_dialog"}]},
+    {"type":"msgbox","parent":-1,"name":"help_dialog","title":"JSON overlay","text":"This dialog and its open action are declared in JSON.","buttons":["Close"],"w":320,"h":240,"font_size":18,"dismissable":true,"hidden":true,"bg_color":"#17243A","fg_color":"#E2E8F0","button_color":"#2563EB"},
+    {"type":"label","parent":-1,"x":36,"y":568,"w":952,"h":22,"text":"Drag the list to scroll. Swipe outside the list to change the full screen.","font_size":15,"fg_color":"#8199B6"},
+    {"type":"drawer","parent":-1,"name":"quick_drawer","x":0,"y":0,"w":1024,"h":248,"edge":"top","open":false,"bg_color":"#17243A"},
+    {"type":"label","parent_name":"quick_drawer","x":36,"y":28,"w":600,"h":42,"text":"Quick Panel","font_size":29,"fg_color":"#F3F7FF"},
+    {"type":"label","parent_name":"quick_drawer","x":36,"y":83,"w":700,"h":34,"text":"Drag this panel up to close it.","font_size":18,"fg_color":"#BBD0EB"},
+    {"type":"toggle","parent_name":"quick_drawer","x":40,"y":155,"w":80,"h":39,"checked":true,"bg_color":"#35445F","fg_color":"#35C996","knob_color":"#FFFFFF"},
+    {"type":"button","parent_name":"quick_drawer","x":809,"y":151,"w":170,"h":50,"text":"Close","font_size":18,"bg_color":"#35445F","fg_color":"#FFFFFF","radius":12,"events":[{"event":"click","action":"drawer_close","target_name":"quick_drawer","animated":true}]}
+  ]
+}

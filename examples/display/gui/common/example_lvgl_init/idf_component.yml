@@ -5,7 +5,8 @@ dependencies:
     version: ">=5.5.5"
 
   hw_init:
-    path: "../hw_init"
+    version: "*"
+    override_path: "../hw_init"
 
   espressif/esp_lvgl_adapter:
     version: "*"

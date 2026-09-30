@@ -498,19 +498,50 @@ esp_err_t esp_display_present_te_sync_wait_for_vsync(esp_display_present_te_sync
     portENTER_CRITICAL(&ctx->lock);
     period_us = ctx->te_period_us;
     portEXIT_CRITICAL(&ctx->lock);
-
-    TickType_t timeout_ticks = pdMS_TO_TICKS(te_wait_timeout_ms(period_us));
+    const TickType_t timeout_ticks = pdMS_TO_TICKS(te_wait_timeout_ms(period_us));
 
     while (true) {
         bool accept = false;
+        int64_t next_phase_us = 0;
         portENTER_CRITICAL(&ctx->lock);
-        accept = te_current_phase_is_usable_locked(ctx, esp_timer_get_time());
+        const int64_t checked_us = esp_timer_get_time();
+        accept = te_current_phase_is_usable_locked(ctx, checked_us);
+        const te_schedule_window_t *schedule = &ctx->schedule;
+        const int64_t scan_start_us = ctx->blanking_end_edge == GPIO_INTR_POSEDGE
+                                      ? ctx->last_rise_time_us : ctx->last_fall_time_us;
+        if (!accept && schedule->has_phase_window && scan_start_us > 0) {
+            const int64_t phase_begin_us = scan_start_us + schedule->phase_begin_us;
+            if (phase_begin_us > checked_us) {
+                next_phase_us = phase_begin_us;
+            }
+        }
         portEXIT_CRITICAL(&ctx->lock);
         if (accept) {
             return ESP_OK;
         }
 
-        if (xSemaphoreTake(ctx->te_vsync_sem, timeout_ticks) != pdTRUE) {
+        const int64_t now_us = esp_timer_get_time();
+        if (next_phase_us > 0 && next_phase_us <= now_us) {
+            continue;
+        }
+        TickType_t wait_ticks = timeout_ticks;
+        bool phase_wakeup = false;
+        if (next_phase_us > now_us) {
+            const int64_t tick_us = (int64_t)portTICK_PERIOD_MS * 1000;
+            const TickType_t phase_ticks =
+                (TickType_t)((next_phase_us - now_us + tick_us - 1) / tick_us);
+            if (phase_ticks > 0 && phase_ticks < wait_ticks) {
+                wait_ticks = phase_ticks;
+                phase_wakeup = true;
+            }
+        }
+        if (xSemaphoreTake(ctx->te_vsync_sem, wait_ticks) != pdTRUE) {
+            /* An optional current-period phase wakeup is not a missing TE
+             * edge. Re-check the original admission predicate; an early
+             * tick or an expired window never authorizes a transfer. */
+            if (phase_wakeup) {
+                continue;
+            }
             ESP_LOGW(TAG,
                      "TE wait timeout: gpio=%d timeout_ticks=%u period=%lldus last_tx=%lldus",
                      ctx->cfg.gpio_num, (unsigned)timeout_ticks,

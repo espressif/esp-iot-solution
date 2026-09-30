@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v2.1.0 - 2026-09-29
+
+### Enhancements:
+
+* Add opt-in `supports_madctl_mv` capability for validated SPI/QSPI modules whose MADCTL.MV bit exchanges the address axes.
+* Keep `swap_xy()` returning `ESP_ERR_NOT_SUPPORTED` by default because MV behavior is module-specific.
+* Preserve the cached MADCTL value when a mirror or axis-swap command fails.
+
 ## v2.0.3 - 2025-12-15
 
 ### Changes:
