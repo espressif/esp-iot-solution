@@ -1,0 +1,6 @@
+version: "0.1.0"
+dependencies:
+  idf: ">=4.4"
+  esp_xmodem:
+    version: "*"
+    override_path: "../../../"
