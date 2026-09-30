@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,10 +19,13 @@ static const char *TAG = "driver_pwm";
 typedef struct {
     ledc_timer_config_t ledc_config;
     uint8_t registered_channel_mask;
+    uint8_t phase_delay_flag;
+    bool hw_cct;
+    uint32_t duty[PWM_CHANNEL_MAX];
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
     bool invert_level;
 #endif
-    uint32_t hponit[5];
+    uint32_t hpoint[5];
 } pwm_handle_t;
 
 static pwm_handle_t *s_pwm = NULL;
@@ -35,6 +38,7 @@ static esp_pm_lock_handle_t s_freq_lock = NULL;
 static esp_pm_lock_handle_t s_cpu_lock = NULL;
 static bool s_lock_is_take = false;
 static bool s_create_done = false;
+
 static void power_control_enable_sleep(void)
 {
     if (s_lock_is_take && s_create_done) {
@@ -74,11 +78,79 @@ static esp_err_t power_control_lock_create(void)
 }
 #endif
 
+static void pwm_recompute_hpoints(uint32_t *eff_duty)
+{
+    uint32_t period = 1 << s_pwm->ledc_config.duty_resolution;
+    uint32_t total = 0;
+    uint32_t acc = 0;
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        eff_duty[ch] = s_pwm->duty[ch];
+        if ((s_pwm->registered_channel_mask & BIT(ch)) && !(s_pwm->hw_cct && ch == PWM_CHANNEL_CCT_COLD)) {
+            total += s_pwm->duty[ch];
+        }
+    }
+    if (total > period) {
+        uint32_t used = 0;
+        int max_ch = -1;
+        for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+            if ((s_pwm->registered_channel_mask & BIT(ch)) && !(s_pwm->hw_cct && ch == PWM_CHANNEL_CCT_COLD)) {
+                eff_duty[ch] = (uint32_t)(((uint64_t)s_pwm->duty[ch] * period) / total);
+                if (s_pwm->duty[ch] && !eff_duty[ch]) {
+                    eff_duty[ch] = 1; /* A requested channel must never be turned off by truncation. */
+                }
+                used += eff_duty[ch];
+                if (max_ch < 0 || eff_duty[ch] >= eff_duty[max_ch]) {
+                    max_ch = ch;
+                }
+            }
+        }
+        if (max_ch >= 0) {
+            /* Absorb the rounding difference in the largest channel. */
+            eff_duty[max_ch] += period - used;
+        }
+    }
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        if (s_pwm->registered_channel_mask & BIT(ch)) {
+            if (s_pwm->hw_cct && ch == PWM_CHANNEL_CCT_COLD) {
+                s_pwm->hpoint[ch] = 0;
+                continue;
+            }
+            s_pwm->hpoint[ch] = acc % period;
+            acc += eff_duty[ch];
+        }
+    }
+}
+
+static esp_err_t pwm_commit_dynamic(void)
+{
+    uint32_t eff_duty[PWM_CHANNEL_MAX];
+    pwm_recompute_hpoints(eff_duty);
+    esp_err_t err = ESP_OK;
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        if (s_pwm->registered_channel_mask & BIT(ch)) {
+            err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, ch,
+                                             eff_duty[ch], s_pwm->hpoint[ch]);
+        }
+    }
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        if (s_pwm->registered_channel_mask & BIT(ch)) {
+            err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, ch);
+        }
+    }
+    return err;
+}
+
 esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
     DRIVER_CHECK(!s_pwm, "already init done", return ESP_ERR_INVALID_ARG);
+    DRIVER_CHECK(config->phase_delay.flag == 0 ||
+                 config->phase_delay.flag == PWM_RGB_CHANNEL_PHASE_DELAY_FLAG ||
+                 config->phase_delay.flag == PWM_CW_CHANNEL_PHASE_DELAY_FLAG ||
+                 config->phase_delay.flag == PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG ||
+                 config->phase_delay.flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG,
+                 "unsupported phase_delay flag", return ESP_ERR_INVALID_ARG);
 
     s_pwm = calloc(1, sizeof(pwm_handle_t));
     DRIVER_CHECK(s_pwm, "alloc fail", return ESP_ERR_NO_MEM);
@@ -108,27 +180,37 @@ esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *, void *), void 
     }
     DRIVER_CHECK(err == ESP_OK, "LEDC timer config fail, please reduce the frequency", goto EXIT);
 
+    s_pwm->phase_delay_flag = config->phase_delay.flag;
+    s_pwm->hw_cct = config->hw_cct;
     uint32_t grayscale_level = 1 << s_pwm->ledc_config.duty_resolution;
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        /* Dynamic mode uses the full PWM range. */
+        if (hook_func) {
+            hook_func(user_data, (void *)grayscale_level);
+        }
+        goto INIT_COMMON;
+    }
     if (config->phase_delay.flag & PWM_RGB_CHANNEL_PHASE_DELAY_FLAG) {
         grayscale_level /= 3;
         for (int i = 0; i < 3; i++) {
-            s_pwm->hponit[i] = grayscale_level * i;
+            s_pwm->hpoint[i] = grayscale_level * i;
         }
     } else if (config->phase_delay.flag & PWM_CW_CHANNEL_PHASE_DELAY_FLAG) {
         grayscale_level /= 2;
         uint8_t cw_start_ch = 3;
         for (int i = 0; i < 2; i++) {
-            s_pwm->hponit[cw_start_ch + i] = grayscale_level * i;
+            s_pwm->hpoint[cw_start_ch + i] = grayscale_level * i;
         }
     } else if (config->phase_delay.flag & PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG) {
         grayscale_level /= 5;
         for (int i = 0; i < 5; i++) {
-            s_pwm->hponit[i] = grayscale_level * i;
+            s_pwm->hpoint[i] = grayscale_level * i;
         }
     } else {
         /* Nothing */
     }
-    if (hook_func) {
+INIT_COMMON:
+    if (hook_func && s_pwm->phase_delay_flag != PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
         hook_func(user_data, (void *)grayscale_level);
     }
 
@@ -190,7 +272,13 @@ esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num)
     err = ledc_channel_config(&ledc_ch_config);
     DRIVER_CHECK(err == ESP_OK, "channel config fail", return ESP_ERR_INVALID_STATE);
     ESP_LOGD(TAG, "channel:%d -> gpio_num:%d", channel, gpio_num);
+    s_pwm->duty[channel] = duty;
     s_pwm->registered_channel_mask |= (1 << channel);
+
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        /* ledc_channel_config() resets hpoint to 0, re-commit to restore complementary phasing. */
+        return pwm_commit_dynamic();
+    }
 
     return err;
 }
@@ -205,8 +293,12 @@ esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value)
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        s_pwm->duty[channel] = value;
+        return pwm_commit_dynamic();
+    }
 
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, channel, value, s_pwm->hponit[channel]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, channel, value, s_pwm->hpoint[channel]);
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, channel);
 
     return err;
@@ -226,11 +318,17 @@ esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        s_pwm->duty[PWM_CHANNEL_R] = value_r;
+        s_pwm->duty[PWM_CHANNEL_G] = value_g;
+        s_pwm->duty[PWM_CHANNEL_B] = value_b;
+        return pwm_commit_dynamic();
+    }
 
     //Must be set first
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hponit[PWM_CHANNEL_R]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hponit[PWM_CHANNEL_G]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hponit[PWM_CHANNEL_B]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hpoint[PWM_CHANNEL_R]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hpoint[PWM_CHANNEL_G]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hpoint[PWM_CHANNEL_B]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R);
@@ -252,10 +350,15 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w)
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        s_pwm->duty[PWM_CHANNEL_CCT_COLD] = value_cct_c;
+        s_pwm->duty[PWM_CHANNEL_BRIGHTNESS_WARM] = value_b_w;
+        return pwm_commit_dynamic();
+    }
 
     //Must be set first
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hponit[PWM_CHANNEL_CCT_COLD]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hponit[PWM_CHANNEL_BRIGHTNESS_WARM]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hpoint[PWM_CHANNEL_CCT_COLD]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hpoint[PWM_CHANNEL_BRIGHTNESS_WARM]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD);
@@ -282,13 +385,21 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        s_pwm->duty[PWM_CHANNEL_R] = value_r;
+        s_pwm->duty[PWM_CHANNEL_G] = value_g;
+        s_pwm->duty[PWM_CHANNEL_B] = value_b;
+        s_pwm->duty[PWM_CHANNEL_CCT_COLD] = value_cct_c;
+        s_pwm->duty[PWM_CHANNEL_BRIGHTNESS_WARM] = value_b_w;
+        return pwm_commit_dynamic();
+    }
 
     //Must be set first
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hponit[PWM_CHANNEL_R]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hponit[PWM_CHANNEL_G]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hponit[PWM_CHANNEL_B]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hponit[PWM_CHANNEL_CCT_COLD]);
-    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hponit[PWM_CHANNEL_BRIGHTNESS_WARM]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R, value_r, s_pwm->hpoint[PWM_CHANNEL_R]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_G, value_g, s_pwm->hpoint[PWM_CHANNEL_G]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_B, value_b, s_pwm->hpoint[PWM_CHANNEL_B]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_CCT_COLD, value_cct_c, s_pwm->hpoint[PWM_CHANNEL_CCT_COLD]);
+    err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_BRIGHTNESS_WARM, value_b_w, s_pwm->hpoint[PWM_CHANNEL_BRIGHTNESS_WARM]);
 
     //Update later
     err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, PWM_CHANNEL_R);
@@ -300,6 +411,32 @@ esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, u
     return err;
 }
 
+esp_err_t pwm_apply_registered(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w)
+{
+    DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    if (s_pwm->phase_delay_flag != PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        /* Keep the original public path for the legacy/application-layer caller. */
+        return pwm_set_rgbcctb_or_rgbcw_channel(value_r, value_g, value_b,
+                                                value_cct_c, value_b_w);
+    }
+    const uint16_t values[PWM_CHANNEL_MAX] = {value_r, value_g, value_b, value_cct_c, value_b_w};
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        if (s_pwm->registered_channel_mask & BIT(ch)) {
+            DRIVER_CHECK((values[ch] <= (1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
+        }
+    }
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        if (s_pwm->registered_channel_mask & BIT(ch)) {
+            s_pwm->duty[ch] = values[ch];
+        }
+    }
+
+#if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
+    power_control_disable_sleep();
+#endif
+    return pwm_commit_dynamic();
+}
+
 esp_err_t pwm_set_shutdown(void)
 {
     esp_err_t err = ESP_OK;
@@ -308,10 +445,14 @@ esp_err_t pwm_set_shutdown(void)
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        memset(s_pwm->duty, 0, sizeof(s_pwm->duty));
+        return pwm_commit_dynamic();
+    }
 
     for (int i = 0; i < PWM_CHANNEL_MAX; i++) {
         if (s_pwm->registered_channel_mask & BIT(i)) {
-            err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, i, 0, s_pwm->hponit[i]);
+            err |= ledc_set_duty_with_hpoint(s_pwm->ledc_config.speed_mode, i, 0, s_pwm->hpoint[i]);
             err |= ledc_update_duty(s_pwm->ledc_config.speed_mode, i);
         }
     }
@@ -321,13 +462,18 @@ esp_err_t pwm_set_shutdown(void)
 esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms)
 {
     DRIVER_CHECK(s_pwm, "pwm_init() must be called first", return ESP_ERR_INVALID_STATE);
+    if (s_pwm->phase_delay_flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+        /* Hardware fade only ramps the duty and cannot update the phase (hpoint),
+         * so it is incompatible with dynamic complementary output. */
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     DRIVER_CHECK(s_pwm->registered_channel_mask & BIT(channel), "Channel %d not registered", return ESP_ERR_INVALID_STATE, channel);
     DRIVER_CHECK(value <= ((1 << s_pwm->ledc_config.duty_resolution)), "value out of range", return ESP_ERR_INVALID_ARG);
 
 #if CONFIG_PM_ENABLE && CONFIG_IDF_TARGET_ESP32
     power_control_disable_sleep();
 #endif
-    if (0 != s_pwm->hponit[1]) {
+    if (0 != s_pwm->hpoint[1]) {
         ESP_LOGE(TAG, "Unable to set hpoint during hardware fade, disable CONFIG_PWM_ENABLE_HW_FADE feature or call other set API");
         abort();
     }

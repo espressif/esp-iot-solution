@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,8 @@
 #define PWM_RGB_CHANNEL_PHASE_DELAY_FLAG        0X01
 #define PWM_CW_CHANNEL_PHASE_DELAY_FLAG         0X02
 #define PWM_RGBCW_CHANNEL_PHASE_DELAY_FLAG      0X04
+/* Dynamic complementary output does not support hardware fade; the Lightbulb HAL automatically uses software fade. */
+#define PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG   0X08
 
 /**
  * @brief Output configuration
@@ -22,10 +24,10 @@ typedef struct {
     /* The LEDC driver default active high, if you need active low, please set it to true. */
     bool invert_level;
 #endif
-    /* This option is used to configure the channels of complementary output. If the flag is not set, all channels (if needed) will be output at the same time. */
     struct {
         uint8_t flag;
     } phase_delay;
+    bool hw_cct;
 } driver_pwm_t;
 
 /**
@@ -105,6 +107,17 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w);
 esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
 
 /**
+ * @brief Update every registered channel from a 5-tuple and commit once
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Driver not initialized, or (legacy mode) a
+ *        required channel is not registered
+ *      - ESP_ERR_INVALID_ARG: Legacy mode only: a requested duty is out of range
+ */
+esp_err_t pwm_apply_registered(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
+
+/**
  * @brief Stop all channel output
  *
  * @return esp_err_t
@@ -117,7 +130,11 @@ esp_err_t pwm_set_shutdown(void);
  * @param channel Abstract pin
  * @param value
  * @param fade_ms
- * @return esp_err_t
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Driver not initialized or channel not registered
+ *      - ESP_ERR_INVALID_ARG: Duty out of range
+ *      - ESP_ERR_NOT_SUPPORTED: Dynamic complementary output is enabled (hardware fade cannot update hpoint)
  */
 esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms);
 

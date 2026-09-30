@@ -137,11 +137,11 @@ static hal_obj_t *hal_create_pwm_driver(void)
     obj->set_hw_fade = (x_set_hw_fade_t)pwm_set_hw_fade;
     obj->deinit = (x_deinit_t)pwm_deinit;
     obj->set_sleep_status = (x_set_sleep_t)pwm_set_sleep;
+    obj->set_rgbwy_or_rgbct_channel = (x_set_rgbwy_or_rgbct_channel_t)pwm_apply_registered;
 
     // Set unused function pointers to NULL
     obj->set_rgb_channel = NULL;
     obj->set_wy_or_ct_channel = NULL;
-    obj->set_rgbwy_or_rgbct_channel = NULL;
     obj->set_init_mode = NULL;
 
     return obj;
@@ -691,8 +691,16 @@ static hal_context_t hal_output_init_common(hal_obj_t *interface, void *driver_c
      */
     int table_size = hal_ctx->interface->driver_grayscale_level;
     if (hal_ctx->interface->type == DRIVER_ESP_PWM) {
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+        const driver_pwm_t *pwm_config = (const driver_pwm_t *)driver_config;
+        if (pwm_config->phase_delay.flag == PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG) {
+            /* Dynamic hpoints require a consistent group snapshot on every fade tick. */
+            hal_ctx->enable_multi_ch_write = true;
+        } else {
 #if CONFIG_PWM_ENABLE_HW_FADE
-        hal_ctx->use_hw_fade = true;
+            hal_ctx->use_hw_fade = true;
+#endif
+        }
 #endif
         // PWM
         // 10bit: 0~1024, size: 1024 + 1
@@ -1036,8 +1044,11 @@ esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t
     }
 #endif
 
-    // 2. loop update channels through mask bits
-    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL] = { 0 };
+    // 2. loop update channels through mask bits.
+    // Keep channels outside the mask. Multi-channel writers commit every slot,
+    // so a zero-filled slot would turn that output off.
+    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
+    memcpy(fade_data, hal_ctx->fade_data, sizeof(fade_data));
     for (int channel = 0; channel < hal_ctx->interface->channel_num; channel++) {
         // 2.1 Unselected channels are skipped directly
         if ((channel_mask & BIT(channel)) == 0) {
@@ -1196,8 +1207,10 @@ esp_err_t hal_start_channel_group_action(hal_context_t hal_ctx, uint16_t value_m
 
     LIGHTBULB_CHECK(xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
 
-    // 2. loop update channels through mask bits
-    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL] = { 0 };
+    // 2. loop update channels through mask bits.
+    // Keep channels outside the mask. Multi-channel writers commit every slot.
+    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
+    memcpy(fade_data, hal_ctx->fade_data, sizeof(fade_data));
     for (int channel = 0; channel < hal_ctx->interface->channel_num; channel++) {
         // 2.1 Unselected channels are skipped directly
         if ((channel_mask & BIT(channel)) == 0) {
@@ -1275,8 +1288,10 @@ esp_err_t hal_stop_channel_action(hal_context_t hal_ctx, uint8_t channel_mask)
 
     LIGHTBULB_CHECK(xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
 
-    // 2. loop update channels through mask bits
-    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL] = { 0 };
+    // 2. loop update channels through mask bits.
+    // Keep channels outside the mask. Multi-channel writers commit every slot.
+    fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
+    memcpy(fade_data, hal_ctx->fade_data, sizeof(fade_data));
     for (int channel = 0; channel < hal_ctx->interface->channel_num; channel++) {
         // 2.1 Unselected channels are skipped directly
         if ((channel_mask & BIT(channel)) == 0) {
