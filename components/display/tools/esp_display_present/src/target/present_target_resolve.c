@@ -27,26 +27,6 @@ static const char *TAG = "present_target_resolve";
  */
 #define DOUBLE_DRAWBUF_HEADROOM_BYTES (128U * 1024U)
 
-static bool mode_is_valid(esp_display_present_mode_t mode)
-{
-    return mode >= ESP_DISPLAY_PRESENT_MODE_NONE &&
-           mode <= ESP_DISPLAY_PRESENT_MODE_AUTO;
-}
-
-static bool panel_type_is_valid(esp_display_present_panel_t panel_type)
-{
-    return panel_type >= ESP_DISPLAY_PRESENT_PANEL_AUTO &&
-           panel_type <= ESP_DISPLAY_PRESENT_PANEL_IO;
-}
-
-static bool rotation_is_valid(esp_display_present_rotation_t rotation)
-{
-    return rotation == ESP_DISPLAY_PRESENT_ROTATE_0 ||
-           rotation == ESP_DISPLAY_PRESENT_ROTATE_90 ||
-           rotation == ESP_DISPLAY_PRESENT_ROTATE_180 ||
-           rotation == ESP_DISPLAY_PRESENT_ROTATE_270;
-}
-
 static uint8_t pixel_format_bytes(
     esp_display_present_pixel_format_t pixel_format)
 {
@@ -250,34 +230,6 @@ static esp_err_t acquire_frame_buffers(
     return ret;
 }
 
-static esp_err_t resolve_panel_interface(
-    const esp_display_present_target_config_t *config,
-    esp_display_present_panel_interface_t *out_panel_interface)
-{
-    if (config == NULL || out_panel_interface == NULL) {
-        return ESP_ERR_INVALID_ARG;
-    }
-    switch (config->hw.panel_type) {
-    case ESP_DISPLAY_PRESENT_PANEL_MIPI_DSI:
-        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_MIPI_DSI;
-        return ESP_OK;
-    case ESP_DISPLAY_PRESENT_PANEL_RGB:
-        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_RGB;
-        return ESP_OK;
-    case ESP_DISPLAY_PRESENT_PANEL_IO:
-        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_OTHER;
-        return ESP_OK;
-    case ESP_DISPLAY_PRESENT_PANEL_AUTO:
-        if (config->hw.io == NULL) {
-            return ESP_ERR_NOT_SUPPORTED;
-        }
-        *out_panel_interface = ESP_DISPLAY_PRESENT_PANEL_IF_OTHER;
-        return ESP_OK;
-    default:
-        return ESP_ERR_INVALID_ARG;
-    }
-}
-
 esp_err_t present_target_resolve_info(
     const esp_display_present_target_config_t *config,
     esp_display_present_pixel_format_t pixel_format,
@@ -291,34 +243,24 @@ esp_err_t present_target_resolve_info(
     uint8_t color_bytes = pixel_format_bytes(pixel_format);
     if (config == NULL || config->hw.panel == NULL || width == 0 ||
             height == 0 || out_info == NULL ||
-            !mode_is_valid(config->fb.mode) ||
-            !panel_type_is_valid(config->hw.panel_type) ||
-            !rotation_is_valid(config->hw.rotation) ||
             config->fb.frame_buffer_count > ESP_DISPLAY_PRESENT_MAX_FRAME_BUFFERS ||
             config->hw.input_pixel_format != pixel_format || color_bytes == 0) {
         return ESP_ERR_INVALID_ARG;
     }
 
     esp_display_present_panel_interface_t panel_interface;
-    esp_err_t ret = resolve_panel_interface(config, &panel_interface);
+    esp_display_present_profile_t profile;
+    esp_err_t ret = esp_display_present_profile_resolve(
+                        config, &panel_interface, &profile);
     if (ret != ESP_OK) {
         return ret;
     }
     bool panel_gram = panel_interface == ESP_DISPLAY_PRESENT_PANEL_IF_OTHER;
+    if (panel_gram && config->hw.io == NULL) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     bool te_enabled = config->hw.te_enabled &&
                       esp_display_present_te_sync_is_enabled(&config->hw.te_sync);
-    esp_display_present_profile_t profile;
-    ret = esp_display_present_profile_resolve(
-              config->fb.mode, panel_interface, te_enabled, &profile);
-    if (ret != ESP_OK) {
-        return ret;
-    }
-    ret = esp_display_present_profile_validate(
-              &profile, panel_interface, config->hw.io != NULL, te_enabled,
-              config->hw.rotation);
-    if (ret != ESP_OK) {
-        return ret;
-    }
     if ((profile.storage == ESP_DISPLAY_PRESENT_STORAGE_GRAM ||
             profile.fb == ESP_DISPLAY_PRESENT_FB_REPAIR) &&
             (config->drawbuf.buffers > 2 ||

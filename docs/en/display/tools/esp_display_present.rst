@@ -43,7 +43,18 @@ Public API
 Include ``esp_display_present.h``. Configuration and shared types are defined in
 ``esp_display_present_config.h`` and ``esp_display_present_types.h``.
 
-The primary object is ``esp_display_presenter_t``. A renderer:
+The primary object is ``esp_display_presenter_t``.
+
+Before panel initialization, use
+``esp_display_present_get_required_frame_buffer_count()`` with an explicit
+panel type, mode, rotation and TE configuration to determine the driver's
+``num_fbs``. The query uses the same static policy as presenter creation and
+does not access panel handles. IO/GRAM returns 0; draw and TE compose buffers
+are separate. After creating the panel, fill the handles and create the
+presenter with the same target configuration. Keep
+``target.fb.frame_buffer_count = 0`` for driver-owned buffers.
+
+The renderer then:
 
 1. creates a presenter from an ``esp_display_present_target_config_t``
 2. acquires a frame contract

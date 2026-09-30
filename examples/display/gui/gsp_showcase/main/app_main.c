@@ -50,32 +50,20 @@ void app_main(void)
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_MIPI_DSI;
     const bool swap_bytes = false;
-    const uint8_t frame_buffer_count = 3;
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_RGB;
     const bool swap_bytes = false;
-    const uint8_t frame_buffer_count = 3;
 #else
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_IO;
     const bool swap_bytes = true;
-    const uint8_t frame_buffer_count = 1;
 #endif
-    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io, frame_buffer_count, HW_ROTATE_0));
-
-    esp_lcd_touch_handle_t touch = NULL;
-#if HW_USE_TOUCH
-    ESP_ERROR_CHECK(hw_touch_init(&touch, HW_ROTATE_0));
-#endif
-
     if (hw_lcd_get_bits_per_pixel() != 16) {
         ESP_LOGE(TAG, "The selected panel must use RGB565");
         ESP_ERROR_CHECK(ESP_ERR_NOT_SUPPORTED);
     }
     const int te_gpio = hw_lcd_get_te_gpio();
-    const esp_display_present_target_config_t display = {
+    esp_display_present_target_config_t display = {
         .hw = {
-            .panel = panel,
-            .io = io,
             .panel_type = panel_type,
             .input_pixel_format = ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB565,
             .rotation = ESP_DISPLAY_PRESENT_ROTATE_0,
@@ -91,6 +79,18 @@ void app_main(void)
             .mode = ESP_DISPLAY_PRESENT_MODE_AUTO,
         },
     };
+
+    uint8_t frame_buffer_count = 0;
+    ESP_ERROR_CHECK(esp_display_present_get_required_frame_buffer_count(
+                        &display, &frame_buffer_count));
+    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io, frame_buffer_count, HW_ROTATE_0));
+    display.hw.panel = panel;
+    display.hw.io = io;
+
+    esp_lcd_touch_handle_t touch = NULL;
+#if HW_USE_TOUCH
+    ESP_ERROR_CHECK(hw_touch_init(&touch, HW_ROTATE_0));
+#endif
 
     esp_gsp_config_t app_config = gsp_bundle_config();
     esp_gsp_esp_lcd_config_t lcd_config = ESP_GSP_ESP_LCD_CONFIG_INIT();

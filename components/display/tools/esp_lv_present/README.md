@@ -96,7 +96,7 @@ Or in `idf_component.yml`:
 
 ```yml
 dependencies:
-  espressif/esp_lv_present: "^0.1.0"
+  espressif/esp_lv_present: "^0.1.1"
 ```
 
 In this repository:

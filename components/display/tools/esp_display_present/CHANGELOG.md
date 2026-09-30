@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.1 - 2026-09-30
+
+- Add a hardware-free panel framebuffer requirement query that shares mode,
+  rotation and TE policy validation with presenter creation.
+- Remove the LVGL adapter dependency from presenter examples and size the
+  benchmark's panel buffers for its supported mode and rotation matrix.
+- Recheck TE phase eligibility when a current-scan transfer window opens,
+  avoiding an unnecessary wait for the next GPIO edge after fast rendering.
+  Keep the existing phase-window bounds and revalidate every wakeup.
+
 ## 1.1.0 - 2026-09-28
 
 - Overlap partition and TE tile copies with rendering when a second draw buffer

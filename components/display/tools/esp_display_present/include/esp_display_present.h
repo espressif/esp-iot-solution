@@ -29,6 +29,26 @@ extern "C" {
 #define ESP_DISPLAY_PRESENT_DEFAULT_PIPELINE_ACQUIRE_TIMEOUT_MS 1000U
 
 /**
+ * Query the minimum number of panel framebuffers before creating the panel.
+ *
+ * Set an explicit RGB, MIPI-DSI or IO panel type. Only panel type, mode,
+ * rotation and TE configuration are read; handles, supplied framebuffers,
+ * pixel format and draw-buffer settings are ignored. This query performs
+ * static policy validation without accessing hardware or allocating memory.
+ *
+ * IO/GRAM returns 0: draw buffers and TE compose buffers are separate.
+ * Presenter creation still validates the actual handles and buffer storage.
+ * @p out_count is set to 0 on error when non-NULL.
+ *
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG for invalid arguments,
+ *         ESP_ERR_NOT_SUPPORTED for an unresolved panel type or unsupported
+ *         mode, rotation or TE combination.
+ */
+esp_err_t esp_display_present_get_required_frame_buffer_count(
+    const esp_display_present_target_config_t *config,
+    uint8_t *out_count);
+
+/**
  * How GSP should talk to this presenter.
  *
  * This is the public draw contract, not the transport implementation.

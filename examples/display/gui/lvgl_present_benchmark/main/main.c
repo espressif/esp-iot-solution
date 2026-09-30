@@ -15,7 +15,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
-#include "esp_lv_adapter_display.h"
 #include "hw_init.h"
 
 #include "demos/lv_demos.h"
@@ -24,7 +23,7 @@
 
 static const char *TAG = "lvgl_bench";
 
-/* Match esp_lv_adapter worker task: prio 6, no core affinity, 1ms min delay. */
+/* LVGL worker: prio 6, no core affinity, 1ms min delay. */
 #define LVGL_BENCHMARK_TICK_MS 1
 #define LVGL_BENCHMARK_TASK_PRIO 6
 #define LVGL_BENCHMARK_TASK_STACK 8192
@@ -84,29 +83,16 @@ static const char *mode_name(esp_display_present_mode_t mode)
            ? names[mode] : "UNKNOWN";
 }
 
-static bool mode_supported_by_target(
+static esp_err_t get_case_frame_buffer_count(
     const esp_display_present_target_config_t *target,
     const benchmark_mode_t *test,
-    esp_display_present_rotation_t rotation)
+    esp_display_present_rotation_t rotation,
+    uint8_t *out_count)
 {
-    const bool gram = target->hw.panel_type == ESP_DISPLAY_PRESENT_PANEL_IO;
-    if (gram) {
-        if (test->mode == ESP_DISPLAY_PRESENT_MODE_TE_SYNC) {
-            return target->hw.te_enabled;
-        }
-        return test->mode == ESP_DISPLAY_PRESENT_MODE_NONE ||
-               test->mode == ESP_DISPLAY_PRESENT_MODE_AUTO;
-    }
-
-    if (test->mode == ESP_DISPLAY_PRESENT_MODE_TE_SYNC) {
-        return false;
-    }
-    /* DOUBLE_DIRECT's dirty-area mechanism is only valid at 0 degrees. */
-    if (test->mode == ESP_DISPLAY_PRESENT_MODE_DOUBLE_DIRECT &&
-            rotation != ESP_DISPLAY_PRESENT_ROTATE_0) {
-        return false;
-    }
-    return true;
+    esp_display_present_target_config_t config = *target;
+    config.fb.mode = test->mode;
+    config.hw.rotation = rotation;
+    return esp_display_present_get_required_frame_buffer_count(&config, out_count);
 }
 
 static void benchmark_end_cb(const lv_demo_benchmark_summary_t *summary)
@@ -289,7 +275,10 @@ static void lvgl_benchmark_task(void *arg)
                 const benchmark_mode_t *test = &s_modes[mode_index];
                 const esp_display_present_rotation_t rotation =
                     s_rotations[rotation_index];
-                if (!mode_supported_by_target(display, test, rotation)) {
+                uint8_t frame_buffer_count = 0;
+                esp_err_t ret = get_case_frame_buffer_count(
+                                    display, test, rotation, &frame_buffer_count);
+                if (ret == ESP_ERR_NOT_SUPPORTED) {
                     ESP_LOGI(TAG,
                              "SKIP mode=%s te_buffers=%u rotation=%d: "
                              "outside target capability matrix",
@@ -297,7 +286,8 @@ static void lvgl_benchmark_task(void *arg)
                              (int)rotation);
                     continue;
                 }
-                esp_err_t ret = run_case(display, test, rotation);
+                ESP_ERROR_CHECK(ret);
+                ret = run_case(display, test, rotation);
                 if (ret == ESP_ERR_NOT_SUPPORTED) {
                     ESP_LOGI(TAG,
                              "SKIP mode=%s te_buffers=%u rotation=%d: "
@@ -325,33 +315,20 @@ void app_main(void)
     esp_lcd_panel_io_handle_t io = NULL;
 
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_MIPI_DSI;
     const bool swap_bytes = false;
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_RGB;
     const bool swap_bytes = false;
 #else
-    const int te_probe = hw_lcd_get_te_gpio();
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        (te_probe != GPIO_NUM_NC) ? ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC
-        : ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_IO;
     const bool swap_bytes = true;
 #endif
 
-    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io,
-                                esp_lv_adapter_get_required_frame_buffer_count(tear_mode, ESP_LV_ADAPTER_ROTATE_0),
-                                HW_ROTATE_0));
     const uint8_t bpp = hw_lcd_get_bits_per_pixel();
     const int te_gpio = hw_lcd_get_te_gpio();
     display = (esp_display_present_target_config_t) {
         .hw = {
-            .panel = panel,
-            .io = io,
             .panel_type = panel_type,
             .input_pixel_format = (bpp == 24)
             ? ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB888
@@ -369,6 +346,26 @@ void app_main(void)
             .mode = ESP_DISPLAY_PRESENT_MODE_AUTO,
         },
     };
+
+    uint8_t frame_buffer_count = 0;
+    for (size_t mode = 0; mode < sizeof(s_modes) / sizeof(s_modes[0]); ++mode) {
+        for (size_t rotation = 0;
+                rotation < sizeof(s_rotations) / sizeof(s_rotations[0]); ++rotation) {
+            uint8_t required = 0;
+            esp_err_t ret = get_case_frame_buffer_count(
+                                &display, &s_modes[mode], s_rotations[rotation], &required);
+            if (ret == ESP_ERR_NOT_SUPPORTED) {
+                continue;
+            }
+            ESP_ERROR_CHECK(ret);
+            if (required > frame_buffer_count) {
+                frame_buffer_count = required;
+            }
+        }
+    }
+    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io, frame_buffer_count, HW_ROTATE_0));
+    display.hw.panel = panel;
+    display.hw.io = io;
 
 #if HW_USE_TOUCH
     esp_lcd_touch_handle_t touch = NULL;

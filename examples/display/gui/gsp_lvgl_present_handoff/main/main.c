@@ -7,7 +7,6 @@
 #include "driver/gpio.h"
 #include "esp_display_present.h"
 #include "esp_gsp_esp_lcd.h"
-#include "esp_lv_adapter_display.h"
 #include "handoff_stress_runner.h"
 #include "hw_init.h"
 
@@ -19,34 +18,20 @@ void app_main(void)
     esp_lcd_panel_io_handle_t io = NULL;
 
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_MIPI_DSI;
     const bool swap_bytes = false;
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_RGB;
     const bool swap_bytes = false;
 #else
-    const int te_probe = hw_lcd_get_te_gpio();
-    const esp_lv_adapter_tear_avoid_mode_t tear_mode =
-        (te_probe != GPIO_NUM_NC) ? ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC
-        : ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
     const esp_display_present_panel_t panel_type = ESP_DISPLAY_PRESENT_PANEL_IO;
     const bool swap_bytes = true;
 #endif
 
-    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io,
-                                esp_lv_adapter_get_required_frame_buffer_count(tear_mode, ESP_LV_ADAPTER_ROTATE_0),
-                                HW_ROTATE_0));
-
     const uint8_t bpp = hw_lcd_get_bits_per_pixel();
     const int te_gpio = hw_lcd_get_te_gpio();
-    const esp_display_present_target_config_t display_cfg = {
+    esp_display_present_target_config_t display_cfg = {
         .hw = {
-            .panel = panel,
-            .io = io,
             .panel_type = panel_type,
             .input_pixel_format = (bpp == 24)
             ? ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB888
@@ -64,6 +49,13 @@ void app_main(void)
             .mode = ESP_DISPLAY_PRESENT_MODE_AUTO,
         },
     };
+
+    uint8_t frame_buffer_count = 0;
+    ESP_ERROR_CHECK(esp_display_present_get_required_frame_buffer_count(
+                        &display_cfg, &frame_buffer_count));
+    ESP_ERROR_CHECK(hw_lcd_init(&panel, &io, frame_buffer_count, HW_ROTATE_0));
+    display_cfg.hw.panel = panel;
+    display_cfg.hw.io = io;
 
     esp_lcd_touch_handle_t touch = NULL;
 #if HW_USE_TOUCH
