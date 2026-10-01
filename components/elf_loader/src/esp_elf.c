@@ -653,8 +653,13 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf)
                             (ELF_ST_TYPE(symtab[j].info) == STT_FUNC)) {
                         len = strlen((const char *)(strtab + symtab[j].name)) + 1;
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-                        elf->symtab[num].addr =
-                            (void *)(elf->ptext + symtab[j].value - elf->sec[ELF_SEC_TEXT].v_addr);
+                        uintptr_t raw_sym_addr = 
+                            (uintptr_t)(elf->ptext + symtab[j].value - elf->sec[ELF_SEC_TEXT].v_addr);
+#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+                        elf->symtab[num].addr = (void *)elf_remap_text(elf, raw_sym_addr);
+#else
+                        elf->symtab[num].addr = (void *)raw_sym_addr;
+#endif
 #else
                         elf->symtab[num].addr =
                             (void *)(elf->psegment + symtab[j].value - elf->svaddr);
