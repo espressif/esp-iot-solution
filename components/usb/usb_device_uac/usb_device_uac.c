@@ -205,6 +205,19 @@ static bool tud_audio_feature_unit_get_request(uint8_t rhport, audio_control_req
 {
     TU_ASSERT(request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT);
 
+    /* bChannelNumber is the low byte of wValue - a host-controlled value
+     * in the range 0..255 (0 = master channel, 1..N = logical channels),
+     * while mute[]/volume[] hold only CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX + 1
+     * entries. The channel number was never validated before indexing the
+     * arrays, so a GET_CUR with an out-of-range channel number would read
+     * (and return to the host) memory beyond the arrays. STALL instead;
+     * valid indices 0..N are unaffected. */
+    if (request->bChannelNumber > CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX) {
+        TU_LOG1("Feature unit get request rejected: channel number %u > %u\r\n",
+                request->bChannelNumber, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX);
+        return false;
+    }
+
     if (request->bControlSelector == AUDIO_FU_CTRL_MUTE && request->bRequest == AUDIO_CS_REQ_CUR) {
         audio_control_cur_1_t mute1 = {
             .bCur = s_uac_device->mute[request->bChannelNumber]
@@ -240,6 +253,16 @@ static bool tud_audio_feature_unit_set_request(uint8_t rhport, audio_control_req
 
     TU_ASSERT(request->bEntityID == UAC2_ENTITY_SPK_FEATURE_UNIT);
     TU_VERIFY(request->bRequest == AUDIO_CS_REQ_CUR);
+
+    /* Same check on the SET path: without it a SET_CUR with an
+     * out-of-range channel number writes 1 byte (mute) or 2 bytes
+     * (volume) past the end of mute[]/volume[] and corrupts the
+     * adjacent struct fields. STALL instead. */
+    if (request->bChannelNumber > CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX) {
+        TU_LOG1("Feature unit set request rejected: channel number %u > %u\r\n",
+                request->bChannelNumber, CFG_TUD_AUDIO_FUNC_1_N_CHANNELS_RX);
+        return false;
+    }
 
     if (request->bControlSelector == AUDIO_FU_CTRL_MUTE) {
         TU_VERIFY(request->wLength == sizeof(audio_control_cur_1_t));
