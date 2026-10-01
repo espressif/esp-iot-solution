@@ -109,9 +109,12 @@ examples/usb/device/usb_extend_screen:
       - esp32_s3_lcd_ev_board_800_480
   esp32p4:
     sdkconfig:
-      - esp32_p4_function_ev_board
+      - defaults
+  esp32s31:
+    sdkconfig:
+      - defaults
   description:
-    Using the ESP32-P4-Function-EV-Board as a Windows USB Extension Screen
+    Use a compatible ESP32-P4, ESP32-S31, or ESP32-S3 board as a Windows USB extension screen
   readme:
     https://raw.githubusercontent.com/espressif/esp-iot-solution/master/examples/usb/device/usb_extend_screen/README.md
 

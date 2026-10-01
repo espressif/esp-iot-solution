@@ -166,6 +166,8 @@ class CustomApp(CMakeApp):
 
         managed_path.mkdir(parents=True, exist_ok=True)
 
+        previous_target = os.environ.get('IDF_TARGET')
+        os.environ['IDF_TARGET'] = self.target
         try:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_manifest = Path(temp_dir) / 'idf_component.yml'
@@ -183,6 +185,11 @@ class CustomApp(CMakeApp):
         except Exception as e:
             logger.error('Error downloading esp_board_manager component: %s', e)
             return False
+        finally:
+            if previous_target is None:
+                os.environ.pop('IDF_TARGET', None)
+            else:
+                os.environ['IDF_TARGET'] = previous_target
 
     def _pre_hook(self, board_name: str) -> None:
         logger.info(
@@ -211,6 +218,7 @@ class CustomApp(CMakeApp):
         # Set environment variable for IDF_EXTRA_ACTIONS_PATH
         env = os.environ.copy()
         env['IDF_EXTRA_ACTIONS_PATH'] = str(bmgr_path)
+        env['IDF_TARGET'] = self.target
 
         subprocess.run(
             [
