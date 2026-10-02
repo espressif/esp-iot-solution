@@ -357,6 +357,22 @@ bool tud_audio_set_itf_cb(uint8_t rhport, tusb_control_request_t const *p_reques
         s_uac_device->mic_resolution = mic_resolutions_per_format[alt - 1];
         s_uac_device->mic_active = true;
         s_uac_device->mic_bytes_per_ms = s_uac_device->current_sample_rate / 1000 * MIC_CHANNEL_NUM * CFG_TUD_AUDIO_FUNC_1_FORMAT_1_N_BYTES_PER_SAMPLE_TX;
+        // Prefill to the flow-control setpoint (depth/2): the controller only
+        // corrects ~0.4% per packet, so from an empty FIFO it climbs for
+        // seconds, sending audible zero-length packets on the way. Mirrors
+        // the speaker path's buffered start.
+        tu_fifo_t *in_ff = tud_audio_get_ep_in_ff();
+        if (in_ff != NULL) {
+            static const uint8_t zeros[64] = {0};
+            uint16_t want = tu_fifo_depth(in_ff) / 2;
+            while (want > 0) {
+                uint16_t chunk = (want > sizeof(zeros)) ? (uint16_t)sizeof(zeros) : want;
+                if (tud_audio_write(zeros, chunk) != chunk) {
+                    break;
+                }
+                want -= chunk;
+            }
+        }
         xTaskNotifyGive(s_uac_device->mic_task_handle);
         TU_LOG1("Microphone interface %d-%d opened", itf, alt);
         printf("Microphone interface %d-%d opened\n", itf, alt);
