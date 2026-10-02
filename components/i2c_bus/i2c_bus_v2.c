@@ -101,7 +101,8 @@ i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
     I2C_BUS_CHECK(conf != NULL, "pointer = NULL error", NULL);
     I2C_BUS_CHECK(conf->mode == I2C_MODE_MASTER, "i2c_bus only supports master mode", NULL);
 
-    if (i2c_master_get_bus_handle(port, &s_i2c_bus[port].bus_handle) == ESP_OK) {
+    if (!s_i2c_bus[port].is_init &&
+            i2c_master_get_bus_handle(port, &s_i2c_bus[port].bus_handle) == ESP_OK) {
         s_i2c_bus[port].is_init = true;
         s_i2c_bus[port].conf_activate = *conf;
         s_i2c_bus[port].bus_config.i2c_port = port;
