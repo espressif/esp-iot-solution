@@ -1,5 +1,11 @@
 # ChangeLog
 
+## Unreleased
+
+### Enhancements:
+
+* Add MIPI vendor flags to skip automatic software reset and MADCTL/COLMOD commands
+
 ## v2.0.2~2 - 2026-05-28
 
 ### Changes:
