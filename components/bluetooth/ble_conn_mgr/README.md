@@ -29,6 +29,20 @@ Service Changed **indication** is acknowledged on-air (`BLE_GAP_EVENT_NOTIFY_TX`
 with `BLE_HS_EDONE`), not when the stack merely queues the indication, so a
 reset before any delivery does not permanently suppress a later re-trigger.
 
+### PAwR / PAST (chip-gated)
+
+Periodic Advertising with Responses and Sync Transfer are optional and gated
+by independent Kconfig options (default off):
+
+- `BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP` — requires `SOC_BLE_PERIODIC_ADV_WITH_RESPONSE`
+  (e.g. ESP32-C5/C6/C61/H2). Exposes PAwR params / subevent data / response APIs
+  and `ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ` / `PER_SUBEV_RESP`.
+- `BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER` — PAST TX/RX (`esp_ble_conn_periodic_sync_set_info`,
+  `esp_ble_conn_periodic_sync_receive`) and `ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER`.
+
+Classic `BLE_CONN_MGR_PERIODIC_ADV` / `PERIODIC_SYNC` remain unchanged for devices
+without PAwR.
+
 ### Out-of-band (OOB) pairing (e.g. NFC)
 
 Pairing can use a **side channel** (NFC tag, QR payload, etc.) instead of or in addition to on-air passkey or numeric comparison. NimBLE exposes this through SMP; `ble_conn_mgr` forwards it as `ESP_BLE_CONN_EVENT_PASSKEY_ACTION` with action `ESP_BLE_CONN_SM_ACT_OOB` (legacy LE OOB) or `ESP_BLE_CONN_SM_ACT_OOB_SC` (LE Secure Connections OOB). API details are in `include/esp_ble_conn_mgr.h`.

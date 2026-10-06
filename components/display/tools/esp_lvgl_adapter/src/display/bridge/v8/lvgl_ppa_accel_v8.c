@@ -132,12 +132,6 @@ static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_col
     uint16_t fg_off_x = block_area->x1 - fg_area->x1;
     uint16_t fg_off_y = block_area->y1 - fg_area->y1;
 
-    if ((uint32_t)fg_off_x + block_w > fg_w) {
-        fg_w = fg_off_x + block_w;
-    }
-    if ((uint32_t)fg_off_y + block_h > fg_h) {
-        fg_h = fg_off_y + block_h;
-    }
     size_t out_buffer_size = ppa_get_aligned_buffer_size(bg_buf, sizeof(lv_color_t) * bg_w * bg_h);
 
     ppa_blend_oper_config_t cfg = {
@@ -288,7 +282,11 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    if (!ppa_buffer_cache_aligned(draw_ctx->buf)) {
+    if (!ppa_buffer_cache_aligned(draw_ctx->buf) ||
+            !display_bridge_dma2d_window_is_compatible(draw_ctx->buf,
+                                                       lv_area_get_width(draw_ctx->buf_area),
+                                                       block_area.x1 - draw_ctx->buf_area->x1,
+                                                       lv_area_get_width(&block_area), sizeof(lv_color_t))) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
@@ -306,7 +304,13 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         uint16_t src_stride_px = src_w;
 
         lv_coord_t src_off_y = block_area.y1 - dsc->blend_area->y1;
-        if (src_off_y < 0) {
+        lv_coord_t src_off_x = block_area.x1 - dsc->blend_area->x1;
+        if (src_off_y < 0 || src_off_x < 0 ||
+                src_off_x + lv_area_get_width(&block_area) > src_stride_px ||
+                src_off_y + block_h > lv_area_get_height(dsc->blend_area) ||
+                !display_bridge_dma2d_window_is_compatible(dsc->src_buf, src_stride_px,
+                                                           src_off_x, lv_area_get_width(&block_area),
+                                                           sizeof(lv_color_t))) {
             lv_draw_sw_blend_basic(draw_ctx, dsc);
             return;
         }

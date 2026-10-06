@@ -43,6 +43,21 @@ static esp_lv_adapter_rotation_t get_configured_rotation(void)
 #endif
 }
 
+static hw_rotation_t hw_rotation_from_adapter(esp_lv_adapter_rotation_t rotation)
+{
+    switch (rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        return HW_ROTATE_90;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        return HW_ROTATE_180;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        return HW_ROTATE_270;
+    case ESP_LV_ADAPTER_ROTATE_0:
+    default:
+        return HW_ROTATE_0;
+    }
+}
+
 /* ---------------------------------------------------------------------------
  * Step 8 helper: FPS monitor task (only compiled when Kconfig option is on)
  * -------------------------------------------------------------------------*/
@@ -83,31 +98,34 @@ esp_err_t example_lvgl_init(example_lvgl_ctx_t *ctx)
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
     ctx->tear_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
     ESP_LOGI(TAG, "LCD interface: RGB");
-#else
+#elif CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
     int te_gpio = hw_lcd_get_te_gpio();
-    bool te_supported = (te_gpio != GPIO_NUM_NC);
-
-    if (te_supported) {
-        ctx->tear_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC;
-        ESP_LOGI(TAG, "TE sync enabled on GPIO %d", te_gpio);
-    } else {
-        ctx->tear_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
-    }
-#if CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
+    bool te_available = (te_gpio != GPIO_NUM_NC);
+    ctx->tear_mode = te_available ? ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC :
+                     ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
     ESP_LOGI(TAG, "LCD interface: QSPI");
+    if (te_available) {
+        ESP_LOGI(TAG, "TE sync enabled on GPIO %d", te_gpio);
+    }
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
+    ctx->tear_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
     ESP_LOGI(TAG, "LCD interface: SPI (with PSRAM)");
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITHOUT_PSRAM
+    ctx->tear_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT;
     ESP_LOGI(TAG, "LCD interface: SPI (without PSRAM)");
 #endif
-#endif /* interface selection */
 
     /* ── Step 3: LCD panel init ────────────────────────────────────────── */
     ESP_LOGI(TAG, "Initializing LCD: %dx%d", HW_LCD_H_RES, HW_LCD_V_RES);
+#if CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
+    const esp_lv_adapter_rotation_t panel_rotation = te_available ? ESP_LV_ADAPTER_ROTATE_0 : ctx->rotation;
+#else
+    const esp_lv_adapter_rotation_t panel_rotation = ctx->rotation;
+#endif
     ESP_RETURN_ON_ERROR(hw_lcd_init(&ctx->panel, &ctx->panel_io,
-                                    ctx->tear_mode, ctx->rotation),
+                                    esp_lv_adapter_get_required_frame_buffer_count(ctx->tear_mode, panel_rotation),
+                                    hw_rotation_from_adapter(panel_rotation)),
                         TAG, "hw_lcd_init failed");
-
     /* ── Step 4: LVGL adapter init ─────────────────────────────────────── */
     esp_lv_adapter_config_t adapter_cfg = ESP_LV_ADAPTER_DEFAULT_CONFIG();
     ESP_RETURN_ON_ERROR(esp_lv_adapter_init(&adapter_cfg),
@@ -128,20 +146,25 @@ esp_err_t example_lvgl_init(example_lvgl_ctx_t *ctx)
     display_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(
                       ctx->panel, ctx->panel_io,
                       HW_LCD_H_RES, HW_LCD_V_RES, ctx->rotation);
-#else /* QSPI or SPI with PSRAM */
-    if (te_supported) {
-        display_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(
+#elif CONFIG_EXAMPLE_LCD_INTERFACE_QSPI
+    if (te_available) {
+        display_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG(
                           ctx->panel, ctx->panel_io,
                           HW_LCD_H_RES, HW_LCD_V_RES, ctx->rotation,
                           te_gpio,
                           hw_lcd_get_bus_freq_hz(),
                           hw_lcd_get_bus_data_lines(),
                           hw_lcd_get_bits_per_pixel());
+        ESP_LOGI(TAG, "TE pipeline: high performance");
     } else {
         display_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
                           ctx->panel, ctx->panel_io,
                           HW_LCD_H_RES, HW_LCD_V_RES, ctx->rotation);
     }
+#else /* SPI with PSRAM */
+    display_cfg = ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(
+                      ctx->panel, ctx->panel_io,
+                      HW_LCD_H_RES, HW_LCD_V_RES, ctx->rotation);
 #endif
 
     ctx->disp = esp_lv_adapter_register_display(&display_cfg);
@@ -152,7 +175,7 @@ esp_err_t example_lvgl_init(example_lvgl_ctx_t *ctx)
 #if HW_USE_TOUCH
     ESP_LOGI(TAG, "Initializing touch panel");
     esp_lcd_touch_handle_t touch_handle = NULL;
-    ESP_RETURN_ON_ERROR(hw_touch_init(&touch_handle, ctx->rotation),
+    ESP_RETURN_ON_ERROR(hw_touch_init(&touch_handle, hw_rotation_from_adapter(ctx->rotation)),
                         TAG, "hw_touch_init failed");
 
     esp_lv_adapter_touch_config_t touch_cfg =

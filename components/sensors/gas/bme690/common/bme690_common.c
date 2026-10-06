@@ -12,6 +12,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -31,12 +32,8 @@
 #ifndef CONFIG_LOG_MAXIMUM_LEVEL
 #define CONFIG_LOG_MAXIMUM_LEVEL ESP_LOG_INFO
 #define CONFIG_BME690_I2C_TIMEOUT_VALUE_MS 50
-#define CONFIG_FREERTOS_HZ (1000)
 #define CONFIG_BME690_AMBIENT_TEMP 25
 #endif
-
-/*! BME69X shuttle board ID */
-#define BME69X_SHUTTLE_ID 0x93
 
 /*! TAG for ESP_LOG */
 #define TAG "BME69X"
@@ -44,8 +41,8 @@
 /******************************************************************************/
 /*!                Static variable definition                                 */
 
-/*! Variable that holds the I2C device address or SPI chip selection */
-static uint8_t dev_addr;
+/*! I2C device address (default SDO low = 0x76) or SPI chip selection */
+static uint8_t dev_addr = BME69X_I2C_ADDR_LOW;
 static i2c_bus_handle_t i2c_bus = NULL;
 static i2c_bus_device_handle_t i2c_dev = NULL;
 static spi_device_handle_t spi_dev = NULL;
@@ -74,7 +71,7 @@ BME69X_INTF_RET_TYPE bme69x_i2c_read(uint8_t reg_addr, uint8_t *reg_data,
         ESP_LOGE(TAG, "I2C read data failed: %s", esp_err_to_name(ret));
         return BME69X_E_COM_FAIL;
     }
-    return BME69X_OK;
+    return BME69X_INTF_RET_SUCCESS;
 }
 
 /*!
@@ -169,7 +166,7 @@ BME69X_INTF_RET_TYPE bme69x_spi_read(uint8_t reg_addr, uint8_t *reg_data,
         return BME69X_E_COM_FAIL;
     }
 
-    return BME69X_OK;
+    return BME69X_INTF_RET_SUCCESS;
 }
 
 /*!
@@ -236,76 +233,83 @@ void bme69x_delay_us(uint32_t period, void *intf_ptr)
 {
     (void)intf_ptr;
 
-    if (period < 1000) {
-        /* Busy wait for periods <1 ms to keep micro-second accuracy */
-        esp_rom_delay_us(period);
-    } else {
-        /* Use RTOS delay for periods ≥1 ms (rounded up) */
-        vTaskDelay(pdMS_TO_TICKS((period + 999) / 1000));
+    if (period == 0) {
+        return;
+    }
+
+    int64_t start_us = esp_timer_get_time();
+    uint64_t full_ticks = ((uint64_t)period * configTICK_RATE_HZ) / 1000000ULL;
+
+    /*
+     * vTaskDelay() wakes on tick boundaries and can therefore block for up
+     * to one tick less than expected. Measure the actual elapsed time below
+     * and busy-wait only for the remaining microseconds.
+     */
+    if (full_ticks > 0) {
+        vTaskDelay((TickType_t)full_ticks);
+    }
+
+    int64_t elapsed_us = esp_timer_get_time() - start_us;
+    if (elapsed_us < period) {
+        esp_rom_delay_us(period - (uint32_t)elapsed_us);
     }
 }
 
 int8_t bme69x_interface_init(struct bme69x_dev *bme, uint8_t intf)
 {
-    int8_t rslt = BME69X_OK;
+    if (bme == NULL) {
+        return BME69X_E_NULL_PTR;
+    }
 
-    if (bme != NULL) {
-        /* Bus configuration : I2C */
-        if (intf == BME69X_I2C_INTF) {
-            ESP_LOGI(TAG, "I2C Interface, dev_addr=0x%02" PRIx8, BME69X_I2C_ADDR_LOW);
+    if (intf == BME69X_I2C_INTF) {
+        ESP_LOGI(TAG, "I2C Interface, dev_addr=0x%02" PRIx8, dev_addr);
 
-            if (i2c_bus == NULL) {
-                ESP_LOGE(TAG, "I2C bus handle is NULL, please call bme69x_set_i2c_bus_handle first");
-                return BME69X_E_COM_FAIL;
-            }
-
-            dev_addr = BME69X_I2C_ADDR_LOW;
-            bme->read = bme69x_i2c_read;
-            bme->write = bme69x_i2c_write;
-            bme->intf = BME69X_I2C_INTF;
-
-            // Create I2C device handle with 100kHz clock speed
-            i2c_dev = i2c_bus_device_create(i2c_bus, dev_addr, 100000);
-            if (i2c_dev == NULL) {
-                ESP_LOGE(TAG, "i2c_bus_device_create failed");
-                return BME69X_E_COM_FAIL;
-            }
-            ESP_LOGI(TAG, "I2C device created at address 0x%02" PRIx8, dev_addr);
-        }
-
-        /* Bus configuration : SPI */
-        else if (intf == BME69X_SPI_INTF) {
-            ESP_LOGI(TAG, "SPI Interface");
-
-            if (spi_dev == NULL) {
-                ESP_LOGE(TAG, "SPI device handle is NULL, please call bme69x_set_spi_device_handle first");
-                return BME69X_E_COM_FAIL;
-            }
-
-            dev_addr = 0;  // Not used for SPI, but keep for compatibility
-            bme->read = bme69x_spi_read;
-            bme->write = bme69x_spi_write;
-            bme->intf = BME69X_SPI_INTF;
-
-            ESP_LOGI(TAG, "SPI device configured successfully");
-        } else {
-            ESP_LOGE(TAG, "Invalid interface type");
+        if (i2c_bus == NULL) {
+            ESP_LOGE(TAG, "I2C bus handle is NULL, please call bme69x_set_i2c_bus_handle first");
             return BME69X_E_COM_FAIL;
         }
 
-        /* Holds the I2C device addr or SPI chip selection */
-        bme->intf_ptr = &dev_addr;
+        bme->read = bme69x_i2c_read;
+        bme->write = bme69x_i2c_write;
+        bme->intf = BME69X_I2C_INTF;
 
-        /* Configure delay in microseconds */
-        bme->delay_us = bme69x_delay_us;
+        /* Allow re-init by replacing the previous device handle */
+        if (i2c_dev != NULL) {
+            i2c_bus_device_delete(&i2c_dev);
+            i2c_dev = NULL;
+        }
 
-        /* Set ambient temperature */
-        bme->amb_temp = CONFIG_BME690_AMBIENT_TEMP;
+        /* clk_speed 0: inherit the bus clock, same as BMM150/BMM350 glue */
+        i2c_dev = i2c_bus_device_create(i2c_bus, dev_addr, 0);
+        if (i2c_dev == NULL) {
+            ESP_LOGE(TAG, "i2c_bus_device_create failed");
+            return BME69X_E_COM_FAIL;
+        }
+        ESP_LOGI(TAG, "I2C device created at address 0x%02" PRIx8, dev_addr);
+    } else if (intf == BME69X_SPI_INTF) {
+        ESP_LOGI(TAG, "SPI Interface");
+
+        if (spi_dev == NULL) {
+            ESP_LOGE(TAG, "SPI device handle is NULL, please call bme69x_set_spi_device_handle first");
+            return BME69X_E_COM_FAIL;
+        }
+
+        dev_addr = 0;
+        bme->read = bme69x_spi_read;
+        bme->write = bme69x_spi_write;
+        bme->intf = BME69X_SPI_INTF;
+
+        ESP_LOGI(TAG, "SPI device configured successfully");
     } else {
-        rslt = BME69X_E_NULL_PTR;
+        ESP_LOGE(TAG, "Invalid interface type");
+        return BME69X_E_COM_FAIL;
     }
 
-    return rslt;
+    bme->intf_ptr = &dev_addr;
+    bme->delay_us = bme69x_delay_us;
+    bme->amb_temp = CONFIG_BME690_AMBIENT_TEMP;
+
+    return BME69X_OK;
 }
 
 void bme69x_check_rslt(const char api_name[], int8_t rslt)
@@ -344,6 +348,12 @@ void bme69x_set_i2c_bus_handle(i2c_bus_handle_t bus_handle)
     ESP_LOGI(TAG, "I2C bus handle set");
 }
 
+void bme69x_set_i2c_address(uint8_t i2c_addr)
+{
+    dev_addr = i2c_addr;
+    ESP_LOGI(TAG, "I2C address set to 0x%02" PRIx8, i2c_addr);
+}
+
 void bme69x_set_spi_device_handle(spi_device_handle_t device_handle)
 {
     spi_dev = device_handle;
@@ -354,14 +364,12 @@ void bme69x_interface_deinit(void)
 {
     ESP_LOGI(TAG, "BME69X ESP32 deinit");
 
-    // for I2C interface, remove the device from the bus
     if (i2c_dev) {
         i2c_bus_device_delete(&i2c_dev);
         i2c_dev = NULL;
     }
-    // and clear the bus handle, but not delete the I2C bus
+    /* Clear the bus handle, but do not delete the I2C bus */
     i2c_bus = NULL;
-
-    // for SPI interface, clear the device handle
+    dev_addr = BME69X_I2C_ADDR_LOW;
     spi_dev = NULL;
 }

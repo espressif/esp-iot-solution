@@ -29,7 +29,7 @@
 #define DIS_PROFILE_APP_IDX       1
 #define BUF_LENGTH                4098
 
-#define BLE_OTA_MAX_CHAR_VAL_LEN  600
+#define BLE_OTA_MAX_CHAR_VAL_LEN  ESP_GATT_MAX_ATTR_LEN
 
 #define BLE_OTA_START_CMD         0x0001
 #define BLE_OTA_STOP_CMD          0x0002

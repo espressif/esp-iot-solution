@@ -155,7 +155,7 @@ The benchmark will cycle through different test scenes automatically, displaying
 - Verify touch controller I2C address
 
 **Build errors:**
-- Ensure ESP-IDF version is 5.5.0 or later
+- Ensure ESP-IDF version is 5.5.5 or later
 - Run `idf.py fullclean` and rebuild
 - Check that all managed components downloaded correctly
 

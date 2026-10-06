@@ -57,6 +57,12 @@ static const char *TAG = "lottie";
 #define LV_LOTTIE_ANIM_RESUME(a)       ((void)0)
 #endif
 
+#if LVGL_VERSION_MAJOR > 9 || (LVGL_VERSION_MAJOR == 9 && LVGL_VERSION_MINOR >= 6)
+#define LV_LOTTIE_CHECK_OBJ(obj, cls, on_fail) LV_CHECK_OBJ((obj), (cls), on_fail)
+#else
+#define LV_LOTTIE_CHECK_OBJ(obj, cls, on_fail) LV_ASSERT_OBJ((obj), (cls))
+#endif
+
 /**********************
  *      TYPEDEFS
  **********************/
@@ -353,7 +359,7 @@ static TaskHandle_t lottie_create_worker_task(lottie_set_src_job_t * job, uint32
 
 void lv_lottie_set_src(lv_obj_t * obj, const void * src)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     if (src == NULL) {
         ESP_LOGE(TAG, "Source is NULL");
         return;
@@ -436,7 +442,7 @@ void lv_lottie_set_src_data(lv_obj_t * obj, void * data, size_t len)
 
 void lv_lottie_set_size(lv_obj_t * obj, int32_t w, int32_t h)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     if (w <= 0 || h <= 0) {
         ESP_LOGE(TAG, "Invalid size: %d x %d", (int)w, (int)h);
         return;
@@ -458,7 +464,7 @@ void lv_lottie_set_size(lv_obj_t * obj, int32_t w, int32_t h)
 
 void lv_lottie_set_buffer(lv_obj_t * obj, void * buf, int32_t w, int32_t h)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     if (buf == NULL || w <= 0 || h <= 0) {
         ESP_LOGE(TAG, "Invalid buffer or size");
         return;
@@ -519,7 +525,7 @@ void lv_lottie_set_buffer(lv_obj_t * obj, void * buf, int32_t w, int32_t h)
 
 void lv_lottie_set_draw_buf(lv_obj_t * obj, lv_lottie_draw_buf_t * draw_buf)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     if (draw_buf == NULL) {
         ESP_LOGE(TAG, "Draw buffer is NULL");
         return;
@@ -583,14 +589,14 @@ void lv_lottie_set_draw_buf(lv_obj_t * obj, lv_lottie_draw_buf_t * draw_buf)
 
 bool lv_lottie_is_loaded(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return false);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     return lottie->loaded;
 }
 
 int32_t lv_lottie_get_total_frames(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return -1);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         return -1;
@@ -600,7 +606,7 @@ int32_t lv_lottie_get_total_frames(lv_obj_t * obj)
 
 int32_t lv_lottie_get_current_frame(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return -1);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         return -1;
@@ -610,7 +616,7 @@ int32_t lv_lottie_get_current_frame(lv_obj_t * obj)
 
 void lv_lottie_set_frame_delay(lv_obj_t * obj, uint32_t delay)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     lottie->frame_delay_ms = delay;
     if (lottie->loaded) {
@@ -620,14 +626,14 @@ void lv_lottie_set_frame_delay(lv_obj_t * obj, uint32_t delay)
 
 uint32_t lv_lottie_get_frame_delay(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return 0);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     return lottie->frame_delay_ms;
 }
 
 void lv_lottie_set_segment(lv_obj_t * obj, uint32_t begin, uint32_t end)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         ESP_LOGW(TAG, "No animation loaded");
@@ -659,7 +665,7 @@ void lv_lottie_set_segment(lv_obj_t * obj, uint32_t begin, uint32_t end)
 
 void lv_lottie_get_segment(lv_obj_t * obj, uint32_t * begin, uint32_t * end)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (begin) {
         *begin = lottie->segment_start;
@@ -671,7 +677,7 @@ void lv_lottie_get_segment(lv_obj_t * obj, uint32_t * begin, uint32_t * end)
 
 void lv_lottie_set_loop_count(lv_obj_t * obj, int32_t count)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (count == 0) {
         count = 1;
@@ -684,14 +690,14 @@ void lv_lottie_set_loop_count(lv_obj_t * obj, int32_t count)
 
 int32_t lv_lottie_get_loop_count(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return -1);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     return lottie->loop_count;
 }
 
 void lv_lottie_set_loop_enabled(lv_obj_t * obj, bool enable)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     lottie->loop_enabled = enable;
     if (lottie->loaded) {
@@ -701,14 +707,14 @@ void lv_lottie_set_loop_enabled(lv_obj_t * obj, bool enable)
 
 bool lv_lottie_get_loop_enabled(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return false);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     return lottie->loop_enabled;
 }
 
 void lv_lottie_play(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         return;
@@ -724,7 +730,7 @@ void lv_lottie_play(lv_obj_t * obj)
 
 void lv_lottie_pause(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (lottie->anim) {
         LV_LOTTIE_ANIM_PAUSE(lottie->anim);
@@ -734,7 +740,7 @@ void lv_lottie_pause(lv_obj_t * obj)
 
 void lv_lottie_stop(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         return;
@@ -750,7 +756,7 @@ void lv_lottie_stop(lv_obj_t * obj)
 
 void lv_lottie_restart(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     if (!lottie->loaded) {
         return;
@@ -762,7 +768,7 @@ void lv_lottie_restart(lv_obj_t * obj)
 
 lv_anim_t * lv_lottie_get_anim(lv_obj_t * obj)
 {
-    LV_ASSERT_OBJ(obj, MY_CLASS);
+    LV_LOTTIE_CHECK_OBJ(obj, MY_CLASS, return NULL);
     lv_lottie_t * lottie = (lv_lottie_t *)obj;
     return lottie->anim;
 }

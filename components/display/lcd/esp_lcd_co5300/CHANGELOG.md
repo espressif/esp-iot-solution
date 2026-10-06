@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v2.2.0 - 2026-08-31
+
+### Enhancements:
+
+* Added low-power support
+
+### Bug Fixes:
+
+* Fixed resource cleanup and initialization issues
+
 ## v2.1.0 - 2026-06-29
 
 ### Enhancements:

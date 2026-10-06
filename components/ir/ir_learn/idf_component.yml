@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.0.2"
 targets:
   - esp32c3
   - esp32c6
@@ -6,6 +6,7 @@ targets:
   - esp32h2
   - esp32s2
   - esp32s3
+  - esp32s31
 description: ir learn with RMT
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/ir/ir_learn
 issues: https://github.com/espressif/esp-iot-solution/issues

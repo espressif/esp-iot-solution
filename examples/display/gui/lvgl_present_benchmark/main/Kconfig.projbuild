@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+#
+# SPDX-License-Identifier: Apache-2.0
+
+menu "Present LVGL benchmark"
+
+    config APP_LVGL_BENCH_LOOP
+        bool "Loop the runtime benchmark matrix"
+        default n
+        help
+            Run the complete mode/rotation matrix repeatedly. When disabled,
+            the benchmark runs the matrix once and then stops its worker task.
+
+    config APP_LVGL_BENCH_TIMEOUT_SECONDS
+        int "Timeout for each mode/rotation benchmark"
+        range 70 600
+        default 120
+        help
+            Maximum time allowed for LVGL's complete benchmark (currently
+            about 69 seconds) and its final summary callback. Each matrix case
+            advances as soon as the callback supplies the statistics.
+
+endmenu

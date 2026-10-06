@@ -102,7 +102,7 @@ I (xxx) mono_demo: OLED initialization complete
 - Try toggling `HW_OLED_INVERT_COLOR` for panel-specific polarity
 
 **Build errors:**
-- Ensure ESP-IDF version is 5.5.0 or later
+- Ensure ESP-IDF version is 5.5.5 or later
 - Run `idf.py fullclean` and rebuild
 - Check that all managed components downloaded correctly
 

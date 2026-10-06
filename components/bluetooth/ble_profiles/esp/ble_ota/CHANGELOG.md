@@ -1,3 +1,8 @@
+## v0.1.18 - 2026.09.09
+
+Bugfix:
+- BLE-OTA: Limit Bluedroid RECV_FW characteristic to `ESP_GATT_MAX_ATTR_LEN`
+
 ## v0.1.17 - 2026.08.25
 
 Bugfix:

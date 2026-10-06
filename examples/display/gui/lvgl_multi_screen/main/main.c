@@ -119,7 +119,7 @@ void app_main()
 
         if (display_count >= 2 && displays[1]) {
             lv_display_set_default(displays[1]);
-            lv_obj_t *screen = lv_disp_get_scr_act(displays[1]);
+            lv_obj_t *screen = lv_display_get_screen_active(displays[1]);
             lv_obj_clean(screen);
 
             lv_obj_t *label = lv_label_create(screen);

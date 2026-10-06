@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+#
+# SPDX-License-Identifier: Apache-2.0
+
+menu "GSP/LVGL presenter ownership handoff stress test"
+
+    config APP_HANDOFF_CYCLES
+        int "GSP <-> LVGL handoff cycles per reporting batch"
+        range 1 1000
+        default 5
+        help
+            Each cycle runs a GSP phase, pauses GSP, hands the shared
+            presenter to LVGL, then resumes GSP. Batches repeat until
+            the device is reset.
+
+    config APP_PHASE_SECONDS
+        int "Duration of each GSP/LVGL phase (seconds)"
+        range 1 3600
+        default 5
+        help
+            GSP animates for this long before the pause, and LVGL pumps
+            lv_timer_handler() for this long before tearing down.
+
+endmenu

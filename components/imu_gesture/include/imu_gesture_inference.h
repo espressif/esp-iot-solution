@@ -16,6 +16,28 @@ extern "C" {
 #endif
 
 /**
+ * @brief Optional model preprocessing function for an inference detector
+ *
+ * The detector first assembles a raw time-major input window from queued IMU
+ * samples according to @c input_source and @c input_channels, then calls this
+ * callback once on the full window before @c model_predict(). If NULL, the
+ * assembled raw window is passed to @c model_predict() directly.
+ *
+ * @param input: Raw time-major model input buffer flattened in [L, C] order
+ * @param input_len: Number of float elements in @p input
+ * @param output: Output buffer to receive the preprocessed model input
+ * @param output_len: Number of float elements available in @p output
+ *
+ * @return
+ *      - true: Window preprocessing succeeds
+ *      - false: Window preprocessing fails
+ */
+typedef bool (*imu_gesture_model_preprocess_fn)(const float *input,
+                                                size_t input_len,
+                                                float *output,
+                                                size_t output_len);
+
+/**
  * @brief Model initialization function for an inference detector
  *
  * @return
@@ -58,9 +80,19 @@ typedef struct imu_gesture_inference_model_t {
     uint32_t input_length;                      /*!< Number of samples required by the model input window */
     uint32_t input_channels;                    /*!< Number of channels for each sample in the model input */
     uint32_t output_count;                      /*!< Number of output scores produced by the model */
+    imu_gesture_model_preprocess_fn model_preprocess; /*!< Optional full-window preprocessing callback */
     imu_gesture_model_init_fn model_init;       /*!< Model initialization callback */
     imu_gesture_model_predict_fn model_predict; /*!< Model prediction callback */
 } imu_gesture_inference_model_t;
+
+/**
+ * @brief Sensor-source layout used when flattening IMU samples into model input
+ */
+typedef enum imu_gesture_inference_input_source_t {
+    IMU_GESTURE_INFERENCE_INPUT_GYRO = 0,       /*!< Use gyroscope axes only: gx, gy, gz */
+    IMU_GESTURE_INFERENCE_INPUT_ACCEL = 1,      /*!< Use accelerometer axes only: ax, ay, az */
+    IMU_GESTURE_INFERENCE_INPUT_ACCEL_GYRO = 2, /*!< Use accelerometer then gyroscope: ax, ay, az, gx, gy, gz */
+} imu_gesture_inference_input_source_t;
 
 /**
  * @brief Inference detector runtime configuration
@@ -72,6 +104,7 @@ typedef struct imu_gesture_inference_config_t {
     const imu_gesture_inference_model_t *model; /*!< Static model descriptor */
     uint32_t window_step;                       /*!< Sliding step in samples for realtime inference */
     uint32_t sample_queue_len;                  /*!< Internal detector sample queue length */
+    imu_gesture_inference_input_source_t input_source; /*!< Sensor layout used to build the raw model input window */
 } imu_gesture_inference_config_t;
 
 /**
@@ -104,11 +137,12 @@ esp_err_t imu_gesture_inference_detector_get_last_result(imu_gesture_detector_ha
  * @brief Run one single-shot inference from an application-owned sample buffer
  *        This API is intended for one-shot inference only. The caller must
  *        provide exactly one full model window in time order. The detector
- *        copies that buffer into the detector's internal time-major window,
- *        passes the assembled [L, C] window directly to @c model_predict(),
- *        invokes the model once, caches the latest successful result inside
- *        the detector, and dispatches the detector callback if an event is
- *        emitted. It does
+ *        assembles a raw time-major [L, C] window from that buffer according
+ *        to @c input_source, optionally preprocesses it through
+ *        @c model_preprocess(), passes the resulting model input directly to
+ *        @c model_predict(), invokes the model once, caches the latest
+ *        successful result inside the detector, and dispatches the detector
+ *        callback if an event is emitted. It does
  *        not consume the detector's realtime queue, but it does reuse the
  *        detector's internal window storage, so applications should reset the
  *        detector afterward if they want realtime inference to resume from a

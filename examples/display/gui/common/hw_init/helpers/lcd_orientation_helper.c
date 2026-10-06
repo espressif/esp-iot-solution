@@ -58,23 +58,23 @@ static lcd_orientation_matrix_t matrix_multiply(lcd_orientation_matrix_t lhs, lc
     return result;
 }
 
-static lcd_orientation_matrix_t matrix_from_rotation(esp_lv_adapter_rotation_t rotation)
+static lcd_orientation_matrix_t matrix_from_rotation(hw_rotation_t rotation)
 {
     switch (rotation) {
-    case ESP_LV_ADAPTER_ROTATE_90:
+    case HW_ROTATE_90:
         return matrix_from_flags(true, true, false);
-    case ESP_LV_ADAPTER_ROTATE_180:
+    case HW_ROTATE_180:
         return matrix_from_flags(false, true, true);
-    case ESP_LV_ADAPTER_ROTATE_270:
+    case HW_ROTATE_270:
         return matrix_from_flags(true, false, true);
-    case ESP_LV_ADAPTER_ROTATE_0:
+    case HW_ROTATE_0:
     default:
         return matrix_from_flags(false, false, false);
     }
 }
 
 void lcd_get_orientation_flags(bool base_swap_xy, bool base_mirror_x, bool base_mirror_y,
-                               esp_lv_adapter_rotation_t rotation,
+                               hw_rotation_t rotation,
                                bool *swap_xy, bool *mirror_x, bool *mirror_y)
 {
     lcd_orientation_matrix_t base = matrix_from_flags(base_swap_xy, base_mirror_x, base_mirror_y);

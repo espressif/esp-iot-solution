@@ -180,6 +180,45 @@ ESP32-S31 需要增加 preview 选项：
 * [通过 sta 命令来连接至对应路由器](./Commands.md#3sta)
 * [通过 startsmart 命令开启 smartconfig 配网](./Commands.md#5smartconfig)
 
+#### 2.6.1 通过 CDC 发送命令
+
+Windows 和 Linux 均可通过 CDC 发送命令。使能 USB-CDC 并烧录固件后，将开发板的 USB-OTG 接口连接至主机。在已激活 ESP-IDF 环境的终端中，先查找 CDC 串口：
+
+```text
+python -m serial.tools.list_ports -v
+```
+
+根据操作系统选择对应的串口打开命令：
+
+**Linux：**
+
+```bash
+python -m serial.tools.miniterm /dev/ttyACM0 115200 --eol LF --echo
+```
+
+**Windows：**
+
+```powershell
+python -m serial.tools.miniterm COM5 115200 --eol LF --echo
+```
+
+将 `/dev/ttyACM0` 或 `COM5` 替换为实际串口名。`--eol LF` 使回车键发送 `\n`，`--echo` 显示本地输入；按 `Ctrl+]` 退出终端。打开前请退出正在使用同一端口的其他串口工具。也可以使用其他串口终端，将发送行尾设置为 LF 或 CRLF。
+
+在串口终端中逐条输入命令，每条命令后按回车：
+
+```text
+help
+version
+ram
+scan
+sta -s MyWiFi -p MyPassword
+sta
+```
+
+将 `MyWiFi` 和 `MyPassword` 替换为路由器的 SSID 和密码。`scan` 和 `sta` 需要使能 USB-ECM/RNDIS/NCM。完整命令说明见 [Commands.md](./Commands.md)。
+
+出现 `Wi-Fi STA connected` 和 `connect success` 表示 ESP 已连接至 Wi-Fi。
+
 ### 2.7 网络设备常见问题
 
 - #### Windows

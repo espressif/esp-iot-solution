@@ -7,7 +7,7 @@
 #pragma once
 
 #include <stdbool.h>
-#include "esp_lv_adapter_display.h"
+#include "hw_init.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,7 +18,7 @@ typedef enum {
     TOUCH_ROTATION_MIPI_DSI,
 } touch_rotation_type_t;
 
-void touch_get_rotation_flags(touch_rotation_type_t type, esp_lv_adapter_rotation_t rotation,
+void touch_get_rotation_flags(touch_rotation_type_t type, hw_rotation_t rotation,
                               bool *swap_xy, bool *mirror_x, bool *mirror_y);
 
 #ifdef __cplusplus

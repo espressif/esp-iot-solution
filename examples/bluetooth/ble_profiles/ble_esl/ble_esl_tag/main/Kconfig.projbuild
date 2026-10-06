@@ -1,0 +1,37 @@
+menu "Example Configuration"
+
+    config EXAMPLE_BLE_ADV_NAME
+        string "Advertisement name"
+        default "ESP_ESL_TAG"
+        help
+            Device name used in BLE advertising.
+
+    config EXAMPLE_BLE_SUB_ADV
+        string "Subsequent advertisement data"
+        default "ESL_TAG"
+        help
+            Extra subsequent advertisement payload text.
+
+    config EXAMPLE_ESL_DISPLAY_WIDTH
+        int "Demo display width"
+        range 1 4095
+        default 296
+        help
+            Width reported by ESL Display Information.
+
+    config EXAMPLE_ESL_DISPLAY_HEIGHT
+        int "Demo display height"
+        range 1 4095
+        default 128
+        help
+            Height reported by ESL Display Information.
+
+    config EXAMPLE_ESL_MAX_IMAGE_INDEX
+        int "Demo Max Image Index"
+        range 0 255
+        default 0
+        help
+            Highest image index reported by ESL Image Information.
+            Keep aligned with CONFIG_BLE_ESL_MAX_IMAGES - 1.
+
+endmenu

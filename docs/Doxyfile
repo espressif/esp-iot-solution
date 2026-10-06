@@ -34,6 +34,8 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_adv/bthome/include/bthome_v2.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/esp/ble_ota_raw/include/esp_ble_ota_raw.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_esl/include/esp_eslp_tag.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_esl/include/esp_eslp_ap.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_hrp/include/esp_hrp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_otp/include/esp_otp.h \
@@ -43,6 +45,7 @@ INPUT = \
     $(PROJECT_PATH)/components/bluetooth/ble_services/bcs/include/esp_bcs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/cts/include/esp_cts.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/dis/include/esp_dis.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/esl/include/esp_esl.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hrs/include/esp_hrs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/ias/include/esp_ias.h \
@@ -59,8 +62,13 @@ INPUT = \
     $(PROJECT_PATH)/components/dali/include/dali_device_sensors.h \
     $(PROJECT_PATH)/components/dali/include/dali_system_components.h \
     $(PROJECT_PATH)/components/dali/include/dali_command.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_config.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_types.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_geometry.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_decoder/include/esp_lv_decoder.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_fs/include/esp_lv_fs.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lv_present/include/esp_lv_present.h \
     $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter.h \
     $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_display.h \
     $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_input.h \

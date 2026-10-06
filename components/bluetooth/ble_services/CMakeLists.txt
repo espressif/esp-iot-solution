@@ -69,6 +69,12 @@ list(APPEND srcs            "ots/src/esp_ots.c")
 list(APPEND include         "ots/include")
 endif()
 
+if(CONFIG_BLE_ESL)
+list(APPEND srcs            "esl/src/esp_esl.c")
+endif()
+# ESL UUIDs / TLV helpers are shared by Tag (server) and AP (client) profiles.
+list(APPEND include         "esl/include")
+
 if(CONFIG_BLE_OTA_SVC)
 list(APPEND srcs            "ota/src/esp_ble_ota_svc.c")
 list(APPEND include         "ota/include")

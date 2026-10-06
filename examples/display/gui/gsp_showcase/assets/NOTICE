@@ -1,0 +1,12 @@
+The PNG and GIF files in this directory are copied from espressif/esp-gsp
+version 1.5.0, examples/performance/benchmark and examples/usage/external_assets.
+main/runtime_badge.png adapts the external_assets badge to RGB PNG for runtime
+decoding. These assets are distributed under the Espressif
+Modified MIT License; see the LICENSE file from that component at
+https://components.espressif.com/components/espressif/esp-gsp/versions/1.5.0/license.
+
+photo.jpg is copied from this repository's
+examples/display/gui/lvgl_decode_image/assets/jpg/frame_0000.jpg (Apache-2.0).
+
+scenes/DejaVuSans.ttf is copied from the neighboring gsp_lvgl_present_handoff
+example. Its DejaVu license is in scenes/DejaVuSans.LICENSE.

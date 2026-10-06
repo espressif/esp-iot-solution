@@ -131,6 +131,18 @@ void bme69x_interface_deinit(void);
 void bme69x_set_i2c_bus_handle(i2c_bus_handle_t bus_handle);
 
 /**
+ *  @brief Set I2C device address (0x76 or 0x77)
+ *
+ *  Must be called before bme69x_interface_init(). If the address changes after
+ *  init, call bme69x_interface_init() again to recreate the I2C device.
+ *
+ *  @param[in] i2c_addr : 7-bit I2C address
+ *
+ *  @return void.
+ */
+void bme69x_set_i2c_address(uint8_t i2c_addr);
+
+/**
  *  @brief Set SPI device handle for ESP32 platform
  *
  *  @param[in] device_handle : SPI device handle

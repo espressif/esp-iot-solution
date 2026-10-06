@@ -1,3 +1,9 @@
+## v1.5.0 - 2026.07.28
+
+Features:
+- ESL: Support Electronic Shelf Label Service
+- ESL: Add deinit API for ESL Service
+
 ## v1.4.0 - 2026.04.17
 
 Features:

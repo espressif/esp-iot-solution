@@ -174,7 +174,7 @@ static bool otp_server_ready(void)
     return s_otp.inited && s_otp.config.role == BLE_OTP_ROLE_SERVER;
 }
 
-static esp_err_t otp_write_chr16(uint16_t uuid16, const uint8_t *data, uint16_t data_len)
+static esp_err_t otp_write_chr16(uint16_t conn_handle, uint16_t uuid16, const uint8_t *data, uint16_t data_len)
 {
     if (!data || data_len == 0) {
         return ESP_ERR_INVALID_ARG;
@@ -189,10 +189,10 @@ static esp_err_t otp_write_chr16(uint16_t uuid16, const uint8_t *data, uint16_t 
         .data_len = data_len,
     };
 
-    return esp_ble_conn_write(&inbuff);
+    return esp_ble_conn_write_by_handle(conn_handle, &inbuff);
 }
 
-static esp_err_t otp_read_chr16(uint16_t uuid16, uint8_t *out_buf, uint16_t buf_len, uint16_t *out_len)
+static esp_err_t otp_read_chr16(uint16_t conn_handle, uint16_t uuid16, uint8_t *out_buf, uint16_t buf_len, uint16_t *out_len)
 {
     if (!out_buf || buf_len == 0) {
         return ESP_ERR_INVALID_ARG;
@@ -207,7 +207,7 @@ static esp_err_t otp_read_chr16(uint16_t uuid16, uint8_t *out_buf, uint16_t buf_
         .data_len = buf_len,
     };
 
-    esp_err_t rc = esp_ble_conn_read(&outbuff);
+    esp_err_t rc = esp_ble_conn_read_by_handle(conn_handle, &outbuff);
     if (rc == ESP_OK && out_len) {
         *out_len = outbuff.data_len;
     }
@@ -555,6 +555,7 @@ static void otp_handle_oacp_response(uint16_t conn_id, const uint8_t *data, uint
     esp_ble_otp_event_data_t otp_event = {0};
     uint8_t req_op = data[1];
     uint8_t rsp_code = data[2];
+    otp_event.oacp_response.conn_handle = conn_id;
     otp_event.oacp_response.response.req_op_code = req_op;
     otp_event.oacp_response.response.rsp_code = rsp_code;
     if (len > 3) {
@@ -632,6 +633,7 @@ static void otp_handle_olcp_response(uint16_t conn_id, const uint8_t *data, uint
 
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_id, true);
     esp_ble_otp_event_data_t otp_event = {0};
+    otp_event.olcp_response.conn_handle = conn_id;
     otp_event.olcp_response.response.req_op_code = data[1];
     otp_event.olcp_response.response.rsp_code = data[2];
     if (len > 3) {
@@ -659,7 +661,7 @@ static void otp_handle_olcp_response(uint16_t conn_id, const uint8_t *data, uint
             if (ctx->dir_listing_pending) {
                 esp_ble_ots_size_t size = {0};
                 uint16_t out_len = 0;
-                if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
+                if (otp_read_chr16(conn_id, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
                                    sizeof(size), &out_len) == ESP_OK) {
                     ctx->meta_state = OTP_META_VALID;
                     ctx->dir_listing_pending = false;
@@ -858,11 +860,11 @@ esp_err_t esp_ble_otp_client_discover_ots(uint16_t conn_handle)
     }
 
     sub.uuid.uuid16 = BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT;
-    esp_ble_conn_subscribe(ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
+    esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
     sub.uuid.uuid16 = BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT;
-    esp_ble_conn_subscribe(ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
+    esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
     sub.uuid.uuid16 = BLE_OTS_CHR_UUID16_OBJECT_CHANGED;
-    esp_ble_conn_subscribe(ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
+    esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
 
     esp_ble_ots_feature_t feature = {0};
     if (esp_ble_otp_client_read_feature(conn_handle, &feature) == ESP_OK) {
@@ -887,7 +889,6 @@ esp_err_t esp_ble_otp_client_discover_ots(uint16_t conn_handle)
 
 esp_err_t esp_ble_otp_client_read_feature(uint16_t conn_handle, esp_ble_ots_feature_t *feature)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -896,7 +897,7 @@ esp_err_t esp_ble_otp_client_read_feature(uint16_t conn_handle, esp_ble_ots_feat
     }
 
     uint16_t out_len = 0;
-    esp_err_t rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OTS_FEATURE, (uint8_t *)feature,
+    esp_err_t rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OTS_FEATURE, (uint8_t *)feature,
                                   sizeof(esp_ble_ots_feature_t), &out_len);
     if (rc == ESP_OK && out_len < sizeof(esp_ble_ots_feature_t)) {
         return ESP_ERR_INVALID_SIZE;
@@ -906,13 +907,12 @@ esp_err_t esp_ble_otp_client_read_feature(uint16_t conn_handle, esp_ble_ots_feat
 
 esp_err_t esp_ble_otp_client_select_first(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_FIRST };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK && ctx) {
         ctx->objsel_state = OTP_OBJSEL_SELECTING;
     }
@@ -921,13 +921,12 @@ esp_err_t esp_ble_otp_client_select_first(uint16_t conn_handle)
 
 esp_err_t esp_ble_otp_client_select_last(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_LAST };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK && ctx) {
         ctx->objsel_state = OTP_OBJSEL_SELECTING;
     }
@@ -936,13 +935,12 @@ esp_err_t esp_ble_otp_client_select_last(uint16_t conn_handle)
 
 esp_err_t esp_ble_otp_client_select_previous(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_PREVIOUS };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK && ctx) {
         ctx->objsel_state = OTP_OBJSEL_SELECTING;
     }
@@ -951,13 +949,12 @@ esp_err_t esp_ble_otp_client_select_previous(uint16_t conn_handle)
 
 esp_err_t esp_ble_otp_client_select_next(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OLCP_NEXT };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK && ctx) {
         ctx->objsel_state = OTP_OBJSEL_SELECTING;
     }
@@ -966,7 +963,6 @@ esp_err_t esp_ble_otp_client_select_next(uint16_t conn_handle)
 
 esp_err_t esp_ble_otp_client_select_by_id(uint16_t conn_handle, const esp_ble_ots_id_t *object_id)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -980,7 +976,7 @@ esp_err_t esp_ble_otp_client_select_by_id(uint16_t conn_handle, const esp_ble_ot
     }
     uint8_t buf[1 + sizeof(object_id->id)] = { BLE_OTS_OLCP_GO_TO };
     memcpy(&buf[1], object_id->id, sizeof(object_id->id));
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK && ctx) {
         ctx->objsel_state = OTP_OBJSEL_SELECTING;
         ctx->meta_state = OTP_META_UNKNOWN;
@@ -1000,50 +996,45 @@ esp_err_t esp_ble_otp_client_select_by_index(uint16_t conn_handle, uint32_t inde
 
 esp_err_t esp_ble_otp_client_set_sort_order(uint16_t conn_handle, uint8_t sort_order)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     uint8_t buf[2] = { BLE_OTS_OLCP_ORDER, sort_order };
-    return otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    return otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
 }
 
 esp_err_t esp_ble_otp_client_request_num_objects(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     uint8_t buf[1] = { BLE_OTS_OLCP_REQ_NUM_OF_OBJ };
-    return otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    return otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
 }
 
 esp_err_t esp_ble_otp_client_clear_mark(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     uint8_t buf[1] = { BLE_OTS_OLCP_CLEAR_MARK };
-    return otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
+    return otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_CONTROL_POINT, buf, sizeof(buf));
 }
 
 esp_err_t esp_ble_otp_client_set_filter(uint16_t conn_handle, const esp_ble_ots_filter_t *filter)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     if (!filter) {
         return ESP_ERR_INVALID_ARG;
     }
-    return otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LIST_FILTER, (const uint8_t *)filter,
+    return otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LIST_FILTER, (const uint8_t *)filter,
                            sizeof(esp_ble_ots_filter_t));
 }
 
 esp_err_t esp_ble_otp_client_read_object_info(uint16_t conn_handle, esp_ble_otp_object_info_t *object_info)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -1057,38 +1048,38 @@ esp_err_t esp_ble_otp_client_read_object_info(uint16_t conn_handle, esp_ble_otp_
     esp_err_t rc;
 
     /* Mandatory object metadata characteristics - fail if any read fails */
-    rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_NAME, object_info->object_name,
+    rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_NAME, object_info->object_name,
                         sizeof(object_info->object_name), &out_len);
     if (rc != ESP_OK) {
         return rc;
     }
-    rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_TYPE, (uint8_t *)&object_info->object_type,
+    rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_TYPE, (uint8_t *)&object_info->object_type,
                         sizeof(object_info->object_type), &out_len);
     if (rc != ESP_OK) {
         return rc;
     }
-    rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&object_info->object_size,
+    rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&object_info->object_size,
                         sizeof(object_info->object_size), &out_len);
     if (rc != ESP_OK) {
         return rc;
     }
-    rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_ID, (uint8_t *)&object_info->object_id,
+    rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ID, (uint8_t *)&object_info->object_id,
                         sizeof(object_info->object_id), &out_len);
     if (rc != ESP_OK) {
         return rc;
     }
-    rc = otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&object_info->object_prop,
+    rc = otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&object_info->object_prop,
                         sizeof(object_info->object_prop), &out_len);
     if (rc != ESP_OK) {
         return rc;
     }
     /* Optional characteristics - ignore failures */
 #ifdef CONFIG_BLE_OTS_FIRST_CREATED_CHARACTERISTIC_ENABLE
-    otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_FIRST_CREATED, (uint8_t *)&object_info->first_created,
+    otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_FIRST_CREATED, (uint8_t *)&object_info->first_created,
                    sizeof(object_info->first_created), &out_len);
 #endif
 #ifdef CONFIG_BLE_OTS_LAST_MODIFIED_CHARACTERISTIC_ENABLE
-    otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_LAST_MODIFIED, (uint8_t *)&object_info->last_modified,
+    otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LAST_MODIFIED, (uint8_t *)&object_info->last_modified,
                    sizeof(object_info->last_modified), &out_len);
 #endif
 
@@ -1126,7 +1117,7 @@ esp_err_t esp_ble_otp_client_write_name(uint16_t conn_handle, const uint8_t *nam
         }
         return ESP_ERR_NOT_SUPPORTED;
     }
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_NAME, name, (uint16_t)name_len);
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_NAME, name, (uint16_t)name_len);
     if (rc == ESP_OK) {
         ctx->meta_state = OTP_META_VALID;
     }
@@ -1148,7 +1139,7 @@ esp_err_t esp_ble_otp_client_write_prop(uint16_t conn_handle, const esp_ble_ots_
     if (ctx->objsel_state != OTP_OBJSEL_SELECTED) {
         return ESP_ERR_INVALID_STATE;
     }
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_PROP, (const uint8_t *)prop,
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_PROP, (const uint8_t *)prop,
                                    sizeof(esp_ble_ots_prop_t));
     if (rc == ESP_OK) {
         ctx->meta_state = OTP_META_VALID;
@@ -1172,7 +1163,7 @@ esp_err_t esp_ble_otp_client_write_first_created(uint16_t conn_handle, const esp
     if (ctx->objsel_state != OTP_OBJSEL_SELECTED) {
         return ESP_ERR_INVALID_STATE;
     }
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_FIRST_CREATED, (const uint8_t *)utc,
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_FIRST_CREATED, (const uint8_t *)utc,
                                    sizeof(esp_ble_ots_utc_t));
     if (rc == ESP_OK) {
         ctx->meta_state = OTP_META_VALID;
@@ -1197,7 +1188,7 @@ esp_err_t esp_ble_otp_client_write_last_modified(uint16_t conn_handle, const esp
     if (ctx->objsel_state != OTP_OBJSEL_SELECTED) {
         return ESP_ERR_INVALID_STATE;
     }
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_LAST_MODIFIED, (const uint8_t *)utc,
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_LAST_MODIFIED, (const uint8_t *)utc,
                                    sizeof(esp_ble_ots_utc_t));
     if (rc == ESP_OK) {
         ctx->meta_state = OTP_META_VALID;
@@ -1329,7 +1320,7 @@ esp_err_t esp_ble_otp_client_resume_write_current_size(uint16_t conn_handle, uin
     }
     esp_ble_ots_size_t size = {0};
     uint16_t out_len = 0;
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
                        sizeof(size), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
@@ -1358,7 +1349,7 @@ esp_err_t esp_ble_otp_client_create_object(uint16_t conn_handle, uint16_t object
     buf[0] = BLE_OTS_OACP_CREATE;
     memcpy(&buf[1], &object_size, sizeof(object_size));
     memcpy(&buf[1 + sizeof(object_size)], &object_type, sizeof(object_type));
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK) {
         if (ctx) {
             ctx->state = OTP_STATE_OACP_PENDING;
@@ -1388,7 +1379,7 @@ esp_err_t esp_ble_otp_client_delete_object(uint16_t conn_handle)
     }
     esp_ble_ots_prop_t prop = {0};
     uint16_t out_len = 0;
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
                        sizeof(prop), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
@@ -1396,7 +1387,7 @@ esp_err_t esp_ble_otp_client_delete_object(uint16_t conn_handle)
         return ESP_ERR_NOT_SUPPORTED;
     }
     uint8_t buf[1] = { BLE_OTS_OACP_DELETE };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK) {
         if (ctx) {
             ctx->state = OTP_STATE_OACP_PENDING;
@@ -1444,7 +1435,7 @@ esp_err_t esp_ble_otp_client_read_object(uint16_t conn_handle, uint32_t offset, 
     buf[0] = BLE_OTS_OACP_READ;
     memcpy(&buf[1], &offset, sizeof(offset));
     memcpy(&buf[1 + sizeof(offset)], &length, sizeof(length));
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc != ESP_OK) {
         return rc;
     }
@@ -1466,7 +1457,7 @@ esp_err_t esp_ble_otp_client_read_object(uint16_t conn_handle, uint32_t offset, 
         } else {
             esp_ble_ots_size_t size = {0};
             uint16_t out_len = 0;
-            if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
+            if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
                                sizeof(size), &out_len) == ESP_OK) {
                 ctx->object_size = size.current_size;
             } else {
@@ -1502,14 +1493,14 @@ esp_err_t esp_ble_otp_client_write_object(uint16_t conn_handle, uint32_t offset,
     esp_ble_ots_prop_t prop = {0};
     esp_ble_ots_size_t size = {0};
     uint16_t out_len = 0;
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
                        sizeof(prop), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
     if (!prop.write_prop) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_SIZE, (uint8_t *)&size,
                        sizeof(size), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
@@ -1526,7 +1517,8 @@ esp_err_t esp_ble_otp_client_write_object(uint16_t conn_handle, uint32_t offset,
         if (!ctx->ots_feature.oacp.truncation_op) {
             return ESP_ERR_NOT_SUPPORTED;
         }
-        if ((offset + length) >= size.current_size) {
+        /* Truncate sets Current Size to Offset+Length; must fit in Allocated Size. */
+        if ((offset + length) > size.allocated_size) {
             return ESP_ERR_INVALID_ARG;
         }
         break;
@@ -1550,7 +1542,7 @@ esp_err_t esp_ble_otp_client_write_object(uint16_t conn_handle, uint32_t offset,
     memcpy(&buf[1], &offset, sizeof(offset));
     memcpy(&buf[1 + sizeof(offset)], &length, sizeof(length));
     buf[1 + sizeof(offset) + sizeof(length)] = (uint8_t)mode;
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc != ESP_OK) {
         return rc;
     }
@@ -1578,7 +1570,6 @@ esp_err_t esp_ble_otp_client_write_object(uint16_t conn_handle, uint32_t offset,
 
 esp_err_t esp_ble_otp_client_calculate_checksum(uint16_t conn_handle, uint32_t offset, uint32_t length)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -1591,7 +1582,7 @@ esp_err_t esp_ble_otp_client_calculate_checksum(uint16_t conn_handle, uint32_t o
     buf[0] = BLE_OTS_OACP_CALCULATE_CHECKSUM;
     memcpy(&buf[1], &offset, sizeof(offset));
     memcpy(&buf[1 + sizeof(offset)], &length, sizeof(length));
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK) {
         if (ctx) {
             ctx->state = OTP_STATE_OACP_PENDING;
@@ -1604,7 +1595,6 @@ esp_err_t esp_ble_otp_client_calculate_checksum(uint16_t conn_handle, uint32_t o
 
 esp_err_t esp_ble_otp_client_execute_object(uint16_t conn_handle, const uint8_t *parameters, uint8_t param_len)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -1623,12 +1613,12 @@ esp_err_t esp_ble_otp_client_execute_object(uint16_t conn_handle, const uint8_t 
     esp_ble_ots_prop_t prop = {0};
     uint16_t obj_type = 0;
     uint16_t out_len = 0;
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_TYPE, (uint8_t *)&obj_type,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_TYPE, (uint8_t *)&obj_type,
                        sizeof(obj_type), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
     (void)obj_type;
-    if (otp_read_chr16(BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
+    if (otp_read_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_PROP, (uint8_t *)&prop,
                        sizeof(prop), &out_len) != ESP_OK) {
         return ESP_FAIL;
     }
@@ -1643,7 +1633,7 @@ esp_err_t esp_ble_otp_client_execute_object(uint16_t conn_handle, const uint8_t 
     if (parameters && param_len) {
         memcpy(&buf[1], parameters, param_len);
     }
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, 1 + param_len);
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, 1 + param_len);
     if (rc == ESP_OK) {
         ctx->state = OTP_STATE_EXECUTING;
         ctx->execute_requested = 1;
@@ -1655,13 +1645,12 @@ esp_err_t esp_ble_otp_client_execute_object(uint16_t conn_handle, const uint8_t 
 
 esp_err_t esp_ble_otp_client_abort(uint16_t conn_handle)
 {
-    (void)conn_handle;
     if (!otp_client_ready()) {
         return ESP_ERR_INVALID_STATE;
     }
     otp_transfer_ctx_t *ctx = otp_ctx_get(conn_handle, true);
     uint8_t buf[1] = { BLE_OTS_OACP_ABORT };
-    esp_err_t rc = otp_write_chr16(BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
+    esp_err_t rc = otp_write_chr16(conn_handle, BLE_OTS_CHR_UUID16_OBJECT_ACTION_CONTROL_POINT, buf, sizeof(buf));
     if (rc == ESP_OK) {
         if (ctx) {
             ctx->state = OTP_STATE_ABORTING;

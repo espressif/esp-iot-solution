@@ -1,0 +1,31 @@
+menu "Example Configuration"
+
+    config EXAMPLE_BLE_ADV_NAME
+        string "AP advertisement name"
+        default "ESP_ESL_AP"
+        help
+            Local name used in AP advertising.
+
+    config EXAMPLE_TAG_ADV_NAME
+        string "Target Tag advertisement name"
+        default "ESP_ESL_TAG"
+        help
+            Connect to the first scanned device with this GAP name.
+
+    config EXAMPLE_BLE_SUB_ADV
+        string "Subsequent advertisement data"
+        default "ESL_AP"
+        help
+            Extra subsequent advertisement payload text.
+
+    config EXAMPLE_ESL_ID
+        hex "ESL ID written during association"
+        range 0x00 0xFE
+        default 0x00
+
+    config EXAMPLE_ESL_GROUP_ID
+        int "ESL Group ID written during association"
+        range 0 127
+        default 0
+
+endmenu

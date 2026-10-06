@@ -83,16 +83,37 @@ typedef enum {
 #define ESP_LV_ADAPTER_TE_WINDOW_MARGIN_PERCENT       5  /*!< Extra window percentage used when expanding TE timing */
 #define ESP_LV_ADAPTER_TE_DATA_LINES_DEFAULT          1  /*!< Default data lines when TE config omits it */
 #define ESP_LV_ADAPTER_TE_BITS_PER_PIXEL_DEFAULT     16  /*!< Default bits-per-pixel when TE config omits it */
+#define ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_ROWS_DEFAULT 16  /*!< Default async TE bounce buffer height */
+
+/**
+ * @brief TE rendering and transfer pipeline
+ */
+typedef enum {
+    ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL = 0, /*!< Wait for TE and transfer a full LVGL frame synchronously */
+    ESP_LV_ADAPTER_TE_PIPELINE_ASYNC_FULL,    /*!< Merge dirty rendering into a staging frame and transfer it fully after TE */
+} esp_lv_adapter_te_pipeline_t;
 
 /**
  * @brief TE (Tearing Effect) synchronization configuration
  *
  * This structure configures GPIO-based TE synchronization for SPI/I2C/I80 panels.
- * TE sync uses ISR + semaphore mechanism (no dedicated task required).
+ * The synchronous pipeline uses an ISR and semaphore. The asynchronous pipeline
+ * also creates a worker task and uses a full-screen staging buffer. ASYNC_FULL
+ * is the recommended high-performance mode: LVGL rendering may continue while
+ * the worker transfers a coherent frame after TE.
  *
  * @note Set gpio_num to -1 to disable TE synchronization
  * @note Set time_tvdl_ms/time_tvdh_ms to 0 to use defaults
  * @note Set refresh_window_percent to 0 to use default (66%)
+ * @note Disabling bounce_buffer_enabled submits the complete staging frame in one
+ *       panel draw call. SPI panel IO splits it according to the bus transaction
+ *       limit, keeping CS active between internal segments and notifying completion
+ *       after the final segment. Configure the SPI bus max_transfer_sz and panel IO
+ *       trans_queue_depth to bound segment size and allow queued transfers.
+ *       PSRAM DMA support depends on the target and panel IO configuration; the
+ *       driver may allocate temporary DMA buffers when direct transfer is unavailable.
+ *       Custom panel drivers must notify completion only after the entire draw call.
+ *       Draw errors drain the configured panel IO; custom drivers must use that IO.
  */
 typedef struct {
     int gpio_num;                   /*!< TE GPIO number (-1 to disable) */
@@ -103,6 +124,9 @@ typedef struct {
     uint8_t bits_per_pixel;         /*!< Bits per pixel for auto-calculation */
     gpio_int_type_t intr_type;      /*!< TE interrupt edge (GPIO_INTR_DISABLE for auto-detect) */
     uint8_t refresh_window_percent; /*!< TE period percentage for transmission, 0 for default (66%) */
+    esp_lv_adapter_te_pipeline_t pipeline; /*!< TE rendering and transfer pipeline */
+    bool bounce_buffer_enabled;     /*!< Use adapter-owned async TE bounce buffers; false submits the staging frame in one draw */
+    uint16_t bounce_buffer_rows;    /*!< Bounce buffer height, 0 for default */
 } esp_lv_adapter_te_sync_config_t;
 
 /**
@@ -251,12 +275,7 @@ typedef struct {
                                   ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT,                                                            \
                                   ESP_LV_ADAPTER_TE_SYNC_DISABLED())
 
-/**
- * @brief SPI with PSRAM and TE synchronization default configuration
- *
- * Simplified macro that creates a complete display configuration with TE sync enabled
- */
-#define ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp) \
+#define ESP_LV_ADAPTER_PRIVATE_DISPLAY_SPI_WITH_PSRAM_TE_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp, _pipeline) \
     ESP_LV_ADAPTER_DISPLAY_CONFIG(_panel, _panel_io,                                                                             \
                                   ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(_hor_res, _ver_res, _rotation),\
                                   ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC,                                                        \
@@ -269,7 +288,27 @@ typedef struct {
                                       .bits_per_pixel = (_bpp),                                                                  \
                                       .intr_type = GPIO_INTR_DISABLE,                                                            \
                                       .refresh_window_percent = ESP_LV_ADAPTER_TE_WINDOW_PERCENT_DEFAULT,                        \
+                                      .pipeline = (_pipeline),                                                                  \
+                                      .bounce_buffer_enabled = ((_pipeline) == ESP_LV_ADAPTER_TE_PIPELINE_ASYNC_FULL),           \
+                                      .bounce_buffer_rows = ((_pipeline) == ESP_LV_ADAPTER_TE_PIPELINE_ASYNC_FULL ?              \
+                                                             ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_ROWS_DEFAULT : 0),                  \
                                   }))
+
+/**
+ * @brief SPI with PSRAM and synchronous full-frame TE configuration
+ */
+#define ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp) \
+    ESP_LV_ADAPTER_PRIVATE_DISPLAY_SPI_WITH_PSRAM_TE_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp, ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL)
+
+/**
+ * @brief Recommended high-performance SPI/QSPI TE configuration
+ *
+ * Keeps the default configuration backward compatible while enabling an
+ * asynchronous coherent-frame pipeline for applications that explicitly opt in.
+ * Rotation is applied by the adapter; keep the panel in its native orientation.
+ */
+#define ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp) \
+    ESP_LV_ADAPTER_PRIVATE_DISPLAY_SPI_WITH_PSRAM_TE_CONFIG(_panel, _panel_io, _hor_res, _ver_res, _rotation, _te_gpio, _bus_freq, _data_lines, _bpp, ESP_LV_ADAPTER_TE_PIPELINE_ASYNC_FULL)
 
 /**
  * @brief Calculate required frame buffer count based on rotation and tearing mode
@@ -280,6 +319,7 @@ typedef struct {
  * frame buffers before registering the display.
  *
  * Buffer count logic:
+ * - TE_SYNC: Returns 1; panel frame buffers are not used
  * - Any non-zero rotation except DOUBLE_PARTIAL: Requires 3 buffers
  * - Triple buffering modes: Requires 3 buffers
  * - Double buffering modes without rotation, and DOUBLE_PARTIAL: Require 2 buffers

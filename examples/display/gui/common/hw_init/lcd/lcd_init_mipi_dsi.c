@@ -41,8 +41,12 @@ static void lcd_ldo_power_on(void)
     ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
 }
 
-esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode, esp_lv_adapter_rotation_t rotation)
+esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, uint8_t frame_buffer_count, hw_rotation_t rotation)
 {
+    if (frame_buffer_count < 1 || frame_buffer_count > 3) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    (void)rotation;
     lcd_ldo_power_on();
 
     ESP_LOGD(TAG, "Install LCD driver");
@@ -59,7 +63,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
 #else
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(HW_MIPI_DPI_PX_FORMAT);
 #endif
-    dpi_config.num_fbs = esp_lv_adapter_get_required_frame_buffer_count(tear_avoid_mode, rotation);
+    dpi_config.num_fbs = frame_buffer_count;
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = s_mipi_dsi_bus,

@@ -45,6 +45,7 @@ typedef struct {
     uint16_t init_cmds_size;
     struct {
         unsigned int use_qspi_interface: 1;
+        unsigned int supports_madctl_mv: 1;
         unsigned int reset_level: 1;
     } flags;
 } st77922_panel_t;
@@ -105,6 +106,7 @@ esp_err_t esp_lcd_new_panel_st77922_general(const esp_lcd_panel_io_handle_t io, 
         st77922->init_cmds = vendor_config->init_cmds;
         st77922->init_cmds_size = vendor_config->init_cmds_size;
         st77922->flags.use_qspi_interface = vendor_config->flags.use_qspi_interface;
+        st77922->flags.supports_madctl_mv = vendor_config->flags.supports_madctl_mv;
     }
     st77922->base.del = panel_st77922_del;
     st77922->base.reset = panel_st77922_reset;
@@ -141,6 +143,17 @@ static esp_err_t tx_param(st77922_panel_t *st77922, esp_lcd_panel_io_handle_t io
         lcd_cmd |= LCD_OPCODE_WRITE_CMD << 24;
     }
     return esp_lcd_panel_io_tx_param(io, lcd_cmd, param, param_size);
+}
+
+static esp_err_t panel_st77922_set_madctl(st77922_panel_t *st77922, uint8_t madctl_val)
+{
+    esp_err_t ret = tx_param(st77922, st77922->io, LCD_CMD_MADCTL, (uint8_t[]) {
+        madctl_val,
+    }, 1);
+    if (ret == ESP_OK) {
+        st77922->madctl_val = madctl_val;
+    }
+    return ret;
 }
 
 static esp_err_t tx_color(st77922_panel_t *st77922, esp_lcd_panel_io_handle_t io, int lcd_cmd, const void *param, size_t param_size)
@@ -363,29 +376,38 @@ static esp_err_t panel_st77922_invert_color(esp_lcd_panel_t *panel, bool invert_
 static esp_err_t panel_st77922_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool mirror_y)
 {
     st77922_panel_t *st77922 = __containerof(panel, st77922_panel_t, base);
-    esp_lcd_panel_io_handle_t io = st77922->io;
-    esp_err_t ret = ESP_OK;
+    uint8_t madctl_val = st77922->madctl_val;
 
     if (mirror_x) {
-        st77922->madctl_val |= BIT(6);
+        madctl_val |= BIT(6);
     } else {
-        st77922->madctl_val &= ~BIT(6);
+        madctl_val &= ~BIT(6);
     }
     if (mirror_y) {
-        st77922->madctl_val |= BIT(7);
+        madctl_val |= BIT(7);
     } else {
-        st77922->madctl_val &= ~BIT(7);
+        madctl_val &= ~BIT(7);
     }
-    ESP_RETURN_ON_ERROR(tx_param(st77922, io, LCD_CMD_MADCTL, (uint8_t[]) {
-        st77922->madctl_val
-    }, 1), TAG, "send command failed");
-    return ret;
+    ESP_RETURN_ON_ERROR(panel_st77922_set_madctl(st77922, madctl_val), TAG, "send command failed");
+    return ESP_OK;
 }
 
 static esp_err_t panel_st77922_swap_xy(esp_lcd_panel_t *panel, bool swap_axes)
 {
-    ESP_LOGW(TAG, "swap_xy is not supported by this panel");
-    return ESP_ERR_NOT_SUPPORTED;
+    st77922_panel_t *st77922 = __containerof(panel, st77922_panel_t, base);
+    if (!st77922->flags.supports_madctl_mv) {
+        ESP_LOGW(TAG, "swap_xy is not supported by this panel (MADCTL.MV opt-in disabled)");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    uint8_t madctl_val = st77922->madctl_val;
+    if (swap_axes) {
+        madctl_val |= BIT(5);
+    } else {
+        madctl_val &= ~BIT(5);
+    }
+    ESP_RETURN_ON_ERROR(panel_st77922_set_madctl(st77922, madctl_val), TAG, "send command failed");
+    return ESP_OK;
 }
 
 static esp_err_t panel_st77922_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap)

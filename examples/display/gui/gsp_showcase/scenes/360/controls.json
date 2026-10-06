@@ -1,0 +1,29 @@
+{
+  "screen": "controls", "w": 360, "h": 360, "screen_bg": "#0D1524",
+  "font": "../DejaVuSans.ttf", "default_font_size": 13, "swipe": true,
+  "objects": [
+    {"type":"label","parent":-1,"x":12,"y":7,"w":336,"h":27,"text":"ESP-GSP Showcase","font_size":21,"fg_color":"#F3F7FF"},
+    {"type":"button","parent":-1,"x":10,"y":40,"w":80,"h":32,"text":"Ctrl","font_size":12,"bg_color":"#2563EB","fg_color":"#FFFFFF","radius":8,"callback":"nav_controls"},
+    {"type":"button","parent":-1,"x":97,"y":40,"w":80,"h":32,"text":"Image","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_media"},
+    {"type":"button","parent":-1,"x":184,"y":40,"w":80,"h":32,"text":"Motion","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_motion"},
+    {"type":"button","parent":-1,"x":271,"y":40,"w":79,"h":32,"text":"Data","font_size":12,"bg_color":"#25364C","fg_color":"#FFFFFF","radius":8,"callback":"nav_data"},
+    {"type":"container","parent":-1,"name":"panel","x":9,"y":83,"w":342,"h":247,"bg_color":"#17243A","border_color":"#314864","border_width":1,"radius":12},
+    {"type":"label","parent_name":"panel","x":14,"y":12,"w":310,"h":24,"text":"Input and state","font_size":18,"fg_color":"#F3F7FF"},
+    {"type":"button","parent_name":"panel","x":14,"y":45,"w":100,"h":35,"text":"Add 10","font_size":13,"bg_color":"#2563EB","fg_color":"#FFFFFF","radius":8,"callback":"increment"},
+    {"type":"button","parent_name":"panel","x":125,"y":45,"w":100,"h":35,"text":"Reset","font_size":13,"bg_color":"#35445F","fg_color":"#FFFFFF","radius":8,"callback":"reset"},
+    {"type":"slider","parent_name":"panel","name":"level","x":15,"y":101,"w":312,"h":26,"min":0,"max":100,"value":42,"track_size":8,"bg_color":"#31445E","fg_color":"#38BDF8","knob_color":"#FFFFFF","radius":12,"callback":"level_changed"},
+    {"type":"progress","parent_name":"panel","name":"level_progress","x":15,"y":141,"w":312,"h":17,"value":42,"bg_color":"#31445E","fg_color":"#35C996","radius":8},
+    {"type":"label","parent_name":"panel","name":"level_readout","x":118,"y":172,"w":150,"h":27,"text":"Level 42%","bind":"level_readout","font_charset":"Level 0123456789%","font_size":19,"fg_color":"#FFFFFF"},
+    {"type":"toggle","parent_name":"panel","name":"power","x":15,"y":207,"w":43,"h":24,"checked":true,"bg_color":"#35445F","fg_color":"#35C996","knob_color":"#FFFFFF","callback":"power_changed"},
+    {"type":"checkbox","parent_name":"panel","name":"alerts","x":79,"y":207,"w":24,"h":24,"checked":true,"fg_color":"#38BDF8","callback":"alerts_changed"},
+    {"type":"radio","parent_name":"panel","name":"choice_a","x":156,"y":207,"w":24,"h":24,"checked":true,"fg_color":"#A78BFA","callback":"select_a"},
+    {"type":"radio","parent_name":"panel","name":"choice_b","x":221,"y":207,"w":24,"h":24,"checked":false,"fg_color":"#A78BFA","callback":"select_b"},
+    {"type":"label","parent_name":"panel","x":264,"y":209,"w":60,"h":20,"text":"A / B","font_size":11,"fg_color":"#CBD8EB"},
+    {"type":"label","parent":-1,"x":12,"y":338,"w":336,"h":17,"text":"Swipe pages. Pull down for Quick Panel.","font_size":11,"fg_color":"#8DA4C0"},
+    {"type":"drawer","parent":-1,"name":"quick_drawer","x":0,"y":0,"w":360,"h":150,"edge":"top","open":false,"bg_color":"#17243A"},
+    {"type":"label","parent_name":"quick_drawer","x":15,"y":13,"w":290,"h":28,"text":"Quick Panel","font_size":20,"fg_color":"#FFFFFF"},
+    {"type":"label","parent_name":"quick_drawer","x":15,"y":48,"w":300,"h":24,"text":"Drag up to close","font_size":13,"fg_color":"#BBD0EB"},
+    {"type":"toggle","parent_name":"quick_drawer","x":18,"y":99,"w":54,"h":28,"checked":true,"bg_color":"#35445F","fg_color":"#35C996","knob_color":"#FFFFFF"},
+    {"type":"button","parent_name":"quick_drawer","x":235,"y":96,"w":108,"h":36,"text":"Close","font_size":13,"bg_color":"#35445F","fg_color":"#FFFFFF","radius":8,"events":[{"event":"click","action":"drawer_close","target_name":"quick_drawer","animated":true}]}
+  ]
+}

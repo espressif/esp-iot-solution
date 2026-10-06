@@ -11,6 +11,7 @@
 
 #include <string.h>
 #include "bmm150_aux_adapter.h"
+#include "bmm150_common.h"
 #include "esp_log.h"
 
 static const char *TAG = "BMM150_AUX_ADAPTER";
@@ -25,11 +26,6 @@ static int8_t bmm150_aux_write(unsigned char reg_addr, const unsigned char *data
 {
     bmi270_handle_t bmi = (bmi270_handle_t)intf_ptr;
     return bmi270_aux_write(bmi, reg_addr, data, (uint16_t)len);
-}
-
-static void bmm150_delay_us(uint32_t period, void *intf_ptr)
-{
-    bmi2_delay_us(period, intf_ptr);
 }
 
 static int8_t bmm150_aux_check_result(int8_t rslt, const struct bmm150_dev *dev, const char *operation)
@@ -57,7 +53,7 @@ int8_t bmm150_aux_adapter_init(const bmm150_aux_config_t *config, bmm150_aux_han
     handle->bmm150_dev.intf = BMM150_I2C_INTF;
     handle->bmm150_dev.read = bmm150_aux_read;
     handle->bmm150_dev.write = bmm150_aux_write;
-    handle->bmm150_dev.delay_us = bmm150_delay_us;
+    handle->bmm150_dev.delay_us = bmm150_delay;
     handle->bmm150_dev.intf_ptr = config->bmi270_dev;
 
     int8_t rslt = bmm150_init(&handle->bmm150_dev);

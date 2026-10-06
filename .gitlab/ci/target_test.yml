@@ -181,7 +181,7 @@ components_test_ir_learn:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.2", "5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.3", "5.4", "5.5"]
         ENV_TAG: "esp-box-3"
   tags:
     - ${IDF_TARGET}

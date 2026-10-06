@@ -149,6 +149,46 @@ menu "BLE Connection Management"
             Use -1 to disable when the central only needs extended scanning (e.g. extended advertising
             without periodic trains). Ignored when Periodic Sync is disabled. Default 2 matches Espressif periodic examples.
 
+    config BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER
+        bool
+        depends on SOC_BLE_50_SUPPORTED
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_EXT_SCAN if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_SYNC if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_PERIODIC_ADV_SYNC_TRANSFER if BT_NIMBLE_ENABLED
+        prompt "Enable Periodic Advertising Sync Transfer (PAST)"
+        help
+            Enable Periodic Advertising Sync Transfer (PAST) APIs and events.
+            Use on Access Point to push local PAwR/periodic train sync info over ACL
+            (esp_ble_conn_periodic_sync_set_info), and on Tag to receive it
+            (esp_ble_conn_periodic_sync_receive). Independent of classic Periodic Sync
+            scan path so peripheral-only Tags can enable PAST without CENTRAL role.
+
+    config BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP
+        bool
+        depends on SOC_BLE_PERIODIC_ADV_WITH_RESPONSE
+        depends on (BLE_CONN_MGR_PERIODIC_ADV || BLE_CONN_MGR_PERIODIC_SYNC || BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_PERIODIC_ADV_WITH_RESPONSES if BT_NIMBLE_ENABLED
+        prompt "Enable Periodic Advertising with Responses (PAwR)"
+        help
+            Enable Periodic Advertising with Responses (PAwR) APIs and events.
+            Only available on SoCs with SOC_BLE_PERIODIC_ADV_WITH_RESPONSE (e.g. ESP32-C5/C6/C61/H2).
+            Requires classic Periodic Adv and/or Periodic Sync / PAST so either the advertiser
+            (AP) or synchronizer (Tag) PAwR path can be used.
+
+    config BLE_CONN_MGR_PAWR_MAX_SUBEV_SET
+        int "Max subevents per PAwR subevent-data set call"
+        depends on BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP
+        range 1 64
+        default 16
+        help
+            Upper bound for num_subevents passed to esp_ble_conn_pawr_subev_data_set().
+
     menuconfig BLE_CONN_MGR_SM
         bool "Enable Security Manager"
 

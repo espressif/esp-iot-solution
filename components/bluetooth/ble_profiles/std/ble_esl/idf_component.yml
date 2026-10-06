@@ -1,0 +1,14 @@
+version: "1.0.0"
+description: BLE standard profile support for Electronic Shelf Label Profile
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/bluetooth/ble_profiles/std/ble_esl
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  ble_otp:
+    version: "~0.2.*"
+    override_path: "../ble_otp"
+examples:
+  - path: ../../../../../examples/bluetooth/ble_profiles/ble_esl/ble_esl_tag
+  - path: ../../../../../examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

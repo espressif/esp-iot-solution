@@ -113,6 +113,21 @@
       - IMAGE: espressif/idf:release-v6.1
       - IMAGE: espressif/idf:latest
 
+# ESP-IDF v5.5.5 is required by LVGL 9.6 Kconfig-conditioned dependencies.
+.build_idf_ge_than_v5_5_5_with_pre_release:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:v5.5.5
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+
+.build_idf_ge_than_v6_1:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+
 .build_idf_active_release_version_with_pre_release:
   parallel:
     matrix:
@@ -289,6 +304,22 @@ build_example_bluetooth_ble_otp_server:
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_otp/ble_otp_server
 
+build_example_bluetooth_ble_esl_tag:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_esl_tag
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_esl/ble_esl_tag
+
+build_example_bluetooth_ble_esl_ap:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_esl_ap
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap
+
 build_example_bluetooth_ble_services_ble_ans:
   extends:
     - .build_examples_template
@@ -320,6 +351,14 @@ build_example_bluetooth_ble_services_ble_cts:
     - .build_idf_active_release_version
   variables:
     EXAMPLE_DIR: examples/bluetooth/ble_services/ble_cts
+
+build_example_bluetooth_ble_services_ble_custom:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_bluetooth_ble_services
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: examples/bluetooth/ble_services/ble_custom
 
 build_example_bluetooth_ble_services_ble_dis:
   extends:
@@ -528,15 +567,60 @@ build_example_display_gui_lvgl_dummy_draw:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_dummy_draw
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_dummy_draw
+
+build_example_display_gui_lvgl_present_benchmark:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_lvgl_present_benchmark
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+  variables:
+    EXAMPLE_DIR: examples/display/gui/lvgl_present_benchmark
+
+build_example_display_gui_gsp_lvgl_present_handoff:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_gsp_lvgl_present_handoff
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/display/gui/gsp_lvgl_present_handoff
+    EXAMPLE_PYTHON_DEPS: esp-gsp-tools
+    # GSPC archives live on Espressif CDN, not GitHub.
+    GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
+
+build_example_display_gui_gsp_showcase:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_gsp_showcase
+    - .build_idf_ge_than_v6_1
+  variables:
+    EXAMPLE_DIR: examples/display/gui/gsp_showcase
+    EXAMPLE_PYTHON_DEPS: esp-gsp-tools
+    GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
+
+build_example_display_gui_gsp_showcase_qspi:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_gui_gsp_showcase
+    - .build_idf_ge_than_v6_1
+  variables:
+    GSP_TOOLS_BASE_URL: "https://dl.espressif.com/AE/gsp/"
+  script:
+    - pip install esp-gsp-tools
+    - cd examples/display/gui/gsp_showcase
+    - idf.py -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.qspi' set-target esp32s3 build
 
 build_example_display_gui_lvgl_common_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_common_demo
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_common_demo
 
@@ -544,7 +628,7 @@ build_example_display_gui_lvgl_decode_image:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_decode_image
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_decode_image
 
@@ -552,7 +636,7 @@ build_example_display_gui_lvgl_freetype_font:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_freetype_font
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_freetype_font
 
@@ -560,7 +644,7 @@ build_example_display_gui_lvgl_multi_screen:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_multi_screen
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_multi_screen
 
@@ -568,7 +652,7 @@ build_example_display_gui_lvgl_light_sleep_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_light_sleep_demo
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_light_sleep_demo
 
@@ -576,7 +660,7 @@ build_example_display_gui_lvgl_mono_demo:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_mono_demo
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_mono_demo
 
@@ -584,7 +668,7 @@ build_example_display_gui_lvgl_eaf_player:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_eaf_player
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_eaf_player
 
@@ -592,7 +676,7 @@ build_example_display_gui_lvgl_fs_assets:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_fs_assets
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_fs_assets
 
@@ -600,7 +684,7 @@ build_example_display_gui_lvgl_lottie_player:
   extends:
     - .build_examples_template
     - .rules:build:example_display_gui_lvgl_lottie_player
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: examples/display/gui/lvgl_lottie_player
 
@@ -848,6 +932,17 @@ build_example_ota_simple_ota_example:
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
+
+build_example_sensors_airmouse:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_sensors_airmouse
+    - .build_idf_ge_than_v5_5
+  variables:
+    EXAMPLE_DIR: examples/sensors/airmouse
+    EXAMPLE_CONFIG: "sdkconfig.defaults.*="
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_sensors_sensor_control_led:
   extends:
@@ -1444,7 +1539,7 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lvgl_adapter_test_apps
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/test_apps
 
@@ -1452,7 +1547,7 @@ build_components_display_tools_esp_lvgl_adapter_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lvgl_adapter_benchmark
-    - .build_idf_ge_than_v5_5_with_pre_release
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lvgl_adapter/benchmark
 
@@ -1465,6 +1560,30 @@ build_components_display_tools_esp_lvgl_adapter_rgb888_benchmark:
     - .build_components_display_tools_esp_lvgl_adapter_benchmark_template
   variables:
     EXAMPLE_CONFIG: "sdkconfig.ci.rgb888=default"
+
+build_components_display_tools_esp_display_present_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_display_present_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_display_present/test_apps
+
+build_components_display_tools_esp_lv_present_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_display_tools_esp_lv_present_test_apps
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+  variables:
+    EXAMPLE_DIR: components/display/tools/esp_lv_present/test_apps
 
 build_components_display_tools_esp_mmap_assets_test_apps:
   extends:
@@ -1502,6 +1621,24 @@ build_components_expander_io_expander_mcp23017_test_apps:
   variables:
     EXAMPLE_DIR: components/expander/io_expander/mcp23017/test_apps
 
+build_components_imu_gesture_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_gesture_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_gesture/test_apps
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+
+build_components_imu_quaternion_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_quaternion_test_apps
+    - .build_idf_active_release_version
+  variables:
+    EXAMPLE_DIR: components/imu_quaternion/test_apps
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+
 build_components_keyboard_button_test_apps:
   extends:
     - .build_examples_template
@@ -1514,7 +1651,7 @@ build_components_ir_ir_learn_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_ir_ir_learn_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_3_to_v6_2
   variables:
     EXAMPLE_DIR: components/ir/ir_learn/test_apps
 
@@ -1658,7 +1795,7 @@ build_components_sensors_battery_fuel_gauge_bq27220_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_battery_fuel_gauge_bq27220_test_apps
-    - .build_idf_active_release_version
+    - .build_idf_ge_than_v5_3_to_v6_2
   variables:
     EXAMPLE_DIR: components/sensors/battery_fuel_gauge/bq27220/test_apps
 
@@ -1666,7 +1803,7 @@ build_components_sensors_gas_bme690_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_sensors_gas_bme690_test_apps
-    - .build_idf_ge_than_v5_3
+    - .build_idf_ge_than_v5_3_to_v6_2
   variables:
     EXAMPLE_DIR: components/sensors/gas/bme690/test_apps
 

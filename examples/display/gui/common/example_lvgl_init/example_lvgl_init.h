@@ -41,9 +41,8 @@ typedef struct {
  * is recommended — it serves as a step-by-step reference:
  *
  *   1. Read display rotation from Kconfig (CONFIG_EXAMPLE_DISPLAY_ROTATION_*)
- *   2. Select tear-avoidance mode for the LCD interface; for SPI / QSPI
- *      interfaces, TE-sync is enabled automatically when the panel provides
- *      a TE GPIO (detected via hw_lcd_get_te_gpio())
+ *   2. Select tear-avoidance mode for the LCD interface; QSPI uses the
+ *      high-performance TE pipeline by default when TE is available
  *   3. Initialise the LCD panel          — hw_lcd_init()
  *   4. Initialise the LVGL adapter       — esp_lv_adapter_init()
  *   5. Register the display              — esp_lv_adapter_register_display()

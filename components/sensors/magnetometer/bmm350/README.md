@@ -24,9 +24,7 @@ The BMM350 has an excellent temperature behaviour with an outstanding low temper
 
 ## Direct I2C
 
-Bind the ESP platform callbacks to an `i2c_bus` handle, then use the Bosch API. I2C address is `BMM350_I2C_ADSEL_SET_LOW` (0x14) or `BMM350_I2C_ADSEL_SET_HIGH` (0x15), depending on ADSEL. Compensated magnetometer data is `float` in micro-tesla.
-
-`common/*` holds the bus handle, device handle, and I2C address in one set of file-level variables, so it drives a single BMM350. Wiring both ADSEL addresses at once would need a second copy of this glue. Other sensors are unaffected — BMM150 and BMM350 can share a bus, because each component keeps its own state. Transfers themselves are serialized by `i2c_bus`, but `bmm350_set_i2c_address()` and `bmm350_interface_init()` replace the device handle, so do not call them while another task is talking to the sensor.
+Bind the ESP platform callbacks, then use the Bosch API. Address is `0x14` or `0x15` (ADSEL). Data is `float` in micro-tesla. Glue is a file-level singleton: one BMM350 per process. Do not call the bus setter, `bmm350_set_i2c_address()`, or `bmm350_interface_init()` while another task is using the sensor.
 
 ```c
 struct bmm350_dev dev;
@@ -44,6 +42,6 @@ bmm350_set_powermode(BMM350_NORMAL_MODE, &dev);
 bmm350_get_compensated_mag_xyz_temp_data(&data, &dev);
 ```
 
-See [bmm350.h](./bmm350.h) and [common/bmm350_common.h](./common/bmm350_common.h) for the full API.
+For a caller-owned `i2c_master_bus_handle_t` (Board Manager, `i2c_new_master_bus()`), use `bmm350_set_i2c_master_bus_handle()` instead. Device clock is 100 kHz, timeout 200 ms. `CONFIG_I2C_BUS_BACKWARD_CONFIG` must be off. On a failed device removal, transfers are blocked until a later setter, init, or deinit succeeds. The caller still owns the bus.
 
----
+See [bmm350.h](./bmm350.h) and [common/bmm350_common.h](./common/bmm350_common.h).

@@ -76,7 +76,7 @@ dependencies:
 
 ### Requirements
 
-- **ESP-IDF**: >= 5.5
+- **ESP-IDF**: >= 5.5.5
 - **LVGL**: 8.x or 9.x (auto-detected)
 - **Optional dependencies**: Required only if corresponding Kconfig options are enabled
 
@@ -232,8 +232,8 @@ Choose the configuration macro based on your display interface:
 | MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 
 **Notes**:
-- Only MIPI DSI and RGB support tearing modes
-- SPI/I2C/I80/QSPI are collectively called "OTHER" interfaces in the adapter and support only `NONE` mode
+- MIPI DSI and RGB support framebuffer-based tearing modes
+- SPI/I2C/I80/QSPI are collectively called "OTHER" interfaces in the adapter and support `NONE` and GPIO-based `TE_SYNC`
 - MONO (Monochrome) interface supports I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts, and **supports rotation**
 
 #### Computing Frame Buffer Count
@@ -263,14 +263,14 @@ Choose the appropriate tearing mode based on your use case:
 | `TRIPLE_FULL` | Full-screen/large-area updates<br>Plenty of RAM | 3 | High | RGB / MIPI DSI |
 | `DOUBLE_FULL` | Large-area updates<br>Tighter RAM | 2, or 3 with rotation | Medium / High | RGB / MIPI DSI |
 | `DOUBLE_DIRECT` | Small-area updates<br>Widget/UI deltas | 2, or 3 with rotation | Medium / High | RGB / MIPI DSI |
-| `TE_SYNC` | SPI/I2C/I80/QSPI interfaces<br>Panel provides TE signal, syncs with vertical blanking to eliminate tearing | 1 | Low | SPI / I2C / I80 / QSPI |
+| `TE_SYNC` | TE-synchronized SPI/I2C/I80/QSPI displays<br>Optional high-performance refresh | 1 or 2 | Low / Medium | SPI / I2C / I80 / QSPI |
 | `NONE` | Static UI<br>Ultra-low RAM | 1 | Low | All interfaces |
 
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+- OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; high-performance TE supports adapter rotation, while other configurations require panel orientation and matching touch mapping
 - MONO (Monochrome) interface **supports software rotation** (0°/90°/180°/270°) with pixel-level rotation handled by LVGL
-- `TE_SYNC` mode requires panel to provide TE output signal and connect TE pin to ESP GPIO; use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` macro for configuration. The `examples/display/gui/lvgl_common_demo` automatically detects and uses TE synchronization if available
+- `TE_SYNC` mode requires a panel TE signal connected to an ESP GPIO. Use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` for the standard mode, or `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG` to overlap LVGL rendering with TE-synchronized transfer. The high-performance mode requires PSRAM and additional full-frame memory; compatible interfaces in `examples/display/gui/common` enable it by default
 
 #### Memory Estimation
 
@@ -702,9 +702,8 @@ Configure via `idf.py menuconfig`:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
-  - Adapter does not apply 90°/270° rotation
-  - For rotation, configure panel orientation (swap XY/mirror) during LCD initialization
-  - Must also adjust touch coordinate mapping
+  - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
+  - High-performance asynchronous `TE_SYNC` applies adapter-side software rotation; keep the panel in native orientation and map touch coordinates to the logical orientation
 
 - **MONO (Monochrome)**:
   - **Fully supports rotation** (0°/90°/180°/270°)
@@ -717,11 +716,13 @@ Configure via `idf.py menuconfig`:
 - **Mode Mapping**:
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL render mode
   - `DOUBLE_DIRECT` → DIRECT render mode
+  - `TE_SYNC`: synchronous mode → FULL; asynchronous high-performance mode → DIRECT
   - Others (incl. `TRIPLE_PARTIAL`) → PARTIAL render mode
   
 - **LVGL Draw Buffer Count**:
   - `TRIPLE_PARTIAL`: 1 buffer
   - `TRIPLE_FULL` / `DOUBLE_*`: 2 buffers
+  - `TE_SYNC`: 1 LVGL draw buffer; asynchronous high-performance mode adds 1 adapter staging buffer
   - FULL/DIRECT default: 2 buffers
   - Otherwise: 1 buffer
   
@@ -774,7 +775,7 @@ esp_lv_adapter_deinit();
 
 ## Compatibility
 
-- **ESP-IDF**: >= 5.5
+- **ESP-IDF**: >= 5.5.5
 - **LVGL**: >= 8, < 10 (v8/v9 supported)
 
 ### ESP-IDF Patches

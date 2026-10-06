@@ -6,7 +6,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include "i2c_bus.h"
+#include "bmm350_common.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
@@ -15,7 +15,10 @@
 #include "freertos/task.h"
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <inttypes.h>
 
 #include "bmm350.h"
@@ -25,6 +28,8 @@
 /*!                 Macro definitions                                         */
 
 #define TAG "BMM350"
+#define BMM350_I2C_FREQ_HZ 100000
+#define BMM350_I2C_TIMEOUT_MS 200
 
 /******************************************************************************/
 /*!                Static variable definition                                 */
@@ -33,6 +38,31 @@
 static uint8_t dev_addr = BMM350_I2C_ADSEL_SET_LOW;
 static i2c_bus_handle_t i2c_bus = NULL;
 static i2c_bus_device_handle_t i2c_dev = NULL;
+static i2c_master_bus_handle_t i2c_master_bus = NULL;
+static i2c_master_dev_handle_t i2c_master_dev = NULL;
+static bool i2c_device_pending_removal = false;
+
+static esp_err_t bmm350_remove_i2c_device(void)
+{
+    esp_err_t ret = ESP_OK;
+    if (i2c_dev != NULL) {
+        ret = i2c_bus_device_delete(&i2c_dev);
+    }
+#if !CONFIG_I2C_BUS_BACKWARD_CONFIG
+    if (ret == ESP_OK && i2c_master_dev != NULL) {
+        ret = i2c_master_bus_rm_device(i2c_master_dev);
+        if (ret == ESP_OK) {
+            i2c_master_dev = NULL;
+        }
+    }
+#endif
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "I2C device removal failed: %s", esp_err_to_name(ret));
+    } else {
+        i2c_device_pending_removal = false;
+    }
+    return ret;
+}
 
 /******************************************************************************/
 /*!                User interface functions                                   */
@@ -44,13 +74,23 @@ BMM350_INTF_RET_TYPE bmm350_i2c_read(uint8_t reg_addr, uint8_t *reg_data, uint32
 {
     (void)intf_ptr;
 
-    if (i2c_dev == NULL) {
+    if (i2c_device_pending_removal || (i2c_dev == NULL && i2c_master_dev == NULL)) {
         ESP_LOGE(TAG, "I2C bus not initialized");
         return BMM350_E_COM_FAIL;
     }
 
     ESP_LOGD(TAG, "I2C read reg 0x%02" PRIx8 " len %" PRIu32, reg_addr, length);
-    esp_err_t ret = i2c_bus_read_bytes(i2c_dev, reg_addr, (uint16_t)length, reg_data);
+    esp_err_t ret;
+    if (i2c_master_dev != NULL) {
+#if CONFIG_I2C_BUS_BACKWARD_CONFIG
+        return BMM350_E_COM_FAIL;
+#else
+        ret = i2c_master_transmit_receive(i2c_master_dev, &reg_addr, 1, reg_data, length,
+                                          BMM350_I2C_TIMEOUT_MS);
+#endif
+    } else {
+        ret = i2c_bus_read_bytes(i2c_dev, reg_addr, (uint16_t)length, reg_data);
+    }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2C read failed: %s", esp_err_to_name(ret));
         return BMM350_E_COM_FAIL;
@@ -66,13 +106,32 @@ BMM350_INTF_RET_TYPE bmm350_i2c_write(uint8_t reg_addr, const uint8_t *reg_data,
 {
     (void)intf_ptr;
 
-    if (i2c_dev == NULL) {
+    if (i2c_device_pending_removal || (i2c_dev == NULL && i2c_master_dev == NULL)) {
         ESP_LOGE(TAG, "I2C bus not initialized");
         return BMM350_E_COM_FAIL;
     }
 
     ESP_LOGD(TAG, "I2C write reg 0x%02" PRIx8 " len %" PRIu32, reg_addr, length);
-    esp_err_t ret = i2c_bus_write_bytes(i2c_dev, reg_addr, (uint16_t)length, reg_data);
+    esp_err_t ret;
+    if (i2c_master_dev != NULL) {
+#if CONFIG_I2C_BUS_BACKWARD_CONFIG
+        return BMM350_E_COM_FAIL;
+#else
+        if (reg_data == NULL || length == 0 || length > UINT16_MAX) {
+            return BMM350_E_COM_FAIL;
+        }
+        uint8_t *buffer = malloc((size_t)length + 1);
+        if (buffer == NULL) {
+            return BMM350_E_COM_FAIL;
+        }
+        buffer[0] = reg_addr;
+        memcpy(buffer + 1, reg_data, length);
+        ret = i2c_master_transmit(i2c_master_dev, buffer, (size_t)length + 1, BMM350_I2C_TIMEOUT_MS);
+        free(buffer);
+#endif
+    } else {
+        ret = i2c_bus_write_bytes(i2c_dev, reg_addr, (uint16_t)length, reg_data);
+    }
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "I2C write failed: %s", esp_err_to_name(ret));
         return BMM350_E_COM_FAIL;
@@ -115,23 +174,41 @@ int8_t bmm350_interface_init(struct bmm350_dev *dev)
         return BMM350_E_NULL_PTR;
     }
 
-    if (i2c_bus == NULL) {
-        ESP_LOGE(TAG, "I2C bus handle is NULL, please call bmm350_set_i2c_bus_handle first");
+    /* Retry pending cleanup even if a NULL setter cleared the bus selection. */
+    i2c_device_pending_removal = true;
+    if (bmm350_remove_i2c_device() != ESP_OK) {
+        return BMM350_E_COM_FAIL;
+    }
+
+    if (i2c_bus == NULL && i2c_master_bus == NULL) {
+        ESP_LOGE(TAG, "I2C bus handle is NULL, please call an I2C bus setter first");
         return BMM350_E_COM_FAIL;
     }
 
     ESP_LOGI(TAG, "I2C Interface, dev_addr=0x%02" PRIx8, dev_addr);
 
-    /* Allow re-init (e.g. address probe) by replacing the previous device handle */
-    if (i2c_dev != NULL) {
-        i2c_bus_device_delete(&i2c_dev);
-        i2c_dev = NULL;
-    }
-
-    i2c_dev = i2c_bus_device_create(i2c_bus, dev_addr, 0);
-    if (i2c_dev == NULL) {
-        ESP_LOGE(TAG, "i2c_bus_device_create failed");
+    if (i2c_master_bus != NULL) {
+#if CONFIG_I2C_BUS_BACKWARD_CONFIG
+        ESP_LOGE(TAG, "Native I2C requires CONFIG_I2C_BUS_BACKWARD_CONFIG disabled");
         return BMM350_E_COM_FAIL;
+#else
+        const i2c_device_config_t config = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = dev_addr,
+            .scl_speed_hz = BMM350_I2C_FREQ_HZ,
+        };
+        esp_err_t ret = i2c_master_bus_add_device(i2c_master_bus, &config, &i2c_master_dev);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "i2c_master_bus_add_device failed: %s", esp_err_to_name(ret));
+            return BMM350_E_COM_FAIL;
+        }
+#endif
+    } else {
+        i2c_dev = i2c_bus_device_create(i2c_bus, dev_addr, 0);
+        if (i2c_dev == NULL) {
+            ESP_LOGE(TAG, "i2c_bus_device_create failed");
+            return BMM350_E_COM_FAIL;
+        }
     }
     ESP_LOGI(TAG, "I2C device created at address 0x%02" PRIx8, dev_addr);
 
@@ -204,8 +281,25 @@ void bmm350_error_codes_print_result(const char api_name[], int8_t rslt)
 
 void bmm350_set_i2c_bus_handle(i2c_bus_handle_t bus_handle)
 {
+    i2c_master_bus = NULL;
     i2c_bus = bus_handle;
-    ESP_LOGI(TAG, "I2C bus handle set");
+    i2c_device_pending_removal = true;
+    (void)bmm350_remove_i2c_device();
+    ESP_LOGI(TAG, "I2C bus handle selected");
+}
+
+esp_err_t bmm350_set_i2c_master_bus_handle(i2c_master_bus_handle_t bus_handle)
+{
+#if CONFIG_I2C_BUS_BACKWARD_CONFIG
+    if (bus_handle != NULL) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+#endif
+    i2c_bus = NULL;
+    i2c_master_bus = bus_handle;
+    i2c_device_pending_removal = true;
+    ESP_LOGI(TAG, "I2C master bus handle selected");
+    return bmm350_remove_i2c_device();
 }
 
 void bmm350_set_i2c_address(uint8_t i2c_addr)
@@ -218,11 +312,9 @@ void bmm350_interface_deinit(void)
 {
     ESP_LOGI(TAG, "BMM350 ESP32 deinit");
 
-    if (i2c_dev) {
-        i2c_bus_device_delete(&i2c_dev);
-        i2c_dev = NULL;
-    }
-    // and clear the bus handle, but not delete the I2C bus
+    i2c_master_bus = NULL;
     i2c_bus = NULL;
     dev_addr = BMM350_I2C_ADSEL_SET_LOW;
+    i2c_device_pending_removal = true;
+    (void)bmm350_remove_i2c_device();
 }

@@ -94,6 +94,7 @@
 #define DISPLAY_BRIDGE_V8_DIFF_BUFFER_COUNT  (3U)
 #define DISPLAY_BRIDGE_V8_DIFF_RECT_CAPACITY (LV_INV_BUF_SIZE)
 #define DISPLAY_BRIDGE_V8_REPAIR_CAPACITY    (LV_INV_BUF_SIZE * 4U + 4U)
+#define DISPLAY_BRIDGE_V8_TE_TRANSFER_ROWS   (32U)
 
 /*********************
  *      TYPEDEFS
@@ -136,6 +137,14 @@ typedef struct esp_lv_adapter_display_bridge_v8 {
     TaskHandle_t notify_task;
     TaskHandle_t dummy_draw_wait_task;
     uint32_t dummy_draw_wait_mask;
+    uint8_t *te_stage_buf;
+    size_t te_stage_capacity;
+    size_t te_stage_used;
+    uint16_t te_stage_area_count;
+    uint16_t te_transfer_rows;
+    bool te_stage_acquired;
+    bool te_stage_initialized;
+    display_bridge_te_bounce_t te_bounce;
     bool dummy_draw;
     int block_size_small;
     int block_size_large;
@@ -930,6 +939,7 @@ static esp_err_t display_bridge_v8_dummy_draw_blit(esp_lv_adapter_display_bridge
 static void *display_bridge_v8_dummy_draw_get_free_buf(esp_lv_adapter_display_bridge_t *bridge);
 static esp_err_t display_bridge_v8_dummy_draw_flush_buf(esp_lv_adapter_display_bridge_t *bridge,
                                                         void *frame_buffer);
+static bool display_bridge_v8_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge);
 
 /* VSync handling */
 static bool display_bridge_v8_handle_vsync(esp_lv_adapter_display_bridge_v8_t *impl);
@@ -1118,6 +1128,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
     impl->base.update_panel = display_bridge_v8_update_panel;
     impl->base.set_area_rounder = display_bridge_v8_set_area_rounder;
     impl->base.set_draw_bitmap_callbacks = display_bridge_v8_set_draw_bitmap_callbacks;
+    impl->base.notify_color_trans_done_from_isr = display_bridge_v8_notify_color_trans_done_from_isr;
     impl->cfg = *cfg;
     impl->panel = cfg->base.panel;
     impl->dummy_draw = cfg->dummy_draw_enabled;
@@ -1153,6 +1164,24 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
         return NULL;
     }
 
+    if (esp_lv_adapter_te_sync_is_async(cfg->te_ctx)) {
+        if (!cfg->draw_buf_secondary || !cfg->draw_buf_pixels || !impl->runtime.color_bytes) {
+            ESP_LOGE(TAG, "Async TE pipeline requires a full-size staging buffer");
+            if (impl->double_wait_sem) {
+                vSemaphoreDeleteWithCaps(impl->double_wait_sem);
+            }
+            free(impl);
+            return NULL;
+        }
+        impl->te_stage_buf = cfg->draw_buf_secondary;
+        impl->te_stage_capacity = cfg->draw_buf_pixels * impl->runtime.color_bytes;
+        display_bridge_te_bounce_alloc(&impl->te_bounce,
+                                       cfg->base.te_sync.bounce_buffer_enabled ?
+                                       LV_MIN(cfg->base.te_sync.bounce_buffer_rows, bridge_v_res(impl)) : 0,
+                                       (size_t)bridge_h_res(impl) * impl->runtime.color_bytes,
+                                       impl->cache_line_size);
+    }
+
     /* Configure VSYNC jitter shield: Specifically for MIPI DSI and RGB panels
        in double-buffered modes to prevent visual artifacts due to race conditions. */
     const bool is_mipi = (cfg->base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
@@ -1171,6 +1200,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
+        display_bridge_te_bounce_free(&impl->te_bounce);
         free(impl);
         return NULL;
     }
@@ -1181,7 +1211,8 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
 
     if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER &&
             impl->runtime.rotation != ESP_LV_ADAPTER_ROTATE_0 &&
-            impl->cfg.base.profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE) {
+            impl->cfg.base.profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
+            !esp_lv_adapter_te_sync_is_async(impl->cfg.te_ctx)) {
         ESP_LOGW(TAG, "rotation=%d configured on panel interface OTHER; adapter will not apply"
                  " rotation. Configure the LCD panel orientation during panel initialization.",
                  impl->runtime.rotation);
@@ -1195,6 +1226,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v8_create(const e
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
+        display_bridge_te_bounce_free(&impl->te_bounce);
         free(impl);
         return NULL;
     }
@@ -1220,6 +1252,7 @@ static void display_bridge_v8_destroy(esp_lv_adapter_display_bridge_t *bridge)
     if (bridge) {
         esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)bridge;
         /* Clear VSync callbacks and free pipeline (owned by bridge) */
+        display_bridge_te_bounce_free(&impl->te_bounce);
         display_bridge_v8_unregister_vsync(impl);
         if (impl->pipeline.elems) {
             free(impl->pipeline.elems);
@@ -1275,6 +1308,22 @@ static esp_err_t display_bridge_v8_update_panel(esp_lv_adapter_display_bridge_t 
     ESP_RETURN_ON_ERROR(display_bridge_init_runtime_info(&impl->runtime, cfg), TAG,
                         "runtime info initialization failed");
 
+    display_bridge_te_bounce_free(&impl->te_bounce);
+    impl->te_stage_buf = NULL;
+    impl->te_stage_capacity = 0;
+    impl->te_stage_initialized = false;
+    if (esp_lv_adapter_te_sync_is_async(cfg->te_ctx)) {
+        ESP_RETURN_ON_FALSE(cfg->draw_buf_secondary && cfg->draw_buf_pixels && impl->runtime.color_bytes,
+                            ESP_ERR_INVALID_ARG, TAG, "Async TE pipeline requires a full-size staging buffer");
+        impl->te_stage_buf = cfg->draw_buf_secondary;
+        impl->te_stage_capacity = cfg->draw_buf_pixels * impl->runtime.color_bytes;
+        display_bridge_te_bounce_alloc(&impl->te_bounce,
+                                       cfg->base.te_sync.bounce_buffer_enabled ?
+                                       LV_MIN(cfg->base.te_sync.bounce_buffer_rows, bridge_v_res(impl)) : 0,
+                                       (size_t)bridge_h_res(impl) * impl->runtime.color_bytes,
+                                       impl->cache_line_size);
+    }
+
     /* Configure VSYNC jitter shield */
     const bool is_mipi = (cfg->base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
     const bool is_double_flush = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL ||
@@ -1291,6 +1340,7 @@ static esp_err_t display_bridge_v8_update_panel(esp_lv_adapter_display_bridge_t 
                                                              &impl->disp_fb, &impl->draw_fb);
     if (pipeline_ret == -1) {
         ESP_LOGE(TAG, "pipeline re-init failed (update_panel)");
+        display_bridge_te_bounce_free(&impl->te_bounce);
         return ESP_ERR_NO_MEM;
     }
 
@@ -1704,10 +1754,9 @@ static void rounder_cb_wrapper(lv_disp_drv_t *drv, lv_area_t *area)
     if (impl->cfg.rounder_cb) {
         impl->cfg.rounder_cb(area, impl->cfg.rounder_user_data);
     }
-    /* Align area for encrypted external-RAM DMA. Checks source (draw_buf_primary)
-     * and dest (draw_fb, stride-aligned only — unaligned stride falls back to CPU copy). */
+    /* Align source and panel framebuffer windows when stride permits. */
     if (display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
-            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb, drv->hor_res, color_bytes)) {
+            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb ? impl->draw_fb : impl->runtime.frame_buffers[0], drv->hor_res, color_bytes)) {
         display_bridge_align_area_for_enc_dma(area, drv->hor_res, color_bytes);
     }
 }
@@ -1733,7 +1782,7 @@ static void display_bridge_v8_set_area_rounder(esp_lv_adapter_display_bridge_t *
          * enable DMA and the flush path already falls back to CPU copy. */
         const bool need_dma2d_rounder =
             display_bridge_dma2d_buffer_needs_alignment(impl->cfg.draw_buf_primary) ||
-            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb,
+            display_bridge_dma2d_x_rounding_sufficient(impl->draw_fb ? impl->draw_fb : impl->runtime.frame_buffers[0],
                                                        bridge_h_res(impl),
                                                        bridge_color_bytes(impl));
         drv->rounder_cb = (rounder_cb || need_dma2d_rounder)
@@ -2005,6 +2054,10 @@ static bool IRAM_ATTR display_bridge_v8_on_io_color_trans_done(esp_lcd_panel_io_
     BaseType_t need_yield = pdFALSE;
     display_bridge_v8_signal_dummy_draw_event(impl, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, &need_yield);
     if (impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
+        if (esp_lv_adapter_te_sync_is_async(impl->cfg.te_ctx)) {
+            bool te_worker = esp_lv_adapter_te_sync_notify_tx_done_from_isr(impl->cfg.te_ctx);
+            return te_worker || (need_yield == pdTRUE);
+        }
         TaskHandle_t notify_task = display_bridge_v8_get_notify_task(impl);
         if (notify_task) {
             vTaskNotifyGiveFromISR(notify_task, &need_yield);
@@ -2013,6 +2066,25 @@ static bool IRAM_ATTR display_bridge_v8_on_io_color_trans_done(esp_lcd_panel_io_
     }
     bool vsync = display_bridge_v8_handle_vsync(impl);
     return vsync || (need_yield == pdTRUE);
+}
+
+static bool IRAM_ATTR display_bridge_v8_notify_color_trans_done_from_isr(esp_lv_adapter_display_bridge_t *bridge)
+{
+    esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)bridge;
+    if (!impl || !impl->panel) {
+        return false;
+    }
+
+    if (esp_lv_adapter_te_sync_is_async(impl->cfg.te_ctx)) {
+        return esp_lv_adapter_te_sync_notify_tx_done_from_isr(impl->cfg.te_ctx);
+    }
+
+    BaseType_t need_yield = pdFALSE;
+    TaskHandle_t notify_task = display_bridge_v8_get_notify_task(impl);
+    if (notify_task) {
+        vTaskNotifyGiveFromISR(notify_task, &need_yield);
+    }
+    return need_yield == pdTRUE;
 }
 
 /**
@@ -2166,6 +2238,217 @@ static void display_bridge_v8_unregister_vsync(esp_lv_adapter_display_bridge_v8_
  *   FLUSH IMPLEMENTATIONS
  **********************/
 
+static void display_bridge_v8_te_stage_transfer(const esp_lv_adapter_display_bridge_v8_t *impl,
+                                                size_t transfer_index, lv_area_t *area,
+                                                size_t *data_offset, size_t *data_size)
+{
+    size_t y = transfer_index * impl->te_transfer_rows;
+    size_t rows = LV_MIN(impl->te_transfer_rows, bridge_v_res(impl) - y);
+    size_t row_bytes = bridge_h_res(impl) * bridge_color_bytes(impl);
+    *area = (lv_area_t) {
+        .x1 = 0,
+        .y1 = (lv_coord_t)y,
+        .x2 = (lv_coord_t)bridge_h_res(impl) - 1,
+        .y2 = (lv_coord_t)(y + rows - 1),
+    };
+    if (data_offset) {
+        *data_offset = y * row_bytes;
+    }
+    if (data_size) {
+        *data_size = rows * row_bytes;
+    }
+}
+
+static esp_err_t display_bridge_v8_te_stage_prepare_tx(void *user_ctx, size_t transfer_index)
+{
+    esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)user_ctx;
+    ESP_RETURN_ON_FALSE(transfer_index < impl->te_stage_area_count,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid staged TE prepare index");
+    if (!impl->te_bounce.count) {
+        return ESP_OK;
+    }
+
+    lv_area_t area;
+    size_t data_offset;
+    size_t data_size;
+    display_bridge_v8_te_stage_transfer(impl, transfer_index, &area, &data_offset, &data_size);
+    ESP_RETURN_ON_FALSE(data_size <= impl->te_bounce.capacity,
+                        ESP_ERR_INVALID_SIZE, TAG, "staged TE transfer exceeds bounce buffer");
+    uint8_t *bounce = impl->te_bounce.buffers[transfer_index % impl->te_bounce.count];
+#if SOC_DMA2D_SUPPORTED
+    return display_bridge_copy_to_dma_buffer(
+               impl->te_stage_buf + data_offset, bounce,
+               (size_t)lv_area_get_width(&area), (size_t)lv_area_get_height(&area),
+               bridge_color_bytes(impl), impl->cache_line_size,
+               &impl->te_bounce.dma2d_copy_state);
+#else
+    memcpy(bounce, impl->te_stage_buf + data_offset, data_size);
+    display_cache_msync_range(bounce, data_size, impl->cache_line_size);
+    return ESP_OK;
+#endif
+}
+
+static esp_err_t display_bridge_v8_te_stage_start_tx(void *user_ctx, size_t transfer_index)
+{
+    esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)user_ctx;
+    ESP_RETURN_ON_FALSE(transfer_index < impl->te_stage_area_count,
+                        ESP_ERR_INVALID_ARG, TAG, "invalid staged TE transfer index");
+    lv_area_t area;
+    size_t data_offset;
+    display_bridge_v8_te_stage_transfer(impl, transfer_index, &area, &data_offset, NULL);
+    uint8_t *pixels = impl->te_bounce.count ?
+                      impl->te_bounce.buffers[transfer_index % impl->te_bounce.count] :
+                      impl->te_stage_buf + data_offset;
+
+    esp_err_t ret = esp_lcd_panel_draw_bitmap(impl->panel, area.x1, area.y1, area.x2 + 1, area.y2 + 1, pixels);
+    if (ret != ESP_OK) {
+        /* Drain queued segments before returning buffer ownership. */
+        esp_err_t drain_ret = esp_lcd_panel_io_tx_param(impl->cfg.base.panel_io, -1, NULL, 0);
+        if (drain_ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to drain TE transfers: %s", esp_err_to_name(drain_ret));
+            abort();
+        }
+    }
+    return ret;
+}
+
+static void display_bridge_v8_te_stage_done(void *user_ctx)
+{
+    esp_lv_adapter_display_bridge_v8_t *impl = (esp_lv_adapter_display_bridge_v8_t *)user_ctx;
+    impl->te_stage_used = 0;
+    impl->te_stage_area_count = 0;
+}
+
+static esp_err_t display_bridge_v8_te_stage_build_full_transfers(esp_lv_adapter_display_bridge_v8_t *impl)
+{
+    size_t color_bytes = bridge_color_bytes(impl);
+    size_t width = bridge_h_res(impl);
+    size_t height = bridge_v_res(impl);
+    size_t row_bytes = width * color_bytes;
+    size_t rows_per_transfer = height;
+    if (impl->cfg.base.te_sync.bounce_buffer_enabled) {
+        rows_per_transfer = impl->te_bounce.count ?
+                            impl->te_bounce.capacity / row_bytes :
+                            LV_MIN(DISPLAY_BRIDGE_V8_TE_TRANSFER_ROWS, height);
+    }
+
+    impl->te_transfer_rows = rows_per_transfer;
+    impl->te_stage_area_count = (height + rows_per_transfer - 1U) / rows_per_transfer;
+    impl->te_stage_used = row_bytes * height;
+    ESP_RETURN_ON_FALSE(impl->te_stage_used <= impl->te_stage_capacity,
+                        ESP_ERR_INVALID_SIZE, TAG, "Async full TE frame exceeds staging buffer");
+    return ESP_OK;
+}
+
+static esp_err_t display_bridge_v8_te_stage_merge_area(esp_lv_adapter_display_bridge_v8_t *impl,
+                                                       const lv_disp_drv_t *drv,
+                                                       const lv_area_t *area,
+                                                       const uint8_t *color_map)
+{
+    const size_t color_bytes = bridge_color_bytes(impl);
+    const size_t width = (size_t)lv_area_get_width(area);
+    const size_t height = (size_t)lv_area_get_height(area);
+    const size_t logical_width = (size_t)drv->hor_res;
+    const size_t physical_width = bridge_h_res(impl);
+    const size_t physical_height = bridge_v_res(impl);
+    const size_t stride = physical_width * color_bytes;
+    const size_t row_bytes = width * color_bytes;
+    ESP_RETURN_ON_FALSE(stride * physical_height <= impl->te_stage_capacity, ESP_ERR_INVALID_SIZE, TAG,
+                        "Async full TE area exceeds staging buffer");
+
+    if (bridge_rotation(impl) != ESP_LV_ADAPTER_ROTATE_0) {
+        const uint8_t *src = color_map +
+                             ((size_t)area->y1 * logical_width + area->x1) * color_bytes;
+        rotate_copy_strided_region(src, impl->te_stage_buf,
+                                   area->x1, area->y1, area->x2, area->y2,
+                                   logical_width, impl);
+        return ESP_OK;
+    }
+
+    const size_t end_offset = (size_t)area->y2 * stride + ((size_t)area->x2 + 1U) * color_bytes;
+    ESP_RETURN_ON_FALSE(end_offset <= impl->te_stage_capacity, ESP_ERR_INVALID_SIZE, TAG,
+                        "Async full TE area exceeds staging buffer");
+
+    const uint8_t *src = color_map + (size_t)area->y1 * stride + (size_t)area->x1 * color_bytes;
+    uint8_t *dst = impl->te_stage_buf + (size_t)area->y1 * stride + (size_t)area->x1 * color_bytes;
+    for (size_t row = 0; row < height; row++) {
+        memcpy(dst + row * stride, src + row * stride, row_bytes);
+    }
+    return ESP_OK;
+}
+
+static void display_bridge_v8_flush_te_async_full(esp_lv_adapter_display_bridge_v8_t *impl,
+                                                  lv_disp_drv_t *drv,
+                                                  const lv_area_t *area,
+                                                  uint8_t *color_map)
+{
+    if (!impl->te_stage_acquired) {
+        esp_err_t ret = esp_lv_adapter_te_sync_acquire_stage(impl->cfg.te_ctx);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Acquire TE staging buffer failed: %s", esp_err_to_name(ret));
+            display_manager_flush_ready(drv);
+            return;
+        }
+        impl->te_stage_acquired = true;
+    }
+
+    if (impl->te_stage_initialized &&
+            display_bridge_v8_te_stage_merge_area(impl, drv, area, color_map) != ESP_OK) {
+        ESP_LOGE(TAG, "Merge dirty area into async full TE staging buffer failed");
+        impl->te_stage_initialized = false;
+    }
+
+    if (!lv_disp_flush_is_last(drv)) {
+        display_manager_flush_ready(drv);
+        return;
+    }
+
+    if (!impl->te_stage_initialized) {
+        const lv_area_t full_area = {
+            .x1 = 0,
+            .y1 = 0,
+            .x2 = drv->hor_res - 1,
+            .y2 = drv->ver_res - 1,
+        };
+        if (display_bridge_v8_te_stage_merge_area(impl, drv, &full_area, color_map) != ESP_OK) {
+            ESP_LOGE(TAG, "Initialize async full TE staging buffer failed");
+            esp_lv_adapter_te_sync_release_stage(impl->cfg.te_ctx);
+            impl->te_stage_acquired = false;
+            display_manager_flush_ready(drv);
+            return;
+        }
+        impl->te_stage_initialized = true;
+    }
+
+    esp_err_t build_ret = display_bridge_v8_te_stage_build_full_transfers(impl);
+    if (build_ret != ESP_OK) {
+        ESP_LOGE(TAG, "Build async full TE transfers failed: %s", esp_err_to_name(build_ret));
+        esp_lv_adapter_te_sync_release_stage(impl->cfg.te_ctx);
+        impl->te_stage_acquired = false;
+        display_manager_flush_ready(drv);
+        return;
+    }
+    if (!impl->te_bounce.count) {
+        display_cache_msync_range(impl->te_stage_buf, impl->te_stage_used, impl->cache_line_size);
+    }
+
+    const esp_lv_adapter_te_sync_job_t job = {
+        .transfer_bytes = impl->te_stage_used,
+        .transfer_count = impl->te_stage_area_count,
+        .prepare_tx = impl->te_bounce.count ? display_bridge_v8_te_stage_prepare_tx : NULL,
+        .start_tx = display_bridge_v8_te_stage_start_tx,
+        .done = display_bridge_v8_te_stage_done,
+        .user_ctx = impl,
+    };
+    esp_err_t ret = esp_lv_adapter_te_sync_submit(impl->cfg.te_ctx, &job);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Submit async full TE frame failed: %s", esp_err_to_name(ret));
+        esp_lv_adapter_te_sync_release_stage(impl->cfg.te_ctx);
+    }
+    impl->te_stage_acquired = false;
+    display_manager_flush_ready(drv);
+}
+
 /**
  * @brief Default flush (single buffer, no tear protection)
  */
@@ -2193,7 +2476,9 @@ static void display_bridge_v8_flush_default(esp_lv_adapter_display_bridge_v8_t *
             display_manager_flush_ready(drv);
         }
     } else {
-        esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
+        esp_err_t ret = impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI ?
+                        display_lcd_blit_mipi_partial(panel_handle, &impl->runtime, area, color_map) :
+                        esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
             /* Callback won't be triggered on failure, must notify LVGL immediately */
@@ -2210,6 +2495,11 @@ static void display_bridge_v8_flush_gpio_te(esp_lv_adapter_display_bridge_v8_t *
                                             const lv_area_t *area,
                                             uint8_t *color_map)
 {
+    if (esp_lv_adapter_te_sync_is_async(impl->cfg.te_ctx)) {
+        display_bridge_v8_flush_te_async_full(impl, drv, area, color_map);
+        return;
+    }
+
     esp_lcd_panel_handle_t panel_handle = impl->panel;
     const int offsetx1 = area->x1;
     const int offsetx2 = area->x2;
@@ -2620,13 +2910,8 @@ static void display_bridge_v8_flush_partial_rotate(esp_lv_adapter_display_bridge
             return;
         }
 
-#if CONFIG_SOC_PPA_SUPPORTED
-        if (!hw_resource.ppa_handle) {
-            display_cache_msync_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
-        }
-#else
+        /* Rotation and diff repair may write through the CPU even with a PPA client. */
         display_cache_msync_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
-#endif
 #if SOC_DMA2D_SUPPORTED || CONFIG_SOC_PPA_SUPPORTED
         display_cache_msync_invalidate_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
 #endif
@@ -2679,7 +2964,10 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
     uint8_t color_bytes = bridge_color_bytes(impl);
 
 #if CONFIG_SOC_PPA_SUPPORTED
-    if (hw_resource.ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888)) {
+    /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
+    if (hw_resource.ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888) &&
+            !display_bridge_dma2d_buffer_needs_alignment(src) &&
+            !display_bridge_dma2d_buffer_needs_alignment(dst_fb)) {
         const size_t rect_w = lv_x_end - lv_x_start + 1;
         const size_t rect_h = lv_y_end - lv_y_start + 1;
 
@@ -2778,7 +3066,10 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
                                          uint8_t color_bytes)
 {
 #if CONFIG_SOC_PPA_SUPPORTED
-    if (hw_resource.ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888)) {
+    /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
+    if (hw_resource.ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888) &&
+            !display_bridge_dma2d_buffer_needs_alignment(from) &&
+            !display_bridge_dma2d_buffer_needs_alignment(to)) {
         ppa_srm_rotation_angle_t ppa_rotation;
         int x_offset = 0, y_offset = 0;
         const uint16_t rect_w = x_end - x_start + 1;
@@ -2845,7 +3136,9 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
     }
 #endif
 
-    display_rotate_copy_region(from,
+    const uint8_t *src = (const uint8_t *)from +
+                         ((size_t)y_start * src_logical_w + x_start) * color_bytes;
+    display_rotate_copy_region(src,
                                to,
                                x_start,
                                y_start,

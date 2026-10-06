@@ -27,6 +27,13 @@ static const char *TAG = "hw_lcd_init";
 #define HW_LCD_VBP                              (10)
 #define HW_LCD_VFP                              (5)
 
+/* Match each target's PSRAM DMA burst limit for external frame buffers. */
+#if CONFIG_IDF_TARGET_ESP32P4 || CONFIG_IDF_TARGET_ESP32S31
+#define HW_LCD_DMA_BURST_SIZE                   (128)
+#else
+#define HW_LCD_DMA_BURST_SIZE                   (64)
+#endif
+
 #if CONFIG_IDF_TARGET_ESP32S31
 #define HW_LCD_RGB_VSYNC                        (GPIO_NUM_45)
 #define HW_LCD_RGB_HSYNC                        (GPIO_NUM_44)
@@ -79,12 +86,16 @@ static const char *TAG = "hw_lcd_init";
 
 static esp_lcd_panel_handle_t s_panel_handle;
 
-esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, esp_lv_adapter_tear_avoid_mode_t tear_avoid_mode, esp_lv_adapter_rotation_t rotation)
+esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, uint8_t frame_buffer_count, hw_rotation_t rotation)
 {
+    if (frame_buffer_count < 1 || frame_buffer_count > 3) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    (void)rotation;
     ESP_LOGI(TAG, "Initialize RGB panel");
     esp_lcd_rgb_panel_config_t panel_conf = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
-        .dma_burst_size = 128,
+        .dma_burst_size = HW_LCD_DMA_BURST_SIZE,
         .data_width = HW_LCD_DATA_WIDTH,
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
         .in_color_format = LCD_COLOR_FMT_RGB565,
@@ -129,7 +140,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
             },
         },
         .flags.fb_in_psram = 1,
-        .num_fbs = esp_lv_adapter_get_required_frame_buffer_count(tear_avoid_mode, rotation),
+        .num_fbs = frame_buffer_count,
 #if CONFIG_IDF_TARGET_ESP32S3
         .bounce_buffer_size_px = HW_LCD_H_RES * HW_LCD_BOUNCE_BUFFER_HEIGHT,
 #endif

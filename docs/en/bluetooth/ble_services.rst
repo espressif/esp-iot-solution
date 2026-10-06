@@ -11,6 +11,7 @@ BLE Services
     Body Composition Service <ble_bcs>
     Current Time Service <ble_cts>
     Device Information Service <ble_dis>
+    Electronic Shelf Label Service <ble_esl>
     Heart Rate Service <ble_hrs>
     Health Thermometer Service <ble_hts>
     Immediate Alert Service <ble_ias>

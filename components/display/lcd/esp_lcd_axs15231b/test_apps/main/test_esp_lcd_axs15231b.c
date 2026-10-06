@@ -11,7 +11,12 @@
 #include "freertos/semphr.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#include "driver/i2c_master.h"
+#else
 #include "driver/i2c.h"
+#endif
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_lcd_panel_io.h"
@@ -75,6 +80,9 @@ static char *TAG = "axs15231b_test";
 
 static SemaphoreHandle_t refresh_finish = NULL;
 static SemaphoreHandle_t touch_mux = NULL;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+static i2c_master_bus_handle_t i2c_bus = NULL;
+#endif
 
 static const axs15231b_lcd_init_cmd_t lcd_init_cmds[] = {
     {0xBB, (uint8_t []){0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A, 0xA5}, 8, 0},
@@ -113,6 +121,17 @@ static const axs15231b_lcd_init_cmd_t lcd_init_cmds[] = {
 
 static void test_i2c_init(void)
 {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    const i2c_master_bus_config_t i2c_bus_config = {
+        .i2c_port = TEST_I2C_MASTER_NUM,
+        .sda_io_num = TEST_PIN_NUM_TOUCH_SDA,
+        .scl_io_num = TEST_PIN_NUM_TOUCH_SCL,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    TEST_ESP_OK(i2c_new_master_bus(&i2c_bus_config, &i2c_bus));
+#else
     const i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = TEST_PIN_NUM_TOUCH_SDA,
@@ -123,11 +142,22 @@ static void test_i2c_init(void)
     };
     TEST_ESP_OK(i2c_param_config(TEST_I2C_MASTER_NUM, &i2c_conf));
     TEST_ESP_OK(i2c_driver_install(TEST_I2C_MASTER_NUM, i2c_conf.mode, 0, 0, 0));
+#endif
 }
 
-static void test_touch_panel_crate(esp_lcd_panel_io_handle_t *io_handle_p, esp_lcd_touch_handle_t *tp_handle_p, esp_lcd_touch_interrupt_callback_t callback)
+static void test_i2c_deinit(void)
 {
-    const esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG();
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    TEST_ESP_OK(i2c_del_master_bus(i2c_bus));
+    i2c_bus = NULL;
+#else
+    TEST_ESP_OK(i2c_driver_delete(TEST_I2C_MASTER_NUM));
+#endif
+}
+
+static void test_touch_panel_create(esp_lcd_panel_io_handle_t *io_handle_p, esp_lcd_touch_handle_t *tp_handle_p, esp_lcd_touch_interrupt_callback_t callback)
+{
+    const esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG_EX(TEST_I2C_CLK_SPEED);
     const esp_lcd_touch_config_t tp_cfg = {
         .x_max = TEST_LCD_I80_H_RES,
         .y_max = TEST_LCD_I80_V_RES,
@@ -144,7 +174,11 @@ static void test_touch_panel_crate(esp_lcd_panel_io_handle_t *io_handle_p, esp_l
         },
         .interrupt_callback = callback,
     };
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    TEST_ESP_OK(esp_lcd_new_panel_io_i2c(i2c_bus, &tp_io_config, io_handle_p));
+#else
     TEST_ESP_OK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)TEST_I2C_MASTER_NUM, &tp_io_config, io_handle_p));
+#endif
     TEST_ESP_OK(esp_lcd_touch_new_i2c_axs15231b(*io_handle_p, &tp_cfg, tp_handle_p));
 }
 
@@ -232,7 +266,7 @@ TEST_CASE("test axs15231b to draw color bar with I80 interface", "[axs15231b][I8
     esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = TEST_PIN_NUM_I80_RST,
         .flags.reset_active_high = 0,
-        .color_space = ESP_LCD_COLOR_SPACE_RGB,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = TEST_LCD_BIT_PER_PIXEL,
     };
     TEST_ESP_OK(esp_lcd_new_panel_axs15231b(io_handle, &panel_config, &panel_handle));
@@ -353,7 +387,7 @@ TEST_CASE("test axs15231b to read touch point with interruption", "[axs15231b][i
 
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
     esp_lcd_touch_handle_t tp_handle = NULL;
-    test_touch_panel_crate(&tp_io_handle, &tp_handle, touch_callback);
+    test_touch_panel_create(&tp_io_handle, &tp_handle, touch_callback);
 
     esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
@@ -371,9 +405,10 @@ TEST_CASE("test axs15231b to read touch point with interruption", "[axs15231b][i
         vTaskDelay(pdMS_TO_TICKS(TEST_READ_PERIOD_MS));
     }
 
-    i2c_driver_delete(TEST_I2C_MASTER_NUM);
-    esp_lcd_touch_del(tp_handle);
-    esp_lcd_panel_io_del(tp_io_handle);
+    TEST_ESP_OK(esp_lcd_touch_register_interrupt_callback(tp_handle, NULL));
+    TEST_ESP_OK(esp_lcd_touch_del(tp_handle));
+    TEST_ESP_OK(esp_lcd_panel_io_del(tp_io_handle));
+    test_i2c_deinit();
     vSemaphoreDelete(touch_mux);
     gpio_uninstall_isr_service();
 }
@@ -386,7 +421,7 @@ TEST_CASE("test axs15231b to read touch point with polling", "[axs15231b][poll]"
 
     esp_lcd_panel_io_handle_t tp_io_handle = NULL;
     esp_lcd_touch_handle_t tp_handle = NULL;
-    test_touch_panel_crate(&tp_io_handle, &tp_handle, NULL);
+    test_touch_panel_create(&tp_io_handle, &tp_handle, NULL);
 
     esp_lcd_touch_point_data_t tp_data[1] = {0};
     uint8_t tp_cnt = 0;
@@ -402,9 +437,9 @@ TEST_CASE("test axs15231b to read touch point with polling", "[axs15231b][poll]"
         vTaskDelay(pdMS_TO_TICKS(TEST_READ_PERIOD_MS));
     }
 
-    i2c_driver_delete(TEST_I2C_MASTER_NUM);
-    esp_lcd_touch_del(tp_handle);
-    esp_lcd_panel_io_del(tp_io_handle);
+    TEST_ESP_OK(esp_lcd_touch_del(tp_handle));
+    TEST_ESP_OK(esp_lcd_panel_io_del(tp_io_handle));
+    test_i2c_deinit();
 }
 
 // Some resources are lazy allocated in the LCD driver, the threadhold is left for that case

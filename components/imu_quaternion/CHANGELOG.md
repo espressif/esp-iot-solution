@@ -16,6 +16,18 @@
 7. Added an internal warmup phase for quaternion convergence after initialization or reinitialization.
 8. Expanded component README with feature description, API introduction, and
    placeholder sections for registry badge and example link.
+9. Added explicit magnetic-input sample fields to the public sample API and
+   clarified that magnetic data is optional.
+10. Unified initialization around gravity plus configured heading alignment and
+   removed the previous implicit first-sample initialization path.
+11. Added explicit sample-driven reinitialization support so applications can
+   rebuild world frame deliberately after reset or recenter events.
+12. Added initial magnetic-reference capture plus update-time magnetic yaw
+   correction and accel/mag rejection tracking.
+13. Added public startup gyro-bias setter/getter helpers so applications can
+   inject or inspect a persisted initial bias estimate.
+14. Normalized public and private header declarations/comments to match the
+   repository header-style and ESP-IDF formatting expectations.
 
 ### API Changes:
 
@@ -28,36 +40,16 @@
    - `gyro_guard_limit_dps`
    - `heading_ref_body[3]`
    - `heading_target_axis`
-
-## Unreleased
-
-### Enhancements:
-
-1. Added explicit magnetic-input sample fields to the public sample API and
-   clarified that magnetic data is optional.
-2. Unified initialization around gravity plus configured heading alignment and
-   removed the previous implicit first-sample initialization path.
-3. Added explicit sample-driven reinitialization support so applications can
-   rebuild world frame deliberately after reset or recenter events.
-4. Added initial magnetic-reference capture plus update-time magnetic yaw
-   correction and accel/mag rejection tracking.
-5. Added public startup gyro-bias setter/getter helpers so applications can
-   inject or inspect a persisted initial bias estimate.
-6. Normalized public and private header declarations/comments to match the
-   repository header-style and ESP-IDF formatting expectations.
-
-### API Changes:
-
-1. Simplified `imu_quat_config_t` to use flat `gyro_bias_enabled`,
+3. Simplified `imu_quat_config_t` to use flat `gyro_bias_enabled`,
    `gyro_guard_enabled`, and `gyro_guard_limit_dps` fields.
-2. Moved detailed bias-learning and gyro-guard recovery tuning parameters to internal implementation constants.
-3. Removed the old init-strategy split and kept one explicit gravity-heading
+4. Moved detailed bias-learning and gyro-guard recovery tuning parameters to internal implementation constants.
+5. Removed the old init-strategy split and kept one explicit gravity-heading
    initialization path.
-4. Added `mag_valid`/`mag[3]` to `imu_quat_sample_t`.
-5. Added `mag_input_enabled` to `imu_quat_config_t`.
-6. Added `imu_quat_reinitialize_from_sample()`.
-7. Added `imu_quat_set_gyro_bias_dps()` and `imu_quat_get_gyro_bias_dps()`.
-8. `imu_quat_update()` now requires the solver to be explicitly initialized
+6. Added `mag_valid`/`mag[3]` to `imu_quat_sample_t`.
+7. Added `mag_input_enabled` to `imu_quat_config_t`.
+8. Added `imu_quat_reinitialize_from_sample()`.
+9. Added `imu_quat_set_gyro_bias_dps()` and `imu_quat_get_gyro_bias_dps()`.
+10. `imu_quat_update()` now requires the solver to be explicitly initialized
    first and returns `ESP_ERR_INVALID_STATE` when called before reinitialization.
 
 ### Testing:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -324,12 +324,8 @@ esp_err_t ir_learn_add_sub_list_node(struct ir_learn_sub_list_head *sub_head, ui
 
 err:
     if (item) {
-        free(item);
-    }
-
-    if (item->symbols.received_symbols) {
         free(item->symbols.received_symbols);
-        item->symbols.received_symbols = NULL;
+        free(item);
     }
     return ret;
 }

@@ -1,3 +1,10 @@
+## v0.2.0 - 2026.07.28
+
+Enhancements:
+- Truncate mode accepts Offset+Length within Allocated Size.
+- Include `conn_handle` in OACP/OLCP response event payloads.
+- Client GATT read/write/subscribe go to the given `conn_handle`
+
 ## v0.1.0
 
 Features:

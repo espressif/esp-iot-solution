@@ -6,12 +6,8 @@
 #include "soc/soc_caps.h"
 
 #if SOC_MIPI_DSI_SUPPORTED
-#include <inttypes.h>
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/i2c.h"
-#include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -36,12 +32,22 @@
 
 #define TEST_PIN_NUM_LCD_RST                    (GPIO_NUM_NC)
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 #if TEST_LCD_BIT_PER_PIXEL == 24
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB888)
 #elif TEST_LCD_BIT_PER_PIXEL == 18
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB666)
 #elif TEST_LCD_BIT_PER_PIXEL == 16
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB565)
+#endif
+#else
+#if TEST_LCD_BIT_PER_PIXEL == 24
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB888)
+#elif TEST_LCD_BIT_PER_PIXEL == 18
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB666)
+#elif TEST_LCD_BIT_PER_PIXEL == 16
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB565)
+#endif
 #endif
 
 #define TEST_MIPI_DSI_PHY_PWR_LDO_CHAN          (3)
@@ -98,7 +104,11 @@ static void test_init_lcd(void)
     TEST_ESP_OK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
 
     ESP_LOGI(TAG, "Install LCD driver of co5300");
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     esp_lcd_dpi_panel_config_t dpi_config = CO5300_466_466_PANEL_60HZ_DPI_CONFIG(TEST_MIPI_DPI_PX_FORMAT);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = CO5300_466_466_PANEL_60HZ_DPI_CONFIG_CF(TEST_MIPI_DPI_PX_FORMAT);
+#endif
     co5300_vendor_config_t vendor_config = {
         .flags.use_mipi_interface = 1,
         .mipi_config = {
@@ -240,6 +250,22 @@ TEST_CASE("test co5300 to rotate with MIPI interface", "[co5300][mipi-rotate]")
         ESP_LOGI(TAG, "@resolution %dx%d time per frame=%.2fMS\r\n", w, h, (float)t / 1000.0f);
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+
+    ESP_LOGI(TAG, "Deinitialize LCD device");
+    test_deinit_lcd();
+}
+
+TEST_CASE("test co5300 sleep with MIPI interface", "[co5300][mipi-sleep]")
+{
+    ESP_LOGI(TAG, "Initialize LCD device");
+    test_init_lcd();
+
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, true));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, true));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, false));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, false));
+    test_draw_color_bar(panel_handle, TEST_LCD_H_RES, TEST_LCD_V_RES);
 
     ESP_LOGI(TAG, "Deinitialize LCD device");
     test_deinit_lcd();

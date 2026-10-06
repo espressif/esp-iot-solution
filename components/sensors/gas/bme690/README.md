@@ -23,4 +23,31 @@ BME690 is an integrated environmental sensor developed specifically for mobile a
 - Indoor navigation (change of floor detection, elevator detection)
 - Altitude tracking and calories expenditure for sports activities
 
+## Interfaces
+
+Bind the ESP platform callbacks, then use the Bosch API in [bme69x.h](./bme69x.h).
+
+### Direct I2C
+
+I2C address is `BME69X_I2C_ADDR_LOW` (0x76) or `BME69X_I2C_ADDR_HIGH` (0x77), depending on SDO.
+
+```c
+struct bme69x_dev bme;
+
+bme69x_set_i2c_bus_handle(i2c_bus);
+bme69x_set_i2c_address(BME69X_I2C_ADDR_LOW);
+bme69x_interface_init(&bme, BME69X_I2C_INTF);
+bme69x_init(&bme);
+```
+
+### SPI
+
+```c
+bme69x_set_spi_device_handle(spi_dev);
+bme69x_interface_init(&bme, BME69X_SPI_INTF);
+bme69x_init(&bme);
+```
+
+See [common/bme690_common.h](./common/bme690_common.h) for the glue API.
+
 ---

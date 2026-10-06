@@ -5,6 +5,7 @@ set(srcs
 )
 set(include_dirs
     "."
+    "../../common/hw_init"
     "../../common/hw_init/helpers"
 )
 

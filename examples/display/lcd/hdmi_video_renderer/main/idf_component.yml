@@ -5,5 +5,5 @@ dependencies:
     version: "^5.0.0"
 
   espressif/esp_audio_codec:
-    version: "^2.3.0"
+    version: ">=2.3.0,<2.6.0"
     public: true

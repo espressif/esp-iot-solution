@@ -51,7 +51,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_lv_adapter_start());
 
     if (esp_lv_adapter_lock(-1) == ESP_OK) {
-        lv_obj_t *scr = lv_scr_act();
+        lv_obj_t *scr = lv_display_get_screen_active(lv_display_get_default());
 
         lv_obj_t *label_top = lv_label_create(scr);
         lv_obj_set_style_text_font(label_top, &font_puhui_14_1, 0);

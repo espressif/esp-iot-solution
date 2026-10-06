@@ -35,11 +35,23 @@
 #define TEST_LCD_BK_LIGHT_OFF_LEVEL             !TEST_LCD_BK_LIGHT_ON_LEVEL
 
 #if TEST_LCD_BIT_PER_PIXEL == 24
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB888)
+#else
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB888)
+#endif
 #elif TEST_LCD_BIT_PER_PIXEL == 18
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB666)
+#else
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB666)
+#endif
 #elif TEST_LCD_BIT_PER_PIXEL == 16
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_FMT_RGB565)
+#else
 #define TEST_MIPI_DPI_PX_FORMAT                 (LCD_COLOR_PIXEL_FORMAT_RGB565)
+#endif
 #endif
 
 #define TEST_DELAY_TIME_MS                      (3000)

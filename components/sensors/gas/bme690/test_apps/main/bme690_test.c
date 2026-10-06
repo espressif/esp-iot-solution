@@ -170,6 +170,7 @@ TEST_CASE("bme690 init-deinit test", "[i2c][sensor][bme690]")
 
     // Set I2C bus handle for BME690
     bme69x_set_i2c_bus_handle(i2c_bus);
+    bme69x_set_i2c_address(BME69X_I2C_ADDR_LOW);
 
     // Initialize BME690 interface
     rslt = bme69x_interface_init(&bme690_dev, BME69X_I2C_INTF);
@@ -210,6 +211,7 @@ TEST_CASE("bme690 forced mode test", "[i2c][sensor][bme690]")
 
     // Set I2C bus handle for BME690
     bme69x_set_i2c_bus_handle(i2c_bus);
+    bme69x_set_i2c_address(BME69X_I2C_ADDR_LOW);
 
     // Initialize BME690 interface
     rslt = bme69x_interface_init(&bme690_dev, BME69X_I2C_INTF);
@@ -302,6 +304,7 @@ TEST_CASE("bme690 self test", "[i2c][sensor][bme690]")
 
     // Set I2C bus handle for BME690
     bme69x_set_i2c_bus_handle(i2c_bus);
+    bme69x_set_i2c_address(BME69X_I2C_ADDR_LOW);
 
     // Initialize BME690 interface
     rslt = bme69x_interface_init(&bme690_dev, BME69X_I2C_INTF);

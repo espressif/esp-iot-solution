@@ -93,7 +93,7 @@ static esp_err_t hw_touch_i2c_init(void)
     return ESP_OK;
 }
 
-esp_err_t hw_touch_init(esp_lcd_touch_handle_t *ret_touch, esp_lv_adapter_rotation_t rotation)
+esp_err_t hw_touch_init(esp_lcd_touch_handle_t *ret_touch, hw_rotation_t rotation)
 {
     if (s_touch_handle) {
         *ret_touch = s_touch_handle;

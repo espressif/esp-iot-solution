@@ -37,7 +37,8 @@ repos:
             .*.base64|
             components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)|
             components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
-            components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)
+            components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
+            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)
           )$
       - id: end-of-file-fixer
         exclude: *whitespace_excludes
@@ -50,7 +51,8 @@ repos:
             .*.patch|
             components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)|
             components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
-            components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)
+            components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
+            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)
           )$
       - id: double-quote-string-fixer
       - id: no-commit-to-branch
@@ -108,5 +110,6 @@ repos:
           components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)|
           components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
           components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
+          examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)|
           components/quickjs-ng/quickjs-ng/.*
         )$

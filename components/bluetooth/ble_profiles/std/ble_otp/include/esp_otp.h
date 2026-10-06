@@ -142,10 +142,12 @@ typedef union {
     } object_changed;                                       /*!< Object changed event data */
 
     struct {
+        uint16_t conn_handle;                               /*!< BLE connection handle */
         esp_ble_otp_oacp_rsp_t response;                   /*!< OACP response */
     } oacp_response;                                        /*!< OACP response event data */
 
     struct {
+        uint16_t conn_handle;                               /*!< BLE connection handle */
         esp_ble_otp_olcp_rsp_t response;                   /*!< OLCP response */
     } olcp_response;                                        /*!< OLCP response event data */
 

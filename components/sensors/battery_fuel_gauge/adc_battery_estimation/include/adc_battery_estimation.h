@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +20,10 @@ typedef struct {
 
 // Charging state detection callback function type
 typedef bool (*adc_battery_charging_detect_cb_t)(void *user_data);
+
+// Standby state detection callback function type, standby means the charge has been terminated
+// because the battery is full, while the charger is still connected
+typedef bool (*adc_battery_standby_detect_cb_t)(void *user_data);
 
 typedef struct {
     union {
@@ -46,6 +50,10 @@ typedef struct {
     // Charging state detection configuration
     adc_battery_charging_detect_cb_t charging_detect_cb;  /*!< Callback function to detect charging state */
     void *charging_detect_user_data;                      /*!< User data passed to the callback function */
+
+    // Standby state detection configuration
+    adc_battery_standby_detect_cb_t standby_detect_cb;    /*!< Callback function to detect standby state, NULL to disable */
+    void *standby_detect_user_data;                       /*!< User data passed to the callback function */
 } adc_battery_estimation_t;
 
 typedef void *adc_battery_estimation_handle_t;
@@ -119,13 +127,42 @@ esp_err_t adc_battery_estimation_destroy(adc_battery_estimation_handle_t handle)
 esp_err_t adc_battery_estimation_get_capacity(adc_battery_estimation_handle_t handle, float *capacity);
 
 /**
+ * @brief Get the filtered battery voltage
+ *
+ * @note This function takes a new set of ADC samples on every call, it does not reuse the samples
+ *       taken by adc_battery_estimation_get_capacity().
+ *
+ * @param handle Pointer to the ADC battery estimation handle
+ * @param voltage Pointer to the battery voltage in volts, already compensated for the voltage divider
+ * @return esp_err_t Return ESP_OK if get voltage successfully, ESP_ERR_INVALID_ARG if invalid argument, ESP_FAIL if failed
+ */
+esp_err_t adc_battery_estimation_get_voltage(adc_battery_estimation_handle_t handle, float *voltage);
+
+/**
  * @brief Get the battery charging state
+ *
+ * @note Once the battery is full and the charger terminates the charge, the charging state becomes
+ *       false even though the charger is still connected. Use adc_battery_estimation_get_standby_state()
+ *       to tell that case apart from a real discharge.
  *
  * @param handle Pointer to the ADC battery estimation handle
  * @param is_charging Pointer to the battery charging state
  * @return esp_err_t Return ESP_OK if get charging state successfully, ESP_ERR_INVALID_ARG if invalid argument, ESP_FAIL if failed
  */
 esp_err_t adc_battery_estimation_get_charging_state(adc_battery_estimation_handle_t handle, bool *is_charging);
+
+/**
+ * @brief Get the battery standby state
+ *
+ * @note Standby means the charge has been terminated because the battery is full, while the charger
+ *       is still connected. The capacity is reported as 100% in this state. Always false when no
+ *       standby detection callback is configured.
+ *
+ * @param handle Pointer to the ADC battery estimation handle
+ * @param is_standby Pointer to the battery standby state
+ * @return esp_err_t Return ESP_OK if get standby state successfully, ESP_ERR_INVALID_ARG if invalid argument, ESP_FAIL if failed
+ */
+esp_err_t adc_battery_estimation_get_standby_state(adc_battery_estimation_handle_t handle, bool *is_standby);
 
 #ifdef __cplusplus
 }

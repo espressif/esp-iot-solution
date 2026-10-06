@@ -1,5 +1,21 @@
 # ChangeLog
 
+## v0.7.2 (2026-09-29)
+
+* Fix the LVGL FreeRTOS PSRAM-stack hook for LVGL 9.6's ESP-qualified `freertos/atomic.h` include while retaining compatibility with older LVGL 9 releases.
+
+## v0.7.1 (2026-09-18)
+
+* Add LVGL 9.6 compatibility for public/private headers, FreeType integration, and display color-format detection.
+* Keep the existing LVGL v8 and v9 bridge paths and compatibility range.
+* Require ESP-IDF >= 5.5.5.
+
+## v0.7.0 (2026-08-14)
+
+* Add a high-performance TE pipeline to improve rendering and display transfer efficiency while retaining TE synchronization.
+* Fix LVGL v8/v9 rotation with flash encryption or PSRAM ECC enabled.
+* Fix TE transfer error handling and ISR logging.
+
 ## v0.6.4 (2026-08-12)
 
 * Fix the required framebuffer count for 180° rotation in `DOUBLE_FULL` and `DOUBLE_DIRECT` modes.

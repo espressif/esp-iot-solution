@@ -1,9 +1,9 @@
 dependencies:
   idf:
-    version: ">=5.5.0"
+    version: ">=5.5.5"
 
   lvgl/lvgl:
-    version: "^9"
+    version: ">=9.6,<10"
     public: true
 
   esp_lvgl_adapter:
@@ -12,5 +12,4 @@ dependencies:
     public: true
 
   hw_init:
-    version: "*"
-    override_path: "../../common/hw_init"
+    path: "../../common/hw_init"

@@ -158,6 +158,17 @@ static void test_rotate_panel(esp_lcd_panel_handle_t panel_handle)
     }
 }
 
+static void test_sleep_panel(esp_lcd_panel_handle_t panel_handle)
+{
+    TEST_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, false));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, true));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, true));
+    vTaskDelay(pdMS_TO_TICKS(100));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, false));
+    TEST_ESP_OK(esp_lcd_panel_disp_sleep(panel_handle, false));
+    TEST_ESP_OK(esp_lcd_panel_disp_on_off(panel_handle, true));
+}
+
 TEST_CASE("test co5300 to draw color bar with SPI interface", "[co5300][spi]")
 {
     esp_lcd_panel_io_handle_t io_handle = NULL;
@@ -194,6 +205,28 @@ TEST_CASE("test co5300 to rotate with QSPI interface", "[co5300][qspi-rotate]")
     esp_lcd_panel_handle_t panel_handle = test_init_lcd(true, &io_handle);
 
     test_rotate_panel(panel_handle);
+
+    test_deinit_lcd(panel_handle, io_handle);
+}
+
+TEST_CASE("test co5300 sleep with SPI interface", "[co5300][spi-sleep]")
+{
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(false, &io_handle);
+
+    test_sleep_panel(panel_handle);
+    test_draw_bitmap(panel_handle);
+
+    test_deinit_lcd(panel_handle, io_handle);
+}
+
+TEST_CASE("test co5300 sleep with QSPI interface", "[co5300][qspi-sleep]")
+{
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_handle_t panel_handle = test_init_lcd(true, &io_handle);
+
+    test_sleep_panel(panel_handle);
+    test_draw_bitmap(panel_handle);
 
     test_deinit_lcd(panel_handle, io_handle);
 }

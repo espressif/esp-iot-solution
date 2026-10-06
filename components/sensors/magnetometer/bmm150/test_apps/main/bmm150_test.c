@@ -163,6 +163,48 @@ cleanup:
     TEST_ASSERT_EQUAL(BMM150_OK, rslt);
 }
 
+#if !CONFIG_I2C_BUS_BACKWARD_CONFIG
+/* Adding a device does not probe the bus, so this runs without sensors attached. */
+TEST_CASE("bmm150 native dual instance test", "[i2c][sensor][bmm150]")
+{
+    const i2c_master_bus_config_t bus_config = {
+        .i2c_port = I2C_NUM_0,
+        .sda_io_num = I2C_SDA_IO,
+        .scl_io_num = I2C_SCL_IO,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .flags.enable_internal_pullup = true,
+    };
+    i2c_master_bus_handle_t bus = NULL;
+    TEST_ESP_OK(i2c_new_master_bus(&bus_config, &bus));
+
+    struct bmm150_dev first = {0};
+    struct bmm150_dev second = {0};
+    TEST_ESP_OK(bmm150_interface_init_from_master_bus(&first, bus, BMM150_DEFAULT_I2C_ADDRESS, 400000));
+    TEST_ESP_OK(bmm150_interface_init_from_master_bus(&second, bus, BMM150_I2C_ADDRESS_CSB_LOW_SDO_HIGH, 400000));
+    TEST_ASSERT_NOT_NULL(first.intf_ptr);
+    TEST_ASSERT_NOT_NULL(second.intf_ptr);
+    TEST_ASSERT_TRUE(first.intf_ptr != second.intf_ptr);
+
+    struct bmm150_dev invalid = {0};
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                      bmm150_interface_init_from_master_bus(NULL, bus, BMM150_DEFAULT_I2C_ADDRESS, 400000));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                      bmm150_interface_init_from_master_bus(&invalid, NULL, BMM150_DEFAULT_I2C_ADDRESS, 400000));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                      bmm150_interface_init_from_master_bus(&invalid, bus, BMM150_DEFAULT_I2C_ADDRESS, 0));
+    TEST_ASSERT_NULL(invalid.intf_ptr);
+
+    /* Deleting one instance leaves the other usable. */
+    TEST_ESP_OK(bmm150_interface_deinit_device(&first));
+    TEST_ASSERT_NULL(first.intf_ptr);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, bmm150_interface_deinit_device(&first));
+    TEST_ASSERT_NOT_NULL(second.intf_ptr);
+
+    TEST_ESP_OK(bmm150_interface_deinit_device(&second));
+    TEST_ESP_OK(i2c_del_master_bus(bus));
+}
+#endif
+
 static void check_leak(size_t before_free, size_t after_free, const char *type)
 {
     ssize_t delta = after_free - before_free;

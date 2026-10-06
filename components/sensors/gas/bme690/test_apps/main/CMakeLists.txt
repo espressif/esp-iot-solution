@@ -1,3 +1,3 @@
-idf_component_register(SRC_DIRS "."
-                       INCLUDE_DIRS "."
-                       REQUIRES unity test_utils driver bme690)
+idf_component_register(SRCS "bme690_test.c"
+                    INCLUDE_DIRS "."
+                    REQUIRES unity esp_driver_gpio heap)

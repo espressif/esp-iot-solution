@@ -1,4 +1,4 @@
-version: "1.0.3~1"
+version: "1.1.0"
 description: I2C/SPI driver for BME690 gas sensor
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/gas/bme690
 repository: https://github.com/espressif/esp-iot-solution.git

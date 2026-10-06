@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.2.0 - 2026-9-18
+
+### Enhancements:
+
+* Updated the dependency on `espressif/i2c_bus` to 1.5.*.
+* Relaxed the version requirement of `cmake_utilities`.
+
 ## v0.1.2 - 2026-2-1
 
 ### Fix:

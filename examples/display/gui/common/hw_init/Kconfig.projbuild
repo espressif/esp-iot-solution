@@ -59,8 +59,8 @@ choice EXAMPLE_DISPLAY_ROTATION
     prompt "Display Rotation"
     default EXAMPLE_DISPLAY_ROTATION_0
     help
-        Select the rotation applied to both the LCD panel and the touch controller
-        so that LVGL coordinates match the screen orientation.
+        Select the display and touch coordinate rotation. The QSPI example
+        applies non-zero rotation in the LVGL adapter when TE is available.
 
 config EXAMPLE_DISPLAY_ROTATION_0
     bool "Rotate 0 degrees"

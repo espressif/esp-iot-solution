@@ -2,11 +2,19 @@ version: "1.0.0"
 
 dependencies:
   idf:
-    version: ">=5.5.0"
+    version: ">=5.5.5"
 
-  espressif/esp_lvgl_adapter:
-    version: "*"
-    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+  espressif/esp_lcd_touch:
+    version: "^1"
+    public: true
+
+  espressif/button:
+    version: "^4"
+    public: true
+
+  espressif/knob:
+    version: "^1"
+    public: true
 
   espressif/esp_lcd_ek79007:
     version: "*"

@@ -7,7 +7,7 @@
 The ``ble_services`` component provides a simplified API interface for accessing commonly used standard and custom BLE services functionality on a GATT server.
 
 Included services:
-- ANS, BAS, BCS, CTS, DIS, HRS, HTS, IAS, MIDI ,OTA ,OTS, TPS, UDS, WSS
+- ANS, BAS, BCS, CTS, DIS, ESL, HRS, HTS, IAS, MIDI ,OTA ,OTS, TPS, UDS, WSS
 
 ### Adding the component to your project
 

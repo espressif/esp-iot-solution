@@ -10,6 +10,8 @@
 
 #include "bmm350.h"
 #include "i2c_bus.h"
+#include "driver/i2c_master.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -76,26 +78,31 @@ int8_t bmm350_interface_init(struct bmm350_dev *dev);
 void bmm350_error_codes_print_result(const char api_name[], int8_t rslt);
 
 /**
- * @brief Deinitializes the ESP peripheral driver.
- *
- * - For I2C: removes the device from the bus and clears the bus handle,
- *   without deinitializing the I2C bus.
+ * @brief Release the I2C device. The bus is not deleted.
  *
  * @return void
  */
 void bmm350_interface_deinit(void);
 
 /**
- *  @brief Set I2C bus handle for ESP32 platform
+ * @brief Select an `i2c_bus` handle. NULL clears the selection.
  *
- *  This glue keeps a single bus handle, device handle, and address, so it
- *  drives one BMM350. Other sensor components are unaffected.
+ * @param[in] bus_handle : I2C bus handle
  *
- *  @param[in] bus_handle : I2C bus handle
- *
- *  @return void.
+ * @return void.
  */
 void bmm350_set_i2c_bus_handle(i2c_bus_handle_t bus_handle);
+
+/**
+ * @brief Select a native I2C master bus. NULL clears the selection.
+ *
+ * Adds a 100 kHz device with a 200 ms timeout after `bmm350_interface_init()`.
+ *
+ * @param[in] bus_handle Native bus handle, or NULL.
+ * @return ESP_OK, a device-removal error, or ESP_ERR_NOT_SUPPORTED when
+ *         CONFIG_I2C_BUS_BACKWARD_CONFIG is enabled.
+ */
+esp_err_t bmm350_set_i2c_master_bus_handle(i2c_master_bus_handle_t bus_handle);
 
 /**
  *  @brief Set I2C device address (0x14 or 0x15)

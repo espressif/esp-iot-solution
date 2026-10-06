@@ -164,6 +164,17 @@ if("${lvgl_name}" IN_LIST build_components)
         endif()
 
     endif()
+
+    # LVGL 9.6 publishes public headers below include/, while older LVGL 9
+    # releases and LVGL 8 keep compatibility/private headers at the component
+    # root or under src/. The adapter's compatibility header probes the
+    # available layout at compile time.
+    if(lvgl_comp_dir)
+        target_include_directories(${COMPONENT_LIB} PRIVATE
+            "${lvgl_comp_dir}"
+            "${lvgl_comp_dir}/include"
+            "${lvgl_comp_dir}/src")
+    endif()
 endif()
 
 function(esp_lv_adapter_target_compile_definitions target_name visibility)
@@ -188,7 +199,10 @@ function(esp_lv_adapter_ensure_lvgl_freetype_stack_check_hook)
         return()
     endif()
 
-    set(_lv_conf_internal "${lvgl_comp_dir}/src/lv_conf_internal.h")
+    set(_lv_conf_internal "${lvgl_comp_dir}/include/lvgl/config/lv_conf_internal.h")
+    if(NOT EXISTS "${_lv_conf_internal}")
+        set(_lv_conf_internal "${lvgl_comp_dir}/src/lv_conf_internal.h")
+    endif()
 
     if(NOT EXISTS "${_lv_conf_internal}")
         message(FATAL_ERROR "esp_lvgl_adapter: LVGL configuration file is missing")
@@ -256,8 +270,18 @@ function(esp_lv_adapter_ensure_lvgl_freertos_stack_caps_hook)
         message(FATAL_ERROR "esp_lvgl_adapter: partially configured LVGL FreeRTOS stack caps hook")
     endif()
 
-    set(_lv_freertos_include "#include \"atomic.h\"")
-    set(_lv_freertos_include_hook "#include \"atomic.h\"\n#if defined(ESP_PLATFORM) && defined(LV_FREERTOS_TASK_STACK_ALLOC_CAPS)\n    #include \"freertos/idf_additions.h\"\n#endif")
+    # LVGL 9.6 uses the ESP-qualified atomic header, while older LVGL 9
+    # releases use the unqualified compatibility header.
+    string(FIND "${_lv_freertos_content}" "#include <freertos/atomic.h>" _lv_freertos_atomic_angle_pos)
+    string(FIND "${_lv_freertos_content}" "#include \"atomic.h\"" _lv_freertos_atomic_quote_pos)
+    if(NOT _lv_freertos_atomic_angle_pos EQUAL -1)
+        set(_lv_freertos_include "#include <freertos/atomic.h>")
+    elseif(NOT _lv_freertos_atomic_quote_pos EQUAL -1)
+        set(_lv_freertos_include "#include \"atomic.h\"")
+    else()
+        message(FATAL_ERROR "esp_lvgl_adapter: unsupported LVGL FreeRTOS atomic include layout")
+    endif()
+    set(_lv_freertos_include_hook "${_lv_freertos_include}\n#if defined(ESP_PLATFORM) && defined(LV_FREERTOS_TASK_STACK_ALLOC_CAPS)\n    #include \"freertos/idf_additions.h\"\n#endif")
     set(_lv_thread_create [[    BaseType_t xTaskCreateStatus = xTaskCreate(
                                        prvRunThread,
                                        name,
@@ -368,10 +392,15 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
             idf_component_get_property(_lvgl_dir ${lvgl_name} COMPONENT_DIR)
         endif()
 
+        set(_lv_ftsystem "")
+        set(_lvgl_freetype_port_is_new OFF)
         if(_lvgl_dir)
-            set(_lv_ftsystem "${_lvgl_dir}/src/libs/freetype/lv_ftsystem.c")
-        else()
-            set(_lv_ftsystem "")
+            if(EXISTS "${_lvgl_dir}/src/font/freetype/lv_ftsystem.c")
+                set(_lv_ftsystem "${_lvgl_dir}/src/font/freetype/lv_ftsystem.c")
+                set(_lvgl_freetype_port_is_new ON)
+            elseif(EXISTS "${_lvgl_dir}/src/libs/freetype/lv_ftsystem.c")
+                set(_lv_ftsystem "${_lvgl_dir}/src/libs/freetype/lv_ftsystem.c")
+            endif()
         endif()
 
         if(_lv_ftsystem AND EXISTS ${_lv_ftsystem})
@@ -381,6 +410,25 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
 
             target_sources(freetype PRIVATE ${_lv_ftsystem})
             target_include_directories(freetype PRIVATE ${_lvgl_dir})
+
+            if(_lvgl_freetype_port_is_new)
+                # FreeType 2.14 no longer exports these internal-header
+                # aliases from ftheader.h, while LVGL 9.6's port still uses
+                # them.
+                target_compile_definitions(freetype PRIVATE
+                    "FT_INTERNAL_DEBUG_H=<freetype/internal/ftdebug.h>"
+                    "FT_INTERNAL_STREAM_H=<freetype/internal/ftstream.h>")
+            endif()
+
+            # LVGL 9.6 also contains the port source in the LVGL target. Keep
+            # one implementation when that source is present.
+            if(_lvgl_freetype_port_is_new AND lvgl_comp_lib AND TARGET ${lvgl_comp_lib})
+                get_target_property(_lvgl_sources ${lvgl_comp_lib} SOURCES)
+                if(_lvgl_sources)
+                    list(FILTER _lvgl_sources EXCLUDE REGEX ".*/src/font/freetype/lv_ftsystem\\.c$")
+                    set_target_properties(${lvgl_comp_lib} PROPERTIES SOURCES "${_lvgl_sources}")
+                endif()
+            endif()
         endif()
     endif()
 endif()

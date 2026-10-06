@@ -10,6 +10,7 @@ BLE 服务
     人体组织成分服务 <ble_bcs>
     当前时间服务 <ble_cts>
     设备信息服务 <ble_dis>
+    电子货架标签服务 <ble_esl>
     心率服务 <ble_hrs>
     健康温度计服务 <ble_hts>
     立即警报服务 <ble_ias>

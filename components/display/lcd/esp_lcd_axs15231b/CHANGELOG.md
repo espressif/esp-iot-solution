@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.1.1 - 2026-08-31
+
+### Bug Fixes:
+
+* Fixed custom I2C clock configuration
+
 ## v2.1.0 - 2026-01-21
 
 ### Enhancements:

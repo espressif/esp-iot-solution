@@ -1,0 +1,7 @@
+dependencies:
+  idf:
+    version: ">=6.0"
+  espressif/esp_display_present:
+    version: "*"
+    override_path: "../.."
+    public: true

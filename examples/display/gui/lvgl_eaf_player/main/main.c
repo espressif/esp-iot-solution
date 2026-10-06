@@ -97,7 +97,7 @@ static void start_eaf_player(lv_display_t *disp)
         return;
     }
 
-    lv_obj_t *screen = lv_disp_get_scr_act(disp);
+    lv_obj_t *screen = lv_display_get_screen_active(disp);
 
     /* Create info label */
     s_info_label = lv_label_create(screen);

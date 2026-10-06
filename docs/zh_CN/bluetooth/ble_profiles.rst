@@ -6,6 +6,7 @@ BLE 配置文件
     :maxdepth: 1
 
     警报通知配置文件 <ble_anp>
+    电子货架标签配置文件 <ble_eslp>
     心率配置文件 <ble_hrp>
     健康温度计配置文件 <ble_htp>
     BLE MIDI 配置文件 <ble_midi>

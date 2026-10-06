@@ -72,7 +72,7 @@ dependencies:
 
 ### 系统要求
 
-- **ESP-IDF**：>= 5.5
+- **ESP-IDF**：>= 5.5.5
 - **LVGL**：8.x 或 9.x（自动适配版本）
 - **可选依赖**：根据启用的功能需要满足相应的组件依赖
 
@@ -228,8 +228,8 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 | MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 
 **注意**：
-- 仅 MIPI DSI 和 RGB 支持防撕裂模式
-- SPI/I2C/I80/QSPI 等接口在适配器中统称为 "OTHER" 接口，仅支持 `NONE` 模式
+- MIPI DSI 和 RGB 支持基于帧缓冲的防撕裂模式
+- SPI/I2C/I80/QSPI 等接口在适配器中统称为 "OTHER" 接口，支持 `NONE` 和基于 GPIO 的 `TE_SYNC`
 - MONO（单色显示）接口支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局，且**支持旋转**
 
 #### 计算帧缓冲数量
@@ -259,14 +259,14 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 | `TRIPLE_FULL` | 整屏/大区域刷新<br>内存充足 | 3 | 高 | RGB / MIPI DSI |
 | `DOUBLE_FULL` | 大区域刷新<br>内存较紧 | 2，旋转时为 3 | 中 / 高 | RGB / MIPI DSI |
 | `DOUBLE_DIRECT` | 小区域更新<br>控件/局部变化 | 2，旋转时为 3 | 中 / 高 | RGB / MIPI DSI |
-| `TE_SYNC` | SPI/I2C/I80/QSPI 接口<br>面板提供 TE 信号，通过垂直消隐同步消除撕裂 | 1 | 低 | SPI / I2C / I80 / QSPI |
+| `TE_SYNC` | 支持 TE 同步的 SPI/I2C/I80/QSPI 屏幕<br>可选高性能刷新 | 1 或 2 | 低 / 中 | SPI / I2C / I80 / QSPI |
 | `NONE` | 静态 UI<br>超低内存 | 1 | 低 | 所有接口 |
 
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-- OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像），并相应调整触摸坐标映射
+- OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；高性能 TE 支持 adapter 旋转，其他配置需使用面板方向并同步调整触摸映射
 - MONO (单色显示) 接口**支持软件旋转**（0°/90°/180°/270°），通过 LVGL 进行像素级旋转处理
-- `TE_SYNC` 模式要求面板提供 TE 输出信号，并将 TE 引脚连接到 ESP GPIO；使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` 宏进行配置。`examples/display/gui/lvgl_common_demo` 会自动检测并在可用时使用 TE 同步
+- `TE_SYNC` 模式要求面板提供 TE 信号并连接到 ESP GPIO。标准模式使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG`；如需让 LVGL 渲染与 TE 同步传输重叠，使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG`。高性能模式需要 PSRAM 和额外的整帧内存；`examples/display/gui/common` 中兼容的接口默认启用该模式
 
 #### 内存估算
 
@@ -696,9 +696,8 @@ static void panel_wake_cb(void *user_data)
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
-  - 适配器不对 90°/270° 进行旋转处理
-  - 如需旋转，请在 LCD 初始化阶段配置面板方向（交换 XY/镜像）
-  - 同时需要相应调整触摸坐标映射
+  - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射
+  - 高性能异步 `TE_SYNC` 执行适配器侧软件旋转；面板保持原生方向，触摸映射对应逻辑方向
 
 - **MONO (单色显示)**：
   - **完全支持旋转**（0°/90°/180°/270°）
@@ -711,11 +710,13 @@ static void panel_wake_cb(void *user_data)
 - **模式映射**：
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL 渲染模式
   - `DOUBLE_DIRECT` → DIRECT 渲染模式
+  - `TE_SYNC`：同步模式 → FULL；异步高性能模式 → DIRECT
   - 其余（含 `TRIPLE_PARTIAL`）→ PARTIAL 渲染模式
   
 - **LVGL 绘制缓冲数量**：
   - `TRIPLE_PARTIAL`：1 块
   - `TRIPLE_FULL` / `DOUBLE_*`：2 块
+  - `TE_SYNC`：1 块 LVGL 绘制缓冲；异步高性能模式额外使用 1 块 adapter staging 缓冲
   - FULL/DIRECT 模式默认：2 块
   - 其他：1 块
   
@@ -768,7 +769,7 @@ esp_lv_adapter_deinit();
 
 ## 兼容性
 
-- **ESP-IDF**：>= 5.5
+- **ESP-IDF**：>= 5.5.5
 - **LVGL**：>= 8, < 10（支持 v8 和 v9）
 
 ### ESP-IDF 补丁说明

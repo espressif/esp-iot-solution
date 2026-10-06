@@ -596,7 +596,7 @@ static void run_headless_benchmark(uint16_t h_res, uint16_t v_res)
 
     /* Clean up display */
     TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(1000)));
-    lv_obj_clean(lv_disp_get_scr_act(headless_disp));
+    lv_obj_clean(lv_display_get_screen_active(headless_disp));
     esp_lv_adapter_unlock();
 
     esp_err_t ret = esp_lv_adapter_unregister_display(headless_disp);

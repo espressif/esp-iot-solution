@@ -16,12 +16,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "lvgl.h"
+#include "lvgl_port_private.h"
 #include "esp_err.h"
 #include "esp_lcd_panel_ops.h"
-#if LVGL_VERSION_MAJOR >= 9
-#include "lvgl_private.h"
-#endif
 #include "adapter_internal.h"
 #include "esp_attr.h"
 
@@ -31,8 +28,15 @@
 
 #define ESP_LV_ADAPTER_BRIDGE_BLOCK_SIZE_SMALL_DEFAULT  (32)
 #define ESP_LV_ADAPTER_BRIDGE_BLOCK_SIZE_LARGE_DEFAULT  (256)
+#define ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_COUNT           (2U)
 
 #if SOC_DMA2D_SUPPORTED
+typedef enum {
+    DISPLAY_BRIDGE_DMA2D_COPY_UNCHECKED = 0,
+    DISPLAY_BRIDGE_DMA2D_COPY_ENABLED,
+    DISPLAY_BRIDGE_DMA2D_COPY_DISABLED,
+} display_bridge_dma2d_copy_state_t;
+
 #ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 #include "esp_async_color_convert.h"
 #else
@@ -40,8 +44,23 @@
 #endif
 #endif
 
+typedef struct {
+    uint8_t *buffers[ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_COUNT];
+    uint8_t count;
+    size_t capacity;
+#if SOC_DMA2D_SUPPORTED
+    display_bridge_dma2d_copy_state_t dma2d_copy_state;
+#endif
+} display_bridge_te_bounce_t;
+
 /* Forward declaration */
 typedef struct esp_lv_adapter_display_bridge esp_lv_adapter_display_bridge_t;
+
+void display_bridge_te_bounce_alloc(display_bridge_te_bounce_t *bounce,
+                                    size_t requested_rows,
+                                    size_t row_bytes,
+                                    size_t alignment);
+void display_bridge_te_bounce_free(display_bridge_te_bounce_t *bounce);
 
 /*********************
  *      TYPEDEFS
@@ -308,6 +327,11 @@ esp_err_t display_lcd_blit_area(esp_lcd_panel_handle_t panel,
                                 int y_end,
                                 const void *frame_buffer);
 
+/* Copy incompatible DMA2D windows through the CPU before submitting a MIPI framebuffer. */
+esp_err_t display_lcd_blit_mipi_partial(esp_lcd_panel_handle_t panel,
+                                        const esp_lv_adapter_display_runtime_info_t *runtime,
+                                        const lv_area_t *area, const void *pixels);
+
 /**
  * @brief Acquire next available frame buffer for double/triple buffering
  *
@@ -374,7 +398,7 @@ struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapte
 /**
  * @brief Initialize runtime information from configuration
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared runtime metadata initialization for LVGL v8 and v9.
  *
  * @param runtime Runtime info structure to initialize
  * @param cfg Display runtime configuration
@@ -462,7 +486,7 @@ esp_err_t display_bridge_release_hw_resource(void);
 /**
  * @brief DMA2D completion callback
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  */
 #ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
 bool display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
@@ -477,13 +501,22 @@ bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
 /**
  * @brief Synchronous DMA2D copy operation
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  *
  * @param trans_desc DMA transfer descriptor
  * @param timeout_ms Timeout in milliseconds
  * @return esp_err_t ESP_OK on success
  */
 esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms);
+
+esp_err_t display_bridge_copy_to_dma_buffer(const void *src,
+                                            void *dst,
+                                            size_t width,
+                                            size_t height,
+                                            uint8_t color_bytes,
+                                            size_t cache_line_size,
+                                            display_bridge_dma2d_copy_state_t *dma2d_state);
+
 #endif /* SOC_DMA2D_SUPPORTED */
 
 /**
@@ -521,29 +554,29 @@ esp_err_t display_bridge_resume_hw_resource_after_sleep(void);
 bool display_bridge_flash_encryption_active(void);
 
 /**
- * @brief Get the alignment required by DMA to encrypted external memory
+ * @brief Get the maximum DMA alignment required by external memory
  *
  * @return Alignment in bytes
  */
 size_t display_bridge_dma2d_ext_mem_alignment(void);
 
 /**
- * @brief Whether DMA to this buffer needs encryption alignment handling
+ * @brief Whether DMA to this buffer needs strict external-memory alignment
  *
- * Returns true only when flash encryption is enabled and the buffer resides in
- * encrypted external RAM. Internal RAM and carve-out no-encryption PSRAM do not
- * need the extra alignment handling.
+ * Uses the IDF MSPI constraints when available, including encryption and PSRAM
+ * ECC. Internal RAM is unrestricted; encryption-exempt PSRAM still requires
+ * alignment when ECC is enabled.
  *
  * @param buffer Buffer pointer
- * @return true if encrypted external-memory DMA alignment is required
+ * @return true if strict external-memory DMA alignment is required
  */
 bool display_bridge_dma2d_buffer_needs_alignment(const void *buffer);
 
 /**
  * @brief Whether X-axis rounding alone can make DMA2D accesses safe for this picture
  *
- * Returns true when stride bytes are already aligned to the encryption granule
- * AND the buffer requires encryption alignment handling. In this case X-axis
+ * Returns true when stride bytes satisfy the MSPI alignment and the buffer
+ * requires strict alignment handling. In this case X-axis
  * (offset and width) rounding is sufficient; Y does not need adjustment.
  *
  * @param buffer     Picture base pointer
@@ -556,7 +589,7 @@ bool display_bridge_dma2d_x_rounding_sufficient(const void *buffer,
                                                 uint8_t color_bytes);
 
 /**
- * @brief Whether a DMA2D window satisfies encrypted external-memory alignment
+ * @brief Whether a DMA2D window satisfies external-memory alignment
  *
  * @param buffer       Picture base pointer
  * @param stride_px    Picture stride in pixels
@@ -572,10 +605,10 @@ bool display_bridge_dma2d_window_is_compatible(const void *buffer,
                                                uint8_t color_bytes);
 
 /**
- * @brief Expand an LVGL invalidated area so DMA to encrypted external RAM stays aligned
+ * @brief Expand an LVGL invalidated area so external-memory DMA stays aligned
  *
  * Rounds x1 down and x2 up so the per-row byte offset and length are multiples
- * of the external-memory encryption granule for the given color depth. Y is not
+ * of the external-memory alignment for the given color depth. Y is not
  * adjusted because row-start alignment depends on stride bytes, not row index.
  *
  * @param area     Invalidated area, expanded in place
@@ -590,7 +623,7 @@ void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t
  * Releases hardware resources (PPA, DMA2D) with reference counting and
  * frees the bridge structure. Safe to call with NULL pointer.
  *
- * @note This function is 100% identical in v8 and v9
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
  *
  * @param bridge Display bridge structure to destroy
  */

@@ -1,0 +1,61 @@
+# GATT Electronic Shelf Label Service
+
+menuconfig BLE_ESL
+    bool "GATT Electronic Shelf Label Service"
+
+if BLE_ESL
+
+config BLE_ESL_DISPLAY_INFO
+    bool "ESL Display Information characteristic"
+    default y
+    select BLE_ESL_IMAGE_INFO
+    help
+      Enable ESL Display Information characteristic.
+      Also enables ESL Image Information. When enabled, call
+      esp_ble_esl_set_display_info() before esp_ble_esl_init().
+
+config BLE_ESL_MAX_DISPLAYS
+    int "Maximum number of displays"
+    range 1 8
+    default 1
+    depends on BLE_ESL_DISPLAY_INFO
+    help
+      Maximum display records exposed by Display Information.
+
+config BLE_ESL_IMAGE_INFO
+    bool
+    default y
+    depends on BLE_ESL_DISPLAY_INFO
+    help
+      ESL Image Information characteristic.
+      Selected automatically by BLE_ESL_DISPLAY_INFO.
+
+config BLE_ESL_SENSOR_INFO
+    bool "ESL Sensor Information characteristic"
+    default n
+    help
+      Enable ESL Sensor Information characteristic.
+
+config BLE_ESL_SENSOR_INFO_MAX_LEN
+    int "Maximum Sensor Information length"
+    range 3 48
+    default 15
+    depends on BLE_ESL_SENSOR_INFO
+    help
+      Maximum octets stored for Sensor Information characteristic.
+
+config BLE_ESL_LED_INFO
+    bool "ESL LED Information characteristic"
+    default n
+    help
+      Enable ESL LED Information characteristic.
+
+config BLE_ESL_MAX_LEDS
+    int "Maximum number of LEDs"
+    range 1 8
+    default 1
+    depends on BLE_ESL_LED_INFO
+    help
+      Maximum LED Information octets exposed by LED Information.
+
+endif # BLE_ESL

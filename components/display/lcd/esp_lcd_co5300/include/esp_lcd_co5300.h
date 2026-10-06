@@ -25,10 +25,10 @@ extern "C" {
  *
  */
 typedef struct {
-    int cmd;                /*<! The specific LCD command */
-    const void *data;       /*<! Buffer that holds the command specific data */
-    size_t data_bytes;      /*<! Size of `data` in memory, in bytes */
-    unsigned int delay_ms;  /*<! Delay in milliseconds after this command */
+    int cmd;                /*!< The specific LCD command */
+    const void *data;       /*!< Buffer that holds the command specific data */
+    size_t data_bytes;      /*!< Size of `data` in memory, in bytes */
+    unsigned int delay_ms;  /*!< Delay in milliseconds after this command */
 } co5300_lcd_init_cmd_t;
 
 /**
@@ -42,7 +42,7 @@ typedef struct {
                                                      *   The array should be declared as `static const` and positioned outside the function.
                                                      *   Please refer to `vendor_specific_init_default` in source file.
                                                      */
-    uint16_t init_cmds_size;                        /*<! Number of commands in above array */
+    uint16_t init_cmds_size;                        /*!< Number of commands in above array */
     union {
 #if SOC_MIPI_DSI_SUPPORTED
         struct {
@@ -52,20 +52,20 @@ typedef struct {
 #endif
     };
     struct {
-        unsigned int use_mipi_interface: 1;         /*<! Set to 1 if using MIPI interface, default is RGB interface */
-        unsigned int use_qspi_interface: 1;         /*<! Set to 1 if use QSPI interface, default is SPI interface */
+        unsigned int use_mipi_interface: 1;         /*!< Set to 1 if using MIPI-DSI, default is SPI/QSPI */
+        unsigned int use_qspi_interface: 1;         /*!< Set to 1 if using QSPI, default is SPI */
     } flags;
 } co5300_vendor_config_t;
 
 /**
  * @brief Create LCD panel for model CO5300
  *
- * @note  When `enable_io_multiplex` is set to 1, this function will first initialize the CO5300 with vendor specific initialization and then calls `esp_lcd_new_rgb_panel()` to create an RGB LCD panel. And the `esp_lcd_panel_init()` function will only initialize RGB.
- * @note  When `enable_io_multiplex` is set to 0, this function will only call `esp_lcd_new_rgb_panel()` to create an RGB LCD panel. And the `esp_lcd_panel_init()` function will initialize both the CO5300 and RGB.
- * @note  Vendor specific initialization can be different between manufacturers, should consult the LCD supplier for initialization sequence code.
+ * @note  The interface is selected by `co5300_vendor_config_t::flags`. SPI is used by default.
+ * @note  Vendor-specific initialization can differ between panel manufacturers. Consult the LCD supplier for the required sequence.
+ * @note  Low-power control is provided by `esp_lcd_panel_disp_sleep()`. With a reset GPIO, the driver also enters Deep Standby and restores the panel during wake-up. Without one, it uses standard Sleep In/Out.
  *
  * @param[in]  io LCD panel IO handle
- * @param[in]  panel_dev_config General panel device configuration (`vendor_config` and `rgb_config` are necessary)
+ * @param[in]  panel_dev_config General panel device configuration
  * @param[out] ret_panel Returned LCD panel handle
  * @return
  *      - ESP_ERR_INVALID_ARG   if parameter is invalid

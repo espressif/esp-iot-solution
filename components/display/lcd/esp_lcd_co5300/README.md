@@ -8,7 +8,7 @@ Implementation of the CO5300 LCD controller with esp_lcd component.
 | :------------: | :---------------------: | :------------: | :--------------------------------------------------------------------------: |
 |    CO5300     |    SPI/ QSPI / MIPI-DSI     | esp_lcd_co5300 | [PDF](https://dl.espressif.com/AE/esp-iot-solution/CO5300_Datasheet_V0.00.pdf) |
 
-**Note**: MIPI-DSI interface only supports ESP-IDF v5.3 and above versions.
+**Note**: This component requires ESP-IDF v5.4 or later. MIPI-DSI is available only on targets with MIPI-DSI support.
 
 For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
 
@@ -61,7 +61,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,      // Set to -1 if not use
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,     // Implemented by LCD command `36h`
-        .bits_per_pixel = 16,                           // Implemented by LCD command `3Ah` (12/16/18)
+        .bits_per_pixel = 16,                           // Implemented by LCD command `3Ah` (16/18/24)
         // .vendor_config = &vendor_config,            // Uncomment this line if use custom initialization commands
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_co5300(io_handle, &panel_config, &panel_handle));
@@ -182,3 +182,22 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 ```
+
+## Low-power operation
+
+Use the standard `esp_lcd` sleep API for every supported transport:
+
+```c
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_sleep(panel_handle, true));
+
+    // The application can now suspend the display bus and its power domains.
+
+    // Restore the bus and its power domains before waking the panel.
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_sleep(panel_handle, false));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+```
+
+When `reset_gpio_num` is configured, sleep enters CO5300 Deep Standby after the normal Sleep In sequence. Wake-up generates the required reset pulse and reruns the configured panel initialization sequence, so the panel is ready for use when the call returns. Without a reset GPIO, the driver falls back to the standard Sleep In/Out commands because Deep Standby cannot be exited by command.
+
+For MIPI-DSI, the panel driver controls only the CO5300. The application or BSP remains responsible for suspending the DSI host/PHY and restoring them before calling the wake path.

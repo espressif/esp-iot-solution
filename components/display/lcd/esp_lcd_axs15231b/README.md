@@ -210,7 +210,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 ## Initialization of the touch component.
 
 ```
-    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG();
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG_EX(400000);
     esp_lcd_panel_io_handle_t io_handle = NULL;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus_handle, &io_config, &io_handle));
 

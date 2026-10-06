@@ -44,6 +44,10 @@
   - "components/bluetooth/ble_profiles/std/ble_otp/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_bluetooth_ble_profiles_std_ble_esl: &patterns-components_bluetooth_ble_profiles_std_ble_esl
+  - "components/bluetooth/ble_profiles/std/ble_esl/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_bluetooth_ble_profiles_third_party_ble_midi: &patterns-components_bluetooth_ble_profiles_third_party_ble_midi
   - "components/bluetooth/ble_profiles/third_party/ble_midi/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -191,6 +195,14 @@
 .patterns-components_display_lcd_touch_esp_lcd_touch_st77926: &patterns-components_display_lcd_touch_esp_lcd_touch_st77926
   - "components/display/lcd_touch/esp_lcd_touch_st77926/**/*"
 
+.patterns-components_display_tools_esp_display_present: &patterns-components_display_tools_esp_display_present
+  - "components/display/tools/esp_display_present/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_display_tools_esp_lv_present: &patterns-components_display_tools_esp_lv_present
+  - "components/display/tools/esp_lv_present/**/*"
+  - "tools/cmake_utilities/package_manager.cmake"
+
 .patterns-components_display_tools_esp_lv_decoder: &patterns-components_display_tools_esp_lv_decoder
   - "components/display/tools/esp_lv_decoder/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -228,6 +240,12 @@
 .patterns-components_extended_vfs: &patterns-components_extended_vfs
   - "components/extended_vfs/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
+
+.patterns-components_imu_gesture: &patterns-components_imu_gesture
+  - "components/imu_gesture/**/*"
+
+.patterns-components_imu_quaternion: &patterns-components_imu_quaternion
+  - "components/imu_quaternion/**/*"
 
 .patterns-components_ir_ir_learn: &patterns-components_ir_ir_learn
   - "components/ir/ir_learn/**/*"
@@ -550,6 +568,8 @@
   - "components/openai/include/OpenAI.h"
 
 .patterns-docs_inc_2: &patterns-docs_inc_2
+  - "components/display/tools/esp_display_present/include/*.h"
+  - "components/display/tools/esp_lv_present/include/*.h"
   - "components/protocomm_ext/include/common/protocomm_ext.h"
   - "components/protocomm_ext/include/security/protocomm_ext_security.h"
   - "components/protocomm_ext/include/transports/protocomm_ext_console.h"
@@ -628,6 +648,12 @@
 .patterns-example_bluetooth_ble_otp_server: &patterns-example_bluetooth_ble_otp_server
   - "examples/bluetooth/ble_profiles/ble_otp/ble_otp_server/**/*"
 
+.patterns-example_bluetooth_ble_esl_tag: &patterns-example_bluetooth_ble_esl_tag
+  - "examples/bluetooth/ble_profiles/ble_esl/ble_esl_tag/**/*"
+
+.patterns-example_bluetooth_ble_esl_ap: &patterns-example_bluetooth_ble_esl_ap
+  - "examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap/**/*"
+
 .patterns-example_bluetooth_ble_ota: &patterns-example_bluetooth_ble_ota
   - "examples/bluetooth/ble_ota/**/*"
 
@@ -691,35 +717,62 @@
 .patterns-example_display_lcd_rgb_avoid_tearing: &patterns-example_display_lcd_rgb_avoid_tearing
   - "examples/display/lcd/rgb_avoid_tearing/**/*"
 
+.patterns-example_display_gui_lvgl_present_benchmark: &patterns-example_display_gui_lvgl_present_benchmark
+  - "examples/display/gui/lvgl_present_benchmark/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
+
+.patterns-example_display_gui_gsp_lvgl_present_handoff: &patterns-example_display_gui_gsp_lvgl_present_handoff
+  - "examples/display/gui/gsp_lvgl_present_handoff/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
+
+.patterns-example_display_gui_gsp_showcase: &patterns-example_display_gui_gsp_showcase
+  - "examples/display/gui/gsp_showcase/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
+
 .patterns-example_display_gui_lvgl_common_demo: &patterns-example_display_gui_lvgl_common_demo
   - "examples/display/gui/lvgl_common_demo/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_decode_image: &patterns-example_display_gui_lvgl_decode_image
   - "examples/display/gui/lvgl_decode_image/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_dummy_draw: &patterns-example_display_gui_lvgl_dummy_draw
   - "examples/display/gui/lvgl_dummy_draw/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_freetype_font: &patterns-example_display_gui_lvgl_freetype_font
   - "examples/display/gui/lvgl_freetype_font/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_multi_screen: &patterns-example_display_gui_lvgl_multi_screen
   - "examples/display/gui/lvgl_multi_screen/**/*"
 
 .patterns-example_display_gui_lvgl_light_sleep_demo: &patterns-example_display_gui_lvgl_light_sleep_demo
   - "examples/display/gui/lvgl_light_sleep_demo/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_mono_demo: &patterns-example_display_gui_lvgl_mono_demo
   - "examples/display/gui/lvgl_mono_demo/**/*"
 
 .patterns-example_display_gui_lvgl_eaf_player: &patterns-example_display_gui_lvgl_eaf_player
   - "examples/display/gui/lvgl_eaf_player/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_fs_assets: &patterns-example_display_gui_lvgl_fs_assets
   - "examples/display/gui/lvgl_fs_assets/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_lvgl_lottie_player: &patterns-example_display_gui_lvgl_lottie_player
   - "examples/display/gui/lvgl_lottie_player/**/*"
+  - "examples/display/gui/common/example_lvgl_init/**/*"
+  - "examples/display/gui/common/hw_init/**/*"
 
 .patterns-example_display_gui_esp_painter_demo: &patterns-example_display_gui_esp_painter_demo
   - "examples/display/gui/esp_painter_demo/**/*"
@@ -792,6 +845,9 @@
 
 .patterns-example_quickjs_ng: &patterns-example_quickjs_ng
   - "examples/quickjs-ng/**/*"
+
+.patterns-example_sensors_airmouse: &patterns-example_sensors_airmouse
+  - "examples/sensors/airmouse/**/*"
 
 .patterns-example_sensors_sensor_control_led: &patterns-example_sensors_sensor_control_led
   - "examples/sensors/sensor_control_led/**/*"
@@ -1124,6 +1180,40 @@
     - <<: *if-dev-push
       changes: *patterns-components_bluetooth_ble_services
 
+.rules:build:example_bluetooth_ble_esl_tag:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_std_ble_esl
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_std_ble_otp
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_services
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_esl_tag
+
+.rules:build:example_bluetooth_ble_esl_ap:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_std_ble_esl
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_profiles_std_ble_otp
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_services
+    - <<: *if-dev-push
+      changes: *patterns-example_bluetooth_ble_esl_ap
+
 .rules:build:example_bluetooth_ble_midi_peripheral:
   rules:
     - <<: *if-protected
@@ -1387,6 +1477,48 @@
       changes: *patterns-components_display_lcd_esp_lcd_panel_io_additions
     - <<: *if-dev-push
       changes: *patterns-example_display_lcd_rgb_avoid_tearing
+
+.rules:build:example_display_gui_lvgl_present_benchmark:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_lvgl_present_benchmark
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_present
+
+.rules:build:example_display_gui_gsp_lvgl_present_handoff:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_gsp_lvgl_present_handoff
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_present
+
+.rules:build:example_display_gui_gsp_showcase:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_display_gui_gsp_showcase
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
 
 .rules:build:example_display_gui_lvgl_common_demo:
   rules:
@@ -1919,6 +2051,22 @@
       changes: *patterns-components_bootloader_support_plus
     - <<: *if-dev-push
       changes: *patterns-example_ota_simple_ota_example
+
+.rules:build:example_sensors_airmouse:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_button
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_gesture
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_quaternion
+    - <<: *if-dev-push
+      changes: *patterns-example_sensors_airmouse
 
 .rules:build:example_sensors_sensor_control_led:
   rules:
@@ -2979,6 +3127,30 @@
       variables:
         MANUAL_TRIGGER_ESP_LVGL_ADAPTER_BENCHMARK: "true"
 
+.rules:build:components_display_tools_esp_display_present_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+
+.rules:build:components_display_tools_esp_lv_present_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_lv_present
+    - <<: *if-dev-push
+      changes: *patterns-components_display_tools_esp_display_present
+
 .rules:build:components_display_tools_esp_mmap_assets_test_apps:
   rules:
     - <<: *if-protected
@@ -3011,6 +3183,28 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_display_tools_esp_lv_lottie_player
+
+.rules:build:components_imu_gesture_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_gesture
+
+.rules:build:components_imu_quaternion_test_apps:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_imu_quaternion
 
 .rules:build:components_keyboard_button_test_apps:
   rules:

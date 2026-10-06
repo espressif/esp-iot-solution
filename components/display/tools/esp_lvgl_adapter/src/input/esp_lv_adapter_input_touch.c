@@ -428,8 +428,10 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
             ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
                                                    MAX_TOUCH_POINTS_V9, touch_ctx->cbs.user_ctx);
         } else {
-            esp_lcd_touch_read_data(touch_ctx->handle);
-            ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V9);
+            ret = esp_lcd_touch_read_data(touch_ctx->handle);
+            if (ret == ESP_OK) {
+                ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V9);
+            }
         }
 
 #if LV_USE_GESTURE_RECOGNITION
@@ -636,8 +638,10 @@ static void multi_touch_refresh_snapshot(esp_lv_adapter_touch_ctx_t *touch_ctx)
         ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
                                                MAX_MULTI_TOUCH_CONTROL_POINTS_V9, touch_ctx->cbs.user_ctx);
     } else {
-        esp_lcd_touch_read_data(touch_ctx->handle);
-        ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_MULTI_TOUCH_CONTROL_POINTS_V9);
+        ret = esp_lcd_touch_read_data(touch_ctx->handle);
+        if (ret == ESP_OK) {
+            ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_MULTI_TOUCH_CONTROL_POINTS_V9);
+        }
     }
 
     if (ret != ESP_OK) {
@@ -1139,8 +1143,10 @@ static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
             ret = touch_ctx->cbs.custom_touch_read(touch_ctx->handle, touch_data, &count,
                                                    MAX_TOUCH_POINTS_V8, touch_ctx->cbs.user_ctx);
         } else {
-            esp_lcd_touch_read_data(touch_ctx->handle);
-            ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V8);
+            ret = esp_lcd_touch_read_data(touch_ctx->handle);
+            if (ret == ESP_OK) {
+                ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V8);
+            }
         }
 
         /* Update last state */

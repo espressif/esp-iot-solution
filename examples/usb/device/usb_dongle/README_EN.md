@@ -182,6 +182,45 @@ For ESP32-S31, add the preview option:
     * [Connect to target AP by sta command](./Commands_EN.md#3sta)
     * [Connect to target AP by startsmart command (SmartConfig)](./Commands_EN.md#5smartconfig)
 
+#### 2.6.1 Send Commands over CDC
+
+Both Windows and Linux support sending commands over CDC. Enable USB-CDC, flash the firmware, and connect the board's USB-OTG port to the host. In a terminal with the ESP-IDF environment activated, first find the CDC serial port:
+
+```text
+python -m serial.tools.list_ports -v
+```
+
+Open the serial port using the command for your operating system:
+
+**Linux:**
+
+```bash
+python -m serial.tools.miniterm /dev/ttyACM0 115200 --eol LF --echo
+```
+
+**Windows:**
+
+```powershell
+python -m serial.tools.miniterm COM5 115200 --eol LF --echo
+```
+
+Replace `/dev/ttyACM0` or `COM5` with the actual port name. `--eol LF` makes the Enter key send `\n`, and `--echo` displays local input. Press `Ctrl+]` to exit. Close other serial tools using the same port before opening it. You can also use another serial terminal with the transmit line ending set to LF or CRLF.
+
+Enter the following commands in the serial terminal one at a time, pressing Enter after each command:
+
+```text
+help
+version
+ram
+scan
+sta -s MyWiFi -p MyPassword
+sta
+```
+
+Replace `MyWiFi` and `MyPassword` with the router's SSID and password. The `scan` and `sta` commands require USB-ECM/RNDIS/NCM to be enabled. See [Commands_EN.md](./Commands_EN.md) for the full command reference.
+
+The `Wi-Fi STA connected` and `connect success` messages indicate that the ESP device has connected to Wi-Fi.
+
 ### 2.7 Common network device Problems
 
 #### Windows
