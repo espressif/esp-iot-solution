@@ -186,6 +186,42 @@ uintptr_t elf_find_sym(const char *sym_name)
     return resolver(sym_name);
 }
 
+/**
+ * @brief Classify a section holding constructor/destructor function pointers.
+ *
+ * Toolchains emit either the modern .preinit_array/.init_array/.fini_array
+ * (run in ascending order, .fini_array in reverse), or the legacy .ctors/.dtors
+ * (.ctors run in reverse, .dtors in ascending order, as __do_global_ctors_aux does).
+ *
+ * @param reverse - set to true if the entries have to be run backwards
+ *
+ * @return ELF_SEC_PREINIT, ELF_SEC_INIT, ELF_SEC_FINI or -1 if not such a section.
+ */
+static int esp_elf_init_section_kind(const elf32_shdr_t *sh, const char *name, bool *reverse)
+{
+    *reverse = false;
+
+    if (!sflags(sh, SHF_ALLOC) || !sh->size) {
+        return -1;
+    }
+
+    if (stype(sh, SHT_PREINIT_ARRAY)) {
+        return ELF_SEC_PREINIT;
+    } else if (stype(sh, SHT_INIT_ARRAY)) {
+        return ELF_SEC_INIT;
+    } else if (stype(sh, SHT_FINI_ARRAY)) {
+        *reverse = true;
+        return ELF_SEC_FINI;
+    } else if (stype(sh, SHT_PROGBITS) && !strcmp(name, ".ctors")) {
+        *reverse = true;
+        return ELF_SEC_INIT;
+    } else if (stype(sh, SHT_PROGBITS) && !strcmp(name, ".dtors")) {
+        return ELF_SEC_FINI;
+    }
+
+    return -1;
+}
+
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
 /**
@@ -212,7 +248,17 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
     for (uint32_t i = 0; i < ehdr->shnum; i++) {
         const char *name = shstrab + shdr[i].name;
 
-        if (stype(&shdr[i], SHT_PROGBITS) && sflags(&shdr[i], SHF_ALLOC)) {
+        bool rev;
+        int init_kind = esp_elf_init_section_kind(&shdr[i], name, &rev);
+
+        (void)rev;
+
+        if (init_kind >= 0) {
+            /* Constructor/destructor arrays have to be in memory, they are run by esp_elf_request()/esp_elf_deinit() */
+            elf->sec[init_kind].v_addr  = shdr[i].addr;
+            elf->sec[init_kind].size    = shdr[i].size;
+            elf->sec[init_kind].offset  = shdr[i].offset;
+        } else if (stype(&shdr[i], SHT_PROGBITS) && sflags(&shdr[i], SHF_ALLOC)) {
             if (sflags(&shdr[i], SHF_EXECINSTR) && !strcmp(ELF_TEXT, name)) {
                 ESP_LOGD(TAG, ".text   sec addr=0x%08x size=0x%08x offset=0x%08x",
                          shdr[i].addr, shdr[i].size, shdr[i].offset);
@@ -300,6 +346,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
         return -ENOMEM;
     }
 
+    /* Retain the v2.0.0 alignment budget for the existing data sections. */
     uint64_t data_size = 0;
     for (uint32_t i = ELF_SEC_BSS; i <= ELF_SEC_DRLRO; i++) {
         if (elf->sec[i].size) {
@@ -307,13 +354,22 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
             data_size += sec_align[i] - 1;
         }
     }
-    if (data_size > UINT32_MAX) {
-        ESP_LOGE(TAG, "Data sections plus alignment padding exceed allocator limit");
+    if (data_size > UINT32_MAX - 3) {
         esp_elf_free(elf->ptext);
         elf->ptext = NULL;
         return -EOVERFLOW;
     }
 
+    uint32_t arrays_off = ELF_ALIGN((uint32_t)data_size, 4);
+    data_size = arrays_off;
+    for (int i = ELF_SEC_PREINIT; i <= ELF_SEC_FINI; i++) {
+        data_size += ELF_ALIGN(elf->sec[i].size, 4);
+    }
+    if (data_size > UINT32_MAX) {
+        esp_elf_free(elf->ptext);
+        elf->ptext = NULL;
+        return -EOVERFLOW;
+    }
     size = (uint32_t)data_size;
     if (size) {
         elf->pdata = esp_elf_malloc(size, false);
@@ -380,6 +436,15 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
             }
             pdata += sec_size;
             remaining -= sec_size;
+        }
+
+        pdata = elf->pdata + arrays_off;
+        for (int i = ELF_SEC_PREINIT; i <= ELF_SEC_FINI; i++) {
+            if (elf->sec[i].size) {
+                elf->sec[i].addr = (uint32_t)pdata;
+                memcpy(pdata, pbuf + elf->sec[i].offset, elf->sec[i].size);
+                pdata += ELF_ALIGN(elf->sec[i].size, 4);
+            }
         }
     }
 
@@ -577,6 +642,70 @@ static void *esp_elf_exported_function_address(esp_elf_t *elf, uint32_t sym_vadd
 #endif
 
 /**
+ * @brief Convert a virtual address of the ELF to its address in memory.
+ *
+ * @return Memory address or 0 if the address is not covered by the loaded image.
+ */
+static uintptr_t esp_elf_vaddr_to_ptr(esp_elf_t *elf, uintptr_t vaddr)
+{
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    return esp_elf_map_sym(elf, vaddr);
+#else
+    return (uintptr_t)(elf->psegment + vaddr - elf->svaddr);
+#endif
+}
+
+/**
+ * @brief Remember where .preinit_array/.init_array/.fini_array live after relocation.
+ *
+ * The arrays are relocated in place like any other data, so their entries are valid
+ * function pointers once esp_elf_relocate() has applied all relocations.
+ */
+static void esp_elf_find_init_arrays(esp_elf_t *elf, const elf32_shdr_t *shdr, uint32_t shnum, const char *shstrab)
+{
+    for (uint32_t i = 0; i < shnum; i++) {
+        bool rev;
+        int kind = esp_elf_init_section_kind(&shdr[i], shstrab + shdr[i].name, &rev);
+        void (***arr)(void);
+        uint32_t *cnt;
+
+        if (kind == ELF_SEC_PREINIT) {
+            arr = &elf->preinit_array;
+            cnt = &elf->preinit_cnt;
+        } else if (kind == ELF_SEC_INIT) {
+            arr = &elf->init_array;
+            cnt = &elf->init_cnt;
+            elf->init_rev = rev;
+        } else if (kind == ELF_SEC_FINI) {
+            arr = &elf->fini_array;
+            cnt = &elf->fini_cnt;
+            elf->fini_rev = rev;
+        } else {
+            continue;
+        }
+
+        uintptr_t addr = esp_elf_vaddr_to_ptr(elf, shdr[i].addr);
+        if (!addr) {
+            ESP_LOGW(TAG, "Can't map init/fini array at 0x%x, it will not be run", (unsigned)shdr[i].addr);
+            continue;
+        }
+
+        *arr = (void (**)(void))addr;
+        *cnt = shdr[i].size / sizeof(void (*)(void));
+    }
+}
+
+static void esp_elf_run_array(void (**arr)(void), uint32_t cnt, bool reverse)
+{
+    for (uint32_t i = 0; i < cnt; i++) {
+        void (*fn)(void) = reverse ? arr[cnt - 1 - i] : arr[i];
+        if (fn && fn != (void (*)(void))(uintptr_t)-1) {
+            fn();
+        }
+    }
+}
+
+/**
  * @brief Initialize ELF object.
  *
  * @param elf - ELF object pointer
@@ -766,6 +895,8 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size)
         }
     }
 
+    esp_elf_find_init_arrays(elf, shdr, ehdr->shnum, shstrab);
+
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
     ret = esp_elf_arch_flush(elf);
     if (ret) {
@@ -793,6 +924,13 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
         return -EINVAL;
     }
 
+    /* Run C++ static constructors (and other init functions) once, before the entry point */
+    if (!elf->init_done) {
+        elf->init_done = true;
+        esp_elf_run_array(elf->preinit_array, elf->preinit_cnt, false);
+        esp_elf_run_array(elf->init_array, elf->init_cnt, elf->init_rev);
+    }
+
     elf->entry(argc, argv);
 
     return 0;
@@ -812,6 +950,11 @@ void esp_elf_deinit(esp_elf_t *elf)
 {
     if (!elf) {
         return;
+    }
+
+    /* Run destructors (.fini_array, reverse order) if the constructors were run */
+    if (elf->init_done) {
+        esp_elf_run_array(elf->fini_array, elf->fini_cnt, elf->fini_rev);
     }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
@@ -977,7 +1120,7 @@ void esp_elf_print_shdr(const uint8_t *pbuf)
 void esp_elf_print_sec(esp_elf_t *elf)
 {
     const char *sec_names[ELF_SECS] = {
-        "text", "bss", "data", "rodata"
+        "text", "bss", "data", "rodata", "data.rel.ro", "preinit_array", "init_array", "fini_array"
     };
 
     for (int i = 0; i < ELF_SECS; i++) {

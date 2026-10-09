@@ -1,5 +1,10 @@
 # ChangeLog
 
+## Unreleased
+
+* Run `.preinit_array` / `.init_array` (or legacy `.ctors`) of a loaded ELF before its entry point (C++ static constructors), and `.fini_array` (or `.dtors`) in `esp_elf_deinit()`; the arrays are now also loaded into memory in section mode (ESP32/ESP32-S2/ESP32-S3)
+* Documented how to build C++ ELF applications
+
 ## v2.0.0 - 2026-10-14
 
 * Validate ELF headers, file ranges, section names, symbol tables, and relocation
