@@ -39,7 +39,7 @@ extern "C" {
  *      - ESP_OK: Success
  *      - ESP_ERR_INVALID_ARG: @p presenter or @p ret_disp is NULL
  *      - ESP_ERR_INVALID_STATE: Binding already started
- *      - ESP_ERR_NOT_SUPPORTED: Unsupported contract or pixel format
+ *      - ESP_ERR_NOT_SUPPORTED: Unsupported contract, pixel format, or buffer layout
  *      - ESP_ERR_NO_MEM: Failed to create the LVGL display
  */
 esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
