@@ -42,6 +42,16 @@
 #define CONFIG_AIRMOUSE_BLE_CCCD_RESTORE_DELAY_MS 10000
 #endif
 
+#define AIRMOUSE_BLE_ACTIVE_CONN_MIN_INTERVAL ESP_BLE_GAP_CONN_ITVL_MS(7.5)
+#define AIRMOUSE_BLE_ACTIVE_CONN_MAX_INTERVAL ESP_BLE_GAP_CONN_ITVL_MS(15)
+#define AIRMOUSE_BLE_ACTIVE_CONN_LATENCY      0
+#define AIRMOUSE_BLE_ACTIVE_CONN_TIMEOUT      400
+
+#define AIRMOUSE_BLE_IDLE_CONN_MIN_INTERVAL   ESP_BLE_GAP_CONN_ITVL_MS(45)
+#define AIRMOUSE_BLE_IDLE_CONN_MAX_INTERVAL   ESP_BLE_GAP_CONN_ITVL_MS(60)
+#define AIRMOUSE_BLE_IDLE_CONN_LATENCY        4
+#define AIRMOUSE_BLE_IDLE_CONN_TIMEOUT        400
+
 static airmouse_ble_handle_t s_ble_hid_ctx = {
     .hid_conn_id = 0,
     .sec_conn = false,
@@ -56,6 +66,8 @@ static airmouse_ble_handle_t s_ble_hid_ctx = {
     .has_peer = false,
     .peer_bda = {0},
     .peer_addr_type = 0,
+    .power_mode = AIRMOUSE_BLE_POWER_ACTIVE,
+    .requested_power_mode = AIRMOUSE_BLE_POWER_ACTIVE,
 };
 #define CHAR_DECLARATION_SIZE   (sizeof(uint8_t))
 
@@ -212,6 +224,8 @@ static void airmouse_ble_clear_hid_ready_state(void)
     s_ble_hid_ctx.has_peer = false;
     memset(s_ble_hid_ctx.peer_bda, 0, sizeof(s_ble_hid_ctx.peer_bda));
     s_ble_hid_ctx.peer_addr_type = 0;
+    s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
+    s_ble_hid_ctx.requested_power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
 }
 
 static uint8_t hidd_service_uuid128[] = {
@@ -246,6 +260,68 @@ static esp_ble_adv_params_t hidd_adv_params = {
     .channel_map        = ADV_CHNL_ALL,
     .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY,
 };
+
+static const char *airmouse_ble_power_mode_name(airmouse_ble_power_mode_t mode)
+{
+    switch (mode) {
+    case AIRMOUSE_BLE_POWER_ACTIVE:
+        return "ACTIVE";
+    case AIRMOUSE_BLE_POWER_IDLE:
+        return "IDLE";
+    case AIRMOUSE_BLE_POWER_SLEEP:
+        return "SLEEP";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+static esp_err_t airmouse_ble_request_conn_params(
+    airmouse_ble_power_mode_t mode)
+{
+    if (!s_ble_hid_ctx.sec_conn || !s_ble_hid_ctx.has_peer) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (s_ble_hid_ctx.requested_power_mode == mode) {
+        return ESP_OK;
+    }
+
+    esp_ble_conn_update_params_t conn_params = {0};
+    memcpy(conn_params.bda, s_ble_hid_ctx.peer_bda, ESP_BD_ADDR_LEN);
+
+    switch (mode) {
+    case AIRMOUSE_BLE_POWER_ACTIVE:
+        conn_params.min_int = AIRMOUSE_BLE_ACTIVE_CONN_MIN_INTERVAL;
+        conn_params.max_int = AIRMOUSE_BLE_ACTIVE_CONN_MAX_INTERVAL;
+        conn_params.latency = AIRMOUSE_BLE_ACTIVE_CONN_LATENCY;
+        conn_params.timeout = AIRMOUSE_BLE_ACTIVE_CONN_TIMEOUT;
+        break;
+    case AIRMOUSE_BLE_POWER_IDLE:
+        conn_params.min_int = AIRMOUSE_BLE_IDLE_CONN_MIN_INTERVAL;
+        conn_params.max_int = AIRMOUSE_BLE_IDLE_CONN_MAX_INTERVAL;
+        conn_params.latency = AIRMOUSE_BLE_IDLE_CONN_LATENCY;
+        conn_params.timeout = AIRMOUSE_BLE_IDLE_CONN_TIMEOUT;
+        break;
+    default:
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    ESP_LOGI(HID_DEMO_TAG,
+             "BLE power mode request: %s",
+             airmouse_ble_power_mode_name(mode));
+
+    esp_err_t ret = esp_ble_gap_update_conn_params(&conn_params);
+    if (ret == ESP_OK) {
+        s_ble_hid_ctx.requested_power_mode = mode;
+    } else {
+        ESP_LOGW(HID_DEMO_TAG,
+                 "BLE power mode request failed: %s (%s)",
+                 airmouse_ble_power_mode_name(mode),
+                 esp_err_to_name(ret));
+    }
+
+    return ret;
+}
 
 static void airmouse_ble_restore_cccd_task(void *arg)
 {
@@ -354,6 +430,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
             s_ble_hid_ctx.peer_addr_type = param->ble_security.auth_cmpl.addr_type;
             s_ble_hid_ctx.has_peer = true;
             s_ble_hid_ctx.sec_conn = true;
+            s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
+            s_ble_hid_ctx.requested_power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
             ESP_LOGI(HID_DEMO_TAG, "secure connection established, sec_conn = 1");
 
             bool peer_bonded = airmouse_ble_is_peer_bonded(bd_addr);
@@ -366,6 +444,14 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
                      bd_addr[3], bd_addr[4], bd_addr[5]);
             ESP_LOGI(HID_DEMO_TAG, "current peer %s bonded=%d",
                      bda_str, peer_bonded);
+
+            esp_err_t power_ret =
+                airmouse_ble_request_conn_params(AIRMOUSE_BLE_POWER_ACTIVE);
+            if (power_ret != ESP_OK) {
+                ESP_LOGW(HID_DEMO_TAG,
+                         "failed to request ACTIVE connection params: %s",
+                         esp_err_to_name(power_ret));
+            }
 
             ESP_LOGI(HID_DEMO_TAG, "start delayed CCCD restore, delay=%d ms",
                      CONFIG_AIRMOUSE_BLE_CCCD_RESTORE_DELAY_MS);
@@ -384,6 +470,19 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param
         }
         break;
     }
+
+    case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
+        ESP_LOGI(HID_DEMO_TAG,
+                 "BLE conn params updated: status=%d conn_interval_ms=%u latency=%u timeout_10ms=%u min_int=%u max_int=%u requested=%s app_state=%s",
+                 param->update_conn_params.status,
+                 param->update_conn_params.conn_int,
+                 param->update_conn_params.latency,
+                 param->update_conn_params.timeout,
+                 param->update_conn_params.min_int,
+                 param->update_conn_params.max_int,
+                 airmouse_ble_power_mode_name(s_ble_hid_ctx.requested_power_mode),
+                 airmouse_ble_power_mode_name(s_ble_hid_ctx.power_mode));
+        break;
 
     default:
         break;
@@ -418,6 +517,8 @@ static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *
         s_ble_hid_ctx.has_peer = false;
         memset(s_ble_hid_ctx.peer_bda, 0, sizeof(s_ble_hid_ctx.peer_bda));
         s_ble_hid_ctx.peer_addr_type = 0;
+        s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
+        s_ble_hid_ctx.requested_power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
         break;
 
     case ESP_HIDD_EVENT_BLE_DISCONNECT:
@@ -510,6 +611,64 @@ static void hidd_event_callback(esp_hidd_cb_event_t event, esp_hidd_cb_param_t *
     default:
         break;
     }
+}
+
+esp_err_t airmouse_ble_enter_active(void)
+{
+    if (s_ble_hid_ctx.power_mode == AIRMOUSE_BLE_POWER_ACTIVE) {
+        return ESP_OK;
+    }
+
+    airmouse_ble_power_mode_t old_mode = s_ble_hid_ctx.power_mode;
+    esp_err_t ret =
+        airmouse_ble_request_conn_params(AIRMOUSE_BLE_POWER_ACTIVE);
+    if (ret == ESP_OK) {
+        s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_ACTIVE;
+        ESP_LOGI(HID_DEMO_TAG,
+                 "AirMouse BLE state: %s -> ACTIVE",
+                 airmouse_ble_power_mode_name(old_mode));
+    }
+    return ret;
+}
+
+esp_err_t airmouse_ble_enter_idle(void)
+{
+    if (s_ble_hid_ctx.power_mode == AIRMOUSE_BLE_POWER_IDLE) {
+        return ESP_OK;
+    }
+
+    airmouse_ble_power_mode_t old_mode = s_ble_hid_ctx.power_mode;
+    esp_err_t ret =
+        airmouse_ble_request_conn_params(AIRMOUSE_BLE_POWER_IDLE);
+    if (ret == ESP_OK) {
+        s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_IDLE;
+        ESP_LOGI(HID_DEMO_TAG,
+                 "AirMouse BLE state: %s -> IDLE",
+                 airmouse_ble_power_mode_name(old_mode));
+    }
+    return ret;
+}
+
+esp_err_t airmouse_ble_enter_sleep(void)
+{
+    if (s_ble_hid_ctx.power_mode == AIRMOUSE_BLE_POWER_SLEEP) {
+        return ESP_OK;
+    }
+
+    airmouse_ble_power_mode_t old_mode = s_ble_hid_ctx.power_mode;
+    if (old_mode == AIRMOUSE_BLE_POWER_ACTIVE) {
+        esp_err_t ret =
+            airmouse_ble_request_conn_params(AIRMOUSE_BLE_POWER_IDLE);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+    }
+
+    s_ble_hid_ctx.power_mode = AIRMOUSE_BLE_POWER_SLEEP;
+    ESP_LOGI(HID_DEMO_TAG,
+             "AirMouse BLE state: %s -> SLEEP",
+             airmouse_ble_power_mode_name(old_mode));
+    return ESP_OK;
 }
 
 // -----------------------------

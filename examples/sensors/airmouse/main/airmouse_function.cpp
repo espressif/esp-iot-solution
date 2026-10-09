@@ -8,10 +8,19 @@
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_pm.h"
+#include "esp_private/esp_clk.h"
+#include "esp_sleep.h"
 #include "esp_timer.h"
+#include "driver/gpio.h"
 #include "freertos/semphr.h"
 
 #define TAG "AIRMOUSE"
+
+static const int64_t kBleIdleTimeoutMs = 3000;
+static const int64_t kBleIdleTimeoutUs = kBleIdleTimeoutMs * 1000;
+static const int64_t kBleSleepTimeoutMs = 30000;
+static const int64_t kBleSleepTimeoutUs = kBleSleepTimeoutMs * 1000;
 
 static QueueHandle_t s_airmouse_imu_queue = NULL;
 static QueueHandle_t s_airmouse_gesture_imu_queue = NULL;
@@ -21,9 +30,16 @@ static imu_gesture_detector_handle_t s_airmouse_knob_detector = NULL;
 static imu_gesture_detector_handle_t s_airmouse_space_switch_detector = NULL;
 static airmouse_runtime_gesture_state_t s_airmouse_runtime_gesture_state = {};
 static airmouse_inference_dispatch_state_t s_airmouse_inference_dispatch_state = {};
+static airmouse_function_handle_t *s_airmouse_function_ctx = NULL;
+static TaskHandle_t s_airmouse_sampling_task_handle = NULL;
+static TaskHandle_t s_airmouse_pose_task_handle = NULL;
+static TaskHandle_t s_airmouse_mouse_task_handle = NULL;
 static TaskHandle_t s_airmouse_runtime_gesture_task_handle = NULL;
 static TaskHandle_t s_airmouse_runtime_config_task_handle = NULL;
 static bool s_airmouse_runtime_config_request_pending = false;
+static bool s_suppress_next_left_button_event = false;
+static int64_t s_last_hid_activity_us = 0;
+static portMUX_TYPE s_activity_lock = portMUX_INITIALIZER_UNLOCKED;
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
 static airmouse_gesture_infer_state_t s_airmouse_gesture_infer_state = {};
 static TaskHandle_t s_airmouse_inference_task_handle = NULL;
@@ -74,6 +90,109 @@ static void airmouse_reset_sampling_queues(void)
     if (s_airmouse_inference_imu_queue != NULL) {
         xQueueReset(s_airmouse_inference_imu_queue);
     }
+}
+
+static void airmouse_mark_hid_activity(void)
+{
+    const int64_t now_us = esp_timer_get_time();
+    portENTER_CRITICAL(&s_activity_lock);
+    s_last_hid_activity_us = now_us;
+    portEXIT_CRITICAL(&s_activity_lock);
+}
+
+static int64_t airmouse_get_last_hid_activity_us(void)
+{
+    int64_t last_us = 0;
+    portENTER_CRITICAL(&s_activity_lock);
+    last_us = s_last_hid_activity_us;
+    portEXIT_CRITICAL(&s_activity_lock);
+    return last_us;
+}
+
+static bool airmouse_is_sleep_mode(const airmouse_function_handle_t *airmouse_ctx)
+{
+    return airmouse_ctx != NULL && airmouse_ctx->ble_handle != NULL &&
+           airmouse_ctx->ble_handle->power_mode == AIRMOUSE_BLE_POWER_SLEEP;
+}
+
+static void airmouse_notify_power_wake_tasks(void)
+{
+    TaskHandle_t wake_tasks[] = {
+        s_airmouse_sampling_task_handle,
+        s_airmouse_pose_task_handle,
+        s_airmouse_mouse_task_handle,
+        s_airmouse_runtime_gesture_task_handle,
+#if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+        s_airmouse_inference_task_handle,
+#endif
+    };
+
+    for (size_t i = 0; i < sizeof(wake_tasks) / sizeof(wake_tasks[0]); ++i) {
+        if (wake_tasks[i] != NULL) {
+            (void)xTaskNotify(wake_tasks[i],
+                              AIRMOUSE_POWER_NOTIFY_WAKE,
+                              eSetBits);
+        }
+    }
+}
+
+static void airmouse_reset_sleep_pipelines(
+    airmouse_function_handle_t *airmouse_ctx)
+{
+    if (s_airmouse_mouse_event_queue != NULL) {
+        xQueueReset(s_airmouse_mouse_event_queue);
+    }
+
+    airmouse_reset_sampling_queues();
+    airmouse_reset_runtime_gesture_pipeline(airmouse_ctx);
+#if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+    airmouse_reset_inference_pipeline(airmouse_ctx, true);
+#endif
+    airmouse_inference_dispatch_state_reset(
+        &s_airmouse_inference_dispatch_state);
+
+    if (airmouse_ctx != NULL && airmouse_ctx->pose_handle != NULL) {
+        (void)airmouse_pose_mapping_request_recenter(airmouse_ctx->pose_handle);
+    }
+}
+
+static esp_err_t airmouse_enter_sleep_state(
+    airmouse_function_handle_t *airmouse_ctx)
+{
+    if (airmouse_ctx == NULL || airmouse_ctx->ble_handle == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    esp_err_t ret = airmouse_ble_enter_sleep();
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "enter SLEEP failed: %s", esp_err_to_name(ret));
+        return ret;
+    }
+
+    airmouse_reset_sleep_pipelines(airmouse_ctx);
+    return ESP_OK;
+}
+
+bool airmouse_resume_from_sleep(bool suppress_left_button_event)
+{
+    airmouse_function_handle_t *airmouse_ctx = s_airmouse_function_ctx;
+    if (!airmouse_is_sleep_mode(airmouse_ctx)) {
+        return false;
+    }
+
+    ESP_LOGI(TAG, "AirMouse wake from SLEEP by left button");
+    esp_sleep_wakeup_cause_t wake_cause = esp_sleep_get_wakeup_cause();
+    if (wake_cause == ESP_SLEEP_WAKEUP_GPIO) {
+        ESP_LOGI(TAG, "Light sleep wake cause: GPIO");
+    } else if (wake_cause != ESP_SLEEP_WAKEUP_UNDEFINED) {
+        ESP_LOGI(TAG, "Light sleep wake cause: %d", (int)wake_cause);
+    }
+    (void)airmouse_ble_enter_active();
+    airmouse_mark_hid_activity();
+    airmouse_reset_sleep_pipelines(airmouse_ctx);
+    s_suppress_next_left_button_event = suppress_left_button_event;
+    airmouse_notify_power_wake_tasks();
+    return true;
 }
 
 static void airmouse_reset_pose_related_pipelines(
@@ -232,6 +351,10 @@ void airmouse_post_mouse_event(const airmouse_mouse_event_t *evt)
 
 void airmouse_runtime_config_request(void)
 {
+    if (airmouse_is_sleep_mode(s_airmouse_function_ctx)) {
+        (void)airmouse_resume_from_sleep(false);
+    }
+
     if (s_airmouse_runtime_config_task_handle == NULL) {
         ESP_LOGW(TAG, "runtime config request ignored: task not ready");
         return;
@@ -246,6 +369,16 @@ void airmouse_runtime_config_request(void)
     (void)xTaskNotify(s_airmouse_runtime_config_task_handle,
                       AIRMOUSE_RUNTIME_CONFIG_NOTIFY_ENTER,
                       eSetBits);
+}
+
+bool airmouse_consume_suppressed_left_button_event(void)
+{
+    if (!s_suppress_next_left_button_event) {
+        return false;
+    }
+
+    s_suppress_next_left_button_event = false;
+    return true;
 }
 
 void airmouse_runtime_gesture_task(void *pvParameters)
@@ -283,6 +416,14 @@ void airmouse_runtime_gesture_task(void *pvParameters)
     while (1) {
         uint32_t notify_bits = 0;
         (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, 0);
+
+        if (airmouse_is_sleep_mode(airmouse_ctx)) {
+            inactive_reset_done = true;
+            active_logged = false;
+            airmouse_reset_runtime_gesture_pipeline(airmouse_ctx);
+            (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+            continue;
+        }
 
         imu_gesture_detector_handle_t knob_detector = airmouse_ctx->knob_detector;
         imu_gesture_detector_handle_t space_switch_detector =
@@ -410,6 +551,14 @@ void airmouse_inference_task(void *pvParameters)
     while (1) {
         uint32_t notify_bits = 0;
         (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, 0);
+
+        if (airmouse_is_sleep_mode(airmouse_ctx)) {
+            inactive_reset_done = true;
+            active_logged = false;
+            airmouse_reset_inference_pipeline(airmouse_ctx, true);
+            (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+            continue;
+        }
 
         if (notify_bits & AIRMOUSE_INFERENCE_NOTIFY_SINGLE_SHOT_START) {
             imu_gesture_detector_handle_t inference_detector =
@@ -776,6 +925,8 @@ void airmouse_bmi270_sampling_task(void *pvParameters)
         return;
     }
 
+    s_airmouse_sampling_task_handle = xTaskGetCurrentTaskHandle();
+
     const TickType_t xPeriod =
         pdMS_TO_TICKS(CONFIG_AIRMOUSE_IMU_SAMPLE_INTERVAL_MS);
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -792,6 +943,15 @@ void airmouse_bmi270_sampling_task(void *pvParameters)
              portTICK_PERIOD_MS, (int)xPeriod);
 
     while (1) {
+        if (ble_handle->power_mode == AIRMOUSE_BLE_POWER_SLEEP) {
+            airmouse_reset_sampling_queues();
+            uint32_t notify_bits = 0;
+            (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+            xLastWakeTime = xTaskGetTickCount();
+            airmouse_reset_sampling_queues();
+            continue;
+        }
+
         if (airmouse_ble_mouse_ready(ble_handle)) {
             airmouse_imu_sample_t sample = {};
 
@@ -920,6 +1080,8 @@ void airmouse_pose_mapping_quaternion_task(void *pvParameters)
         return;
     }
 
+    s_airmouse_pose_task_handle = xTaskGetCurrentTaskHandle();
+
     vTaskDelay(pdMS_TO_TICKS(2000));
     airmouse_pose_mapping_quaternion_init(pose_handle,
                                           &airmouse_ctx->config.pose);
@@ -933,6 +1095,18 @@ void airmouse_pose_mapping_quaternion_task(void *pvParameters)
 #endif
 
     while (1) {
+        if (airmouse_is_sleep_mode(airmouse_ctx)) {
+            inactive_reset_done = true;
+            active_logged = false;
+            last_mouse_ready = false;
+            xQueueReset(imu_queue);
+            uint32_t notify_bits = 0;
+            (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+            xQueueReset(imu_queue);
+            (void)airmouse_pose_mapping_request_recenter(pose_handle);
+            continue;
+        }
+
         if (xSemaphoreTake(airmouse_ctx->pose_reset_sem, 0) == pdTRUE) {
             const bool reconfigure_pose = airmouse_ctx->pose_reconfigure_pending;
             airmouse_ctx->pose_reconfigure_pending = false;
@@ -1083,24 +1257,64 @@ void airmouse_mouse_task(void *pvParameters)
 
     bool left_button_held = false;
     bool active_logged = false;
+    s_airmouse_mouse_task_handle = xTaskGetCurrentTaskHandle();
+    airmouse_mark_hid_activity();
 
     ESP_LOGI(TAG, "mouse task started");
 
     while (1) {
+        if (ble_handle->power_mode == AIRMOUSE_BLE_POWER_SLEEP) {
+            left_button_held = false;
+            active_logged = false;
+            uint32_t notify_bits = 0;
+            (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+            continue;
+        }
+
         airmouse_mouse_event_t evt;
         BaseType_t qret = xQueueReceive(mouse_event_queue, &evt, pdMS_TO_TICKS(20));
         if (qret != pdPASS) {
             if (!airmouse_ble_mouse_ready(ble_handle)) {
                 left_button_held = false;
                 active_logged = false;
+                airmouse_mark_hid_activity();
+            } else {
+                const int64_t now_us = esp_timer_get_time();
+                const int64_t elapsed_us =
+                    now_us - airmouse_get_last_hid_activity_us();
+                if (elapsed_us >= kBleSleepTimeoutUs) {
+                    if (ble_handle->power_mode != AIRMOUSE_BLE_POWER_SLEEP) {
+                        (void)airmouse_enter_sleep_state(airmouse_ctx);
+                    }
+                } else if (elapsed_us >= kBleIdleTimeoutUs &&
+                           ble_handle->power_mode == AIRMOUSE_BLE_POWER_ACTIVE) {
+                    (void)airmouse_ble_enter_idle();
+                }
             }
             continue;
         }
         if (!airmouse_ble_mouse_ready(ble_handle)) {
             left_button_held = false;
             active_logged = false;
+            airmouse_mark_hid_activity();
             continue;
         }
+
+        if (evt.type == AIRMOUSE_MOUSE_EVENT_MOVE &&
+                evt.data.move.dx == 0 &&
+                evt.data.move.dy == 0) {
+            continue;
+        }
+
+        if (ble_handle->power_mode == AIRMOUSE_BLE_POWER_SLEEP) {
+            continue;
+        }
+
+        if (ble_handle->power_mode == AIRMOUSE_BLE_POWER_IDLE) {
+            ESP_LOGI(TAG, "BLE idle wake event: type=%d", (int)evt.type);
+            (void)airmouse_ble_enter_active();
+        }
+        airmouse_mark_hid_activity();
 
         if (!active_logged) {
             ESP_LOGI(TAG, "mouse task active: mouse ready");
@@ -1112,6 +1326,65 @@ void airmouse_mouse_task(void *pvParameters)
             &evt,
             &left_button_held,
             &s_airmouse_inference_dispatch_state);
+    }
+}
+
+static esp_err_t airmouse_configure_automatic_light_sleep(void)
+{
+    int xtal_freq_mhz = esp_clk_xtal_freq() / 1000000;
+    if (xtal_freq_mhz <= 0) {
+#if CONFIG_IDF_TARGET_ESP32C5
+        xtal_freq_mhz = 48;
+#else
+        xtal_freq_mhz = 40;
+#endif
+    }
+
+    esp_pm_config_t pm_config = {
+        .max_freq_mhz = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ,
+        .min_freq_mhz = xtal_freq_mhz,
+        .light_sleep_enable = true,
+    };
+
+    esp_err_t ret = esp_pm_configure(&pm_config);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "Automatic light sleep enabled, max_freq=%d MHz, min_freq=%d MHz",
+                 pm_config.max_freq_mhz,
+                 pm_config.min_freq_mhz);
+    } else if (ret == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGE(TAG,
+                 "Automatic light sleep unsupported: check CONFIG_PM_ENABLE / CONFIG_FREERTOS_USE_TICKLESS_IDLE");
+    } else {
+        ESP_LOGE(TAG,
+                 "Automatic light sleep configure failed: %s",
+                 esp_err_to_name(ret));
+    }
+
+    return ret;
+}
+
+static void airmouse_configure_left_button_light_sleep_wakeup(
+    gpio_num_t gpio_num)
+{
+    esp_err_t ret = gpio_wakeup_enable(gpio_num, GPIO_INTR_LOW_LEVEL);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "left button GPIO%d wakeup config failed: %s",
+                 (int)gpio_num,
+                 esp_err_to_name(ret));
+        return;
+    }
+
+    ret = esp_sleep_enable_gpio_wakeup();
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "left button GPIO%d light sleep wake enabled",
+                 (int)gpio_num);
+    } else {
+        ESP_LOGE(TAG,
+                 "GPIO light sleep wakeup enable failed: %s",
+                 esp_err_to_name(ret));
     }
 }
 
@@ -1128,6 +1401,12 @@ esp_err_t airmouse_function_prepare_resources(airmouse_function_handle_t *ctx)
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
     imu_gesture_inference_config_t inference_config = {};
 #endif
+
+    s_airmouse_function_ctx = ctx;
+    airmouse_mark_hid_activity();
+    (void)airmouse_configure_automatic_light_sleep();
+    airmouse_configure_left_button_light_sleep_wakeup(
+        (gpio_num_t)ctx->config.hardware.reset_button);
 
     s_airmouse_imu_queue = xQueueCreate(8, sizeof(airmouse_imu_sample_t));
     if (s_airmouse_imu_queue == NULL) {
@@ -1260,6 +1539,10 @@ esp_err_t airmouse_function_prepare_resources(airmouse_function_handle_t *ctx)
 #endif
     s_airmouse_runtime_gesture_task_handle = NULL;
     s_airmouse_runtime_config_task_handle = NULL;
+    s_airmouse_sampling_task_handle = NULL;
+    s_airmouse_pose_task_handle = NULL;
+    s_airmouse_mouse_task_handle = NULL;
+    s_suppress_next_left_button_event = false;
 
     return ESP_OK;
 
@@ -1302,6 +1585,16 @@ fail:
         vQueueDelete(s_airmouse_imu_queue);
         s_airmouse_imu_queue = NULL;
     }
+    s_airmouse_function_ctx = NULL;
+    s_airmouse_sampling_task_handle = NULL;
+    s_airmouse_pose_task_handle = NULL;
+    s_airmouse_mouse_task_handle = NULL;
+    s_airmouse_runtime_gesture_task_handle = NULL;
+    s_airmouse_runtime_config_task_handle = NULL;
+#if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+    s_airmouse_inference_task_handle = NULL;
+#endif
+    s_suppress_next_left_button_event = false;
 
     return ret;
 }
@@ -1340,6 +1633,10 @@ esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx)
 #endif
     s_airmouse_runtime_gesture_task_handle = NULL;
     s_airmouse_runtime_config_task_handle = NULL;
+    s_airmouse_sampling_task_handle = NULL;
+    s_airmouse_pose_task_handle = NULL;
+    s_airmouse_mouse_task_handle = NULL;
+    s_suppress_next_left_button_event = false;
 
     TaskHandle_t imu_task_handle = NULL;
     TaskHandle_t pose_task_handle = NULL;
@@ -1494,6 +1791,16 @@ fail_detectors_and_queues:
         vQueueDelete(s_airmouse_imu_queue);
         s_airmouse_imu_queue = NULL;
     }
+    s_airmouse_function_ctx = NULL;
+    s_airmouse_sampling_task_handle = NULL;
+    s_airmouse_pose_task_handle = NULL;
+    s_airmouse_mouse_task_handle = NULL;
+    s_airmouse_runtime_gesture_task_handle = NULL;
+    s_airmouse_runtime_config_task_handle = NULL;
+#if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+    s_airmouse_inference_task_handle = NULL;
+#endif
+    s_suppress_next_left_button_event = false;
 
     return err;
 }

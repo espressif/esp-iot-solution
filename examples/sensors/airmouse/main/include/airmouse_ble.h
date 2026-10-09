@@ -16,6 +16,12 @@
 extern "C" {
 #endif
 
+typedef enum {
+    AIRMOUSE_BLE_POWER_ACTIVE = 0,
+    AIRMOUSE_BLE_POWER_IDLE,
+    AIRMOUSE_BLE_POWER_SLEEP,
+} airmouse_ble_power_mode_t;
+
 typedef struct {
     uint16_t hid_conn_id;
     bool sec_conn;
@@ -30,6 +36,8 @@ typedef struct {
     bool has_peer;
     esp_bd_addr_t peer_bda;
     uint8_t peer_addr_type;
+    airmouse_ble_power_mode_t power_mode;
+    airmouse_ble_power_mode_t requested_power_mode;
 } airmouse_ble_handle_t;
 
 static inline bool airmouse_ble_mouse_ready(const airmouse_ble_handle_t *h)
@@ -41,6 +49,9 @@ static inline bool airmouse_ble_mouse_ready(const airmouse_ble_handle_t *h)
 esp_err_t airmouse_ble_init(void);
 esp_err_t airmouse_ble_deinit(void);
 airmouse_ble_handle_t *airmouse_ble_hid_get_ctx(void);
+esp_err_t airmouse_ble_enter_active(void);
+esp_err_t airmouse_ble_enter_idle(void);
+esp_err_t airmouse_ble_enter_sleep(void);
 
 #ifdef __cplusplus
 }

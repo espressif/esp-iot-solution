@@ -1,3 +1,5 @@
+file(TO_CMAKE_PATH "$ENV{IDF_PATH}" IDF_PATH_CMAKE)
+
 idf_component_register(
     SRCS
         "esp_hidd_prf_api.c"
@@ -5,7 +7,7 @@ idf_component_register(
         "hid_device_le_prf.c"
     INCLUDE_DIRS
         "include"
-        "$ENV{IDF_PATH}/components/bt/host/bluedroid/api/include/api"
+        "${IDF_PATH_CMAKE}/components/bt/host/bluedroid/api/include/api"
     REQUIRES
         bt
 )

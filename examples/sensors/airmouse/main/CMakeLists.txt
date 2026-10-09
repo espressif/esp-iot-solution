@@ -30,6 +30,9 @@ set(main_requires
     esp_wifi
     esp_event
     esp_netif
+    esp_pm
+    esp_driver_gpio
+    esp_hw_support
 )
 
 if(CONFIG_IDF_TARGET_ESP32P4)

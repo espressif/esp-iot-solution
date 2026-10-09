@@ -46,6 +46,10 @@ enum {
 };
 
 enum {
+    AIRMOUSE_POWER_NOTIFY_WAKE = BIT3,
+};
+
+enum {
     AIRMOUSE_RUNTIME_CONFIG_NOTIFY_ENTER = BIT0,
 };
 
@@ -74,6 +78,8 @@ TaskHandle_t *airmouse_get_inference_task_handle_ref(void);
 TaskHandle_t *airmouse_get_runtime_config_task_handle_ref(void);
 void airmouse_post_mouse_event(const airmouse_mouse_event_t *evt);
 void airmouse_runtime_config_request(void);
+bool airmouse_resume_from_sleep(bool suppress_left_button_event);
+bool airmouse_consume_suppressed_left_button_event(void);
 
 esp_err_t airmouse_function_prepare_resources(airmouse_function_handle_t *ctx);
 esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx);

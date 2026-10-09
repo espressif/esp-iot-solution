@@ -23,10 +23,20 @@ static void airmouse_btn_send_mouse_event(airmouse_btn_handle_t *handle,
     airmouse_post_mouse_event(&evt);
 }
 
+static void airmouse_btn_press_down_cb(void *arg, void *data)
+{
+    (void)arg;
+    (void)data;
+    (void)airmouse_resume_from_sleep(true);
+}
+
 static void airmouse_btn_short_press_cb(void *arg, void *data)
 {
     (void)arg;
     airmouse_btn_handle_t *handle = (airmouse_btn_handle_t *)data;
+    if (airmouse_consume_suppressed_left_button_event()) {
+        return;
+    }
     airmouse_btn_send_mouse_event(handle, AIRMOUSE_MOUSE_EVENT_LEFT_CLICK);
 }
 
@@ -34,6 +44,9 @@ static void airmouse_btn_double_press_cb(void *arg, void *data)
 {
     (void)arg;
     airmouse_btn_handle_t *handle = (airmouse_btn_handle_t *)data;
+    if (airmouse_consume_suppressed_left_button_event()) {
+        return;
+    }
     airmouse_btn_send_mouse_event(handle, AIRMOUSE_MOUSE_EVENT_RECENTER);
 }
 
@@ -41,6 +54,9 @@ static void airmouse_btn_multiple_press_cb(void *arg, void *data)
 {
     (void)arg;
     airmouse_btn_handle_t *handle = (airmouse_btn_handle_t *)data;
+    if (airmouse_consume_suppressed_left_button_event()) {
+        return;
+    }
     if (handle != NULL && handle->runtime_gesture_task_handle_ref != NULL &&
             *handle->runtime_gesture_task_handle_ref != NULL) {
         (void)xTaskNotify(*handle->runtime_gesture_task_handle_ref,
@@ -53,6 +69,9 @@ static void airmouse_btn_long_press_start_cb(void *arg, void *data)
 {
     (void)arg;
     airmouse_btn_handle_t *handle = (airmouse_btn_handle_t *)data;
+    if (airmouse_consume_suppressed_left_button_event()) {
+        return;
+    }
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
     if (handle != NULL && handle->inference_task_handle_ref != NULL &&
             *handle->inference_task_handle_ref != NULL) {
@@ -109,11 +128,23 @@ airmouse_btn_handle_t *airmouse_btn_init(QueueHandle_t mouse_event_queue,
     button_gpio_config_t btn_gpio_cfg = {
         .gpio_num = hardware_config->reset_button,
         .active_level = 0,
+        .enable_power_save = true,
     };
 
     ret = iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &handle->btn);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "failed to create button");
+        free(handle);
+        return NULL;
+    }
+
+    ret = iot_button_register_cb(handle->btn,
+                                 BUTTON_PRESS_DOWN,
+                                 NULL,
+                                 airmouse_btn_press_down_cb,
+                                 handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "failed to register press down callback");
         free(handle);
         return NULL;
     }

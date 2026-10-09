@@ -12,6 +12,57 @@
 
 static const char *TAG = "AIRMOUSE";
 
+void airmouse_inference_dispatch_state_init(
+    airmouse_inference_dispatch_state_t *state)
+{
+    if (state == NULL) {
+        return;
+    }
+
+    state->lock = portMUX_INITIALIZER_UNLOCKED;
+    state->v_label_suppress_until_us = 0;
+    state->sz_label_suppress_until_us = 0;
+}
+
+void airmouse_inference_dispatch_state_reset(
+    airmouse_inference_dispatch_state_t *state)
+{
+    if (state == NULL) {
+        return;
+    }
+
+    portENTER_CRITICAL(&state->lock);
+    state->v_label_suppress_until_us = 0;
+    state->sz_label_suppress_until_us = 0;
+    portEXIT_CRITICAL(&state->lock);
+}
+
+void airmouse_inference_dispatch_note_page_switch(
+    airmouse_inference_dispatch_state_t *state,
+    airmouse_mouse_event_type_t event_type,
+    int64_t now_us,
+    int64_t duration_us)
+{
+    if (state == NULL) {
+        return;
+    }
+
+    portENTER_CRITICAL(&state->lock);
+    switch (event_type) {
+    case AIRMOUSE_MOUSE_EVENT_SPACE_LEFT:
+    case AIRMOUSE_MOUSE_EVENT_SPACE_RIGHT:
+        state->sz_label_suppress_until_us = now_us + duration_us;
+        break;
+    case AIRMOUSE_MOUSE_EVENT_SPACE_UP:
+    case AIRMOUSE_MOUSE_EVENT_SPACE_DOWN:
+        state->v_label_suppress_until_us = now_us + duration_us;
+        break;
+    default:
+        break;
+    }
+    portEXIT_CRITICAL(&state->lock);
+}
+
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
 static int64_t airmouse_inference_dispatch_get_v_suppress_until_us(
     airmouse_inference_dispatch_state_t *state)
@@ -307,31 +358,6 @@ airmouse_gesture_infer_action_t airmouse_gesture_infer_handle_detector_event(
     return action;
 }
 
-void airmouse_inference_dispatch_state_init(
-    airmouse_inference_dispatch_state_t *state)
-{
-    if (state == NULL) {
-        return;
-    }
-
-    state->lock = portMUX_INITIALIZER_UNLOCKED;
-    state->v_label_suppress_until_us = 0;
-    state->sz_label_suppress_until_us = 0;
-}
-
-void airmouse_inference_dispatch_state_reset(
-    airmouse_inference_dispatch_state_t *state)
-{
-    if (state == NULL) {
-        return;
-    }
-
-    portENTER_CRITICAL(&state->lock);
-    state->v_label_suppress_until_us = 0;
-    state->sz_label_suppress_until_us = 0;
-    portEXIT_CRITICAL(&state->lock);
-}
-
 bool airmouse_inference_dispatch_action_to_mouse_event(
     airmouse_gesture_infer_action_t action,
     airmouse_inference_dispatch_state_t *state,
@@ -369,29 +395,4 @@ bool airmouse_inference_dispatch_action_to_mouse_event(
     }
 }
 
-void airmouse_inference_dispatch_note_page_switch(
-    airmouse_inference_dispatch_state_t *state,
-    airmouse_mouse_event_type_t event_type,
-    int64_t now_us,
-    int64_t duration_us)
-{
-    if (state == NULL) {
-        return;
-    }
-
-    portENTER_CRITICAL(&state->lock);
-    switch (event_type) {
-    case AIRMOUSE_MOUSE_EVENT_SPACE_LEFT:
-    case AIRMOUSE_MOUSE_EVENT_SPACE_RIGHT:
-        state->sz_label_suppress_until_us = now_us + duration_us;
-        break;
-    case AIRMOUSE_MOUSE_EVENT_SPACE_UP:
-    case AIRMOUSE_MOUSE_EVENT_SPACE_DOWN:
-        state->v_label_suppress_until_us = now_us + duration_us;
-        break;
-    default:
-        break;
-    }
-    portEXIT_CRITICAL(&state->lock);
-}
 #endif
