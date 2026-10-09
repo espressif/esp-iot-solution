@@ -2,6 +2,7 @@
 
 ## 1.1.2 - 2026-10-09
 
+- Align renderer buffers and expose their guaranteed base alignment.
 - Fix framebuffer retirement races and early RGB completion.
 
 ## 1.1.1 - 2026-09-30

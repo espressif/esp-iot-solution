@@ -449,5 +449,18 @@ esp_err_t esp_display_present_endpoint_bind(
         binding_reset(out_endpoint);
         return ret != ESP_OK ? ret : ESP_ERR_INVALID_STATE;
     }
+    if (out_endpoint->caps.contract == ESP_DISPLAY_PRESENT_CONTRACT_PARTITION) {
+        uintptr_t addresses = 0;
+        for (uint8_t index = 0; index < out_endpoint->drawbuf_pool.count; ++index) {
+            addresses |= (uintptr_t)out_endpoint->drawbuf_pool.buffers[index];
+        }
+        out_endpoint->buffer_alignment = present_buffer_alignment(addresses);
+    } else if (target_info->hw.panel_gram) {
+        out_endpoint->buffer_alignment =
+            esp_display_present_te_compose_get_buffer_alignment(out_endpoint->mode_ctx);
+    } else {
+        out_endpoint->buffer_alignment =
+            esp_display_present_fb_get_buffer_alignment(out_endpoint->mode_ctx);
+    }
     return ESP_OK;
 }

@@ -67,6 +67,7 @@ typedef struct {
     esp_display_present_frame_tracker_t *tracker;
     /** Owns the storage borrowed by pool-backed mode contexts. */
     esp_display_present_drawbuf_pool_t drawbuf_pool;
+    size_t buffer_alignment;
     esp_display_presenter_caps_t caps;
 } esp_display_present_endpoint_binding_t;
 

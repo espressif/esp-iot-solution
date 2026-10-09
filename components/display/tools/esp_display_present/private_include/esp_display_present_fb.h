@@ -56,6 +56,9 @@ typedef struct {
 typedef struct esp_display_present_fb_endpoint
     esp_display_present_fb_endpoint_t;
 
+size_t esp_display_present_fb_get_buffer_alignment(
+    const esp_display_present_fb_endpoint_t *frame);
+
 /** A single-producer surface lease. Do not retain it after submit/cancel. */
 typedef struct esp_display_present_fb_lease {
     esp_display_present_fb_endpoint_t *owner;

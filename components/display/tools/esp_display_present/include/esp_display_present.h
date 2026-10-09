@@ -237,6 +237,14 @@ esp_err_t esp_display_presenter_get_drawbuf(
     esp_display_presenter_drawbuf_t *out_drawbuf);
 
 /**
+ * Read the minimum base-address alignment of all buffers that this presenter
+ * can lease to its renderer. The result is a power of two, in bytes. Query
+ * again after changing rotation, which rebuilds the renderer storage.
+ */
+esp_err_t esp_display_presenter_get_buffer_alignment(
+    const esp_display_presenter_t *presenter, size_t *out_alignment);
+
+/**
  * Rebind the serial render-task owner after a platform session handoff.
  * Valid only between frames; it retains pending hardware completion fences.
  */
