@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v1.3.2 (2026-8-18)
+
+* Fix chronic mic-stream dropouts: size the EP-IN FIFO to satisfy TinyUSB's flow-control constraints and prefill it to the setpoint at stream start.
+
 ## v1.3.1 (2026-5-25)
 
 * Fix TinyUSB RHPort high-speed configuration for ESP32-S31: use RHPORT0 instead of RHPORT1 (RHPORT1 is only for ESP32-P4).
