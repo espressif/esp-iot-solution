@@ -410,7 +410,7 @@ esp_err_t esp_lv_adapter_set_dummy_draw_callbacks(lv_display_t *disp,
  * @param[in] x_end Ending X coordinate (exclusive)
  * @param[in] y_end Ending Y coordinate (exclusive)
  * @param[in] frame_buffer Pointer to framebuffer data
- * @param[in] wait true to wait for completion, false to return immediately
+ * @param[in] wait true to wait for this color transfer, false to return after submission
  *
  * @return
  *      - ESP_OK: Success
@@ -445,9 +445,9 @@ void *esp_lv_adapter_dummy_draw_get_free_buf(lv_display_t *disp);
 /**
  * @brief Submit a complete frame buffer to the display in dummy draw mode
  *
- * Blits the frame buffer to the display and waits for the hardware DMA to switch
- * to it (via on_frame_buf_complete), ensuring tear-free output. After this call
- * returns, the next free buffer is available via esp_lv_adapter_dummy_draw_get_free_buf().
+ * Submits the frame and obtains the next writable buffer, waiting if needed.
+ * A spare buffer can allow return before the hardware switch completes.
+ * On submission failure, the current writable buffer is retained for retry.
  *
  * @param[in] disp         Pointer to LVGL display object
  * @param[in] frame_buffer Buffer previously obtained from esp_lv_adapter_dummy_draw_get_free_buf()

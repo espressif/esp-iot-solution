@@ -58,6 +58,13 @@ typedef struct {
     STAILQ_HEAD(, display_pipeline_buf) empty_list;  /*!< Free buffer pool, FIFO */
     struct display_pipeline_buf *elems;               /*!< Pre-allocated element array */
     uint8_t elem_count;                               /*!< Number of elements */
+    /* Track completion arriving during RGB submission. */
+    struct {
+        uint32_t complete_seq;
+        uint32_t submit_seq;
+        bool submitting;
+        bool color_done;
+    } rgb;
     portMUX_TYPE lock;                                /*!< ISR/task shared spinlock */
 } esp_lv_adapter_display_pipeline_t;
 

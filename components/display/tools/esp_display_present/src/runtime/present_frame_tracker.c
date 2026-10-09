@@ -250,6 +250,8 @@ void esp_display_present_tracker_rollback_frame(
         return;
     }
     portENTER_CRITICAL(&tracker->lock);
+    tracker->sw.rgb.submitting = false;
+    tracker->sw.rgb.color_done = false;
     if (submission_active) {
         fault_locked(tracker, ESP_DISPLAY_PRESENT_FAULT_PRODUCER_PROTOCOL);
     } else {
@@ -685,6 +687,10 @@ esp_err_t esp_display_present_tracker_init_switch(
     tracker->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
     tracker->sw.pending_frame_buffer = NULL;
     tracker->sw.armed_submit_count = 0;
+    tracker->sw.rgb.frame_done_seq = 0;
+    tracker->sw.rgb.submit_seq = 0;
+    tracker->sw.rgb.submitting = false;
+    tracker->sw.rgb.color_done = false;
     tracker->sw.closing = false;
     tracker->sw.pending_sem = xSemaphoreCreateBinaryWithCaps(
                                   MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
@@ -701,67 +707,6 @@ void esp_display_present_tracker_deinit_switch(
         vSemaphoreDeleteWithCaps(tracker->sw.pending_sem);
         tracker->sw.pending_sem = NULL;
     }
-}
-
-void esp_display_present_tracker_mark_submit(
-    esp_display_present_frame_tracker_t *tracker)
-{
-    if (!tracker) {
-        return;
-    }
-
-    portENTER_CRITICAL(&tracker->lock);
-    ++tracker->sw.armed_submit_count;
-    portEXIT_CRITICAL(&tracker->lock);
-}
-
-bool esp_display_present_tracker_consume_submit_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    bool submit_gate_enabled)
-{
-    if (!submit_gate_enabled) {
-        return true;
-    }
-
-    if (!tracker) {
-        return false;
-    }
-
-    bool submit_pending = false;
-    portENTER_CRITICAL_ISR(&tracker->lock);
-    submit_pending = tracker->sw.armed_submit_count != 0;
-    if (submit_pending) {
-        --tracker->sw.armed_submit_count;
-    }
-    portEXIT_CRITICAL_ISR(&tracker->lock);
-
-    return submit_pending;
-}
-
-void esp_display_present_tracker_set_pending(
-    esp_display_present_frame_tracker_t *tracker,
-    void *frame_buffer)
-{
-    if (!tracker) {
-        return;
-    }
-
-    portENTER_CRITICAL(&tracker->lock);
-    tracker->sw.pending_frame_buffer = frame_buffer;
-    portEXIT_CRITICAL(&tracker->lock);
-}
-
-void esp_display_present_tracker_set_pending_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void *frame_buffer)
-{
-    if (!tracker) {
-        return;
-    }
-
-    portENTER_CRITICAL_ISR(&tracker->lock);
-    tracker->sw.pending_frame_buffer = frame_buffer;
-    portEXIT_CRITICAL_ISR(&tracker->lock);
 }
 
 bool esp_display_present_tracker_has_pending(
@@ -824,34 +769,6 @@ esp_err_t esp_display_present_tracker_wait_pending(
         (void)xSemaphoreTake(tracker->sw.pending_sem, portMAX_DELAY);
     }
     return ESP_OK;
-}
-
-bool esp_display_present_tracker_publish_pending_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void **out_frame_buffer)
-{
-    if (!tracker || !out_frame_buffer) {
-        return false;
-    }
-
-    bool published = false;
-    SemaphoreHandle_t sem = NULL;
-    portENTER_CRITICAL_ISR(&tracker->lock);
-    if (tracker->sw.pending_frame_buffer) {
-        *out_frame_buffer = tracker->sw.pending_frame_buffer;
-        tracker->sw.pending_frame_buffer = NULL;
-        sem = tracker->sw.pending_sem;
-        published = true;
-    }
-    portEXIT_CRITICAL_ISR(&tracker->lock);
-
-    if (published && sem != NULL) {
-        BaseType_t ignored = pdFALSE;
-        (void)xSemaphoreGiveFromISR(sem, &ignored);
-        (void)ignored;
-    }
-
-    return published;
 }
 
 /* ---- Pool domain ---- */
@@ -1128,50 +1045,120 @@ bool esp_display_present_tracker_pool_cancel_commit(
     return removed;
 }
 
-bool IRAM_ATTR esp_display_present_tracker_pool_retire_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void **out_new_display_buffer,
-    uint64_t *out_ticket)
+void esp_display_present_tracker_begin_submit(
+    esp_display_present_frame_tracker_t *tracker)
 {
-    esp_display_present_tracker_buf_t *elem;
-    SemaphoreHandle_t sem = NULL;
-    BaseType_t wake = pdFALSE;
+    portENTER_CRITICAL(&tracker->lock);
+    tracker->sw.rgb.submitting = true;
+    tracker->sw.rgb.color_done = false;
+    portEXIT_CRITICAL(&tracker->lock);
+}
 
-    if (!tracker || !tracker->pool.elems) {
+void esp_display_present_tracker_color_done(
+    esp_display_present_frame_tracker_t *tracker)
+{
+    portENTER_CRITICAL_SAFE(&tracker->lock);
+    if (tracker->sw.rgb.submitting) {
+        tracker->sw.rgb.submit_seq = tracker->sw.rgb.frame_done_seq;
+        tracker->sw.rgb.color_done = true;
+    }
+    portEXIT_CRITICAL_SAFE(&tracker->lock);
+}
+
+static bool IRAM_ATTR retire_submit_locked(
+    esp_display_present_frame_tracker_t *tracker, bool pending, bool gated,
+    void **out_display, uint64_t *out_ticket, bool *out_release)
+{
+    esp_display_present_tracker_buf_t *elem = STAILQ_FIRST(&tracker->pool.inflight_queue);
+    if (!elem || (pending && !tracker->sw.pending_frame_buffer) ||
+            (gated && tracker->sw.armed_submit_count == 0)) {
         return false;
     }
+    if (pending && tracker->sw.pending_frame_buffer != elem->new_display_buffer) {
+        fault_locked(tracker, ESP_DISPLAY_PRESENT_FAULT_PRODUCER_PROTOCOL);
+        return false;
+    }
+    if (gated) {
+        --tracker->sw.armed_submit_count;
+    }
+    if (pending) {
+        tracker->sw.pending_frame_buffer = NULL;
+    }
+    *out_display = elem->new_display_buffer;
+    *out_ticket = elem->ticket;
+    *out_release = elem->release_on_retire;
+    STAILQ_REMOVE_HEAD(&tracker->pool.inflight_queue, entry);
+    elem->new_display_buffer = NULL;
+    elem->ticket = 0;
+    elem->release_on_retire = false;
+    if (*out_release) {
+        STAILQ_INSERT_TAIL(&tracker->pool.free_queue, elem, entry);
+    }
+    return true;
+}
 
-    portENTER_CRITICAL_ISR(&tracker->lock);
-    elem = STAILQ_FIRST(&tracker->pool.inflight_queue);
-    if (elem) {
-        STAILQ_REMOVE_HEAD(&tracker->pool.inflight_queue, entry);
-        if (out_new_display_buffer != NULL) {
-            *out_new_display_buffer = elem->new_display_buffer;
-        }
-        if (out_ticket != NULL) {
-            *out_ticket = elem->ticket;
-        }
-        bool release_buffer = elem->release_on_retire;
-        elem->new_display_buffer = NULL;
-        elem->ticket = 0;
-        elem->release_on_retire = false;
-        if (release_buffer) {
-            STAILQ_INSERT_TAIL(&tracker->pool.free_queue, elem, entry);
-            sem = tracker->pool.avail_sem;
+static void IRAM_ATTR signal_retire(
+    esp_display_present_frame_tracker_t *tracker, bool pending, bool release, bool isr)
+{
+    SemaphoreHandle_t semaphores[] = {
+        pending ? tracker->sw.pending_sem : NULL,
+        release ? tracker->pool.avail_sem : NULL,
+        tracker->pool.retire_sem,
+    };
+    BaseType_t wake = pdFALSE;
+    for (size_t i = 0; i < sizeof(semaphores) / sizeof(semaphores[0]); ++i) {
+        if (semaphores[i]) {
+            if (isr) {
+                xSemaphoreGiveFromISR(semaphores[i], &wake);
+            } else {
+                xSemaphoreGive(semaphores[i]);
+            }
         }
     }
-    portEXIT_CRITICAL_ISR(&tracker->lock);
-
-    if (sem) {
-        xSemaphoreGiveFromISR(sem, &wake);
-    }
-    if (elem != NULL && tracker->pool.retire_sem != NULL) {
-        xSemaphoreGiveFromISR(tracker->pool.retire_sem, &wake);
-    }
-    if (wake == pdTRUE) {
+    if (isr && wake == pdTRUE) {
         portYIELD_FROM_ISR();
     }
-    return elem != NULL;
+}
+
+bool esp_display_present_tracker_publish_submit(
+    esp_display_present_frame_tracker_t *tracker, void *pending,
+    bool gated, bool replay_early,
+    void **out_display, uint64_t *out_ticket)
+{
+    bool release = false;
+    portENTER_CRITICAL(&tracker->lock);
+    if (pending) {
+        tracker->sw.pending_frame_buffer = pending;
+    }
+    if (gated) {
+        ++tracker->sw.armed_submit_count;
+    }
+    bool retired = replay_early && tracker->sw.rgb.color_done &&
+                   tracker->sw.rgb.frame_done_seq != tracker->sw.rgb.submit_seq &&
+                   retire_submit_locked(tracker, pending != NULL, gated,
+                                        out_display, out_ticket, &release);
+    tracker->sw.rgb.submitting = false;
+    portEXIT_CRITICAL(&tracker->lock);
+    if (retired) {
+        signal_retire(tracker, pending != NULL, release, false);
+    }
+    return retired;
+}
+
+bool esp_display_present_tracker_retire_submit_isr(
+    esp_display_present_frame_tracker_t *tracker, bool pending, bool gated,
+    void **out_display, uint64_t *out_ticket)
+{
+    bool release = false;
+    portENTER_CRITICAL_ISR(&tracker->lock);
+    ++tracker->sw.rgb.frame_done_seq;
+    bool retired = retire_submit_locked(tracker, pending, gated,
+                                        out_display, out_ticket, &release);
+    portEXIT_CRITICAL_ISR(&tracker->lock);
+    if (retired) {
+        signal_retire(tracker, pending, release, true);
+    }
+    return retired;
 }
 
 bool esp_display_present_tracker_pool_has_inflight(

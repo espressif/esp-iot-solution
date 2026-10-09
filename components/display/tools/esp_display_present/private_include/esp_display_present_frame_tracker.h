@@ -93,6 +93,13 @@ typedef struct {
         SemaphoreHandle_t pending_sem;
         uint8_t armed_submit_count;
         bool closing;
+        /* Track completion arriving during RGB submission. */
+        struct {
+            uint32_t frame_done_seq;
+            uint32_t submit_seq;
+            bool submitting;
+            bool color_done;
+        } rgb;
     } sw;
 
     /* Pool domain: framebuffer pool metadata, ordered inflight queue and
@@ -283,21 +290,21 @@ esp_err_t esp_display_present_tracker_init_switch(
 void esp_display_present_tracker_deinit_switch(
     esp_display_present_frame_tracker_t *tracker);
 
-void esp_display_present_tracker_mark_submit(
+void esp_display_present_tracker_begin_submit(
     esp_display_present_frame_tracker_t *tracker);
 
-bool IRAM_ATTR esp_display_present_tracker_consume_submit_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    bool submit_gate_enabled);
+void IRAM_ATTR esp_display_present_tracker_color_done(
+    esp_display_present_frame_tracker_t *tracker);
 
-void esp_display_present_tracker_set_pending(
-    esp_display_present_frame_tracker_t *tracker,
-    void *frame_buffer);
+/* Publish readiness and preserve an RGB completion that arrived during blit. */
+bool esp_display_present_tracker_publish_submit(
+    esp_display_present_frame_tracker_t *tracker, void *pending,
+    bool gated, bool replay_early,
+    void **out_display, uint64_t *out_ticket);
 
-/** ISR-safe restore when publish was taken but the frame must stay pending. */
-void IRAM_ATTR esp_display_present_tracker_set_pending_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void *frame_buffer);
+bool IRAM_ATTR esp_display_present_tracker_retire_submit_isr(
+    esp_display_present_frame_tracker_t *tracker, bool pending, bool gated,
+    void **out_display, uint64_t *out_ticket);
 
 bool esp_display_present_tracker_has_pending(
     esp_display_present_frame_tracker_t *tracker);
@@ -308,10 +315,6 @@ void esp_display_present_tracker_request_switch_stop(
 
 esp_err_t esp_display_present_tracker_wait_pending(
     esp_display_present_frame_tracker_t *tracker);
-
-bool IRAM_ATTR esp_display_present_tracker_publish_pending_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void **out_frame_buffer);
 
 /* ---- Pool domain ---- */
 
@@ -352,11 +355,6 @@ esp_err_t esp_display_present_tracker_pool_acquire_next(
 bool esp_display_present_tracker_pool_cancel_commit(
     esp_display_present_frame_tracker_t *tracker,
     void *buffer);
-
-bool esp_display_present_tracker_pool_retire_isr(
-    esp_display_present_frame_tracker_t *tracker,
-    void **out_new_display_buffer,
-    uint64_t *out_ticket);
 
 bool IRAM_ATTR esp_display_present_tracker_pool_has_inflight(
     const esp_display_present_frame_tracker_t *tracker);

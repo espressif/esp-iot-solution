@@ -348,6 +348,27 @@ size_t display_bridge_get_cache_line_size(void);
 
 /* Pipeline management */
 
+typedef struct {
+    uint32_t submitted;
+    uint32_t completed;
+    uint32_t notifications_inflight;
+    TaskHandle_t waiter;
+} display_bridge_dummy_transfer_t;
+
+#define ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE (1U << 0)
+
+esp_err_t display_bridge_dummy_transfer_begin(display_bridge_dummy_transfer_t *transfer,
+                                              portMUX_TYPE *lock, uint32_t *ticket);
+void display_bridge_dummy_transfer_cancel(display_bridge_dummy_transfer_t *transfer,
+                                          portMUX_TYPE *lock, uint32_t ticket);
+/* Publish raw completion after forwarding the callback's display events. */
+bool display_bridge_dummy_transfer_done(display_bridge_dummy_transfer_t *transfer,
+                                        portMUX_TYPE *lock);
+esp_err_t display_bridge_dummy_transfer_wait(display_bridge_dummy_transfer_t *transfer,
+                                             portMUX_TYPE *lock, uint32_t ticket, int32_t timeout_ms);
+esp_err_t display_bridge_dummy_transfer_wait_idle(display_bridge_dummy_transfer_t *transfer,
+                                                  portMUX_TYPE *lock, int32_t timeout_ms);
+
 /**
  * @brief Initialize pipeline from runtime config (call from bridge create with impl's pipeline and cfg)
  *
@@ -365,21 +386,22 @@ int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pip
                                           esp_lv_adapter_display_runtime_config_t *cfg,
                                           void **out_disp_fb, void **out_draw_fb);
 
-/**
- * @brief Mark an element in the pipeline as busy
- */
-void display_bridge_pipeline_mark_buf_busy(esp_lv_adapter_display_pipeline_t *p, void *buf);
+/* Submit and publish ownership together; RGB preserves an early switch event. */
+esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
+                                       esp_lcd_panel_handle_t panel,
+                                       const esp_lv_adapter_display_runtime_info_t *runtime,
+                                       void **front, void **pending, void *buffer,
+                                       bool rgb);
+
+void display_bridge_pipeline_color_done(esp_lv_adapter_display_pipeline_t *p);
 
 /**
- * @brief Release a buffer from the busy list to the empty list (ISR context)
+ * @brief Retire a busy buffer and publish its pending front (ISR context)
  *
- * Caller contract: when this is called from an ISR, the caller MUST subsequently
- * call vTaskNotifyGiveFromISR() on the task that may be blocked in
- * display_bridge_pipeline_wait_free_buf() (typically the LVGL adapter task).
- * Otherwise the waiter will never be woken. See v8/v9 VSync handlers for the
- * pattern: release_buf_isr(pipeline) then vTaskNotifyGiveFromISR(notify_task, &need_yield).
+ * On true, notify the producer with vTaskNotifyGiveFromISR() to wake pipeline waits.
  */
-void display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p);
+bool display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p,
+                                             void **front, void **pending);
 
 /**
  * @brief Take a free buffer from the pipeline (no wait)

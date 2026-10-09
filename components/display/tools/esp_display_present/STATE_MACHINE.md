@@ -38,6 +38,10 @@ took effect would let one event stand for two switches and keep a skipped
 buffer inflight. RGB commits therefore wait until the FIFO is empty before
 requesting the next switch.
 
+Frame-done callbacks may arrive during submission. RGB replays an early
+completion only after color transfer completes. Pending state, submit readiness
+and buffer retirement are updated together before waking the producer.
+
 ## Lifecycle
 
 | State | Meaning | Invariant |

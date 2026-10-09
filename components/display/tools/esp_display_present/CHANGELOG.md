@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 - 2026-10-09
+
+- Fix framebuffer retirement races and early RGB completion.
+
 ## 1.1.1 - 2026-09-30
 
 - Add a hardware-free panel framebuffer requirement query that shares mode,
