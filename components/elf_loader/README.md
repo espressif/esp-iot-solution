@@ -181,6 +181,33 @@ Linking lib.so completed
 [100%] Built target so
 ```
 
+### C++ ELF Applications
+
+C++ ELF applications (classes, inheritance, virtual functions, `new`/`delete`, global objects) can be built with `project_elf` and loaded like C applications. This has been tested on ESP32-S31 (RISC-V) and ESP32-S3 (Xtensa). Keep in mind:
+
+* **Static constructors:** the loader runs the ELF's `.preinit_array` and `.init_array` once before the entry point is called, and `.fini_array` (in reverse order) in `esp_elf_deinit()`. The Xtensa toolchain uses the legacy `.ctors` / `.dtors` sections instead, which are handled as well (`.ctors` is run backwards, as the C runtime does).
+* **C++ runtime symbols:** the built-in symbol table only contains C library symbols. The host application must export every C++ runtime symbol the ELF uses, for example `operator new`/`operator delete` and `__cxa_pure_virtual`, with `esp_elf_register_symbol()`. The undefined symbols of an ELF can be listed with `readelf -s <file>.app.elf | grep UND`. Mangled names depend on the target, on 32-bit targets `size_t` is `unsigned int`, e.g. `_Znwj` (`operator new(unsigned int)`) and `_ZdlPvj` (sized `operator delete`).
+
+```c
+#include <new>
+#include "esp_elf.h"
+#include "private/elf_symbol.h"
+
+static void *cpp_new(size_t n) { return ::operator new(n); }
+static void cpp_delete(void *p) { ::operator delete(p); }
+
+static const struct esp_elfsym s_cpp_syms[] = {
+    { "_Znwj",  (void *)cpp_new },
+    { "_ZdlPv", (void *)cpp_delete },
+    ESP_ELFSYM_END
+};
+
+esp_elf_register_symbol(s_cpp_syms);
+```
+
+* **Global objects with destructors:** the ELF references `__dso_handle` and `__cxa_atexit`, which the loader does not provide. Define them inside the ELF (a small list of `fn, arg` pairs that is run at exit), or export them from the host.
+* **Not covered:** C++ exceptions and RTTI (`typeinfo` symbols) have not been tested.
+
 ### Adding the Component to Your Project
 
 Please use the component manager command add-dependency to add the elf_loader component as a dependency in your project. During the CMake step, the component will be downloaded automatically.

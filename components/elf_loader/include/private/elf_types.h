@@ -55,6 +55,9 @@ extern "C" {
 #define SHT_REL         9               /*!< relocation table */
 #define SHT_SHKIB       10              /*!< reserved but has unspecified semantics. */
 #define SHT_SYNSYM      11              /*!< dynamic symbol */
+#define SHT_INIT_ARRAY  14              /*!< array of constructors (.init_array) */
+#define SHT_FINI_ARRAY  15              /*!< array of destructors (.fini_array) */
+#define SHT_PREINIT_ARRAY 16            /*!< array of pre-constructors (.preinit_array) */
 #define SHT_LOPROC      0x70000000      /*!< reserved for processor-specific semantics */
 #define SHT_LOUSER      0x7fffffff      /*!< lower bound of the range of indexes reserved for application programs */
 #define SHT_HIUSER      0xffffffff      /*!< upper bound of the range of indexes reserved for application programs. */
@@ -126,7 +129,10 @@ extern "C" {
 #define ELF_SEC_DATA            2
 #define ELF_SEC_RODATA          3
 #define ELF_SEC_DRLRO           4
-#define ELF_SECS                5
+#define ELF_SEC_PREINIT         5
+#define ELF_SEC_INIT            6
+#define ELF_SEC_FINI            7
+#define ELF_SECS                8
 
 #define ELF_ST_BIND(_i)         ((_i) >> 4)
 #define ELF_ST_TYPE(_i)         ((_i) & 0xf)
@@ -249,6 +255,16 @@ typedef struct esp_elf {
     esp_elf_sec_t   sec[ELF_SECS];      /*!< ".bss", "data", "rodata", ".text" */
 
     int (*entry)(int argc, char *argv[]);               /*!< Entry pointer of ELF */
+
+    void (**preinit_array)(void);       /*!< .preinit_array in memory, NULL if none */
+    uint32_t        preinit_cnt;        /*!< number of .preinit_array entries */
+    void (**init_array)(void);          /*!< .init_array in memory, NULL if none */
+    uint32_t        init_cnt;           /*!< number of .init_array entries */
+    void (**fini_array)(void);          /*!< .fini_array in memory, NULL if none */
+    uint32_t        fini_cnt;           /*!< number of .fini_array entries */
+    bool            init_rev;           /*!< run init functions backwards (legacy .ctors) */
+    bool            fini_rev;           /*!< run fini functions backwards (.fini_array) */
+    bool            init_done;          /*!< constructors already run */
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
     uint32_t        text_off;           /*!< .text symbol offset */
