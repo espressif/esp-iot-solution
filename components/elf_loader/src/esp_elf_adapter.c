@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <assert.h>
 #include <sys/errno.h>
 #include "esp_idf_version.h"
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
+#if CONFIG_IDF_TARGET_ESP32S3 && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+#include "esp_cache.h"
+#endif
 #include "soc/soc.h"
 #if CONFIG_IDF_TARGET_ESP32S31
 #include "esp32s31/rom/cache.h"
@@ -100,15 +102,40 @@ uintptr_t elf_remap_text(esp_elf_t *elf, uintptr_t sym)
 #endif
 
 /**
- * @brief Flush data from cache to external RAM.
+ * @brief Synchronize ELF text between cache and external RAM.
  *
- * @param None
+ * @param elf - ELF object pointer
  *
- * @return None
+ * @return 0 if success or a negative value if failed.
+ *
+ * @note ESP32-S3 on ESP-IDF >= 5.2 writes back the loaded .text range through
+ *       D-cache and invalidates the corresponding I-cache range with
+ *       esp_cache_msync(). Other supported targets keep the full-cache path.
  */
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
-void IRAM_ATTR esp_elf_arch_flush(void)
+int IRAM_ATTR esp_elf_arch_flush(esp_elf_t *elf)
 {
+#if CONFIG_IDF_TARGET_ESP32S3 && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+    esp_elf_sec_t *text = &elf->sec[ELF_SEC_TEXT];
+    if (text->addr && text->size) {
+        esp_err_t ret = esp_cache_msync((void *)text->addr, text->size,
+                                        ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+        if (ret != ESP_OK) {
+            return -EIO;
+        }
+
+        const uintptr_t instruction_addr = elf_remap_text(elf, text->addr);
+        const uintptr_t line_size = CONFIG_ESP32S3_INSTRUCTION_CACHE_LINE_SIZE;
+        const uintptr_t aligned_begin = instruction_addr & ~(line_size - 1);
+        const uintptr_t aligned_end = ELF_ALIGN(instruction_addr + text->size, line_size);
+        ret = esp_cache_msync((void *)aligned_begin, aligned_end - aligned_begin,
+                              ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_TYPE_INST);
+        if (ret != ESP_OK) {
+            return -EIO;
+        }
+    }
+#else
+    (void)elf;
     extern void spi_flash_disable_interrupts_caches_and_other_cpu(void);
     extern void spi_flash_enable_interrupts_caches_and_other_cpu(void);
 
@@ -138,5 +165,8 @@ void IRAM_ATTR esp_elf_arch_flush(void)
     spi_flash_disable_interrupts_caches_and_other_cpu();
     spi_flash_enable_interrupts_caches_and_other_cpu();
 #endif
+#endif
+
+    return 0;
 }
 #endif

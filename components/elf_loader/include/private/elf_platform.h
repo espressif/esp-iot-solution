@@ -62,12 +62,17 @@ uintptr_t elf_remap_text(esp_elf_t *elf, uintptr_t sym);
 #endif
 
 /**
- * @brief Flush data from cache to external RAM.
+ * @brief Synchronize ELF text between cache and external RAM.
  *
- * @return None
+ * @param elf - ELF object pointer
+ *
+ * @return 0 if success or a negative value if failed.
+ *
+ * @note ESP32-S3 on ESP-IDF >= 5.2 uses ranged cache synchronization. Other
+ *       supported targets keep the full-cache synchronization path.
  */
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
-void esp_elf_arch_flush(void);
+int esp_elf_arch_flush(esp_elf_t *elf);
 #endif
 
 /**
