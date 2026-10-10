@@ -2,11 +2,11 @@
 
 **Note:** This component is for developers testing only. It is not intended for production use.
 
-A component providing enhanced touch slider detection functionality for ESP32 series chips.
+A component providing touch slider detection functionality for ESP32 series chips.
 
 ## Features
 
-- FSM-based touch detection with configurable thresholds
+- FSM-based touch detection with configurable normalized fused-count thresholds
 - Support for slider gesture detection with configurable position calculation window
 - Automatic default value selection for optimal performance
 - Callback-based event notification
@@ -32,10 +32,8 @@ The `calculate_window` parameter determines how many adjacent touch channels are
 - Larger values (3+): Better noise immunity but potentially lower resolution
 - For high-precision applications: Recommended value is `min(3, channel_num)`
 
-**Backward Compatibility:**
-- Setting `calculate_window = 0` enables automatic default selection
-- Existing code that doesn't initialize this field will use optimal defaults
-- Explicitly set values continue to work as before
+Set `calculate_window = 0` for the automatic default. Explicit values from 1
+through `channel_num` are accepted.
 
 ## Example
 
@@ -47,7 +45,7 @@ The `calculate_window` parameter determines how many adjacent touch channels are
 #include "touch_slider_sensor.h"
 
 static uint32_t channel_list[] = {2, 4, 6, 12, 10, 8};
-static float threshold[] = {0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f};
+static uint32_t thresholds[] = {25, 25, 25, 25, 25, 25};
 static int channel_num = 6;
 static int slider_range = 10000;
 
@@ -83,14 +81,16 @@ void app_main(void)
     touch_slider_config_t config = {
         .channel_num = channel_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
         .filter_reset_times = 5,
         .position_range = 10000,
         .swipe_alpha = 0.9,
         .swipe_threshold = 50,
         .swipe_hysterisis = 40,
-        .channel_gold_value = NULL,
-        .debounce_times = 0,
         .calculate_window = 0,  // Use default value (auto-selected based on channel count)
         .skip_lowlevel_init = false
     };

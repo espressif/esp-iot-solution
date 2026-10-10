@@ -423,21 +423,26 @@ examples/usb/device/usb_dongle:
 
 examples/touch/touch_button:
   enable:
-    - if: SOC_TOUCH_SENSOR_SUPPORTED == 1
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4", "esp32h4", "esp32s31"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR >= 1)
 
 examples/touch/touch_button_sensor:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 4)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4", "esp32h4", "esp32s31"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR >= 1)
 
 examples/touch/touch_proximity:
   enable:
-    - if: IDF_TARGET in ["esp32s3"]
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32s3"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR >= 0)
 
 examples/touch/touch_slider_sensor:
   enable:
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR < 4)
-    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 4)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR >= 5)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR == 0)
+    - if: IDF_TARGET in ["esp32s2", "esp32s3", "esp32p4", "esp32h4", "esp32s31"] and (IDF_VERSION_MAJOR == 6 and IDF_VERSION_MINOR >= 1)
 
 examples/ulp/lp_cpu/lp_environment_sensor:
   enable:

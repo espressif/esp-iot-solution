@@ -28,6 +28,17 @@ push_to_github:
     - echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
     - git remote remove github &>/dev/null || true
     - git remote add github git@github.com:espressif/esp-iot-solution.git
+    - |
+      # push_to_github.sh mirrors the complete commit tree. Refuse the sync if
+      # an internal handoff or secret document is present in the candidate SHA.
+      set -euo pipefail
+      internal_files=$(git ls-tree -r --name-only "$CI_COMMIT_SHA" | \
+        grep -E '(^|/)([^/]*_SECRET\.md|task\.md)$' || true)
+      if [[ -n "$internal_files" ]]; then
+        printf 'Refusing public GitHub sync; internal files are in %s:\n%s\n' \
+          "$CI_COMMIT_SHA" "$internal_files" >&2
+        exit 1
+      fi
     - ${IOT_SOLUTION_PATH}/tools/ci/push_to_github.sh
 
 .deploy_docs_template:

@@ -1,0 +1,169 @@
+menu "Touch Button Example"
+
+    config TOUCH_BUTTON_EXAMPLE_CHANNEL_NUM
+        int "Touch channel count"
+        range 1 4
+        default 2
+        help
+            Number of touch channels used by this example. Set this to the
+            number of electrodes wired on the board.
+
+    config TOUCH_BUTTON_EXAMPLE_CHANNEL_1
+        int "Touch channel 1"
+        range 0 31
+        default 6 if IDF_TARGET_ESP32S31
+        default 12
+        help
+            First touch channel used by this example. On ESP32-S31, GPIO12 is
+            touch channel 6; the channel ID is not the GPIO number.
+
+    config TOUCH_BUTTON_EXAMPLE_CHANNEL_2
+        int "Touch channel 2"
+        range 0 31
+        default 7 if IDF_TARGET_ESP32S31
+        default 13
+        help
+            Second touch channel used by this example. On ESP32-S31, GPIO13 is
+            touch channel 7; the channel ID is not the GPIO number.
+
+    config TOUCH_BUTTON_EXAMPLE_CHANNEL_3
+        int "Touch channel 3"
+        range 0 31
+        default 3
+        help
+            Third touch channel used by this example.
+
+    config TOUCH_BUTTON_EXAMPLE_CHANNEL_4
+        int "Touch channel 4"
+        range 0 31
+        default 4
+        help
+            Fourth touch channel used by this example.
+
+    config TOUCH_BUTTON_EXAMPLE_THRESHOLD
+        int "Touch threshold"
+        range 1 100000
+        default 500
+        help
+            Absolute touch-amplitude threshold. Tune this value for the board
+            and electrode using the amplitude printed by the example.
+
+    config TOUCH_BUTTON_EXAMPLE_WS2812_GPIO
+        int "WS2812 data GPIO"
+        range 0 48
+        default 15
+        help
+            GPIO connected to the WS2812 data input. The first configured touch
+            channel is shown red and the second configured channel is shown blue.
+
+    config TOUCH_BUTTON_EXAMPLE_SAMPLE_PERIOD_MS
+        int "Sample period (ms)"
+        range 0 1000
+        default 20
+        help
+            Requested full-scan period. Set 0 to use the lowlevel default.
+
+    config TOUCH_BUTTON_EXAMPLE_SAMPLE_CFG_NUM
+        int "Sample configuration count"
+        range 0 1 if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+        range 0 3
+        default 0
+        help
+            Number of frequency/sample configurations. Set 0 to use the
+            target-specific lowlevel default.
+
+    config TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        bool "Customize V3 frequency tuning"
+        depends on IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32H4
+        default n
+        help
+            Override the built-in profile's RC and driver settings below.
+            Otherwise select Low/High frequency under Component config >
+            Touch sensor lowlevel. Frequencies depend on the circuit; tuning
+            values are not measured frequencies in Hz.
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ1_CAP
+        int "Frequency 0: RC capacitance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 127
+        default 100 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 125
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ1_RES
+        int "Frequency 0: RC resistance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 3
+        default 3 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 3
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ1_COARSE
+        int "Frequency 0: High driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 31
+        default 5 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 0
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ1_FINE
+        int "Frequency 0: Low driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 15
+        default 1 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 5
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ2_CAP
+        int "Frequency 1: RC capacitance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 127
+        default 100 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 125
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ2_RES
+        int "Frequency 1: RC resistance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 3
+        default 3 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 3
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ2_COARSE
+        int "Frequency 1: High driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 31
+        default 7 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 0
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ2_FINE
+        int "Frequency 1: Low driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 15
+        default 12 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 11
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ3_CAP
+        int "Frequency 2: RC capacitance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 127
+        default 100 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 125
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ3_RES
+        int "Frequency 2: RC resistance"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 3
+        default 3 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 3
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ3_COARSE
+        int "Frequency 2: High driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 31
+        default 23 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 1
+
+    config TOUCH_BUTTON_EXAMPLE_FREQ3_FINE
+        int "Frequency 2: Low driver"
+        depends on TOUCH_BUTTON_EXAMPLE_CUSTOM_FREQUENCIES
+        range 0 15
+        default 14 if TOUCH_SENSOR_LOWLEVEL_V3_SAMPLE_PROFILE_HIGH_FREQ
+        default 7
+
+endmenu

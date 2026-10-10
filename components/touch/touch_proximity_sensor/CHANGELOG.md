@@ -1,5 +1,14 @@
 # ChangeLog
 
+## Unreleased
+
+* **Breaking:** migrate to `touch_sensor_fsm` v1.0 complete-frame input.
+  Proximity configuration now uses absolute normalized `thresholds`, explicit
+  debounce fields, and optional sampling settings.
+* Preserve the independent proximity low-level data type and accumulated
+  measurement period; ordinary touch 5000-count alignment and frequency
+  estimation are not used for proximity channels.
+
 ## v0.2.0 - 2025-1-20
 
 ### Break changes:

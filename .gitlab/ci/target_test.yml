@@ -99,29 +99,6 @@ components_test_esp_msc_ota:
     TEST_FOLDER: components/usb/esp_msc_ota
     TEST_ENV: ${ENV_TAG}
 
-components_test_touch_button_sensor:
-  extends:
-    - .pytest_template
-    - .rules:build:components_touch_touch_button_sensor_test_apps
-  needs:
-    - job: "build_components_touch_touch_button_sensor_test_apps"
-      artifacts: true
-      optional: false
-  parallel:
-    matrix:
-      - IDF_VERSION: "5.4"
-        IDF_TARGET: ["esp32", "esp32s3", "esp32s2"]
-        ENV_TAG: "generic"
-      # - IDF_VERSION: "5.4"
-      #   IDF_TARGET: "esp32p4"
-      #   ENV_TAG: "generic,eco4"
-  tags:
-    - ${IDF_TARGET}
-    - ${ENV_TAG}
-  variables:
-    TEST_TARGET: ${IDF_TARGET}
-    TEST_FOLDER: components/touch/touch_button_sensor
-
 components_test_touch_proximity_sensor:
   extends:
     - .pytest_template
@@ -132,7 +109,7 @@ components_test_touch_proximity_sensor:
       optional: false
   parallel:
     matrix:
-        - IDF_VERSION: ["5.4", "5.5"]
+        - IDF_VERSION: "5.5"
           IDF_TARGET: esp32s3
           ENV_TAG: "generic"
   tags:

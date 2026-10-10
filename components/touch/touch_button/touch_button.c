@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,9 +22,12 @@ typedef struct {
 static uint8_t button_touch_get_key_level(button_driver_t *button_driver)
 {
     button_touch_obj *touch_btn = __containerof(button_driver, button_touch_obj, base);
-    touch_button_sensor_handle_events(touch_btn->touch_handle);
-    touch_state_t state;
-    touch_button_sensor_get_state(touch_btn->touch_handle, touch_btn->touch_channel, &state);
+    touch_state_t state = TOUCH_STATE_INACTIVE;
+    if (touch_button_sensor_handle_events(touch_btn->touch_handle) != ESP_OK ||
+            touch_button_sensor_get_state(touch_btn->touch_handle,
+                                          touch_btn->touch_channel, &state) != ESP_OK) {
+        return BUTTON_INACTIVE;
+    }
     return state == TOUCH_STATE_ACTIVE ? BUTTON_ACTIVE : BUTTON_INACTIVE;
 }
 
@@ -42,6 +45,11 @@ esp_err_t iot_button_new_touch_button_device(const button_config_t *button_confi
     button_touch_obj *touch_btn = NULL;
     esp_err_t ret = ESP_OK;
     ESP_GOTO_ON_FALSE(button_config && touch_config && ret_button, ESP_ERR_INVALID_ARG, err, TAG, "Invalid argument");
+    *ret_button = NULL;
+    ESP_GOTO_ON_FALSE(touch_config->touch_channel >= 0 &&
+                      touch_config->channel_threshold > 0,
+                      ESP_ERR_INVALID_ARG, err, TAG,
+                      "Invalid touch channel or threshold");
 
     touch_btn = (button_touch_obj *)calloc(1, sizeof(button_touch_obj));
     ESP_GOTO_ON_FALSE(touch_btn, ESP_ERR_NO_MEM, err, TAG, "No memory for gpio button");
@@ -49,26 +57,33 @@ esp_err_t iot_button_new_touch_button_device(const button_config_t *button_confi
     touch_btn->touch_channel = touch_config->touch_channel;
 
     uint32_t channel_list[1] = {touch_config->touch_channel};
-    float button_threshold[1] = {touch_config->channel_threshold};
+    uint32_t button_threshold[1] = {touch_config->channel_threshold};
 
     touch_button_config_t config = {
         .channel_num = 1,
         .channel_list = channel_list,
-        .channel_threshold = button_threshold,
+        .thresholds = button_threshold,
         .skip_lowlevel_init = touch_config->skip_lowlevel_init,
-        .debounce_times = 1,
+        .debounce_active = 1,
+        .debounce_inactive = 1,
     };
     ret = touch_button_sensor_create(&config, &touch_btn->touch_handle, NULL, NULL);
-    ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Create touch button sensor failed");
-    ret = iot_button_create(button_config, &touch_btn->base, ret_button);
-    ESP_GOTO_ON_FALSE(ret == ESP_OK, ESP_FAIL, err, TAG, "Create button failed");
+    ESP_GOTO_ON_FALSE(ret == ESP_OK, ret, err, TAG, "Create touch button sensor failed");
 
+    /* iot_button_create() starts the shared timer before it returns.  Install
+     * the driver callbacks first so an early timer tick cannot dereference a
+     * partially initialized driver. */
     touch_btn->base.get_key_level = button_touch_get_key_level;
     touch_btn->base.del = button_touch_delete;
+    ret = iot_button_create(button_config, &touch_btn->base, ret_button);
+    ESP_GOTO_ON_FALSE(ret == ESP_OK, ret, err, TAG, "Create button failed");
 
     return ESP_OK;
 err:
     if (touch_btn) {
+        if (touch_btn->touch_handle != NULL) {
+            (void)touch_button_sensor_delete(touch_btn->touch_handle);
+        }
         free(touch_btn);
     }
     return ret;

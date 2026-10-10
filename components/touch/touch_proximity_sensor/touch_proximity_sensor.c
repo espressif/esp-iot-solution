@@ -1,261 +1,404 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <stdio.h>
+#include <inttypes.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <inttypes.h>
 #include <time.h>
 #include "soc/soc_caps.h"
-#include "esp_err.h"
-#include "esp_log.h"
 #include "esp_check.h"
-#include "touch_proximity_sensor.h"
+#include "esp_log.h"
 #include "touch_sensor_fsm.h"
 #include "touch_sensor_lowlevel.h"
-
-const static char *TAG = "touch-prox-sensor";
-
+#include "touch_proximity_sensor.h"
 #if CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG
-static uint64_t start_time = 0;
-static uint64_t get_time_in_ms(void)
-{
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    uint64_t current_time = (uint64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-    if (start_time == 0) {
-        start_time = current_time;
-    }
-    return current_time - start_time;
-}
-
-// print touch values(raw, smooth, benchmark) of each enabled channel, every 50ms
-#define PRINT_VALUE(pad_num, raw, smooth, benchmark) printf("vl,%"PRId64",%"PRIu32",%"PRIu32",%"PRIu32",%"PRIu32"\n", get_time_in_ms(), pad_num, raw, smooth, benchmark)
-// print trigger if touch active/inactive happens
-#define PRINT_TRIGGER(pad_num, smooth, if_active) printf("tg,%"PRId64",%"PRIu32",%"PRIu32",%d,%d,%d,%d,%d\n", get_time_in_ms(), pad_num, smooth, if_active?1:0, if_active?0:1,0,0,0)
-#else
-#define PRINT_VALUE(pad_num, raw, smooth, benchmark)
-#define PRINT_TRIGGER(pad_num, smooth, if_active)
+#include "touch_sensor_fsm_private.h"
 #endif
 
-typedef struct {
+static const char *TAG = "touch_proximity_sensor";
+
+#ifndef CONFIG_TOUCH_PROXIMITY_MEAS_COUNT
+#define CONFIG_TOUCH_PROXIMITY_MEAS_COUNT 20
+#endif
+
+typedef struct touch_proximity_sensor_t {
     uint32_t channel_num;
     uint32_t *channel_list;
+    bool *channels_active;
+    uint32_t freq_num;
+    uint32_t sample_period_ms;
     fsm_handle_t fsm_handle;
+    touch_lowlevel_handle_t *lowlevel_handles;
+    uint32_t registered_num;
+    bool owns_lowlevel;
+    bool fsm_started;
     proxi_cb_t proximity_callback;
     void *proximity_cb_arg;
-    bool channels_active[SOC_TOUCH_PROXIMITY_CHANNEL_NUM];
-    touch_lowlevel_handle_t lowlevel_handle[SOC_TOUCH_PROXIMITY_CHANNEL_NUM];
-    bool skip_lowlevel_init;
     bool is_initialized;
 } proxi_sensor_t;
 
-static void fsm_state_callback(fsm_handle_t handle, uint32_t channel, fsm_state_t state, uint32_t data, void *user_data)
+static int32_t find_channel_index(const proxi_sensor_t *sensor, uint32_t channel)
 {
-    proxi_sensor_t *sensor = (proxi_sensor_t *)user_data;
-
-    bool is_active = (state == FSM_STATE_ACTIVE);
-    for (int i = 0; i < sensor->channel_num; i++) {
+    for (uint32_t i = 0; i < sensor->channel_num; i++) {
         if (sensor->channel_list[i] == channel) {
-            sensor->channels_active[i] = is_active;
-            PRINT_TRIGGER(channel, data, is_active);
-            if (sensor->proximity_callback) {
-                proxi_state_t event = is_active ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE;
-                sensor->proximity_callback(channel, event, sensor->proximity_cb_arg);
-            }
-            return;
+            return (int32_t)i;
         }
     }
+    return -1;
 }
 
-static void _touch_intr_cb(uint32_t channel, touch_lowlevel_state_t state, void *state_data, void *arg)
+static int32_t lowlevel_channel_index(const touch_lowlevel_info_t *info, uint32_t channel)
 {
-    proxi_sensor_t *sensor = (proxi_sensor_t *)arg;
-    if (state == TOUCH_LOWLEVEL_STATE_NEW_DATA) {
-        uint32_t raw_data = *(uint32_t *)state_data;
-        touch_sensor_fsm_update_data(sensor->fsm_handle, channel, raw_data, true);
+    for (uint32_t i = 0; i < info->channel_num; i++) {
+        if (info->channel_list[i] == channel) {
+            return (int32_t)i;
+        }
+    }
+    return -1;
+}
+
+static void fsm_state_callback(fsm_handle_t handle, uint32_t channel, fsm_state_t state,
+                               uint32_t data, void *user_data)
+{
+    (void)handle;
+    (void)data;
+    proxi_sensor_t *sensor = (proxi_sensor_t *)user_data;
+    int32_t index = find_channel_index(sensor, channel);
+    if (index < 0) {
+        return;
+    }
+
+    bool active = state == FSM_STATE_ACTIVE;
+    sensor->channels_active[index] = active;
+    if (sensor->proximity_callback != NULL) {
+        sensor->proximity_callback(channel,
+                                   active ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE,
+                                   sensor->proximity_cb_arg);
     }
 }
 
-esp_err_t touch_proximity_sensor_create(touch_proxi_config_t *config, touch_proximity_handle_t *sensor_handle, proxi_cb_t cb, void *cb_arg)
+static void touch_sensor_callback(uint32_t channel, touch_lowlevel_state_t state,
+                                  void *state_data, void *arg)
 {
-    ESP_RETURN_ON_FALSE(config && sensor_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
-    ESP_RETURN_ON_FALSE(config->channel_num > 0 && config->channel_list, ESP_ERR_INVALID_ARG, TAG, "Invalid channel config");
-    ESP_RETURN_ON_FALSE(config->channel_num <= SOC_TOUCH_PROXIMITY_CHANNEL_NUM, ESP_ERR_INVALID_ARG, TAG, "Too many channels");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)arg;
+    if (state != TOUCH_LOWLEVEL_STATE_NEW_DATA || state_data == NULL ||
+            sensor->fsm_handle == NULL || sensor->freq_num == 0) {
+        return;
+    }
 
-    proxi_sensor_t *sensor = calloc(1, sizeof(proxi_sensor_t));
-    ESP_RETURN_ON_FALSE(sensor, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory");
+    const uint32_t *raw_data = (const uint32_t *)state_data;
+    (void)touch_sensor_fsm_update_data(sensor->fsm_handle, channel, raw_data,
+                                       sensor->freq_num, true);
+}
 
+static esp_err_t proximity_cleanup(proxi_sensor_t *sensor)
+{
+    if (sensor == NULL) {
+        return ESP_OK;
+    }
+
+    esp_err_t first_error = ESP_OK;
+    if (sensor->fsm_handle != NULL && sensor->fsm_started) {
+        esp_err_t ret = touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_STOP, NULL);
+        if (ret != ESP_OK && first_error == ESP_OK) {
+            first_error = ret;
+        }
+    }
+    if (sensor->owns_lowlevel) {
+        esp_err_t ret = touch_sensor_lowlevel_stop();
+        if (ret != ESP_OK && first_error == ESP_OK) {
+            first_error = ret;
+        }
+    }
+    for (uint32_t i = 0; i < sensor->registered_num; i++) {
+        if (sensor->lowlevel_handles[i] != NULL) {
+            esp_err_t ret = touch_sensor_lowlevel_unregister(sensor->lowlevel_handles[i]);
+            if (ret != ESP_OK && first_error == ESP_OK) {
+                first_error = ret;
+            }
+        }
+    }
+    if (sensor->fsm_handle != NULL) {
+        esp_err_t ret = touch_sensor_fsm_delete(sensor->fsm_handle);
+        if (ret != ESP_OK && first_error == ESP_OK) {
+            first_error = ret;
+        }
+    }
+    if (sensor->owns_lowlevel) {
+        esp_err_t ret = touch_sensor_lowlevel_delete();
+        if (ret != ESP_OK && first_error == ESP_OK) {
+            first_error = ret;
+        }
+    }
+
+    free(sensor->channel_list);
+    free(sensor->channels_active);
+    free(sensor->lowlevel_handles);
+    free(sensor);
+    return first_error;
+}
+
+static uint32_t effective_proximity_period(uint32_t scan_period_ms,
+                                           uint32_t proximity_count)
+{
+    uint64_t period = (uint64_t)scan_period_ms * proximity_count;
+    return period > UINT32_MAX ? UINT32_MAX : (uint32_t)period;
+}
+
+esp_err_t touch_proximity_sensor_create(const touch_proxi_config_t *config,
+                                        touch_proximity_handle_t *sensor_handle,
+                                        proxi_cb_t cb, void *cb_arg)
+{
+    ESP_RETURN_ON_FALSE(config != NULL && sensor_handle != NULL, ESP_ERR_INVALID_ARG,
+                        TAG, "Invalid arguments");
+    *sensor_handle = NULL;
+    ESP_RETURN_ON_FALSE(config->channel_num > 0 && config->channel_list != NULL &&
+                        config->thresholds != NULL, ESP_ERR_INVALID_ARG, TAG,
+                        "Invalid channel configuration");
+
+#if !SOC_TOUCH_SUPPORT_PROX_SENSING
+    (void)cb;
+    (void)cb_arg;
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    ESP_RETURN_ON_FALSE(config->channel_num <= SOC_TOUCH_PROXIMITY_CHANNEL_NUM,
+                        ESP_ERR_INVALID_ARG, TAG, "Too many proximity channels");
+    uint32_t proximity_count = config->proximity_count != 0 ?
+                               config->proximity_count : CONFIG_TOUCH_PROXIMITY_MEAS_COUNT;
+    ESP_RETURN_ON_FALSE(proximity_count > 0 && proximity_count <= 255,
+                        ESP_ERR_INVALID_ARG, TAG, "Invalid proximity count");
+    for (uint32_t i = 0; i < config->channel_num; i++) {
+        ESP_RETURN_ON_FALSE(config->thresholds[i] > 0, ESP_ERR_INVALID_ARG, TAG,
+                            "Proximity thresholds must be nonzero");
+        for (uint32_t j = 0; j < i; j++) {
+            ESP_RETURN_ON_FALSE(config->channel_list[i] != config->channel_list[j],
+                                ESP_ERR_INVALID_ARG, TAG,
+                                "Duplicate proximity channel");
+        }
+    }
+
+    proxi_sensor_t *sensor = calloc(1, sizeof(*sensor));
+    ESP_RETURN_ON_FALSE(sensor != NULL, ESP_ERR_NO_MEM, TAG, "No memory for proximity sensor");
     sensor->channel_num = config->channel_num;
     sensor->channel_list = malloc(config->channel_num * sizeof(uint32_t));
-
-    esp_err_t ret = ESP_OK;
-    ESP_GOTO_ON_FALSE(sensor->channel_list, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to allocate channel list");
-    memcpy(sensor->channel_list, config->channel_list, config->channel_num * sizeof(uint32_t));
-
+    sensor->channels_active = calloc(config->channel_num, sizeof(bool));
+    sensor->lowlevel_handles = calloc(config->channel_num, sizeof(touch_lowlevel_handle_t));
+    if (sensor->channel_list == NULL || sensor->channels_active == NULL ||
+            sensor->lowlevel_handles == NULL) {
+        proximity_cleanup(sensor);
+        return ESP_ERR_NO_MEM;
+    }
+    memcpy(sensor->channel_list, config->channel_list,
+           config->channel_num * sizeof(uint32_t));
     sensor->proximity_callback = cb;
     sensor->proximity_cb_arg = cb_arg;
-    sensor->skip_lowlevel_init = config->skip_lowlevel_init;
 
+    esp_err_t ret;
     if (!config->skip_lowlevel_init) {
-        touch_lowlevel_type_t *channel_type = calloc(config->channel_num, sizeof(touch_lowlevel_type_t));
-        ESP_GOTO_ON_FALSE(channel_type, ESP_ERR_NO_MEM, cleanup, TAG, "Failed to allocate channel types");
-
-        for (int i = 0; i < config->channel_num; i++) {
+        touch_lowlevel_type_t *channel_type =
+            calloc(config->channel_num, sizeof(touch_lowlevel_type_t));
+        if (channel_type == NULL) {
+            proximity_cleanup(sensor);
+            return ESP_ERR_NO_MEM;
+        }
+        for (uint32_t i = 0; i < config->channel_num; i++) {
             channel_type[i] = TOUCH_LOWLEVEL_TYPE_PROXIMITY;
         }
 
-        touch_lowlevel_config_t low_config = {
+        touch_lowlevel_config_t lowlevel_config = {
             .channel_num = config->channel_num,
-            .channel_list = config->channel_list,
+            .channel_list = sensor->channel_list,
             .channel_type = channel_type,
-            .proximity_count = CONFIG_TOUCH_PROXIMITY_MEAS_COUNT,
+            .sample_period_ms = config->sample_period_ms,
+            .sample_cfg_num = config->sample_cfg_num,
+            .proximity_count = proximity_count,
         };
-        esp_err_t ret = touch_sensor_lowlevel_create(&low_config);
+        ret = touch_sensor_lowlevel_create(&lowlevel_config);
         free(channel_type);
-        ESP_GOTO_ON_ERROR(ret, cleanup, TAG, "Failed to create touch sensor lowlevel");
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to create proximity lowlevel: %s",
+                     esp_err_to_name(ret));
+            proximity_cleanup(sensor);
+            return ret;
+        }
+        sensor->owns_lowlevel = true;
+        ret = touch_sensor_lowlevel_start();
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to start proximity lowlevel: %s",
+                     esp_err_to_name(ret));
+            proximity_cleanup(sensor);
+            return ret;
+        }
     }
 
-    fsm_config_t fsm_config = {
-        .mode = FSM_MODE_USER_PUSH,
-        .state_cb = fsm_state_callback,
-        .channel_num = config->channel_num,
-        .channel_list = config->channel_list,
-        .threshold_p = config->channel_threshold,
-        .threshold_n = NULL, // not use negative logic
-        .gold_value = config->channel_gold_value,
-        .debounce_p = config->debounce_times,
-        .debounce_n = config->debounce_times,
-        .smooth_coef = CONFIG_TOUCH_PROXIMITY_SMOOTH_COEF_X1000 / 1000.0f,
-        .baseline_coef = CONFIG_TOUCH_PROXIMITY_BASELINE_COEF_X1000 / 1000.0f,
-        .max_p = CONFIG_TOUCH_PROXIMITY_MAX_P_X1000 / 1000.0f,
-        .min_n = CONFIG_TOUCH_PROXIMITY_MIN_N_X1000 / 1000.0f,
-        .hysteresis_p = 0.1f, // 10% hysteresis
-        .noise_p = config->channel_threshold[0] / CONFIG_TOUCH_PROXIMITY_NOISE_P_SNR,
-        .noise_n = config->channel_threshold[0] / CONFIG_TOUCH_PROXIMITY_NOISE_N_SNR,
-        .reset_p = CONFIG_TOUCH_PROXIMITY_RESET_P,
-        .reset_n = CONFIG_TOUCH_PROXIMITY_RESET_N,
-        .raw_buf_size = CONFIG_TOUCH_PROXIMITY_RAW_BUF_SIZE,
-        .scale_factor = 1,
-        .user_data = sensor,
-    };
-
-    ESP_GOTO_ON_ERROR(
-        touch_sensor_fsm_create(&fsm_config, &sensor->fsm_handle),
-        cleanup, TAG, "Failed to create FSM"
-    );
-
-    for (int i = 0; i < config->channel_num; i++) {
-        ESP_GOTO_ON_ERROR(
-            touch_sensor_lowlevel_register(config->channel_list[i], _touch_intr_cb, sensor, &sensor->lowlevel_handle[i]),
-            cleanup, TAG, "Failed to register channel %d", i
-        );
+    touch_lowlevel_info_t lowlevel_info = {0};
+    ret = touch_sensor_lowlevel_get_info(&lowlevel_info);
+    if (ret != ESP_OK) {
+        proximity_cleanup(sensor);
+        return ret;
+    }
+    if (lowlevel_info.sample_cfg_num == 0 ||
+            lowlevel_info.sample_cfg_num > FSM_MAX_FREQ) {
+        ESP_LOGE(TAG, "Unsupported proximity frame width: %" PRIu32,
+                 lowlevel_info.sample_cfg_num);
+        proximity_cleanup(sensor);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    for (uint32_t i = 0; i < sensor->channel_num; i++) {
+        int32_t lowlevel_index = lowlevel_channel_index(&lowlevel_info,
+                                                        sensor->channel_list[i]);
+        if (lowlevel_index < 0) {
+            ESP_LOGE(TAG, "Channel %" PRIu32 " is not in proximity lowlevel",
+                     sensor->channel_list[i]);
+            proximity_cleanup(sensor);
+            return ESP_ERR_NOT_FOUND;
+        }
+        if (lowlevel_info.channel_type != NULL &&
+                lowlevel_info.channel_type[lowlevel_index] != TOUCH_LOWLEVEL_TYPE_PROXIMITY) {
+            ESP_LOGE(TAG, "Channel %" PRIu32 " is not a proximity channel",
+                     sensor->channel_list[i]);
+            proximity_cleanup(sensor);
+            return ESP_ERR_INVALID_ARG;
+        }
+    }
+    if (lowlevel_info.proximity_count == 0) {
+        ESP_LOGE(TAG, "Lowlevel did not report a proximity measurement count");
+        proximity_cleanup(sensor);
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (config->proximity_count != 0 &&
+            lowlevel_info.proximity_count != config->proximity_count) {
+        ESP_LOGE(TAG, "Requested proximity count=%" PRIu32 " but lowlevel uses=%" PRIu32,
+                 config->proximity_count, lowlevel_info.proximity_count);
+        proximity_cleanup(sensor);
+        return ESP_ERR_INVALID_STATE;
+    }
+    sensor->freq_num = lowlevel_info.sample_cfg_num;
+    sensor->sample_period_ms = effective_proximity_period(lowlevel_info.sample_period_ms,
+                                                          lowlevel_info.proximity_count);
+    if (sensor->sample_period_ms == 0) {
+        sensor->sample_period_ms = 20 * lowlevel_info.proximity_count;
     }
 
-    ESP_GOTO_ON_ERROR(
-        touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_START, NULL),
-        cleanup, TAG, "Failed to start FSM"
-    );
+    fsm_config_t fsm_config;
+    ret = touch_sensor_fsm_get_default_config(sensor->freq_num,
+                                              sensor->sample_period_ms,
+                                              &fsm_config);
+    if (ret != ESP_OK) {
+        proximity_cleanup(sensor);
+        return ret;
+    }
+    fsm_config.mode = FSM_MODE_USER_PUSH;
+    fsm_config.channel_num = sensor->channel_num;
+    fsm_config.channel_list = sensor->channel_list;
+    fsm_config.freq_num = sensor->freq_num;
+    fsm_config.threshold_active = config->thresholds;
+    fsm_config.debounce_active = config->debounce_active;
+    fsm_config.debounce_inactive = config->debounce_inactive;
+    fsm_config.sample_period_ms = sensor->sample_period_ms;
+    fsm_config.state_cb = fsm_state_callback;
+    fsm_config.user_data = sensor;
 
-    if (!config->skip_lowlevel_init) {
-        ESP_GOTO_ON_ERROR(
-            touch_sensor_lowlevel_start(),
-            cleanup, TAG, "Failed to start touch sensor lowlevel"
-        );
+    ret = touch_sensor_fsm_create(&fsm_config, &sensor->fsm_handle);
+    if (ret != ESP_OK) {
+        proximity_cleanup(sensor);
+        return ret;
+    }
+    ret = touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_START, NULL);
+    if (ret != ESP_OK) {
+        proximity_cleanup(sensor);
+        return ret;
+    }
+    sensor->fsm_started = true;
+
+    for (uint32_t i = 0; i < sensor->channel_num; i++) {
+        ret = touch_sensor_lowlevel_register(sensor->channel_list[i],
+                                             touch_sensor_callback, sensor,
+                                             &sensor->lowlevel_handles[i]);
+        if (ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to register channel %" PRIu32 ": %s",
+                     sensor->channel_list[i], esp_err_to_name(ret));
+            proximity_cleanup(sensor);
+            return ret;
+        }
+        sensor->registered_num++;
     }
 
     sensor->is_initialized = true;
     *sensor_handle = (touch_proximity_handle_t)sensor;
-    ESP_LOGI(TAG, "Touch Proximity Driver Version: %d.%d.%d",
-             TOUCH_PROXIMITY_SENSOR_VER_MAJOR, TOUCH_PROXIMITY_SENSOR_VER_MINOR, TOUCH_PROXIMITY_SENSOR_VER_PATCH);
+    ESP_LOGI(TAG, "Created with %" PRIu32 " channels, %" PRIu32
+             " frequency samples, effective frame period %" PRIu32 " ms",
+             sensor->channel_num, sensor->freq_num, sensor->sample_period_ms);
     return ESP_OK;
+#endif
+}
 
-cleanup:
-    touch_proximity_sensor_delete((touch_proximity_handle_t)sensor);
+esp_err_t touch_proximity_sensor_delete(touch_proximity_handle_t handle)
+{
+    return proximity_cleanup((proxi_sensor_t *)handle);
+}
+
+esp_err_t touch_proximity_sensor_get_data(touch_proximity_handle_t handle,
+                                          uint32_t channel, uint32_t *data)
+{
+    ESP_RETURN_ON_FALSE(handle != NULL && data != NULL, ESP_ERR_INVALID_ARG, TAG,
+                        "Invalid arguments");
+    proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG,
+                        "Sensor not initialized");
+    ESP_RETURN_ON_FALSE(find_channel_index(sensor, channel) >= 0, ESP_ERR_NOT_FOUND, TAG,
+                        "Channel is not configured");
+
+    int32_t fused_filtered = 0;
+    esp_err_t ret = touch_sensor_fsm_get_data(sensor->fsm_handle, channel, &fused_filtered);
+    if (ret == ESP_OK) {
+        /* Wrapper amplitudes are unsigned; preserve the FSM's signed data at its API boundary. */
+        *data = fused_filtered > 0 ? (uint32_t)fused_filtered : 0;
+    }
     return ret;
 }
 
-esp_err_t touch_proximity_sensor_delete(touch_proximity_handle_t proxi_sensor)
+esp_err_t touch_proximity_sensor_get_state(touch_proximity_handle_t handle,
+                                           uint32_t channel, proxi_state_t *state)
 {
-    if (!proxi_sensor) {
-        return ESP_OK;
-    }
-    proxi_sensor_t *sensor = (proxi_sensor_t *)proxi_sensor;
-    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
-
-    if (!sensor->skip_lowlevel_init) {
-        touch_sensor_lowlevel_stop();
-    }
-
-    if (sensor->fsm_handle) {
-        touch_sensor_fsm_control(sensor->fsm_handle, FSM_CTRL_STOP, NULL);
-        touch_sensor_fsm_delete(sensor->fsm_handle);
-    }
-
-    for (int i = 0; i < sensor->channel_num; i++) {
-        touch_sensor_lowlevel_unregister(sensor->lowlevel_handle[i]);
-    }
-
-    if (!sensor->skip_lowlevel_init) {
-        touch_sensor_lowlevel_delete();
-    }
-
-    free(sensor->channel_list);
-    free(sensor);
-    return ESP_OK;
-}
-
-esp_err_t touch_proximity_sensor_get_data(touch_proximity_handle_t handle, uint32_t channel, uint32_t *data)
-{
-    ESP_RETURN_ON_FALSE(handle && data, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
+    ESP_RETURN_ON_FALSE(handle != NULL && state != NULL, ESP_ERR_INVALID_ARG, TAG,
+                        "Invalid arguments");
     proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
-    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
-
-    uint32_t raw_data[3] = {0};
-    ESP_RETURN_ON_ERROR(
-        touch_sensor_fsm_get_data(sensor->fsm_handle, channel, raw_data),
-        TAG, "Failed to get FSM data"
-    );
-
-    *data = raw_data[FSM_DATA_SMOOTH];
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG,
+                        "Sensor not initialized");
+    int32_t index = find_channel_index(sensor, channel);
+    ESP_RETURN_ON_FALSE(index >= 0, ESP_ERR_NOT_FOUND, TAG, "Channel is not configured");
+    *state = sensor->channels_active[index] ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE;
     return ESP_OK;
-}
-
-esp_err_t touch_proximity_sensor_get_state(touch_proximity_handle_t handle, uint32_t channel, proxi_state_t *state)
-{
-    ESP_RETURN_ON_FALSE(handle && state, ESP_ERR_INVALID_ARG, TAG, "Invalid arguments");
-    proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
-    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
-
-    for (int i = 0; i < sensor->channel_num; i++) {
-        if (sensor->channel_list[i] == channel) {
-            *state = sensor->channels_active[i] ? PROXI_STATE_ACTIVE : PROXI_STATE_INACTIVE;
-            return ESP_OK;
-        }
-    }
-
-    return ESP_ERR_NOT_FOUND;
 }
 
 esp_err_t touch_proximity_sensor_handle_events(touch_proximity_handle_t handle)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
+    ESP_RETURN_ON_FALSE(handle != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid argument");
     proxi_sensor_t *sensor = (proxi_sensor_t *)handle;
-    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG, "Sensor not initialized");
+    ESP_RETURN_ON_FALSE(sensor->is_initialized, ESP_ERR_INVALID_STATE, TAG,
+                        "Sensor not initialized");
 
-    ESP_RETURN_ON_ERROR(touch_sensor_fsm_handle_events(sensor->fsm_handle), TAG, "Failed to handle FSM events");
+    esp_err_t ret = touch_sensor_fsm_handle_events(sensor->fsm_handle);
+    if (ret != ESP_OK) {
+        return ret;
+    }
 #if CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG
-    uint32_t raw_data[3] = {0};
-    for (int j = 0; j < sensor->channel_num; j++) {
-        // TODO: handle P4 using offset
-        ESP_RETURN_ON_ERROR(
-            touch_sensor_fsm_get_data(sensor->fsm_handle, sensor->channel_list[j], raw_data),
-            TAG, "Failed to get FSM data"
-        );
-        PRINT_VALUE(sensor->channel_list[j], raw_data[FSM_DATA_RAW], raw_data[FSM_DATA_SMOOTH], raw_data[FSM_DATA_BASELINE]);
+    for (uint32_t i = 0; i < sensor->channel_num; i++) {
+        touch_fsm_info_t info = {0};
+        if (touch_sensor_fsm_get_info(sensor->fsm_handle,
+                                      sensor->channel_list[i], &info) != ESP_OK) {
+            continue;
+        }
+        for (uint32_t f = 0; f < sensor->freq_num; f++) {
+            printf("vl,%" PRIu64 "," TOUCH_FSM_INFO_PRINT_FORMAT "\n",
+                   (uint64_t)0,
+                   TOUCH_FSM_INFO_PRINT_ARGS(sensor->channel_list[i], f, &info));
+        }
     }
 #endif
     return ESP_OK;

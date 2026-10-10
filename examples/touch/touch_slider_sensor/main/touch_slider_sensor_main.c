@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,7 +10,7 @@
 #include "touch_slider_sensor.h"
 
 static uint32_t channel_list[] = {2, 4, 6, 12, 10, 8};
-static float threshold[] = {0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f};
+static uint32_t thresholds[] = {25, 25, 25, 25, 25, 25};
 static int channel_num = 6;
 static int slider_range = 10000;
 
@@ -46,14 +46,16 @@ void app_main(void)
     touch_slider_config_t config = {
         .channel_num = channel_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
         .filter_reset_times = 5,
         .position_range = 10000,
         .swipe_alpha = 0.9,
         .swipe_threshold = 50,
         .swipe_hysterisis = 40,
-        .channel_gold_value = NULL,
-        .debounce_times = 0,
         .calculate_window = 0, // 0 means auto select window size
         .skip_lowlevel_init = false
     };

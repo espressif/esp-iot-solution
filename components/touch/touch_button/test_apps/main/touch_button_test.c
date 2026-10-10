@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +17,8 @@ static const char *TAG = "GPIO BUTTON TEST";
 
 #define TOUCH_CHANNEL_1  1
 #define TOUCH_CHANNEL_2  2
+#define TOUCH_THRESHOLD_LIGHT  500
+#define TOUCH_THRESHOLD_HEAVY  1000
 
 static void button_event_cb(void *arg, void *data)
 {
@@ -27,7 +29,7 @@ static void button_event_cb(void *arg, void *data)
     }
 
     if (BUTTON_PRESS_UP == event || BUTTON_LONG_PRESS_HOLD == event || BUTTON_LONG_PRESS_UP == event) {
-        ESP_LOGI(TAG, "\tTICKS[%"PRIu32"]", iot_button_get_ticks_time(arg));
+        ESP_LOGI(TAG, "\tTICKS[%"PRIu32"]", iot_button_get_pressed_time(arg));
     }
 
     if (BUTTON_MULTIPLE_CLICK == event) {
@@ -40,7 +42,7 @@ TEST_CASE("touch button test", "[button][touch]")
     const button_config_t btn_cfg = {0};
     const button_touch_config_t touch_cfg = {
         .touch_channel = TOUCH_CHANNEL_1,
-        .channel_threshold = 0.1,
+        .channel_threshold = TOUCH_THRESHOLD_LIGHT,
         .skip_lowlevel_init = false,
     };
 
@@ -108,7 +110,7 @@ TEST_CASE("touch multiple button test", "[button][touch][multiple]")
     const button_config_t btn_cfg = {0};
     button_touch_config_t touch_cfg = {
         .touch_channel = TOUCH_CHANNEL_1,
-        .channel_threshold = 0.1,
+        .channel_threshold = TOUCH_THRESHOLD_LIGHT,
         .skip_lowlevel_init = true,
     };
 
@@ -165,7 +167,7 @@ TEST_CASE("touch button light and heavy press test", "[button][touch][light and 
     const button_config_t btn_cfg = {0};
     button_touch_config_t touch_cfg = {
         .touch_channel = TOUCH_CHANNEL_1,
-        .channel_threshold = 0.1,
+        .channel_threshold = TOUCH_THRESHOLD_LIGHT,
         .skip_lowlevel_init = true,
     };
 
@@ -175,7 +177,7 @@ TEST_CASE("touch button light and heavy press test", "[button][touch][light and 
     TEST_ASSERT_NOT_NULL(btn_1);
 
     touch_cfg.touch_channel = TOUCH_CHANNEL_1;
-    touch_cfg.channel_threshold = 0.2;
+    touch_cfg.channel_threshold = TOUCH_THRESHOLD_HEAVY;
     button_handle_t btn_2 = NULL;
     ret = iot_button_new_touch_button_device(&btn_cfg, &touch_cfg, &btn_2);
     TEST_ASSERT(ret == ESP_OK);
@@ -200,7 +202,7 @@ TEST_CASE("touch button test memory leak", "[button][touch][memory leak]")
     const button_config_t btn_cfg = {0};
     const button_touch_config_t touch_cfg = {
         .touch_channel = TOUCH_CHANNEL_1,
-        .channel_threshold = 0.1,
+        .channel_threshold = TOUCH_THRESHOLD_LIGHT,
         .skip_lowlevel_init = false,
     };
 

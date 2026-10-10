@@ -12,8 +12,8 @@
 #include "touch_sensor_lowlevel.h"
 
 #define TOUCH_CHANNEL_1        (1)
-#define LIGHT_TOUCH_THRESHOLD  (0.15)
-#define HEAVY_TOUCH_THRESHOLD  (0.25)
+#define LIGHT_TOUCH_THRESHOLD  (70U)
+#define HEAVY_TOUCH_THRESHOLD  (70U)
 
 static const char *TAG = "touch_button";
 
