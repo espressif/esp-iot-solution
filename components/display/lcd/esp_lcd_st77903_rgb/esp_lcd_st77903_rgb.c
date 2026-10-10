@@ -325,8 +325,8 @@ static esp_err_t panel_st77903_rgb_del(esp_lcd_panel_t *panel)
     if (st77903->reset_gpio_num >= 0) {
         gpio_reset_pin(st77903->reset_gpio_num);
     }
-    free(st77903);
     ESP_LOGD(TAG, "del st77903 panel @%p", st77903);
+    free(st77903);
     return ESP_OK;
 }
 

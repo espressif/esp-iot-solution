@@ -293,8 +293,8 @@ static esp_err_t panel_st7701_del(esp_lcd_panel_t *panel)
     if (st7701->reset_gpio_num >= 0) {
         gpio_reset_pin(st7701->reset_gpio_num);
     }
-    free(st7701);
     ESP_LOGD(TAG, "del st7701 panel @%p", st7701);
+    free(st7701);
     return ESP_OK;
 }
 
