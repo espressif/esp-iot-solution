@@ -6,6 +6,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "esp_assert.h"
 #include "esp_err.h"
 #include "i2c_bus.h"
 
