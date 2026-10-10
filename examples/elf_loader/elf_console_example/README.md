@@ -6,11 +6,11 @@ This example shows how to dynamically load shared objects (.so) or ELF applicati
 
 Before project configuration and build, be sure to set the correct chip target using `idf.py set-target <chip_name>`.
 
-* Note: Only ESP32, ESP32-S2, ESP32-S3, ESP32-C6, ESP32-C61, ESP32-S31 and ESP32-P4 are supported
+* Note: Only ESP32, ESP32-S2, ESP32-S3, ESP32-C5, ESP32-C6, ESP32-C61, ESP32-S31 and ESP32-P4 are supported
 
 ### Hardware Required
 
-* A development board based on espressif ESP32/ESP32-S2/ESP32-S3/ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4 SoC
+* A development board based on espressif ESP32/ESP32-S2/ESP32-S3/ESP32-C5/ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4 SoC
 * A USB cable for power supply and programming
 
 ### Generate the ELF File
@@ -27,8 +27,8 @@ To build for Xtensa architecture (ESP32/ESP32-S2/ESP32-S3):
     cp build/hello_world.app.elf ../elf_console_example/main/fs_image/xtensa/test_app.elf
 ```
 
-To build for RISC-V architecture (ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4):
-1. Set the target to a RISC-V-based chip: `idf.py -G 'Unix Makefiles' set-target esp32c6` (or esp32c61/esp32s31/esp32p4)
+To build for RISC-V architecture (ESP32-C5/ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4):
+1. Set the target to a RISC-V-based chip: `idf.py -G 'Unix Makefiles' set-target esp32c6` (or esp32c5/esp32c61/esp32s31/esp32p4)
 2. Build the project: `idf.py elf`
 3. Copy the generated ELF file:
 ```
@@ -51,8 +51,8 @@ To build for Xtensa architecture (ESP32/ESP32-S2/ESP32-S3):
     cp build/lib.so ../elf_console_example/main/fs_image/xtensa/lib.so
 ```
 
-To build for RISC-V architecture (ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4):
-1. Set the target to a RISC-V-based chip: `idf.py -G 'Unix Makefiles' set-target esp32c6` (or esp32c61/esp32s31/esp32p4)
+To build for RISC-V architecture (ESP32-C5/ESP32-C6/ESP32-C61/ESP32-S31/ESP32-P4):
+1. Set the target to a RISC-V-based chip: `idf.py -G 'Unix Makefiles' set-target esp32c6` (or esp32c5/esp32c61/esp32s31/esp32p4)
 2. Build the project: `idf.py so`
 3. Copy the generated shared library:
 ```

@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v1.3.5 - 2026-10-10
+
+* Added support for ESP32-C5
+* Reject SRAM executable ELF allocations when `CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT` is enabled (C5/C6/C61/P4/S31, etc.); document PMP / PSRAM requirements
+
 ## v1.3.4 - 2026-09-29
 
 * Fixed ESP32-S3 PSRAM ELF relocation deadlock under multicore load by using ranged thread-safe cache synchronization

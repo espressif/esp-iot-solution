@@ -1,9 +1,10 @@
-version: "1.3.4"
+version: "1.3.5"
 targets:
   - esp32
   - esp32s2
   - esp32s3
   - esp32s31
+  - esp32c5
   - esp32c6
   - esp32c61
   - esp32p4
