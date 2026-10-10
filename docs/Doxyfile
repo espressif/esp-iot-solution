@@ -115,7 +115,6 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
     $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
-    $(PROJECT_PATH)/components/touch/touch_button_sensor/include/touch_button_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_slider_sensor/include/touch_slider_sensor.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_host.h \

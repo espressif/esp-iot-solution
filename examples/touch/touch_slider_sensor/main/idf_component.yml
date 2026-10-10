@@ -1,11 +1,12 @@
 targets:
-  - esp32
   - esp32s2
   - esp32s3
   - esp32p4
+  - esp32h4
+  - esp32s31
   - linux
 dependencies:
-  idf: ">=4.4"
+  idf: ">=5.5"
   cmake_utilities: "0.*"
   touch_slider_sensor:
     version: "*"

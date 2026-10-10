@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "driver/gpio.h"
 #include "driver/ledc.h"
 
 #ifdef __cplusplus

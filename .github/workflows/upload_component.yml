@@ -147,7 +147,6 @@ jobs:
             components/storage/ramfs;
             components/touch_ic/touch_ic_bs8112a3;
             components/touch/touch_button;
-            components/touch/touch_button_sensor;
             components/touch/touch_proximity_sensor;
             components/touch/touch_slider_sensor;
             components/usb/esp_msc_ota;

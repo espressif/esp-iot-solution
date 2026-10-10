@@ -95,6 +95,15 @@
     matrix:
       - IMAGE: espressif/idf:release-v5.5
 
+# The migrated touch components require IDF 5.5 or newer and are validated
+# against the same released IDF images.
+.build_idf_touch_sensor_v1:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+
 .build_idf_ge_than_v5_4_to_v6_2:
   parallel:
     matrix:
@@ -966,7 +975,7 @@ build_example_touch_button:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_button
-    - .build_idf_active_release_version
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: examples/touch/touch_button
 
@@ -974,15 +983,16 @@ build_example_touch_button_sensor:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_button_sensor
-    - .build_idf_active_release_version
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: examples/touch/touch_button_sensor
+    IDF_PREVIEW_TARGETS: "1"
 
 build_example_touch_slider_sensor:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_slider_sensor
-    - .build_idf_active_release_version
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: examples/touch/touch_slider_sensor
 
@@ -990,7 +1000,7 @@ build_example_touch_touch_proximity:
   extends:
     - .build_examples_template
     - .rules:build:example_touch_touch_proximity
-    - .build_idf_ge_than_v5_3
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: examples/touch/touch_proximity
 
@@ -1940,7 +1950,7 @@ build_components_touch_touch_proximity_sensor_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_proximity_sensor_test_apps
-    - .build_idf_ge_than_v5_3
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: components/touch/touch_proximity_sensor/test_apps
 
@@ -1948,24 +1958,16 @@ build_components_touch_touch_button_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_button_test_apps
-    - .build_idf_ge_than_v5_3
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: components/touch/touch_button/test_apps
     EXAMPLE_APPEND_ARGS: "--ignore-warnings"
-
-build_components_touch_touch_button_sensor_test_apps:
-  extends:
-    - .build_examples_template
-    - .rules:build:components_touch_touch_button_sensor_test_apps
-    - .build_idf_active_release_version
-  variables:
-    EXAMPLE_DIR: components/touch/touch_button_sensor/test_apps
 
 build_components_touch_touch_slider_sensor_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_touch_touch_slider_sensor_test_apps
-    - .build_idf_ge_than_v5_3
+    - .build_idf_touch_sensor_v1
   variables:
     EXAMPLE_DIR: components/touch/touch_slider_sensor/test_apps
 

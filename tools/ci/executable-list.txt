@@ -19,6 +19,7 @@ examples/elf_loader/elf_console_example/main/fs_image/xtensa/test_so.elf
 examples/elf_loader/elf_loader_example/main/test_riscv.elf
 examples/elf_loader/elf_loader_example/main/test_xtensa.elf
 examples/mcp/mcp_server/gen_es256_test_materials.sh
+examples/touch/touch_button_sensor/tools/live_touch_button_capture.py
 examples/usb/device/bootloader_uf2/utils/redirect.sh
 examples/usb/device/usb_msc_wireless_disk/tools/analyze_upload_log_en.py
 examples/usb/device/usb_msc_wireless_disk/tools/upload_speed_test.py

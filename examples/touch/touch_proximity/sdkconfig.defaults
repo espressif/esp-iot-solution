@@ -2,7 +2,9 @@
 # Espressif IoT Development Framework (ESP-IDF) 5.3.2 Project Minimal Configuration
 #
 CONFIG_IDF_TARGET="esp32s3"
-CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG=y
+# Keep the published wrapper example on its public API. FSM private diagnostics
+# are exercised by the dedicated FSM example instead.
+CONFIG_TOUCH_PROXIMITY_SENSOR_DEBUG=n
 
 # Suppress Touch API deprecation warnings in IDF 5.5
 CONFIG_TOUCH_SUPPRESS_DEPRECATE_WARN=y

@@ -1,4 +1,9 @@
 dependencies:
-  idf: ">=5.3"
+  idf: ">=5.5"
+  cmake_utilities: "0.*"
+  espressif/touch_sensor_fsm:
+    version: "^0.9.0"
+  espressif/touch_sensor_lowlevel:
+    version: "^1.0.2"
   touch_proximity_sensor:
     override_path: "../../../../components/touch/touch_proximity_sensor"
