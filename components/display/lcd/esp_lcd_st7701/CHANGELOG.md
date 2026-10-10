@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v2.0.3 - 2026-10-10
+
+### Bugfix:
+
+* Log the RGB panel pointer before freeing it during deletion, fixing GCC 15 use-after-free build errors when debug logging is enabled.
+
 ## v2.0.2~2 - 2026-05-28
 
 ### Changes:
