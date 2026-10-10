@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.3 - 2026-10-10
+
+### Bug Fixes:
+
+- Include `esp_assert.h` explicitly for `ESP_STATIC_ASSERT` to avoid relying on transitive includes.
+
 ## v0.1.2 - 2026-09-07
 
 ### Bug Fixes:
