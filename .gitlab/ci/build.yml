@@ -2132,6 +2132,7 @@ build_example_robot_ragtime_panthera:
   variables:
     EXAMPLE_DIR: examples/robot/ragtime_panthera
     BUILD_RECURSIVE: "0"
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_elf_loader_elf_loader_example:
   extends:
