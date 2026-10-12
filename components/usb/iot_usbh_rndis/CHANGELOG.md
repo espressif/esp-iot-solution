@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.1 - 2026-10-09
+
+### Bug Fixes:
+
+* Fixed `out_transfer_buffer_size` to Tx a full sized ethernet packet
+
 ## v0.5.0 - 2026-06-30
 
 ### Features:

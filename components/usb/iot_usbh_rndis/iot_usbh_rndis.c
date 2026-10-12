@@ -597,7 +597,7 @@ static void _usbh_rndis_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_dev
             .dev_addr = event_data->new_dev.dev_addr,
             .itf_num = itf_num,
             .in_transfer_buffer_size = 512 * 4,
-            .out_transfer_buffer_size = 512 * 3,
+            .out_transfer_buffer_size = 512 * 4,
             .in_ringbuf_size = 4096, // enable ring buffer to handle packet sticking
             .cbs = {
                 .notif_cb = _usbh_rndis_notif_cb,
