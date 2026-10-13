@@ -591,16 +591,19 @@ static esp_err_t airmouse_pose_mapping_update_current_forward_from_sample(
     const float mag[3],
     int64_t now_us,
     float f_cur_out[3],
+    bool *has_pose_out,
     bool *has_forward_out)
 {
     if (handle == nullptr || accel == nullptr || gyro == nullptr ||
-            f_cur_out == nullptr || has_forward_out == nullptr) {
+            f_cur_out == nullptr || has_pose_out == nullptr ||
+            has_forward_out == nullptr) {
         return ESP_ERR_INVALID_ARG;
     }
 
     f_cur_out[0] = 0.0f;
     f_cur_out[1] = 0.0f;
     f_cur_out[2] = 0.0f;
+    *has_pose_out = false;
     *has_forward_out = false;
 
     if (handle->quat_handle == nullptr) {
@@ -685,6 +688,11 @@ static esp_err_t airmouse_pose_mapping_update_current_forward_from_sample(
         return ESP_OK;
     }
 
+    f_cur_out[0] = f_cur[0];
+    f_cur_out[1] = f_cur[1];
+    f_cur_out[2] = f_cur[2];
+    *has_pose_out = true;
+
     {
         const int64_t log_now_us = esp_timer_get_time();
         if ((log_now_us - handle->last_forward_log_us) >=
@@ -723,10 +731,38 @@ static esp_err_t airmouse_pose_mapping_update_current_forward_from_sample(
     handle->f_stable[1] = f_cur[1];
     handle->f_stable[2] = f_cur[2];
 
-    f_cur_out[0] = f_cur[0];
-    f_cur_out[1] = f_cur[1];
-    f_cur_out[2] = f_cur[2];
     *has_forward_out = true;
+    return ESP_OK;
+}
+
+static esp_err_t airmouse_pose_mapping_fill_pose_angles(
+    airmouse_pose_mapping_quaternion_handle_t *handle,
+    const float f_cur[3],
+    airmouse_pose_mapping_cursor_output_t *out)
+{
+    if (handle == nullptr || f_cur == nullptr || out == nullptr) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    float u = 0.0f;
+    float v = 0.0f;
+    esp_err_t ret =
+        airmouse_pose_mapping_project_fcur_to_angle_uv(handle, f_cur, &u, &v);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    float range_x = 0.0f;
+    float range_y = 0.0f;
+    ret = airmouse_pose_mapping_get_range_rad(&range_x, &range_y);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    static constexpr float rad_to_deg = 57.2957795131f;
+    out->has_pose_angles = true;
+    out->yaw_deg = u * range_x * rad_to_deg;
+    out->pitch_deg = v * range_y * rad_to_deg;
     return ESP_OK;
 }
 
@@ -738,8 +774,6 @@ static esp_err_t airmouse_pose_mapping_project_forward_to_cursor_output(
     if (handle == nullptr || f_cur == nullptr || out == nullptr) {
         return ESP_ERR_INVALID_ARG;
     }
-
-    memset(out, 0, sizeof(*out));
 
     float u = 0.0f;
     float v = 0.0f;
@@ -808,6 +842,7 @@ esp_err_t airmouse_pose_mapping_update_cursor_from_sample(
     memset(out, 0, sizeof(*out));
 
     float f_cur[3] = {0.0f, 0.0f, 0.0f};
+    bool has_pose_out = false;
     bool has_forward_out = false;
     const esp_err_t ret = airmouse_pose_mapping_update_current_forward_from_sample(
                               handle,
@@ -817,8 +852,17 @@ esp_err_t airmouse_pose_mapping_update_cursor_from_sample(
                               mag,
                               now_us,
                               f_cur,
+                              &has_pose_out,
                               &has_forward_out);
-    if (ret != ESP_OK || !has_forward_out) {
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    if (has_pose_out) {
+        (void)airmouse_pose_mapping_fill_pose_angles(handle, f_cur, out);
+    }
+
+    if (!has_forward_out) {
         return ret;
     }
 

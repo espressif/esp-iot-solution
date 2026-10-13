@@ -47,6 +47,7 @@ typedef struct {
 
 typedef struct {
     airmouse_mouse_event_type_t type;
+    int64_t source_timestamp_us;
     union {
         airmouse_mouse_move_event_t move;
         airmouse_mouse_abs_move_event_t abs_move;

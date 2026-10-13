@@ -5,6 +5,7 @@
  */
 #include "airmouse_function.h"
 #include "airmouse_hid.h"
+#include "airmouse_test.h"
 #include "sdkconfig.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -41,8 +42,24 @@ static bool s_suppress_next_left_button_event = false;
 static int64_t s_last_hid_activity_us = 0;
 static portMUX_TYPE s_activity_lock = portMUX_INITIALIZER_UNLOCKED;
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+typedef enum {
+    AIRMOUSE_INFERENCE_RECONFIG_RUN = 0,
+    AIRMOUSE_INFERENCE_RECONFIG_PAUSE_REQUESTED,
+    AIRMOUSE_INFERENCE_RECONFIG_PAUSED,
+    AIRMOUSE_INFERENCE_RECONFIG_CANCEL_REQUESTED,
+} airmouse_inference_reconfig_state_t;
+
+static const TickType_t kInferenceReconfigAckTimeoutTicks =
+    pdMS_TO_TICKS(200);
 static airmouse_gesture_infer_state_t s_airmouse_gesture_infer_state = {};
 static TaskHandle_t s_airmouse_inference_task_handle = NULL;
+static SemaphoreHandle_t s_airmouse_inference_reconfig_ack_sem = NULL;
+static portMUX_TYPE s_airmouse_inference_reconfig_lock =
+    portMUX_INITIALIZER_UNLOCKED;
+static airmouse_inference_reconfig_state_t
+s_airmouse_inference_reconfig_state = AIRMOUSE_INFERENCE_RECONFIG_RUN;
+static uint32_t s_airmouse_inference_reconfig_request_seq = 0;
+static uint32_t s_airmouse_inference_reconfig_ack_seq = 0;
 #endif
 
 static void airmouse_reset_runtime_gesture_pipeline(
@@ -61,20 +78,365 @@ static void airmouse_reset_runtime_gesture_pipeline(
 }
 
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
-static void airmouse_reset_inference_pipeline(
-    airmouse_function_handle_t *airmouse_ctx,
-    bool reset_dispatch_state)
+static void airmouse_inference_reconfig_set_state(
+    airmouse_inference_reconfig_state_t state)
+{
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    s_airmouse_inference_reconfig_state = state;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+}
+
+static void airmouse_reset_inference_runtime_state(bool reset_dispatch_state)
 {
     if (s_airmouse_inference_imu_queue != NULL) {
         xQueueReset(s_airmouse_inference_imu_queue);
-    }
-    if (airmouse_ctx->inference_detector != NULL) {
-        (void)imu_gesture_detector_reset(airmouse_ctx->inference_detector);
     }
     airmouse_gesture_infer_state_reset(&s_airmouse_gesture_infer_state);
     if (reset_dispatch_state) {
         airmouse_inference_dispatch_state_reset(
             &s_airmouse_inference_dispatch_state);
+    }
+}
+
+static void airmouse_reset_inference_pipeline(
+    airmouse_function_handle_t *airmouse_ctx,
+    bool reset_dispatch_state)
+{
+    airmouse_reset_inference_runtime_state(reset_dispatch_state);
+    if (airmouse_ctx != NULL && airmouse_ctx->inference_detector != NULL) {
+        (void)imu_gesture_detector_reset(airmouse_ctx->inference_detector);
+    }
+}
+
+static void airmouse_request_inference_pipeline_reset(
+    airmouse_function_handle_t *airmouse_ctx,
+    bool reset_dispatch_state)
+{
+    if (s_airmouse_inference_task_handle != NULL) {
+        if (reset_dispatch_state) {
+            airmouse_inference_dispatch_state_reset(
+                &s_airmouse_inference_dispatch_state);
+        }
+        (void)xTaskNotify(s_airmouse_inference_task_handle,
+                          AIRMOUSE_INFERENCE_NOTIFY_RESET,
+                          eSetBits);
+    } else {
+        airmouse_reset_inference_runtime_state(reset_dispatch_state);
+        if (airmouse_ctx != NULL &&
+                airmouse_ctx->inference_detector != NULL) {
+            (void)imu_gesture_detector_reset(
+                airmouse_ctx->inference_detector);
+        }
+    }
+}
+
+static void airmouse_inference_reconfig_signal_state_change(void)
+{
+    if (s_airmouse_inference_reconfig_ack_sem != NULL) {
+        (void)xSemaphoreGive(s_airmouse_inference_reconfig_ack_sem);
+    }
+}
+
+static bool airmouse_inference_reconfig_pause_ack_valid(uint32_t request_seq)
+{
+    bool ack_valid = false;
+
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    ack_valid =
+        s_airmouse_inference_reconfig_state ==
+        AIRMOUSE_INFERENCE_RECONFIG_PAUSED &&
+        s_airmouse_inference_reconfig_request_seq == request_seq &&
+        s_airmouse_inference_reconfig_ack_seq == request_seq;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    return ack_valid;
+}
+
+static bool airmouse_inference_reconfig_is_run(void)
+{
+    bool is_run = false;
+
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    is_run =
+        s_airmouse_inference_reconfig_state ==
+        AIRMOUSE_INFERENCE_RECONFIG_RUN;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    return is_run;
+}
+
+static void airmouse_inference_task_handle_paused_notifications(
+    uint32_t notify_bits)
+{
+    if (notify_bits & AIRMOUSE_INFERENCE_NOTIFY_RESET) {
+        airmouse_reset_inference_runtime_state(false);
+    }
+
+    if (notify_bits & (AIRMOUSE_INFERENCE_NOTIFY_SINGLE_SHOT_START |
+                       AIRMOUSE_INFERENCE_NOTIFY_SINGLE_SHOT_FINISH)) {
+        airmouse_gesture_infer_state_reset(&s_airmouse_gesture_infer_state);
+        ESP_LOGI(TAG, "single-shot inference canceled by detector reconfig");
+    }
+}
+
+static esp_err_t airmouse_inference_request_cancel_and_wait(
+    TaskHandle_t inference_task_handle,
+    uint32_t request_seq)
+{
+    bool request_cancel = false;
+
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    if (s_airmouse_inference_reconfig_request_seq == request_seq &&
+            s_airmouse_inference_reconfig_state !=
+            AIRMOUSE_INFERENCE_RECONFIG_RUN) {
+        s_airmouse_inference_reconfig_state =
+            AIRMOUSE_INFERENCE_RECONFIG_CANCEL_REQUESTED;
+        request_cancel = true;
+    }
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    if (!request_cancel) {
+        return airmouse_inference_reconfig_is_run() ?
+               ESP_OK : ESP_ERR_INVALID_STATE;
+    }
+
+    if (inference_task_handle == NULL) {
+        ESP_LOGW(TAG, "inference reconfig cancel failed: task handle is NULL");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    BaseType_t notify_ret =
+        xTaskNotify(inference_task_handle,
+                    AIRMOUSE_INFERENCE_NOTIFY_RECONFIG_CANCEL,
+                    eSetBits);
+    if (notify_ret != pdPASS) {
+        ESP_LOGW(TAG, "inference reconfig cancel notify failed");
+    }
+
+    TickType_t start_ticks = xTaskGetTickCount();
+    TickType_t elapsed_ticks = 0;
+
+    while (elapsed_ticks < kInferenceReconfigAckTimeoutTicks) {
+        TickType_t remaining_ticks =
+            kInferenceReconfigAckTimeoutTicks - elapsed_ticks;
+        if (xSemaphoreTake(s_airmouse_inference_reconfig_ack_sem,
+                           remaining_ticks) != pdTRUE) {
+            break;
+        }
+
+        if (airmouse_inference_reconfig_is_run()) {
+            return ESP_OK;
+        }
+
+        elapsed_ticks = xTaskGetTickCount() - start_ticks;
+    }
+
+    if (airmouse_inference_reconfig_is_run()) {
+        return ESP_OK;
+    }
+
+    ESP_LOGW(TAG, "inference reconfig cancel handoff timed out");
+    return ESP_ERR_TIMEOUT;
+}
+
+static bool airmouse_inference_task_service_reconfig_pause(
+    uint32_t initial_notify_bits)
+{
+    uint32_t request_seq = 0;
+    bool should_pause = false;
+    bool signal_state_change = false;
+
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    if (s_airmouse_inference_reconfig_state ==
+            AIRMOUSE_INFERENCE_RECONFIG_PAUSE_REQUESTED) {
+        request_seq = s_airmouse_inference_reconfig_request_seq;
+        should_pause = true;
+    } else if (s_airmouse_inference_reconfig_state ==
+               AIRMOUSE_INFERENCE_RECONFIG_CANCEL_REQUESTED) {
+        s_airmouse_inference_reconfig_state =
+            AIRMOUSE_INFERENCE_RECONFIG_RUN;
+        signal_state_change = true;
+    }
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    if (signal_state_change) {
+        airmouse_inference_reconfig_signal_state_change();
+        return true;
+    }
+
+    if (!should_pause) {
+        return false;
+    }
+
+    airmouse_inference_task_handle_paused_notifications(initial_notify_bits);
+    airmouse_reset_inference_runtime_state(true);
+
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    if (s_airmouse_inference_reconfig_state ==
+            AIRMOUSE_INFERENCE_RECONFIG_PAUSE_REQUESTED &&
+            s_airmouse_inference_reconfig_request_seq == request_seq) {
+        s_airmouse_inference_reconfig_state =
+            AIRMOUSE_INFERENCE_RECONFIG_PAUSED;
+        s_airmouse_inference_reconfig_ack_seq = request_seq;
+        should_pause = true;
+        signal_state_change = true;
+    } else if (s_airmouse_inference_reconfig_state ==
+               AIRMOUSE_INFERENCE_RECONFIG_CANCEL_REQUESTED &&
+               s_airmouse_inference_reconfig_request_seq == request_seq) {
+        s_airmouse_inference_reconfig_state =
+            AIRMOUSE_INFERENCE_RECONFIG_RUN;
+        signal_state_change = true;
+        should_pause = false;
+    } else {
+        should_pause = false;
+    }
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    if (signal_state_change) {
+        airmouse_inference_reconfig_signal_state_change();
+    }
+
+    if (!should_pause) {
+        return true;
+    }
+
+    while (1) {
+        uint32_t notify_bits = 0;
+        (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, portMAX_DELAY);
+        airmouse_inference_task_handle_paused_notifications(notify_bits);
+
+        bool done = false;
+        bool signal_done = false;
+        portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+        if (s_airmouse_inference_reconfig_state ==
+                AIRMOUSE_INFERENCE_RECONFIG_RUN) {
+            done = true;
+        } else if (s_airmouse_inference_reconfig_state ==
+                   AIRMOUSE_INFERENCE_RECONFIG_CANCEL_REQUESTED) {
+            s_airmouse_inference_reconfig_state =
+                AIRMOUSE_INFERENCE_RECONFIG_RUN;
+            done = true;
+            signal_done = true;
+        }
+        portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+        if (done ||
+                (notify_bits & (AIRMOUSE_INFERENCE_NOTIFY_RECONFIG_RESUME |
+                                AIRMOUSE_INFERENCE_NOTIFY_RECONFIG_CANCEL))) {
+            portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+            if (s_airmouse_inference_reconfig_state !=
+                    AIRMOUSE_INFERENCE_RECONFIG_RUN) {
+                s_airmouse_inference_reconfig_state =
+                    AIRMOUSE_INFERENCE_RECONFIG_RUN;
+                signal_done = true;
+            }
+            portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+            if (signal_done) {
+                airmouse_inference_reconfig_signal_state_change();
+            }
+            return true;
+        }
+    }
+}
+
+static esp_err_t airmouse_pause_inference_for_detector_reconfig(
+    airmouse_function_handle_t *airmouse_ctx)
+{
+    if (airmouse_ctx == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (s_airmouse_inference_task_handle == NULL) {
+        if (airmouse_ctx->inference_detector != NULL) {
+            ESP_LOGE(TAG,
+                     "inference detector exists but inference task is not ready");
+            return ESP_ERR_INVALID_STATE;
+        }
+        return ESP_OK;
+    }
+
+    if (s_airmouse_inference_reconfig_ack_sem == NULL) {
+        ESP_LOGE(TAG, "inference reconfig ack semaphore is NULL");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    while (xSemaphoreTake(s_airmouse_inference_reconfig_ack_sem, 0) ==
+            pdTRUE) {
+    }
+
+    uint32_t request_seq = 0;
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    if (s_airmouse_inference_reconfig_state !=
+            AIRMOUSE_INFERENCE_RECONFIG_RUN) {
+        portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+        ESP_LOGW(TAG, "inference reconfig pause rejected: state=%d",
+                 (int)s_airmouse_inference_reconfig_state);
+        return ESP_ERR_INVALID_STATE;
+    }
+    request_seq = ++s_airmouse_inference_reconfig_request_seq;
+    s_airmouse_inference_reconfig_ack_seq = 0;
+    s_airmouse_inference_reconfig_state =
+        AIRMOUSE_INFERENCE_RECONFIG_PAUSE_REQUESTED;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    BaseType_t notify_ret =
+        xTaskNotify(s_airmouse_inference_task_handle,
+                    AIRMOUSE_INFERENCE_NOTIFY_RECONFIG_PAUSE,
+                    eSetBits);
+    if (notify_ret != pdPASS) {
+        (void)airmouse_inference_request_cancel_and_wait(
+            s_airmouse_inference_task_handle,
+            request_seq);
+        ESP_LOGW(TAG, "inference reconfig pause notify failed");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    TickType_t start_ticks = xTaskGetTickCount();
+    TickType_t elapsed_ticks = 0;
+
+    while (elapsed_ticks < kInferenceReconfigAckTimeoutTicks) {
+        TickType_t remaining_ticks =
+            kInferenceReconfigAckTimeoutTicks - elapsed_ticks;
+        if (xSemaphoreTake(s_airmouse_inference_reconfig_ack_sem,
+                           remaining_ticks) != pdTRUE) {
+            break;
+        }
+
+        if (airmouse_inference_reconfig_pause_ack_valid(request_seq)) {
+            return ESP_OK;
+        }
+
+        elapsed_ticks = xTaskGetTickCount() - start_ticks;
+    }
+
+    esp_err_t cancel_ret =
+        airmouse_inference_request_cancel_and_wait(
+            s_airmouse_inference_task_handle,
+            request_seq);
+    if (cancel_ret != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "inference reconfig pause timed out and cancel did not settle");
+        return cancel_ret;
+    }
+
+    ESP_LOGW(TAG, "inference reconfig pause timed out");
+    return ESP_ERR_TIMEOUT;
+}
+
+static void airmouse_resume_inference_after_detector_reconfig(void)
+{
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    s_airmouse_inference_reconfig_state = AIRMOUSE_INFERENCE_RECONFIG_RUN;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
+    if (s_airmouse_inference_task_handle != NULL) {
+        BaseType_t notify_ret =
+            xTaskNotify(s_airmouse_inference_task_handle,
+                        AIRMOUSE_INFERENCE_NOTIFY_RECONFIG_RESUME,
+                        eSetBits);
+        if (notify_ret != pdPASS) {
+            ESP_LOGW(TAG, "inference reconfig resume notify failed");
+        }
     }
 }
 #endif
@@ -146,7 +508,7 @@ static void airmouse_reset_sleep_pipelines(
     airmouse_reset_sampling_queues();
     airmouse_reset_runtime_gesture_pipeline(airmouse_ctx);
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
-    airmouse_reset_inference_pipeline(airmouse_ctx, true);
+    airmouse_request_inference_pipeline_reset(airmouse_ctx, true);
 #endif
     airmouse_inference_dispatch_state_reset(
         &s_airmouse_inference_dispatch_state);
@@ -201,13 +563,7 @@ static void airmouse_reset_pose_related_pipelines(
     airmouse_reset_sampling_queues();
     airmouse_reset_runtime_gesture_pipeline(airmouse_ctx);
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
-    if (s_airmouse_inference_task_handle != NULL) {
-        (void)xTaskNotify(s_airmouse_inference_task_handle,
-                          AIRMOUSE_INFERENCE_NOTIFY_RESET,
-                          eSetBits);
-    } else {
-        airmouse_reset_inference_pipeline(airmouse_ctx, true);
-    }
+    airmouse_request_inference_pipeline_reset(airmouse_ctx, true);
 #endif
 }
 
@@ -552,6 +908,12 @@ void airmouse_inference_task(void *pvParameters)
         uint32_t notify_bits = 0;
         (void)xTaskNotifyWait(0, UINT32_MAX, &notify_bits, 0);
 
+        if (airmouse_inference_task_service_reconfig_pause(notify_bits)) {
+            inactive_reset_done = true;
+            active_logged = false;
+            continue;
+        }
+
         if (airmouse_is_sleep_mode(airmouse_ctx)) {
             inactive_reset_done = true;
             active_logged = false;
@@ -849,13 +1211,25 @@ runtime_config_cleanup:
         if ((change_flags & AIRMOUSE_CONFIG_CHANGE_INFERENCE) != 0) {
             bool detector_enabled = false;
 
-            ret = airmouse_gesture_infer_recreate_detector(
-                      &airmouse_ctx->config.inference,
-                      &s_airmouse_gesture_infer_state,
-                      &airmouse_ctx->inference_detector,
-                      airmouse_inference_event_cb,
-                      NULL,
-                      &detector_enabled);
+            if (s_airmouse_inference_task_handle == NULL &&
+                    airmouse_ctx->config.inference.enable) {
+                ret = ESP_ERR_INVALID_STATE;
+                ESP_LOGW(TAG,
+                         "runtime config cannot enable inference without inference task");
+            } else {
+                ret = airmouse_pause_inference_for_detector_reconfig(
+                          airmouse_ctx);
+            }
+            if (ret == ESP_OK) {
+                ret = airmouse_gesture_infer_recreate_detector(
+                          &airmouse_ctx->config.inference,
+                          &s_airmouse_gesture_infer_state,
+                          &airmouse_ctx->inference_detector,
+                          airmouse_inference_event_cb,
+                          NULL,
+                          &detector_enabled);
+                airmouse_resume_inference_after_detector_reconfig();
+            }
             if (ret != ESP_OK) {
                 ESP_LOGW(TAG,
                          "runtime config failed to apply inference changes: 0x%x; rollback",
@@ -1002,6 +1376,11 @@ void airmouse_bmi270_sampling_task(void *pvParameters)
 
             if (ret == ESP_OK) {
                 sample.timestamp_us = esp_timer_get_time();  // Timestamp the sample when the read completes.
+
+#if AIRMOUSE_TEST_MODE_ENABLE
+                airmouse_test_realtime_update_imu(sample.gyr,
+                                                  sample.timestamp_us);
+#endif
 
                 BaseType_t qret = xQueueSend(imu_queue, &sample, 0);
 
@@ -1203,19 +1582,37 @@ void airmouse_pose_mapping_quaternion_task(void *pvParameters)
                   sample.timestamp_us,
                   &cursor_out);
 #endif
+        const int64_t pose_done_us = esp_timer_get_time();
         if (ret == ESP_OK && cursor_out.has_relative) {
             evt.type = AIRMOUSE_MOUSE_EVENT_MOVE;
+            evt.source_timestamp_us = sample.timestamp_us;
             evt.data.move.dx = cursor_out.dx;
             evt.data.move.dy = cursor_out.dy;
             should_post_event = true;
         } else if (ret == ESP_OK && cursor_out.has_absolute) {
             evt.type = AIRMOUSE_MOUSE_EVENT_ABS_MOVE;
+            evt.source_timestamp_us = sample.timestamp_us;
             evt.data.abs_move.x = cursor_out.abs_x;
             evt.data.abs_move.y = cursor_out.abs_y;
             should_post_event = true;
         }
 
         if (ret == ESP_OK) {
+#if AIRMOUSE_TEST_MODE_ENABLE
+            const bool realtime_has_mouse_event =
+                should_post_event &&
+                (evt.type != AIRMOUSE_MOUSE_EVENT_MOVE ||
+                 evt.data.move.dx != 0 ||
+                 evt.data.move.dy != 0);
+            if (cursor_out.has_pose_angles) {
+                airmouse_test_update_pose(cursor_out.yaw_deg,
+                                          cursor_out.pitch_deg);
+            }
+            airmouse_test_realtime_mark_pose(
+                sample.timestamp_us,
+                pose_done_us,
+                realtime_has_mouse_event);
+#endif
             if (should_post_event) {
                 airmouse_post_mouse_event(&evt);
             }
@@ -1279,6 +1676,7 @@ void airmouse_mouse_task(void *pvParameters)
                 active_logged = false;
                 airmouse_mark_hid_activity();
             } else {
+#if !AIRMOUSE_TEST_MODE_ENABLE
                 const int64_t now_us = esp_timer_get_time();
                 const int64_t elapsed_us =
                     now_us - airmouse_get_last_hid_activity_us();
@@ -1290,6 +1688,7 @@ void airmouse_mouse_task(void *pvParameters)
                            ble_handle->power_mode == AIRMOUSE_BLE_POWER_ACTIVE) {
                     (void)airmouse_ble_enter_idle();
                 }
+#endif
             }
             continue;
         }
@@ -1320,6 +1719,11 @@ void airmouse_mouse_task(void *pvParameters)
             ESP_LOGI(TAG, "mouse task active: mouse ready");
             active_logged = true;
         }
+
+#if AIRMOUSE_TEST_MODE_ENABLE
+        airmouse_test_realtime_mark_hid(evt.source_timestamp_us,
+                                        esp_timer_get_time());
+#endif
 
         airmouse_hid_dispatch_event(
             airmouse_ctx,
@@ -1408,6 +1812,14 @@ esp_err_t airmouse_function_prepare_resources(airmouse_function_handle_t *ctx)
     airmouse_configure_left_button_light_sleep_wakeup(
         (gpio_num_t)ctx->config.hardware.reset_button);
 
+#if AIRMOUSE_TEST_MODE_ENABLE
+    ret = airmouse_test_init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize AirMouse test mode");
+        goto fail;
+    }
+#endif
+
     s_airmouse_imu_queue = xQueueCreate(8, sizeof(airmouse_imu_sample_t));
     if (s_airmouse_imu_queue == NULL) {
         ESP_LOGE(TAG, "Failed to create IMU queue");
@@ -1444,6 +1856,18 @@ esp_err_t airmouse_function_prepare_resources(airmouse_function_handle_t *ctx)
     }
 
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
+    s_airmouse_inference_reconfig_ack_sem = xSemaphoreCreateBinary();
+    if (s_airmouse_inference_reconfig_ack_sem == NULL) {
+        ESP_LOGE(TAG, "Failed to create inference reconfig ack semaphore");
+        ret = ESP_FAIL;
+        goto fail;
+    }
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    s_airmouse_inference_reconfig_state = AIRMOUSE_INFERENCE_RECONFIG_RUN;
+    s_airmouse_inference_reconfig_request_seq = 0;
+    s_airmouse_inference_reconfig_ack_seq = 0;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
+
     airmouse_gesture_infer_state_init(&s_airmouse_gesture_infer_state,
                                       &ctx->config.inference);
     if (s_airmouse_gesture_infer_state.enabled &&
@@ -1552,6 +1976,15 @@ fail:
         (void)imu_gesture_detector_del(ctx->inference_detector);
         ctx->inference_detector = NULL;
     }
+    if (s_airmouse_inference_reconfig_ack_sem != NULL) {
+        vSemaphoreDelete(s_airmouse_inference_reconfig_ack_sem);
+        s_airmouse_inference_reconfig_ack_sem = NULL;
+    }
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    s_airmouse_inference_reconfig_state = AIRMOUSE_INFERENCE_RECONFIG_RUN;
+    s_airmouse_inference_reconfig_request_seq = 0;
+    s_airmouse_inference_reconfig_ack_seq = 0;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
 #endif
     if (s_airmouse_space_switch_detector != NULL) {
         (void)imu_gesture_detector_del(s_airmouse_space_switch_detector);
@@ -1629,6 +2062,12 @@ esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx)
     }
     airmouse_gesture_infer_state_reset(&s_airmouse_gesture_infer_state);
     airmouse_inference_dispatch_state_reset(&s_airmouse_inference_dispatch_state);
+    airmouse_inference_reconfig_set_state(AIRMOUSE_INFERENCE_RECONFIG_RUN);
+    if (s_airmouse_inference_reconfig_ack_sem != NULL) {
+        while (xSemaphoreTake(s_airmouse_inference_reconfig_ack_sem, 0) ==
+                pdTRUE) {
+        }
+    }
     s_airmouse_inference_task_handle = NULL;
 #endif
     s_airmouse_runtime_gesture_task_handle = NULL;
@@ -1687,10 +2126,13 @@ esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx)
         goto fail_pose_task;
     }
 
+#if AIRMOUSE_TEST_MODE_ENABLE
+    ESP_LOGI(TAG, "test mode: runtime gesture task disabled");
+#else
     ret = xTaskCreate(
               airmouse_runtime_gesture_task,
               "airmouse_runtime_gesture_task",
-              4096,
+              8192,
               ctx,
               4,
               &runtime_gesture_task_handle
@@ -1699,6 +2141,7 @@ esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx)
         ESP_LOGE(TAG, "Failed to create runtime gesture task");
         goto fail_mouse_task;
     }
+#endif
 
     ret = xTaskCreate(
               airmouse_runtime_config_task,
@@ -1710,7 +2153,11 @@ esp_err_t airmouse_function_start(airmouse_function_handle_t *ctx)
           );
     if (ret != pdPASS) {
         ESP_LOGE(TAG, "Failed to create runtime config task");
+#if AIRMOUSE_TEST_MODE_ENABLE
+        goto fail_mouse_task;
+#else
         goto fail_runtime_gesture_task;
+#endif
     }
 
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
@@ -1740,11 +2187,13 @@ fail_runtime_config_task:
         runtime_config_task_handle = NULL;
     }
 #endif
+#if !AIRMOUSE_TEST_MODE_ENABLE
 fail_runtime_gesture_task:
     if (runtime_gesture_task_handle != NULL) {
         vTaskDelete(runtime_gesture_task_handle);
         runtime_gesture_task_handle = NULL;
     }
+#endif
 fail_mouse_task:
     if (mouse_task_handle != NULL) {
         vTaskDelete(mouse_task_handle);
@@ -1764,6 +2213,10 @@ fail_detectors_and_queues:
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
     (void)imu_gesture_detector_del(ctx->inference_detector);
     ctx->inference_detector = NULL;
+    if (s_airmouse_inference_reconfig_ack_sem != NULL) {
+        vSemaphoreDelete(s_airmouse_inference_reconfig_ack_sem);
+        s_airmouse_inference_reconfig_ack_sem = NULL;
+    }
 #endif
     (void)imu_gesture_detector_del(ctx->space_switch_detector);
     (void)imu_gesture_detector_del(ctx->knob_detector);
@@ -1799,6 +2252,11 @@ fail_detectors_and_queues:
     s_airmouse_runtime_config_task_handle = NULL;
 #if CONFIG_AIRMOUSE_GESTURE_INFER_ENABLE
     s_airmouse_inference_task_handle = NULL;
+    portENTER_CRITICAL(&s_airmouse_inference_reconfig_lock);
+    s_airmouse_inference_reconfig_state = AIRMOUSE_INFERENCE_RECONFIG_RUN;
+    s_airmouse_inference_reconfig_request_seq = 0;
+    s_airmouse_inference_reconfig_ack_seq = 0;
+    portEXIT_CRITICAL(&s_airmouse_inference_reconfig_lock);
 #endif
     s_suppress_next_left_button_event = false;
 

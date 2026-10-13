@@ -11,6 +11,7 @@ set(main_srcs
     "airmouse_runtime_config.c"
     "airmouse_server.c"
     "airmouse_config.c"
+    "airmouse_test.c"
 )
 
 list(APPEND main_srcs "airmouse_pose_mapping_quaternion.cpp")

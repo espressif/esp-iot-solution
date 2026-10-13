@@ -17,6 +17,10 @@ extern "C" {
 #endif
 
 typedef struct {
+    bool has_pose_angles;
+    float yaw_deg;
+    float pitch_deg;
+
     bool has_relative;
     int8_t dx;
     int8_t dy;
