@@ -1162,7 +1162,10 @@ esp_err_t esp_lv_adapter_set_dummy_draw(lv_display_t *disp, bool enable)
             }
         } else {
             /* Rebind LVGL back to the panel framebuffers, then redraw fully. */
-            ret = display_manager_restore_dummy_draw(disp);
+            ret = display_manager_wait_dummy_draw_done(disp, -1);
+            if (ret == ESP_OK) {
+                ret = display_manager_restore_dummy_draw(disp);
+            }
             if (ret == ESP_OK) {
                 ret = display_manager_set_dummy_draw(disp, false);
             }

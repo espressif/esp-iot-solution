@@ -30,6 +30,11 @@ esp_lcd 面板
 - **LVGL**：仅 9.x（`>=9,<10`），不支持 LVGL 8
 - **esp_display_present**：必须先由应用创建 Presenter
 
+绑定在租用绘图表面前检查缓冲区是否满足 `LV_DRAW_BUF_ALIGN`。
+显示颜色格式和全帧跨度以 Presenter 为准；PARTITION 送屏使用 LVGL 的实际行跨度。
+直接租给 LVGL 的驱动帧缓冲也必须满足该对齐要求；不满足时，初始化面板时提供对齐的
+帧缓冲，或使用面板能满足的 LVGL 缓冲对齐值。`start()` 会返回 `ESP_ERR_NOT_SUPPORTED`。
+
 ## 和 `esp_lvgl_adapter` 的区别
 
 | | `esp_lv_present` | `esp_lvgl_adapter` |
@@ -96,7 +101,7 @@ idf.py add-dependency "espressif/esp_lv_present"
 
 ```yml
 dependencies:
-  espressif/esp_lv_present: "^0.1.1"
+  espressif/esp_lv_present: "^0.1.2"
 ```
 
 本仓库内使用：

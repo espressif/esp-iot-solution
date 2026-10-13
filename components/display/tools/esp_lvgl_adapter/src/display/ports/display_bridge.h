@@ -74,6 +74,8 @@ struct esp_lv_adapter_display_bridge {
                                  const void *frame_buffer,
                                  bool wait);
 
+    esp_err_t (*wait_dummy_draw_done)(esp_lv_adapter_display_bridge_t *bridge, int32_t timeout_ms);
+
     /**
      * @brief Get a free frame buffer from the pipeline for dummy draw
      *
@@ -85,8 +87,8 @@ struct esp_lv_adapter_display_bridge {
     /**
      * @brief Submit a complete frame buffer in dummy draw mode
      *
-     * Blits the provided frame buffer to the display and waits for the hardware to switch
-     * to it, then returns the next free buffer into draw_fb. Tear-safe via on_frame_buf_complete.
+     * Submits the frame and obtains the next writable buffer, waiting if needed.
+     * A spare buffer can allow return before the hardware switch completes.
      */
     esp_err_t (*dummy_draw_flush_buf)(esp_lv_adapter_display_bridge_t *bridge, void *frame_buffer);
 

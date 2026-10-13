@@ -32,10 +32,12 @@ esp_err_t esp_display_present_drawbuf_pool_alloc(
                     ? (MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA)
                     : (MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     for (uint8_t index = 0; index < count; ++index) {
-        pool->buffers[index] = heap_caps_malloc(pool->bytes, caps);
+        pool->buffers[index] = heap_caps_aligned_alloc(
+                                   ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, pool->bytes, caps);
         if (pool->buffers[index] == NULL && in_psram) {
-            pool->buffers[index] = heap_caps_malloc(
-                                       pool->bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+            pool->buffers[index] = heap_caps_aligned_alloc(
+                                       ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, pool->bytes,
+                                       MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
         }
         if (pool->buffers[index] == NULL) {
             esp_display_present_drawbuf_pool_free(pool);

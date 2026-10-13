@@ -73,6 +73,9 @@ esp_err_t esp_display_present_te_compose_get_surface(
     const esp_display_present_te_compose_t *te_compose,
     esp_display_present_te_compose_surface_t *out_surface);
 
+size_t esp_display_present_te_compose_get_buffer_alignment(
+    const esp_display_present_te_compose_t *te_compose);
+
 esp_err_t esp_display_present_te_compose_validate_frame(
     esp_display_present_te_compose_t *te_compose,
     uint64_t frame_id);

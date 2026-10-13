@@ -186,6 +186,8 @@ struct esp_lv_adapter_display_node *display_manager_get_node(lv_display_t *disp)
  */
 esp_err_t display_manager_wait_flush_done(lv_display_t *disp, int32_t timeout_ms);
 
+esp_err_t display_manager_wait_dummy_draw_done(lv_display_t *disp, int32_t timeout_ms);
+
 /**
  * @brief Refetch framebuffers from LCD panel and update all references
  *

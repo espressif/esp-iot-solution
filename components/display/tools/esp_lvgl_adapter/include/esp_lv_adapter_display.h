@@ -487,7 +487,9 @@ bool esp_lv_adapter_display_notify_frame_done_from_isr(lv_display_t *disp);
  * Releases pipeline buffers for buffer-switch tear-avoid modes and dummy-draw. Required when an
  * external owner registers the LCD panel callbacks (after
  * esp_lv_adapter_set_default_display_idf_callback_registration_enabled(false)); otherwise the
- * flush path can block forever waiting for a free buffer.
+ * flush path can block forever waiting for a free buffer. For RGB, also forward
+ * on_color_trans_done so completion during draw_bitmap can be associated with
+ * the current submission rather than an idle frame event.
  *
  * @param[in] disp LVGL display handle.
  * @return Whether a high-priority task should yield.

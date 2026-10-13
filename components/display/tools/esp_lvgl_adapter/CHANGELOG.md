@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.7.3 (2026-10-09)
+
+* Fix LVGL 8/9 tear-avoid submission races, sequence wrap and early RGB completion.
+* Validate framebuffer setup and complete LVGL 8 callback forwarding.
+* Fix dummy draw completion, waiter lifetime and mode handoff.
+
 ## v0.7.2 (2026-09-29)
 
 * Fix the LVGL FreeRTOS PSRAM-stack hook for LVGL 9.6's ESP-qualified `freertos/atomic.h` include while retaining compatibility with older LVGL 9 releases.

@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "esp_display_present_cache.h"
+#include "esp_display_present_drawbuf.h"
 #include "esp_display_present_ppa.h"
 #include "esp_display_present_rotate.h"
 #include "esp_heap_caps.h"
@@ -68,12 +69,13 @@ esp_err_t esp_display_present_transform_create(
         (size_t)transform->physical.size.width * bytes_per_pixel;
 
     size_t logical_bytes = transform->logical.stride_bytes * info->hw.height;
-    transform->logical_buffer = heap_caps_malloc(
-                                    logical_bytes,
+    transform->logical_buffer = heap_caps_aligned_alloc(
+                                    ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, logical_bytes,
                                     MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED);
     if (transform->logical_buffer == NULL) {
-        transform->logical_buffer = heap_caps_malloc(
-                                        logical_bytes, MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED);
+        transform->logical_buffer = heap_caps_aligned_alloc(
+                                        ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, logical_bytes,
+                                        MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED);
     }
     if (transform->logical_buffer == NULL) {
         free(transform);

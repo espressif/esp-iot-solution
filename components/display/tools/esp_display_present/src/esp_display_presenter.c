@@ -29,6 +29,7 @@ struct esp_display_presenter {
     void *mode_ctx;
     esp_display_present_frame_tracker_t *tracker;
     esp_display_present_drawbuf_pool_t drawbuf_pool;
+    size_t buffer_alignment;
     esp_display_presenter_caps_t caps;
     struct {
         bool active;
@@ -302,6 +303,7 @@ static esp_err_t presenter_bind_config(
     presenter->mode_ctx = endpoint.mode_ctx;
     presenter->tracker = endpoint.tracker;
     presenter->drawbuf_pool = endpoint.drawbuf_pool;
+    presenter->buffer_alignment = endpoint.buffer_alignment;
     presenter->caps = endpoint.caps;
 
     ret = esp_display_present_target_set_callbacks(
@@ -332,6 +334,7 @@ static esp_err_t presenter_release_binding(esp_display_presenter_t *presenter)
     }
     presenter->target = NULL;
     presenter->endpoint_ops = NULL;
+    presenter->buffer_alignment = 0;
     presenter->mode_ops = NULL;
     memset(&presenter->caps, 0, sizeof(presenter->caps));
     return ESP_OK;
@@ -525,6 +528,19 @@ esp_err_t esp_display_presenter_get_drawbuf(
             return ESP_ERR_INVALID_STATE;
         }
     }
+    return ESP_OK;
+}
+
+esp_err_t esp_display_presenter_get_buffer_alignment(
+    const esp_display_presenter_t *presenter, size_t *out_alignment)
+{
+    if (presenter == NULL || out_alignment == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (presenter->buffer_alignment == 0) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    *out_alignment = presenter->buffer_alignment;
     return ESP_OK;
 }
 

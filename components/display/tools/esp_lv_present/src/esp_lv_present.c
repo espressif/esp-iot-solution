@@ -54,6 +54,16 @@ static uint32_t esp_lv_present_tick_cb(void)
     return (uint32_t)(esp_timer_get_time() / 1000ULL);
 }
 
+static size_t esp_lv_present_buffer_bytes(size_t capacity)
+{
+#if LV_VERSION_CHECK(9, 6, 0)
+    /* LVGL rounds reshaped draw-buffer sizes up to LV_DRAW_BUF_ALIGN. */
+    return capacity - capacity % LV_DRAW_BUF_ALIGN;
+#else
+    return capacity;
+#endif
+}
+
 static bool esp_lv_present_area_is_full(const esp_lv_present_ctx_t *ctx,
                                         const esp_display_present_area_t *area)
 {
@@ -178,11 +188,28 @@ static esp_err_t esp_lv_present_bind_surface_buffer(
     if (ret != ESP_OK) {
         return esp_lv_present_fail_frame(ctx, ret);
     }
+    const size_t stride = ctx->acquired.surface.stride_bytes;
+    const size_t buffer_bytes = esp_lv_present_buffer_bytes(ctx->acquired.capacity_bytes);
+    const lv_color_format_t cf = lv_display_get_color_format(ctx->display);
+    if (stride < (size_t)ctx->caps.width * ctx->bytes_per_pixel ||
+            ctx->caps.height > buffer_bytes / stride ||
+            buffer_bytes > UINT32_MAX ||
+            ctx->acquired.surface.pixels != lv_draw_buf_align(ctx->acquired.surface.pixels, cf)) {
+        return esp_lv_present_fail_frame(ctx, ESP_ERR_NOT_SUPPORTED);
+    }
+    const lv_display_render_mode_t mode = ctx->is_full_contract
+                                          ? LV_DISPLAY_RENDER_MODE_FULL
+                                          : LV_DISPLAY_RENDER_MODE_DIRECT;
+#if LV_VERSION_CHECK(9, 3, 0)
+    lv_display_set_buffers_with_stride(ctx->display, ctx->acquired.surface.pixels,
+                                       NULL, buffer_bytes, stride, mode);
+#else
+    if (stride != lv_draw_buf_width_to_stride(ctx->caps.width, cf)) {
+        return esp_lv_present_fail_frame(ctx, ESP_ERR_NOT_SUPPORTED);
+    }
     lv_display_set_buffers(ctx->display, ctx->acquired.surface.pixels, NULL,
-                           ctx->acquired.capacity_bytes,
-                           ctx->is_full_contract
-                           ? LV_DISPLAY_RENDER_MODE_FULL
-                           : LV_DISPLAY_RENDER_MODE_DIRECT);
+                           buffer_bytes, mode);
+#endif
     return ESP_OK;
 }
 
@@ -191,6 +218,8 @@ static void esp_lv_present_on_render_start(lv_event_t *event)
     esp_lv_present_ctx_t *ctx = lv_event_get_user_data(event);
     esp_err_t ret = esp_lv_present_bind_surface_buffer(ctx);
     if (ret != ESP_OK) {
+        ctx->display->inv_p = 0;
+        lv_timer_pause(lv_display_get_refr_timer(ctx->display));
         ESP_LOGE(TAG, "acquire surface draw buffer failed: %s",
                  esp_err_to_name(ret));
     }
@@ -200,7 +229,7 @@ static esp_err_t esp_lv_present_submit_surface(
     esp_lv_present_ctx_t *ctx)
 {
     size_t rows = 0;
-    const size_t stride = (size_t)ctx->caps.width * ctx->bytes_per_pixel;
+    const size_t stride = ctx->acquired.surface.stride_bytes;
     esp_err_t ret = ctx->acquired.resolve_rows != NULL
                     ? ctx->acquired.resolve_rows(
                         ctx->acquired.resolve_rows_ctx,
@@ -230,7 +259,12 @@ static esp_err_t esp_lv_present_flush_area(esp_lv_present_ctx_t *ctx,
     }
     const size_t width = (size_t)(area->x2 - area->x1 + 1);
     const size_t height = (size_t)(area->y2 - area->y1 + 1);
-    const size_t stride = width * ctx->bytes_per_pixel;
+    const size_t row_bytes = width * ctx->bytes_per_pixel;
+    const size_t stride = ctx->display->buf_act != NULL
+                          ? ctx->display->buf_act->header.stride : 0;
+    if (stride < row_bytes) {
+        return ESP_ERR_INVALID_SIZE;
+    }
 
     esp_display_presenter_buffer_t acquired = ctx->acquired;
     esp_err_t ret = ESP_OK;
@@ -250,7 +284,7 @@ static esp_err_t esp_lv_present_flush_area(esp_lv_present_ctx_t *ctx,
     }
 
     if (color_map != (const uint8_t *)acquired.surface.pixels) {
-        memcpy(acquired.surface.pixels, color_map, rows * stride);
+        memcpy(acquired.surface.pixels, color_map, (rows - 1) * stride + row_bytes);
     }
 
     const esp_display_present_area_t band = {
@@ -337,6 +371,7 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
     esp_lv_present_ctx_t *ctx = &s_ctx;
     ESP_RETURN_ON_FALSE(ctx->display == NULL, ESP_ERR_INVALID_STATE, TAG,
                         "binding already started");
+    *ret_disp = NULL;
 
     if (!ctx->lvgl_inited) {
         lv_init();
@@ -357,6 +392,13 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
         ctx->caps.pixel_format == ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB888,
         ESP_ERR_NOT_SUPPORTED, TAG, "unsupported pixel format %d",
         ctx->caps.pixel_format);
+
+    size_t alignment = 0;
+    ESP_RETURN_ON_ERROR(esp_display_presenter_get_buffer_alignment(presenter, &alignment),
+                        TAG, "query renderer buffer alignment");
+    ESP_RETURN_ON_FALSE(alignment >= LV_DRAW_BUF_ALIGN, ESP_ERR_NOT_SUPPORTED, TAG,
+                        "presenter buffer alignment %u is below LVGL requirement %u",
+                        (unsigned)alignment, (unsigned)LV_DRAW_BUF_ALIGN);
 
     ESP_RETURN_ON_ERROR(esp_display_presenter_rebind_producer(presenter),
                         TAG, "rebind presenter producer");
@@ -386,9 +428,9 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
     if (display == NULL) {
         return ESP_ERR_NO_MEM;
     }
-    if (ctx->caps.pixel_format == ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB888) {
-        lv_display_set_color_format(display, LV_COLOR_FORMAT_RGB888);
-    }
+    lv_display_set_color_format(display,
+                                ctx->caps.pixel_format == ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB888
+                                ? LV_COLOR_FORMAT_RGB888 : LV_COLOR_FORMAT_RGB565);
 
     ctx->display = display;
     esp_err_t ret;
@@ -402,9 +444,22 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
         lv_display_add_event_cb(display, esp_lv_present_on_render_start,
                                 LV_EVENT_RENDER_START, ctx);
     } else {
+        const lv_color_format_t cf = lv_display_get_color_format(display);
+        size_t stride = lv_draw_buf_width_to_stride(ctx->caps.width, cf);
+        size_t buffer_bytes = esp_lv_present_buffer_bytes(drawbuf.bytes);
+        bool valid = stride != 0 && buffer_bytes / stride != 0 &&
+                     buffer_bytes <= UINT32_MAX;
+        for (uint8_t index = 0; index < drawbuf.count; ++index) {
+            valid = valid && drawbuf.buffers[index] == lv_draw_buf_align(drawbuf.buffers[index], cf);
+        }
+        if (!valid) {
+            lv_display_delete(display);
+            ctx->display = NULL;
+            return ESP_ERR_NOT_SUPPORTED;
+        }
         lv_display_set_buffers(display, drawbuf.buffers[0],
                                drawbuf.count > 1 ? drawbuf.buffers[1] : NULL,
-                               drawbuf.bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+                               buffer_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
     }
     lv_display_set_flush_cb(display, esp_lv_present_flush_cb);
     *ret_disp = display;

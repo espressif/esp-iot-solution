@@ -103,12 +103,14 @@ esp_err_t esp_display_present_te_compose_create(
         te_compose->compose_buffer_count = PRESENT_TE_COMPOSE_MAX_BUFFERS;
     }
     for (uint8_t index = 0; index < te_compose->compose_buffer_count; ++index) {
-        te_compose->draw.buffers[index] = heap_caps_malloc(
-                                              draw_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA | MALLOC_CAP_8BIT |
+        te_compose->draw.buffers[index] = heap_caps_aligned_alloc(
+                                              ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, draw_bytes,
+                                              MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA | MALLOC_CAP_8BIT |
                                               MALLOC_CAP_CACHE_ALIGNED);
         if (te_compose->draw.buffers[index] == NULL) {
-            te_compose->draw.buffers[index] = heap_caps_malloc(
-                                                  draw_bytes, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA |
+            te_compose->draw.buffers[index] = heap_caps_aligned_alloc(
+                                                  ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT, draw_bytes,
+                                                  MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA |
                                                   MALLOC_CAP_8BIT | MALLOC_CAP_CACHE_ALIGNED);
         }
         if (te_compose->draw.buffers[index] == NULL) {
@@ -235,6 +237,19 @@ esp_err_t esp_display_present_te_compose_get_surface(
         .height = te_compose->draw.height,
     };
     return ESP_OK;
+}
+
+size_t esp_display_present_te_compose_get_buffer_alignment(
+    const esp_display_present_te_compose_t *te_compose)
+{
+    if (te_compose == NULL) {
+        return 0;
+    }
+    uintptr_t addresses = 0;
+    for (uint8_t index = 0; index < te_compose->compose_buffer_count; ++index) {
+        addresses |= (uintptr_t)te_compose->draw.buffers[index];
+    }
+    return present_buffer_alignment(addresses);
 }
 
 esp_err_t esp_display_present_te_compose_begin(

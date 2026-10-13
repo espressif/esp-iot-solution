@@ -20,6 +20,22 @@
 
 static const char *TAG = "present_fb";
 
+size_t esp_display_present_fb_get_buffer_alignment(
+    const esp_display_present_fb_endpoint_t *frame)
+{
+    if (frame == NULL) {
+        return 0;
+    }
+    if (frame->fb.transform != NULL) {
+        return present_buffer_alignment((uintptr_t)frame->lease.logical_surface);
+    }
+    uintptr_t addresses = 0;
+    for (uint8_t index = 0; index < frame->fb.frame_buffer_count; ++index) {
+        addresses |= (uintptr_t)frame->fb.frame_buffers[index];
+    }
+    return present_buffer_alignment(addresses);
+}
+
 static bool fb_uses_transform(
     const esp_display_present_fb_endpoint_t *frame)
 {

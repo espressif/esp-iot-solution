@@ -28,6 +28,13 @@ esp_lcd panel
 - **LVGL**: 9.x only (`>=9,<10`). LVGL 8 is not supported.
 - **esp_display_present**: the application must create the presenter first.
 
+The binding checks the presenter's buffer alignment against `LV_DRAW_BUF_ALIGN`
+before acquiring a surface. It uses the presenter's pixel format and surface
+stride; PARTITION flushes preserve LVGL's actual row stride.
+Driver-owned framebuffers leased directly to LVGL must meet that alignment. If they do not,
+provide aligned framebuffers when initializing the panel or use an LVGL buffer
+alignment that the panel can satisfy; `start()` returns `ESP_ERR_NOT_SUPPORTED`.
+
 ## vs `esp_lvgl_adapter`
 
 | | `esp_lv_present` | `esp_lvgl_adapter` |
@@ -96,7 +103,7 @@ Or in `idf_component.yml`:
 
 ```yml
 dependencies:
-  espressif/esp_lv_present: "^0.1.1"
+  espressif/esp_lv_present: "^0.1.2"
 ```
 
 In this repository:

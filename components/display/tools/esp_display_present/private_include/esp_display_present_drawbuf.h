@@ -17,6 +17,12 @@ extern "C" {
 #endif
 
 #define ESP_DISPLAY_PRESENT_DRAWBUF_MAX_BUFFERS 2U
+#define ESP_DISPLAY_PRESENT_DRAWBUF_ALIGNMENT 64U
+
+static inline size_t present_buffer_alignment(uintptr_t addresses)
+{
+    return addresses & (~addresses + 1U);
+}
 
 typedef struct {
     /**

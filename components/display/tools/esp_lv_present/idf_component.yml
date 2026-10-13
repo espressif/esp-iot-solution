@@ -1,4 +1,4 @@
-version: "0.1.1"
+version: "0.1.2"
 description: LVGL 9 flush binding for an existing esp_display_present presenter.
 license: "Apache-2.0"
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_present
@@ -13,7 +13,7 @@ dependencies:
     version: ">=9,<10"
     public: true
   espressif/esp_display_present:
-    version: "^1.0.2"
+    version: "^1.1.2"
     override_path: "../esp_display_present"
     public: true
 examples:

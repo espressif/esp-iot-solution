@@ -1426,17 +1426,16 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         have_panel_fb = display_manager_fetch_panel_frame_buffers(node, required_frames, color_size);
     }
 
-    /* Tear-avoidance modes: unified buffer + pipeline setup */
-    if (have_panel_fb && pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
+    /* Scanout tear avoidance cannot fall back to an uninitialized pipeline. */
+    if ((profile->interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+            profile->interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI) &&
+            pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
             pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
-        if (display_manager_setup_tear_buffers(node, color_size)) {
+        if (have_panel_fb && display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        /* Reset any state setup_tear_buffers might have partially set */
-        cfg->draw_buf_pixels = 0;
-        cfg->draw_buf_primary = NULL;
-        cfg->draw_buf_secondary = NULL;
-        ESP_LOGW(TAG, "tear mode %d setup failed, falling back to allocated buffers", pub->tear_avoid_mode);
+        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %d", pub->tear_avoid_mode);
+        return false;
     }
 
     /* Allocate buffers manually */
@@ -1515,18 +1514,16 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         have_panel_fb = display_manager_fetch_panel_frame_buffers(node, required_frames, color_size);
     }
 
-    /* Tear-avoidance modes: unified buffer + pipeline setup */
-    if (have_panel_fb && pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
+    /* Scanout tear avoidance cannot fall back to an uninitialized pipeline. */
+    if ((profile->interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+            profile->interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI) &&
+            pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE &&
             pub->tear_avoid_mode != ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
-        if (display_manager_setup_tear_buffers(node, color_size)) {
+        if (have_panel_fb && display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        /* Reset any state setup_tear_buffers might have partially set */
-        cfg->draw_buf_pixels = 0;
-        cfg->draw_buf_primary = NULL;
-        cfg->draw_buf_secondary = NULL;
-        ESP_LOGW(TAG, "tear mode %d setup failed, falling back to allocated buffers", pub->tear_avoid_mode);
-
+        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %d", pub->tear_avoid_mode);
+        return false;
     }
 
     /* Allocate buffers manually */
@@ -1991,7 +1988,7 @@ esp_err_t display_manager_wait_flush_done(lv_display_t *disp, int32_t timeout_ms
     int64_t start_time = esp_timer_get_time();
     int64_t timeout_us = (timeout_ms < 0) ? INT64_MAX : ((int64_t)timeout_ms * 1000);
 
-    while (disp->rendering_in_progress) {
+    while (disp->rendering_in_progress || disp->flushing) {
         vTaskDelay(pdMS_TO_TICKS(1));
 
         if (esp_timer_get_time() - start_time > timeout_us) {
@@ -2023,11 +2020,25 @@ esp_err_t display_manager_wait_flush_done(lv_display_t *disp, int32_t timeout_ms
         return te_ret;
     }
 
+    ESP_RETURN_ON_ERROR(display_manager_wait_dummy_draw_done(disp, timeout_ms), TAG,
+                        "Timeout waiting for dummy draw transfer completion");
+
     /* Additional safety: wait one more frame for any hardware operations */
     vTaskDelay(pdMS_TO_TICKS(20));
 
     ESP_LOGD(TAG, "Flush completion confirmed");
     return ESP_OK;
+}
+
+esp_err_t display_manager_wait_dummy_draw_done(lv_display_t *disp, int32_t timeout_ms)
+{
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not found");
+    if (!node->bridge || !node->bridge->wait_dummy_draw_done) {
+        return ESP_OK;
+    }
+    return node->bridge->wait_dummy_draw_done(node->bridge, timeout_ms);
 }
 
 /**

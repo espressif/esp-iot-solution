@@ -5,7 +5,7 @@
  *
  * COMMIT switch: present a coherent surface and rotate the FB pipeline.
  *
- * Barrier PENDING (mode5/6): wait_pending → blit → set_pending → acquire_next.
+ * Barrier PENDING (mode5/6): wait_pending → blit → publish → acquire_next.
  * Barrier ORDERED (mode3): pool_commit before blit, no wait_pending, keeps
  * two in-flight presents; acquire_next failure is terminal.
  */
@@ -21,11 +21,29 @@
 
 static const char *TAG = "present_fb_switch";
 
+static esp_err_t publish_pipeline_submit(
+    esp_display_present_fb_endpoint_t *frame, void *pending)
+{
+    uint64_t ticket = 0;
+    if (!esp_display_present_tracker_publish_submit(
+                &frame->tracker, pending, frame->fb.submit_gate_enabled,
+                frame->fb.single_pending_switch, &frame->fb.disp_fb, &ticket)) {
+        return ESP_OK;
+    }
+    esp_err_t ret = esp_display_present_tracker_complete_frame(
+                        &frame->tracker, ticket, false, true);
+    if (ret == ESP_OK) {
+        xSemaphoreGive(frame->tracker.frame.completion_event);
+    }
+    return ret;
+}
+
 static esp_err_t submit_pipeline_pending(
     esp_display_present_fb_endpoint_t *frame,
     void *panel_pixels,
     uint64_t ticket)
 {
+    esp_display_present_tracker_begin_submit(&frame->tracker);
     esp_err_t ret = esp_display_present_blit_full_frame(
                         frame->panel, frame->physical_width, frame->physical_height,
                         panel_pixels);
@@ -34,10 +52,9 @@ static esp_err_t submit_pipeline_pending(
     }
     esp_display_present_tracker_pool_commit(
         &frame->tracker, frame->fb.disp_fb, panel_pixels, ticket);
-    esp_display_present_tracker_set_pending(&frame->tracker,
-                                            panel_pixels);
-    if (frame->fb.submit_gate_enabled) {
-        esp_display_present_tracker_mark_submit(&frame->tracker);
+    ret = publish_pipeline_submit(frame, panel_pixels);
+    if (ret != ESP_OK) {
+        return ret;
     }
 
     /* Rotated DOUBLE_FULL: do not wait here for a recycled scanout FB.
@@ -67,6 +84,7 @@ static esp_err_t submit_pipeline_ordered(
     uint64_t previous_frame)
 {
     void *old_display = frame->fb.disp_fb;
+    esp_display_present_tracker_begin_submit(&frame->tracker);
     esp_err_t ret = esp_display_present_blit_full_frame(
                         frame->panel, frame->physical_width, frame->physical_height,
                         panel_pixels);
@@ -83,8 +101,9 @@ static esp_err_t submit_pipeline_ordered(
      * ownership FIFO. Do not also publish through the single pending slot:
      * triple buffering may accept the next frame before VSYNC and would
      * overwrite that slot, while the ISR retires the inflight FIFO directly. */
-    if (frame->fb.submit_gate_enabled) {
-        esp_display_present_tracker_mark_submit(&frame->tracker);
+    ret = publish_pipeline_submit(frame, NULL);
+    if (ret != ESP_OK) {
+        return ret;
     }
     ret = esp_display_present_tracker_end_frame(
               &frame->tracker, frame_id);

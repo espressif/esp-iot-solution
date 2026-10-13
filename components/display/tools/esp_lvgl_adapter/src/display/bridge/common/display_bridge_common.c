@@ -1238,6 +1238,111 @@ void display_bridge_common_destroy(esp_lv_adapter_display_bridge_t *bridge)
  *   PIPELINE HELPERS
  **********************/
 
+esp_err_t display_bridge_dummy_transfer_begin(display_bridge_dummy_transfer_t *transfer,
+                                              portMUX_TYPE *lock, uint32_t *ticket)
+{
+    portENTER_CRITICAL(lock);
+    if (transfer->waiter != NULL) {
+        portEXIT_CRITICAL(lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    *ticket = ++transfer->submitted;
+    portEXIT_CRITICAL(lock);
+    return ESP_OK;
+}
+
+void display_bridge_dummy_transfer_cancel(display_bridge_dummy_transfer_t *transfer,
+                                          portMUX_TYPE *lock, uint32_t ticket)
+{
+    portENTER_CRITICAL(lock);
+    if (transfer->submitted == ticket && transfer->completed != ticket) {
+        --transfer->submitted;
+    }
+    portEXIT_CRITICAL(lock);
+}
+
+bool IRAM_ATTR display_bridge_dummy_transfer_done(display_bridge_dummy_transfer_t *transfer,
+                                                  portMUX_TYPE *lock)
+{
+    TaskHandle_t waiter = NULL;
+    portENTER_CRITICAL_SAFE(lock);
+    if (transfer->completed != transfer->submitted) {
+        ++transfer->completed;
+        waiter = transfer->waiter;
+        if (waiter != NULL) {
+            ++transfer->notifications_inflight;
+        }
+    }
+    portEXIT_CRITICAL_SAFE(lock);
+
+    BaseType_t need_yield = pdFALSE;
+    if (waiter != NULL) {
+        if (xPortInIsrContext()) {
+            xTaskNotifyFromISR(waiter, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE,
+                               eSetBits, &need_yield);
+        } else {
+            xTaskNotify(waiter, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE, eSetBits);
+        }
+        portENTER_CRITICAL_SAFE(lock);
+        --transfer->notifications_inflight;
+        portEXIT_CRITICAL_SAFE(lock);
+    }
+    return need_yield == pdTRUE;
+}
+
+esp_err_t display_bridge_dummy_transfer_wait(display_bridge_dummy_transfer_t *transfer,
+                                             portMUX_TYPE *lock, uint32_t ticket, int32_t timeout_ms)
+{
+    TaskHandle_t task = xTaskGetCurrentTaskHandle();
+    portENTER_CRITICAL(lock);
+    /* Sequence distance is bounded by the panel's transaction queue. */
+    bool completed = (int32_t)(transfer->completed - ticket) >= 0 &&
+                     transfer->notifications_inflight == 0;
+    if (transfer->waiter != NULL) {
+        portEXIT_CRITICAL(lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (completed) {
+        portEXIT_CRITICAL(lock);
+        return ESP_OK;
+    }
+    transfer->waiter = task;
+    portEXIT_CRITICAL(lock);
+
+    const TickType_t timeout = timeout_ms < 0 ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
+    const TickType_t start = timeout_ms < 0 ? 0 : xTaskGetTickCount();
+    for (;;) {
+        TickType_t elapsed = timeout_ms < 0 ? 0 : xTaskGetTickCount() - start;
+        portENTER_CRITICAL(lock);
+        completed = (int32_t)(transfer->completed - ticket) >= 0;
+        bool notifying = transfer->notifications_inflight != 0;
+        if (!notifying && (completed || (timeout_ms >= 0 && elapsed >= timeout))) {
+            transfer->waiter = NULL;
+            portEXIT_CRITICAL(lock);
+            return completed ? ESP_OK : ESP_ERR_TIMEOUT;
+        }
+        portEXIT_CRITICAL(lock);
+        if (notifying) {
+            /* Keep the waiter alive until notification delivery finishes. */
+            vTaskDelay(1);
+            continue;
+        }
+        TickType_t wait_ticks = timeout_ms < 0 ? portMAX_DELAY : timeout - elapsed;
+        uint32_t events = 0;
+        (void)xTaskNotifyWait(0, ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE,
+                              &events, wait_ticks);
+    }
+}
+
+esp_err_t display_bridge_dummy_transfer_wait_idle(display_bridge_dummy_transfer_t *transfer,
+                                                  portMUX_TYPE *lock, int32_t timeout_ms)
+{
+    portENTER_CRITICAL(lock);
+    uint32_t ticket = transfer->submitted;
+    portEXIT_CRITICAL(lock);
+    return display_bridge_dummy_transfer_wait(transfer, lock, ticket, timeout_ms);
+}
+
 int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pipeline,
                                           esp_lv_adapter_display_runtime_config_t *cfg,
                                           void **out_disp_fb, void **out_draw_fb)
@@ -1265,6 +1370,10 @@ int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pip
     uint8_t fb_count = cfg->frame_buffer_count;
 
     pipeline->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
+    pipeline->rgb.complete_seq = 0;
+    pipeline->rgb.submit_seq = 0;
+    pipeline->rgb.submitting = false;
+    pipeline->rgb.color_done = false;
     STAILQ_INIT(&pipeline->busy_list);
     STAILQ_INIT(&pipeline->empty_list);
     pipeline->elem_count = fb_count;
@@ -1334,33 +1443,123 @@ err:
     return ret;
 }
 
-void display_bridge_pipeline_mark_buf_busy(esp_lv_adapter_display_pipeline_t *p, void *buf)
+static bool pipeline_buffer_is_queued(esp_lv_adapter_display_pipeline_t *p, void *buffer)
 {
-    if (!p) {
-        return;
-    }
-    for (int i = 0; i < p->elem_count; i++) {
-        if (p->elems[i].buffer == buf) {
-            portENTER_CRITICAL(&p->lock);
-            STAILQ_INSERT_TAIL(&p->busy_list, &p->elems[i], entry);
-            portEXIT_CRITICAL(&p->lock);
-            return;
+    struct display_pipeline_buf *elem;
+    STAILQ_FOREACH(elem, &p->busy_list, entry) {
+        if (elem->buffer == buffer) {
+            return true;
         }
     }
+    STAILQ_FOREACH(elem, &p->empty_list, entry) {
+        if (elem->buffer == buffer) {
+            return true;
+        }
+    }
+    return false;
 }
 
-void IRAM_ATTR display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p)
+esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
+                                       esp_lcd_panel_handle_t panel,
+                                       const esp_lv_adapter_display_runtime_info_t *runtime,
+                                       void **front, void **pending, void *buffer,
+                                       bool rgb)
+{
+    if (!p || !p->elems || !front || !*front || !buffer || *front == buffer) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    /* RGB and a single pending slot must retire before the next switch. */
+    if (rgb || pending != NULL) {
+        for (;;) {
+            ulTaskNotifyValueClear(NULL, ULONG_MAX);
+            portENTER_CRITICAL(&p->lock);
+            bool busy = !STAILQ_EMPTY(&p->busy_list);
+            portEXIT_CRITICAL(&p->lock);
+            if (!busy) {
+                break;
+            }
+            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        }
+    }
+
+    void *old_front = *front;
+    struct display_pipeline_buf *old = NULL;
+    bool known_buffer = false;
+    portENTER_CRITICAL(&p->lock);
+    for (int i = 0; i < p->elem_count; ++i) {
+        if (p->elems[i].buffer == old_front) {
+            old = &p->elems[i];
+        }
+        known_buffer |= p->elems[i].buffer == buffer;
+    }
+    bool valid = old && known_buffer && !pipeline_buffer_is_queued(p, old_front) &&
+                 !pipeline_buffer_is_queued(p, buffer);
+    if (valid) {
+        p->rgb.submitting = true;
+        p->rgb.color_done = false;
+    }
+    portEXIT_CRITICAL(&p->lock);
+    if (!valid) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_err_t ret = display_lcd_blit_full(panel, runtime, buffer);
+    portENTER_CRITICAL(&p->lock);
+    p->rgb.submitting = false;
+    if (ret != ESP_OK) {
+        portEXIT_CRITICAL(&p->lock);
+        return ret;
+    }
+    if (rgb && p->rgb.color_done && p->rgb.complete_seq != p->rgb.submit_seq) {
+        STAILQ_INSERT_TAIL(&p->empty_list, old, entry);
+        if (pending) {
+            *front = buffer;
+            *pending = NULL;
+        }
+    } else {
+        STAILQ_INSERT_TAIL(&p->busy_list, old, entry);
+        if (pending) {
+            *pending = buffer;
+        }
+    }
+    portEXIT_CRITICAL(&p->lock);
+    return ESP_OK;
+}
+
+void IRAM_ATTR display_bridge_pipeline_color_done(esp_lv_adapter_display_pipeline_t *p)
 {
     if (!p || !p->elems) {
         return;
     }
+    portENTER_CRITICAL_SAFE(&p->lock);
+    if (p->rgb.submitting) {
+        p->rgb.submit_seq = p->rgb.complete_seq;
+        p->rgb.color_done = true;
+    }
+    portEXIT_CRITICAL_SAFE(&p->lock);
+}
+
+bool IRAM_ATTR display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p,
+                                                       void **front, void **pending)
+{
+    if (!p || !p->elems) {
+        return false;
+    }
     portENTER_CRITICAL_ISR(&p->lock);
+    ++p->rgb.complete_seq;
     struct display_pipeline_buf *elem = STAILQ_FIRST(&p->busy_list);
-    if (elem) {
+    bool released = elem && (!pending || *pending);
+    if (released) {
         STAILQ_REMOVE_HEAD(&p->busy_list, entry);
         STAILQ_INSERT_TAIL(&p->empty_list, elem, entry);
+        if (pending) {
+            *front = *pending;
+            *pending = NULL;
+        }
     }
     portEXIT_CRITICAL_ISR(&p->lock);
+    return released;
 }
 
 struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapter_display_pipeline_t *p)

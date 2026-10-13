@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-10-09
+
+- Fix borrowed buffer alignment, capacity, color format and stride.
+
 ## 0.1.1 - 2026-09-30
 
 - Scope IDF atomic-helper warning compatibility to LVGL's FreeRTOS source so
