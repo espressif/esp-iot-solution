@@ -1,0 +1,35 @@
+menu "ESP XModem"
+
+    config ESP_XMODEM_SENDER_TASK_STACK_SIZE
+        int "Sender task stack size (bytes)"
+        default 4096
+        range 2048 32768
+        help
+            Stack size allocated for the XModem sender background task.
+            Increase this if you see stack-overflow panics.
+
+    config ESP_XMODEM_RECEIVER_TASK_STACK_SIZE
+        int "Receiver task stack size (bytes)"
+        default 4096
+        range 2048 32768
+        help
+            Stack size allocated for the XModem receiver background task.
+
+    config ESP_XMODEM_SENDER_TASK_PRIORITY
+        int "Sender/receiver task FreeRTOS priority"
+        default 11
+        range 1 24
+        help
+            FreeRTOS priority for the XModem sender and receiver tasks.
+            Must be higher than any task that calls esp_xmodem_sender_send()
+            or esp_xmodem_clean() to avoid deadlocks.
+
+    config ESP_XMODEM_STOP_TASK_PRIORITY
+        int "Stop-helper task FreeRTOS priority"
+        default 12
+        range 1 24
+        help
+            FreeRTOS priority for the short-lived stop-helper task that
+            deletes the sender/receiver task from a separate context.
+
+endmenu
