@@ -20,6 +20,7 @@ typedef struct {
 esp_err_t bldc_mcpwm_init(bldc_mcpwm_config_t *mcpwm_config, void **cmprs)
 {
     BLDC_CHECK(mcpwm_config, "mcpwm_config is NULL", ESP_ERR_INVALID_ARG);
+    BLDC_CHECK(cmprs, "cmprs is NULL", ESP_ERR_INVALID_ARG);
     esp_err_t err = ESP_OK;
     bldc_mcpwm_ctx_t *bldc_mcpwm_ctx = calloc(1, sizeof(bldc_mcpwm_ctx_t));
     BLDC_CHECK(bldc_mcpwm_ctx, "calloc failed", ESP_ERR_NO_MEM);
