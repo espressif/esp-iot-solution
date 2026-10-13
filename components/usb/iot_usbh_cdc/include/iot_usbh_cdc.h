@@ -381,6 +381,34 @@ esp_err_t usbh_cdc_get_dev_handle(usbh_cdc_port_handle_t cdc_port_handle, usb_de
  */
 esp_err_t usbh_cdc_port_get_intf_desc(usbh_cdc_port_handle_t port_handle, const usb_intf_desc_t **notif_intf,  const usb_intf_desc_t **data_intf);
 
+/**
+ * @brief Restart the bulk IN transfer chain after SET_INTERFACE(alt=1) completes.
+ *
+ * The IN endpoint is unavailable while the data interface is in alt=0.  Any
+ * pending IN transfer fails with STATUS_ERROR and leaves the pipe HALTED.
+ * Call this from the ECM layer once alt=1 is active so the receive path
+ * becomes live again.
+ *
+ * @param[in] cdc_port_handle CDC port handle
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if handle or transfer is NULL
+ */
+esp_err_t usbh_cdc_restart_in_transfer(usbh_cdc_port_handle_t cdc_port_handle);
+
+/**
+ * @brief Recover the bulk OUT pipe after a software reboot.
+ *
+ * On a software reboot the USB device is not power-cycled.  A failed OUT
+ * transfer from the previous session can leave the pipe HALTED, blocking all
+ * future transmits.  This function clears the halt and releases the semaphore
+ * only when the pipe is actually stalled (semaphore count == 0), so it is
+ * safe to call unconditionally after SET_INTERFACE(alt=1) on both HW and SW
+ * reboots.
+ *
+ * @param[in] cdc_port_handle CDC port handle
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if handle or transfer is NULL
+ */
+esp_err_t usbh_cdc_restart_out_transfer(usbh_cdc_port_handle_t cdc_port_handle);
+
 #ifdef __cplusplus
 }
 #endif
