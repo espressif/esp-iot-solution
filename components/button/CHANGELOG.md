@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.2.2 - 2026-10-13
+
+### Fix:
+
+* Fixed ADC button calibration on ESP32-S31 by using the channel-aware conversion API when line fitting is supported.
+
 ## v4.2.1 - 2026-08-31
 
 ### Fix:

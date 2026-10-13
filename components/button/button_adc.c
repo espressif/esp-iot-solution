@@ -238,7 +238,12 @@ static uint32_t get_adc_voltage(adc_unit_t unit_id, uint8_t channel)
     //Convert adc_reading to voltage in mV
     int voltage = 0;
     if (g_button.unit[unit_id].adc_cali_handle != NULL) {
+#if CONFIG_IDF_TARGET_ESP32S31 && ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED
+        // S31 line fitting and the channel-aware API were introduced together.
+        esp_err_t ret = adc_cali_chan_raw_to_voltage(g_button.unit[unit_id].adc_cali_handle, channel, adc_reading, &voltage);
+#else
         esp_err_t ret = adc_cali_raw_to_voltage(g_button.unit[unit_id].adc_cali_handle, adc_reading, &voltage);
+#endif
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "ADC calibration conversion failed: %s", esp_err_to_name(ret));
             return 0;
