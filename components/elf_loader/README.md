@@ -13,8 +13,11 @@ This ELF loader supports following SoCs:
 - ESP32-S3, support running ELF in PSRAM
 - ESP32-S31, support running ELF in PSRAM
 - ESP32-P4, support running ELF in PSRAM
+- ESP32-C5, support running ELF in PSRAM
 - ESP32-C6
 - ESP32-C61, support running ELF in PSRAM
+
+> **PMP / memory protection:** Targets with PMP IDRAM split (ESP32-C5/C6/C61/P4/S31, etc.) make DRAM non-executable when `CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=y`. Loading ELF into internal SRAM then requires `CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=n`; otherwise the loader refuses executable allocations. Prefer `ELF_LOADER_LOAD_PSRAM` when SPIRAM is available (not offered on ESP32-C6). Official ESP-IDF support for ESP32-C5 starts at **v5.5.2**.
 
 ### Usage
 

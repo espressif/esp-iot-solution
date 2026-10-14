@@ -1,17 +1,22 @@
 menu "Espressif ELF Loader Configuration"
-    visible if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
+    visible if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C5 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
 
     config ELF_LOADER_BUS_ADDRESS_MIRROR
         bool
         default y if (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
-        default n if (IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
+        default n if (IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C5 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
 
     config ELF_LOADER
         bool "Enable Espressif ELF Loader"
         default y
-        depends on (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
+        depends on (IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C5 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61)
         help
             Select this option to enable ELF Loader and show the submenu with ELF Loader configuration choices.
+
+            On targets with PMP IDRAM split (e.g. ESP32-C5/C6/C61/P4/S31),
+            loading ELF code into internal SRAM requires
+            CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=n (DRAM is non-executable).
+            Prefer "Load ELF to PSRAM" when SPIRAM is available.
 
     if ELF_LOADER
         config ELF_DYNAMIC_LOAD_SHARED_OBJECT
@@ -44,11 +49,14 @@ menu "Espressif ELF Loader Configuration"
         config ELF_LOADER_LOAD_PSRAM
             bool "Load ELF to PSRAM"
             default y
-            depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61) && SPIRAM
+            depends on (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32S31 || IDF_TARGET_ESP32C5 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32C61) && SPIRAM
             select ELF_LOADER_CACHE_OFFSET if (IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3)
             select ELF_LOADER_SET_MMU if IDF_TARGET_ESP32S2
             help
                 Load ELF file into PSRAM instead of internal SRAM.
+
+                On targets with PMP IDRAM split this avoids the conflict with
+                CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT when executing ELF from memory.
 
         menu "ELF Symbols Table"
 

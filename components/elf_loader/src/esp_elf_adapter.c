@@ -7,6 +7,7 @@
 #include <sys/errno.h>
 #include "esp_idf_version.h"
 #include "esp_attr.h"
+#include "esp_log.h"
 #include "esp_heap_caps.h"
 #if CONFIG_IDF_TARGET_ESP32S3 && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
 #include "esp_cache.h"
@@ -35,6 +36,22 @@
 void *esp_elf_malloc(uint32_t n, bool exec)
 {
     uint32_t caps;
+
+#if defined(CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT) && CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT \
+    && !defined(CONFIG_ELF_LOADER_LOAD_PSRAM)
+    /*
+     * With PMP IDRAM split, DRAM is not executable. Without LOAD_PSRAM the
+     * loader places .text in ordinary writable SRAM (C5/C6/C61/P4/S31, etc.),
+     * so refuse executable allocations early instead of failing at fetch.
+     */
+    if (exec) {
+        static const char *TAG = "elf_adapter";
+        ESP_LOGE(TAG, "cannot execute ELF from SRAM when "
+                 "CONFIG_ESP_SYSTEM_PMP_IDRAM_SPLIT=y; disable PMP IDRAM split "
+                 "or enable ELF_LOADER_LOAD_PSRAM with SPIRAM");
+        return NULL;
+    }
+#endif
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 #ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
