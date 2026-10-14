@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.0.4 - 2026-10-13
+
+### Bug fix:
+
+* Add NULL pointer checks for handles in `bldc_control_start()`, `bldc_control_stop()`, `bldc_six_step_operation()` and for the `cmprs` output argument in `bldc_mcpwm_init()`.
+
 ## v1.0.3 - 2026-1-30
 
 * Fix driver component requirement in CMake for newer ESP-IDF 6.0 versions
