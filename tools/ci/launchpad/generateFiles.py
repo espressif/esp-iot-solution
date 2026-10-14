@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from itertools import count
 import re
 import sys
 import subprocess
@@ -63,35 +62,42 @@ def find_build_dir(
     build_dir: str,
 ) -> list:
     """
-    Check local build dir with the following priority:
-
-    1. <app_path>/${IDF_VERSION}/build_<target>_<config>
-    2. <app_path>/${IDF_VERSION}/build_<target>
-    3. <app_path>/build_<target>_<config>
-    4. <app_path>/build
+    Find a build directory under every available IDF version.
 
     Args:
         app_path: app path
-        target: target
-        config: config
+        build_dir: build directory from idf_build_apps
 
     Returns:
         valid build directory
     """
 
-    # list all idf versions
-    idf_version = ['4.3','4.4','5.0','5.1','5.2','5.3']
+    app_dir = Path(app_path)
+    if not app_dir.is_dir():
+        return []
 
-    check_dirs = []
-    for i in idf_version:
-        check_dirs.append((os.path.join(i, os.path.basename(build_dir)), f'v{i}'))
-    build_dir = []
-    for check_dir in check_dirs:
-        binary_path = os.path.join(app_path, check_dir[0])
-        if os.path.isdir(binary_path):
-            print(f'find valid binary path: {binary_path}, idf version: {check_dir[1]}')
-            build_dir.append(check_dir)
-    return build_dir
+    version_dirs = sorted(
+        (
+            path for path in app_dir.iterdir()
+            if path.is_dir() and re.fullmatch(r'\d+\.\d+', path.name)
+        ),
+        key=lambda path: tuple(int(part) for part in path.name.split('.')),
+    )
+    found_build_dirs = []
+    for version_dir in version_dirs:
+        relative_path = os.path.join(version_dir.name, os.path.basename(build_dir))
+        binary_path = app_dir / relative_path
+        if binary_path.is_dir():
+            idf_version = f'v{version_dir.name}'
+            print(f'find valid binary path: {binary_path}, idf version: {idf_version}')
+            found_build_dirs.append((relative_path, idf_version))
+    return found_build_dirs
+
+
+def find_configured_build_dir(app_path: str, target: str, config: str) -> list:
+    """Find build artifacts selected by the LaunchPad upload configuration."""
+    build_name = f'build_{target}' + (f'_{config}' if config else '')
+    return find_build_dir(app_path, build_name)
 
 def find_app_version(app_path: str)->str:
     pattern = r'(^|\n)version: "?([0-9]+).([0-9]+).([0-9]+)"?'
@@ -120,7 +126,7 @@ def find_app_version(app_path: str)->str:
 def remove_app_from_config(apps):
     with open(PROJECT_CONFIG_FILE, 'r') as file:
         config_apps = yaml.safe_load(file)
-    new_apps = []
+    apps_by_dir = {}
     for app in apps:
         # remove './' in string
         if app['app_dir'].startswith('./'):
@@ -128,10 +134,35 @@ def remove_app_from_config(apps):
         else:
             app_dir = app['app_dir']
 
-        if app_dir not in config_apps:
-            continue
+        if app_dir in config_apps:
+            apps_by_dir[app_dir] = app
 
-        example = config_apps[app_dir]
+    new_apps = []
+    for app_dir, example in config_apps.items():
+        app = apps_by_dir.get(app_dir)
+        if app is None:
+            app = App(app_dir).__dict__
+            app['app_version'] = find_app_version(app_dir)
+
+        existing_builds = {
+            (info['target'], info['sdkconfig'], info['build_dir'])
+            for info in app['build_info']
+        }
+        for target, target_config in example.items():
+            if target in ('description', 'readme') or not isinstance(target_config, dict):
+                continue
+            for sdkconfig in target_config.get('sdkconfig', []):
+                for build_dir, idf_version in find_configured_build_dir(app_dir, target, sdkconfig):
+                    build_key = (target, sdkconfig, build_dir)
+                    if build_key not in existing_builds:
+                        app['build_info'].append({
+                            'target': target,
+                            'sdkconfig': sdkconfig,
+                            'build_dir': build_dir,
+                            'idf_version': idf_version,
+                        })
+                        existing_builds.add(build_key)
+
         matched_build_info = []
         sdkcount = {}
         for build_info in app['build_info']:
@@ -148,14 +179,15 @@ def remove_app_from_config(apps):
                     sdkcount[f'developKits.{target}'] = 1
                 else:
                     sdkcount[f'developKits.{target}'] += 1
-        if matched_build_info:
-            app['build_info'] = matched_build_info
-            app['sdkcount'] = sdkcount
-            if config_apps[app_dir].get('readme'):
-                app['readme'] = config_apps[app_dir]['readme']
-            if config_apps[app_dir].get('description'):
-                app['description'] = config_apps[app_dir]['description']
-            new_apps.append(app)
+        if not matched_build_info:
+            continue
+        app['build_info'] = matched_build_info
+        app['sdkcount'] = sdkcount
+        if example.get('readme'):
+            app['readme'] = example['readme']
+        if example.get('description'):
+            app['description'] = example['description']
+        new_apps.append(app)
     return new_apps
 
 # Squash the json into a list of apps
@@ -281,9 +313,10 @@ def unquote_config_keys(text):
     result = re.sub(pattern, r'\1', text)
     return result
 
-# Get the output json file from idf_build_apps, process it, merge binaries and create config.toml
-with open(sys.argv[1], 'r') as file:
-    apps = squash_json(file.read())
+def main(input_file):
+    """Merge selected build artifacts and create the LaunchPad manifest."""
+    with open(input_file, 'r') as file:
+        apps = squash_json(file.read())
     if os.path.exists(PROJECT_CONFIG_FILE):
         print(f'Reading {PROJECT_CONFIG_FILE}')
         apps = remove_app_from_config(apps)
@@ -292,3 +325,7 @@ with open(sys.argv[1], 'r') as file:
     print('create config.toml...')
     create_config_toml(apps)
     print('create config.toml success')
+
+
+if __name__ == '__main__':
+    main(sys.argv[1])
