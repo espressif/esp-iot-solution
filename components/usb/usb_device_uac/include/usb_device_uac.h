@@ -7,6 +7,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include "esp_err.h"
 
@@ -45,6 +46,25 @@ typedef struct  {
  *       - ESP_FAIL on failure
  */
 esp_err_t uac_device_init(uac_device_config_t *config);
+
+/**
+ * @brief Bytes of speaker audio currently buffered in the UAC RX FIFO.
+ *
+ * While streaming, a healthy value sits near half of
+ * uac_device_spk_fifo_size() and stays there; drifting to 0 or to the
+ * maximum means the host is not following the feedback endpoint.
+ *
+ * Safe to call from any task (value is momentarily approximate).
+ */
+size_t uac_device_spk_fifo_level(void);
+
+/**
+ * @brief Capacity of the UAC RX FIFO in bytes.
+ *
+ * Configured via CONFIG_UAC_SPK_INTERVAL_MS (FIFO holds interval+1 ms
+ * worth of audio).
+ */
+size_t uac_device_spk_fifo_size(void);
 
 #ifdef __cplusplus
 }
