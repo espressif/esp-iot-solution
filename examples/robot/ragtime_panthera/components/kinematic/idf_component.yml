@@ -1,0 +1,7 @@
+version: "0.1.0"
+description: 6-DOF DH-based kinematics (forward kinematics and damped-least-squares inverse kinematics) for the Ragtime Panthera robotic arm.
+dependencies:
+  idf: ">=5.0"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

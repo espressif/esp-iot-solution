@@ -993,11 +993,8 @@
   - "examples/relinker/**/*"
   - "tools/cmake_utilities/scripts/relinker/**/*"
 
-.patterns-example_ragtime_panthera_follower: &patterns-example_ragtime_panthera_follower
-  - "examples/robot/ragtime_panthera/follower/**/*"
-
-.patterns-example_robot_ragtime_panthera_leader: &patterns-example_robot_ragtime_panthera_leader
-  - "examples/robot/ragtime_panthera/leader/**/*"
+.patterns-example_robot_ragtime_panthera: &patterns-example_robot_ragtime_panthera
+  - "examples/robot/ragtime_panthera/**/*"
 
 .patterns-example_weaver_led_light: &patterns-example_weaver_led_light
   - "examples/weaver/led_light/**/*"
@@ -2550,7 +2547,7 @@
     - <<: *if-dev-push
       changes: *patterns-example_relinker
 
-.rules:build:example_ragtime_panthera_follower:
+.rules:build:example_robot_ragtime_panthera:
   rules:
     - <<: *if-protected
     - <<: *if-label-build
@@ -2558,17 +2555,7 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
-      changes: *patterns-example_ragtime_panthera_follower
-
-.rules:build:example_robot_ragtime_panthera_leader:
-  rules:
-    - <<: *if-protected
-    - <<: *if-label-build
-    - <<: *if-trigger-job
-    - <<: *if-dev-push
-      changes: *patterns-build_system
-    - <<: *if-dev-push
-      changes: *patterns-example_robot_ragtime_panthera_leader
+      changes: *patterns-example_robot_ragtime_panthera
 
 .rules:build:example_weaver_imu_gesture:
   rules:

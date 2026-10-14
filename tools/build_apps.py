@@ -50,7 +50,7 @@ IGNORE_WARNINGS = [
     r'warning HPM-DC, which helps to run some flash > 80MHz by adjusting dummy cycles, is no longer enabled by default.',
     r'warning To enable this feature, your bootloader needs to have the support for it \(by explicitly selecting BOOTLOADER_FLASH_DC_AWARE\)',
     r'warning If your bootloader does not support it, select SPI_FLASH_HPM_DC_DISABLE to suppress the warning. READ DOCS FIRST!',
-    r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panther/follower
+    r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panthera
     r'WARNING: The following Kconfig variables were used in "if" clauses, but not',  # Due to the introduction of Kconfig and package manager dependencies, compilation warnings are generated
     r'.+MultiCommand.+',
     r'warning: \'ISP_AWB_SAMPLE_POINT_BEFORE_CCM\' is deprecated: Use ISP_AWB_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
