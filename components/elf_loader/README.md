@@ -27,7 +27,7 @@ Add a dependency on this component in your component or project's idf_component.
 
     ```yml
     dependencies:
-      espressif/elf_loader: "1.*"
+      espressif/elf_loader: "2.*"
     ```
 
 Enable ELF loader in the menuconfig:
@@ -56,10 +56,24 @@ Add API calls in your project as follows:
     // Your Code
 
     esp_elf_init(&elf);
-    esp_elf_relocate(&elf, elf_file_data_bytes);
+    esp_elf_relocate(&elf, elf_file_data_bytes, elf_file_size_bytes);
     esp_elf_request(&elf, 0, argc, argv);
     esp_elf_deinit(&elf);
 ```
+
+The third argument to `esp_elf_relocate()` is the exact accessible length of the
+ELF image. Callers using `esp_elf_open()` should pass `file.size`; embedded ELF
+images can use the difference between the `_binary_*_end` and `_binary_*_start`
+linker symbols. The buffer must be 4-byte aligned. This argument is required to
+reject malformed input before any ELF headers, sections, or relocation entries
+are accessed. The old two-argument signature is no longer supported.
+For embedded ELF images, use the component's `elf_embed_aligned_binary(target
+file BINARY|TEXT)` CMake helper to guarantee input alignment on released
+ESP-IDF versions, where `target_add_binary_data(... ALIGN 4)` is ignored.
+
+When dynamic shared object loading is enabled, an ELF shared library without
+an entry point can be loaded and queried with `dlsym()`. Such a library cannot
+be executed with `esp_elf_request()`.
 
 If dynamic load shared object is enabled, you can use the following APIs in your project:
 

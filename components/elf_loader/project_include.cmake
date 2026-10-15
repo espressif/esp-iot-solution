@@ -1,6 +1,27 @@
 set(PY_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_MODULE_PATH})
 
+# Keep embedded ELF input 4-byte aligned on all supported ESP-IDF versions.
+# Unlike target_add_binary_data with ALIGN, this works with release-v5.x.
+function(elf_embed_aligned_binary target embed_file embed_type)
+    get_filename_component(embed_file "${embed_file}" ABSOLUTE)
+    get_filename_component(embed_name "${embed_file}" NAME)
+    set(embed_srcfile "${CMAKE_CURRENT_BINARY_DIR}/${embed_name}.aligned.S")
+    set(embed_script "${PY_PATH}/tool/embed_aligned_binary.cmake")
+
+    add_custom_command(
+        OUTPUT "${embed_srcfile}"
+        COMMAND "${CMAKE_COMMAND}"
+            -D "DATA_FILE=${embed_file}"
+            -D "SOURCE_FILE=${embed_srcfile}"
+            -D "FILE_TYPE=${embed_type}"
+            -P "${embed_script}"
+        DEPENDS "${embed_file}" "${embed_script}"
+        VERBATIM
+    )
+    target_sources(${target} PRIVATE "${embed_srcfile}")
+endfunction()
+
 # elf_embed_binary
 #
 # Create a c file corresponding to ELF and embed into the application.
@@ -69,5 +90,5 @@ function(elf_embed_binary app_name app_path output_bin)
 
     add_dependencies(${COMPONENT_LIB} ${app_name}_generate)
 
-    target_add_binary_data(${COMPONENT_LIB} ${elf_output_bin} BINARY)
+    elf_embed_aligned_binary(${COMPONENT_LIB} ${elf_output_bin} BINARY)
 endfunction()

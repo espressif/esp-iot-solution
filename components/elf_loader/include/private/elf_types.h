@@ -7,6 +7,7 @@
 #pragma once
 
 #include <unistd.h>
+#include <sys/types.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -17,6 +18,9 @@ extern "C" {
 #endif
 
 #define EI_NIDENT       16              /*!< Magic number and other information length */
+/** @brief Supported ELF object types */
+#define ELF_ET_EXEC     2               /*!< Executable ELF object */
+#define ELF_ET_DYN      3               /*!< Shared ELF object */
 
 /** @brief Type of segment */
 
@@ -244,6 +248,7 @@ typedef struct esp_elf {
 #else
     unsigned char   *psegment;          /*!< segment buffer pointer */
     uint32_t         svaddr;            /*!< start virtual address of segment */
+    size_t           segment_size;      /*!< allocated segment buffer length */
 #endif
 
     esp_elf_sec_t   sec[ELF_SECS];      /*!< ".bss", "data", "rodata", ".text" */
