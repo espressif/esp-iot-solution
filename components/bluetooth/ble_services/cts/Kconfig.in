@@ -5,6 +5,22 @@ menuconfig BLE_CTS
 
 if BLE_CTS
 
+choice BLE_CTS_DEFAULT_PERM
+    prompt "Security for Current Time Service characteristics"
+    default BLE_CTS_DEFAULT_PERM_RW
+    help
+      With encryption required, a peer can read, write and subscribe to these
+      characteristics only over an encrypted link, and ble_conn_mgr refuses
+      to notify or indicate them on a link that is not encrypted.
+
+config BLE_CTS_DEFAULT_PERM_RW
+    bool "No security required"
+
+config BLE_CTS_DEFAULT_PERM_RW_ENCRYPT
+    bool "Require encryption"
+
+endchoice
+
 config BLE_CTS_CURRENT_TIME_WRITE_ENABLE
     bool "Current time write enable"
     default y

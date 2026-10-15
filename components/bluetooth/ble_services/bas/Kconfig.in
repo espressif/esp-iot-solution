@@ -5,6 +5,22 @@ menuconfig BLE_BAS
 
 if BLE_BAS
 
+choice BLE_BAS_DEFAULT_PERM
+    prompt "Security for Battery Service characteristics"
+    default BLE_BAS_DEFAULT_PERM_RW
+    help
+      With encryption required, a peer can read and subscribe to these
+      characteristics only over an encrypted link, and ble_conn_mgr refuses
+      to notify or indicate them on a link that is not encrypted.
+
+config BLE_BAS_DEFAULT_PERM_RW
+    bool "No security required"
+
+config BLE_BAS_DEFAULT_PERM_RW_ENCRYPT
+    bool "Require encryption"
+
+endchoice
+
 config BLE_BAS_BATTERY_LEVEL_NOTIFY_ENABLE
     bool "Battery Level Notification"
     default y
