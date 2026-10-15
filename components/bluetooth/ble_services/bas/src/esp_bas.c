@@ -587,9 +587,22 @@ esp_err_t esp_ble_bas_set_battery_info(esp_ble_bas_battery_info_t *info)
     return esp_ble_bas_data_handle(true, BLE_BAS_CHR_UUID16_BATTERY_INFO, NULL, 0);
 }
 
+/* BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC is NimBLE's BLE_GATT_CHR_F_NOTIFY_INDICATE_ENC.
+ * Defined here too so this builds against a ble_conn_mgr that predates it; there
+ * it still gates subscribing, and ble_conn_mgr gates the send once it has it. */
+#ifndef BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC
+#define BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC 0x8000
+#endif
+
+#ifdef CONFIG_BLE_BAS_DEFAULT_PERM_RW_ENCRYPT
+#define BAS_PERM (BLE_CONN_GATT_CHR_READ_ENC | BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC)
+#else
+#define BAS_PERM 0
+#endif
+
 static const esp_ble_conn_character_t nu_lookup_table[] = {
     {
-        "level",     BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ
+        "level",     BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM
 #ifdef CONFIG_BLE_BAS_BATTERY_LEVEL_NOTIFY_ENABLE
         | BLE_CONN_GATT_CHR_NOTIFY
 #endif
@@ -597,7 +610,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
     },
 #ifdef CONFIG_BLE_BAS_BATTERY_LEVEL_STATUS
     {
-        "level_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "level_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_BAS_BATTERY_LEVEL_STATUS_INDICATE_ENABLE
         | BLE_CONN_GATT_CHR_INDICATE
 #endif
@@ -607,7 +620,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 
 #ifdef CONFIG_BLE_BAS_ESTIMATED_SERVICE_DATE
     {
-        "estimated_date",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "estimated_date",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_BAS_ESTIMATED_SERVICE_DATE_INDICATE_ENABLE
         | BLE_CONN_GATT_CHR_INDICATE
 #endif
@@ -617,14 +630,14 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 
 #ifdef CONFIG_BLE_BAS_BATTERY_CRITICAL_STATUS
     {
-        "critical_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_INDICATE
+        "critical_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_INDICATE
         , { BLE_BAS_CHR_UUID16_CRITICAL_STATUS},       esp_bas_critical_status_cb
     },
 #endif
 
 #ifdef CONFIG_BLE_BAS_BATTERY_ENERGY_STATUS
     {
-        "energy_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "energy_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_BAS_BATTERY_ENERGY_STATUS_INDICATE_ENABLE
         | BLE_CONN_GATT_CHR_INDICATE
 #endif
@@ -634,7 +647,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 
 #ifdef CONFIG_BLE_BAS_BATTERY_TIME_STATUS
     {
-        "time_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "time_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_BAS_BATTERY_TIME_STATUS_INDICATE_ENABLE
         | BLE_CONN_GATT_CHR_INDICATE
 #endif
@@ -644,7 +657,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 
 #ifdef CONFIG_BLE_BAS_BATTERY_HEALTH_STATUS
     {
-        "health_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "health_status",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_BAS_BATTERY_HEALTH_STATUS_INDICATE_ENABLE
         | BLE_CONN_GATT_CHR_INDICATE
 #endif
@@ -654,14 +667,14 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 
 #ifdef CONFIG_BLE_BAS_BATTERY_HEALTH_INFORMATION
     {
-        "health_info",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_INDICATE
+        "health_info",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_INDICATE
         , { BLE_BAS_CHR_UUID16_HEALTH_INFO},       esp_bas_health_info_cb
     },
 #endif
 
 #ifdef CONFIG_BLE_BAS_BATTERY_INFORMATION
     {
-        "battery_info",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_INDICATE
+        "battery_info",    BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BAS_PERM | BLE_CONN_GATT_CHR_INDICATE
         , { BLE_BAS_CHR_UUID16_BATTERY_INFO},       esp_bas_battery_info_cb
     },
 #endif
