@@ -333,6 +333,7 @@ esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_
 #define BLE_CONN_GATT_CHR_WRITE_ENC         0x1000  /*!< Characteristic write requires encryption */
 #define BLE_CONN_GATT_CHR_WRITE_AUTHEN      0x2000  /*!< Characteristic write requires authentication */
 #define BLE_CONN_GATT_CHR_WRITE_AUTHOR      0x4000  /*!< Characteristic write requires authorization */
+#define BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC 0x8000 /*!< Subscribing requires encryption, and a notification or indication on an unencrypted link is refused */
 
 /** Legacy advertising connection mode (conn_mode in esp_ble_conn_adv_params_t). Values match the underlying BLE stack. */
 typedef enum {
@@ -1865,6 +1866,7 @@ esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint16_t adv_len,
  * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong notify
+ *  - ESP_ERR_INVALID_STATE if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
@@ -1882,6 +1884,7 @@ esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
  *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_INVALID_STATE if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff);
@@ -1899,6 +1902,7 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
  *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
  *  - ESP_ERR_NO_MEM if system resources are insufficient
  *  - ESP_ERR_TIMEOUT if completion is not received within wait timeout
+ *  - ESP_ERR_INVALID_STATE if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_notify_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
@@ -1917,6 +1921,7 @@ esp_err_t esp_ble_conn_notify_by_attr_handle(uint16_t conn_handle, uint16_t attr
  *  - ESP_ERR_INVALID_ARG on invalid parameters
  *  - ESP_ERR_NO_MEM if system resources are insufficient
  *  - ESP_ERR_TIMEOUT if confirmation is not received within wait timeout
+ *  - ESP_ERR_INVALID_STATE if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_indicate_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
@@ -1956,6 +1961,7 @@ esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t 
  * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on wrong write
+ *  - ESP_ERR_INVALID_STATE in the peripheral role, where this sends an indication, if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff);
@@ -1970,6 +1976,7 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff);
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
  *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_INVALID_STATE in the peripheral role, where this sends an indication, if the characteristic is declared with BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC and the link is not encrypted
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff);
