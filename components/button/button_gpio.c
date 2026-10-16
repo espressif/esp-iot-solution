@@ -50,6 +50,15 @@ static esp_err_t button_gpio_enable_gpio_wakeup(uint32_t gpio_num, uint8_t activ
         if (ret == ESP_OK) {
             gpio_intr_enable(gpio_num);
         }
+#if CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP
+#if SOC_PM_SUPPORT_EXT1_WAKEUP
+
+        if (ret == ESP_OK) {
+            ret = esp_sleep_enable_ext1_wakeup_io(1ULL << gpio_num, active_level == 0 ? ESP_EXT1_WAKEUP_ANY_LOW :  ESP_EXT1_WAKEUP_ANY_HIGH);
+        }
+
+#endif
+#endif        
     } else {
         gpio_intr_disable(gpio_num);
         ret = gpio_wakeup_disable(gpio_num);
