@@ -34,8 +34,9 @@ typedef struct {
  * @param[in]  token   Optional bearer token
  *
  * @return
- *       - ESP_OK               On success
- *       - ESP_ERR_INVALID_ARG  Invalid vision pointer
+ *       - ESP_OK                On success
+ *       - ESP_ERR_INVALID_ARG   If vision is NULL
+ *       - ESP_ERR_INVALID_SIZE  If url or token does not fit
  */
 esp_err_t esp_xiaozhi_vision_init(esp_xiaozhi_vision_t *vision,
                                   const char *url,
@@ -49,8 +50,9 @@ esp_err_t esp_xiaozhi_vision_init(esp_xiaozhi_vision_t *vision,
  * @param[in]     token   Optional bearer token, NULL clears it
  *
  * @return
- *       - ESP_OK               On success
- *       - ESP_ERR_INVALID_ARG  Invalid vision pointer
+ *       - ESP_OK                On success
+ *       - ESP_ERR_INVALID_ARG   If vision is NULL
+ *       - ESP_ERR_INVALID_SIZE  If url or token does not fit; the stored endpoint is unchanged
  */
 esp_err_t esp_xiaozhi_vision_set_endpoint(esp_xiaozhi_vision_t *vision,
                                           const char *url,

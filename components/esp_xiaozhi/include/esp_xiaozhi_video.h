@@ -43,9 +43,10 @@ typedef struct {
  * @param[out]  out_handle  Pointer to the output handle
  *
  * @return
- *       - ESP_OK               On success
- *       - ESP_ERR_NO_MEM       Out of memory
- *       - ESP_ERR_INVALID_ARG  Invalid output handle
+ *       - ESP_OK                On success
+ *       - ESP_ERR_NO_MEM        Out of memory
+ *       - ESP_ERR_INVALID_ARG   Invalid output handle
+ *       - ESP_ERR_INVALID_SIZE  If config url or token is 512 bytes or longer
  */
 esp_err_t esp_xiaozhi_video_create(const esp_xiaozhi_video_config_t *config, esp_xiaozhi_video_handle_t **out_handle);
 
@@ -68,8 +69,9 @@ esp_err_t esp_xiaozhi_video_destroy(esp_xiaozhi_video_handle_t *handle);
  * @param[in]  token   Optional bearer token, or NULL to clear it
  *
  * @return
- *       - ESP_OK               On success
- *       - ESP_ERR_INVALID_ARG  Invalid handle
+ *       - ESP_OK                On success
+ *       - ESP_ERR_INVALID_ARG   If handle is NULL
+ *       - ESP_ERR_INVALID_SIZE  If url or token is 512 bytes or longer
  */
 esp_err_t esp_xiaozhi_video_set_explain_url(esp_xiaozhi_video_handle_t *handle, const char *url, const char *token);
 

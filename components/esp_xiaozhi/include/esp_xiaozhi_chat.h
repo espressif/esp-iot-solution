@@ -370,22 +370,29 @@ esp_err_t esp_xiaozhi_chat_send_stop_listening(esp_xiaozhi_chat_handle_t chat_hd
 esp_err_t esp_xiaozhi_chat_send_abort_speaking(esp_xiaozhi_chat_handle_t chat_hd, esp_xiaozhi_chat_abort_speaking_reason_t reason);
 
 /**
- * @brief  Copy the vision explain endpoint from the latest MCP initialize
+ * @brief  Copy this chat's vision explain endpoint
  *
- * Xiaozhi sends this in `initialize.params.capabilities.vision`. The URL is an
- * HTTP upload target, not the OTA host. Empty until that message arrives.
+ *         Xiaozhi sends the endpoint in initialize.params.capabilities.vision.
+ *         The URL is an HTTP upload target, not the OTA host. Each chat handle
+ *         keeps its own copy, so two agents do not share it. Empty until that
+ *         message arrives. Not thread-safe. Not ISR-safe.
  *
- * @param[out] url         Explain URL buffer
- * @param[in]  url_size    Size of url
- * @param[out] token       Optional bearer token buffer, may be NULL
- * @param[in]  token_size  Size of token, ignored when token is NULL
+ * @param[in]   chat_hd     Chat handle returned by esp_xiaozhi_chat_init()
+ * @param[out]  url         Explain URL buffer; cleared when it is too small
+ * @param[in]   url_size    Size of url, including the terminating NUL
+ * @param[out]  token       Optional bearer token buffer. NULL skips the copy
+ * @param[in]   token_size  Size of token, including the terminating NUL. Must be
+ *                          non-zero when token is not NULL
  *
  * @return
- *       - ESP_OK                 URL copied
- *       - ESP_ERR_INVALID_ARG    url is NULL or url_size is 0
- *       - ESP_ERR_INVALID_STATE  No vision URL has been received
+ *       - ESP_OK                  On success; url and token are complete copies
+ *       - ESP_ERR_INVALID_ARG     If chat_hd is 0, url is NULL, url_size is 0,
+ *                                 or token is not NULL and token_size is 0
+ *       - ESP_ERR_INVALID_STATE   If this chat has not received a vision URL
+ *       - ESP_ERR_INVALID_SIZE    If url or token buffer is too small
  */
-esp_err_t esp_xiaozhi_chat_get_vision_explain(char *url, size_t url_size, char *token, size_t token_size);
+esp_err_t esp_xiaozhi_chat_get_vision_explain(esp_xiaozhi_chat_handle_t chat_hd, char *url, size_t url_size,
+                                              char *token, size_t token_size);
 
 #ifdef __cplusplus
 }
