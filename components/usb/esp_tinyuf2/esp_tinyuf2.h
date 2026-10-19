@@ -26,17 +26,23 @@ extern "C" {
 
 #define UF2_RESET_REASON_VALUE (CONFIG_UF2_OTA_RESET_REASON_VALUE)
 
+typedef enum {
+    TINYUF2_UPDATE_COMPLETE = 0,
+    TINYUF2_UPDATE_PCT = 1,
+    TINYUF2_UPDATE_MOUNT = 2,
+} uf2_update_event_t;
+
 /**
  * @brief user callback called after uf2 update complete
  *
  */
-typedef void (*update_complete_cb_t)(void);
+typedef void (*update_event_cb_t)(uf2_update_event_t, uint32_t);
 
 /**
  * @brief user callback called after nvs modified
  *
  */
-typedef void (*nvs_modified_cb_t)(void);
+typedef void (*nvs_modified_cb_t)(const char*);
 
 /**
  * @brief tinyuf2 configurations
@@ -46,7 +52,7 @@ typedef struct {
     esp_partition_subtype_t subtype;  /*!< Partition subtype. if ESP_PARTITION_SUBTYPE_ANY will use the next_update_partition by default. */
     const char *label;                /*!< Partition label. Set this value if looking for partition with a specific name. if subtype==ESP_PARTITION_SUBTYPE_ANY, label default to NULL.*/
     bool if_restart;                  /*!< if restart system to new app partition after UF2 flashing done */
-    update_complete_cb_t complete_cb; /*!< user callback called after uf2 update complete */
+    update_event_cb_t event_cb; /*!< user callback called after uf2 update complete */
 } tinyuf2_ota_config_t;
 
 /**
@@ -118,7 +124,7 @@ void esp_restart_from_tinyuf2(void);
  * @return
  *      - ESP_OK: Operation was successful.
  */
-esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
+esp_err_t esp_tinyuf2_set_all_key_hidden(bool);
 
 /**
  * @brief Add a key to the hidden keys list.
@@ -134,7 +140,7 @@ esp_err_t esp_tinyuf2_set_all_key_hidden(bool if_hidden)
  *      - ESP_ERR_INVALID_ARG: Provided key is NULL.
  *      - ESP_ERR_NO_MEM: Memory allocation failed or maximum number of hidden keys exceeded.
  */
-esp_err_t esp_tinyuf2_add_key_hidden(const char *key)
+esp_err_t esp_tinyuf2_add_key_hidden(const char *);
 #endif
 
 #ifdef __cplusplus
