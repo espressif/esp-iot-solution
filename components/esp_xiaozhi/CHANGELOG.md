@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.3
+
+### Fixed
+
+- **MCP session lifecycle**: Do not clear MCP manager session state on server hello, goodbye, or audio channel close. Clearing it dropped tool state that the server still uses for the same MCP session.
+- **MCP request context**: Handle inbound MCP with a NULL request context. Stamp the current audio `session_id` only on the reply.
+- **Vision explain endpoint**: Copy `initialize.params.capabilities.vision` URL and token into 512-byte buffers and expose them through `esp_xiaozhi_chat_get_vision_explain()`.
+
 ## v0.1.2
 
 ### Fixed

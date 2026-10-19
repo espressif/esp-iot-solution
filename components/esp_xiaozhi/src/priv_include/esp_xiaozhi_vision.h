@@ -15,8 +15,8 @@
 extern "C" {
 #endif  /* __cplusplus */
 
-#define ESP_XIAOZHI_VISION_EXPLAIN_URL_LEN   256
-#define ESP_XIAOZHI_VISION_EXPLAIN_TOKEN_LEN 128
+#define ESP_XIAOZHI_VISION_EXPLAIN_URL_LEN   512
+#define ESP_XIAOZHI_VISION_EXPLAIN_TOKEN_LEN 512
 
 /**
  * @brief  Shared context for vision explain clients

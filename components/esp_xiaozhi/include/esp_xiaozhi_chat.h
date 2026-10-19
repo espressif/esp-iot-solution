@@ -369,6 +369,24 @@ esp_err_t esp_xiaozhi_chat_send_stop_listening(esp_xiaozhi_chat_handle_t chat_hd
  */
 esp_err_t esp_xiaozhi_chat_send_abort_speaking(esp_xiaozhi_chat_handle_t chat_hd, esp_xiaozhi_chat_abort_speaking_reason_t reason);
 
+/**
+ * @brief  Copy the vision explain endpoint from the latest MCP initialize
+ *
+ * Xiaozhi sends this in `initialize.params.capabilities.vision`. The URL is an
+ * HTTP upload target, not the OTA host. Empty until that message arrives.
+ *
+ * @param[out] url         Explain URL buffer
+ * @param[in]  url_size    Size of url
+ * @param[out] token       Optional bearer token buffer, may be NULL
+ * @param[in]  token_size  Size of token, ignored when token is NULL
+ *
+ * @return
+ *       - ESP_OK                 URL copied
+ *       - ESP_ERR_INVALID_ARG    url is NULL or url_size is 0
+ *       - ESP_ERR_INVALID_STATE  No vision URL has been received
+ */
+esp_err_t esp_xiaozhi_chat_get_vision_explain(char *url, size_t url_size, char *token, size_t token_size);
+
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
