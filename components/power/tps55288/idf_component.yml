@@ -1,0 +1,7 @@
+version: "0.1.0"
+description: I2C driver for the TPS55288 buck-boost converter
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/power/tps55288
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  idf: ">=5.3"
