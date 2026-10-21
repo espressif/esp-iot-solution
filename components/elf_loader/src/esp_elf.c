@@ -189,6 +189,37 @@ uintptr_t elf_find_sym(const char *sym_name)
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 
+/* MALLOC_CAP_EXEC can return instruction RAM which only accepts 32-bit
+ * loads/stores on Xtensa (e.g. ESP32-S3 internal IRAM). libc memcpy() may
+ * emit byte stores and panic with LoadStoreError even for aligned pointers.
+ * The allocation and literal-pool offsets are word-aligned; store complete
+ * words and zero-pad the final partial word without reading past the ELF. */
+#ifndef CONFIG_ELF_LOADER_LOAD_PSRAM
+static void esp_elf_copy_executable(void *destination, const uint8_t *source, size_t length)
+{
+    volatile uint32_t *words = (volatile uint32_t *)destination;
+    size_t i = 0;
+    for (; length - i >= sizeof(uint32_t); i += sizeof(uint32_t)) {
+        uint32_t value;
+        memcpy(&value, source + i, sizeof(value));
+        words[i / sizeof(uint32_t)] = value;
+    }
+    if (i < length) {
+        uint32_t value = 0;
+        memcpy(&value, source + i, length - i);
+        words[i / sizeof(uint32_t)] = value;
+    }
+}
+
+static void esp_elf_clear_executable(void *destination, size_t length)
+{
+    volatile uint32_t *words = (volatile uint32_t *)destination;
+    for (size_t i = 0; i < length / sizeof(uint32_t); ++i) {
+        words[i] = 0;
+    }
+}
+#endif
+
 /**
  * @brief Load ELF section.
  *
@@ -201,7 +232,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 {
     uint32_t entry;
     uint32_t size;
-    uint32_t sec_align[ELF_SECS] = {1, 1, 1, 1, 1, 1, 1, 1};
+    uint32_t sec_align[ELF_SECS] = {1, 1, 1, 1, 1, 1, 1, 1, 1};
     static const uint32_t data_sections[] = {
         ELF_SEC_DATA, ELF_SEC_RODATA, ELF_SEC_DRLRO, ELF_SEC_BSS,
         ELF_SEC_PREINIT, ELF_SEC_INIT, ELF_SEC_FINI
@@ -261,6 +292,12 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
                 ESP_LOGD(TAG, ".rodata offset is 0x%lx size is 0x%x",
                          elf->sec[ELF_SEC_RODATA].offset,
                          elf->sec[ELF_SEC_RODATA].size);
+            } else if (!strcmp(ELF_GOT_LOC, name)) {
+                /* Xtensa l32r uses PC-relative literal addresses: these bytes
+                 * must retain their offset from .text in executable memory. */
+                elf->sec[ELF_SEC_GOT_LOC].v_addr = shdr[i].addr;
+                elf->sec[ELF_SEC_GOT_LOC].size = shdr[i].size;
+                elf->sec[ELF_SEC_GOT_LOC].offset = shdr[i].offset;
             } else if (!strcmp(ELF_DATA_REL_RO, name)) {
                 ESP_LOGD(TAG, ".data.rel.ro sec addr=0x%08x size=0x%08x offset=0x%08x",
                          shdr[i].addr, shdr[i].size, shdr[i].offset);
@@ -306,7 +343,30 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
         }
     }
 
-    elf->ptext = esp_elf_malloc(elf->sec[ELF_SEC_TEXT].size, true);
+    /* Keep .got.loc at its original PC-relative offset from .text. The gap
+     * can contain .rodata, but it must NOT be mapped as .text symbols. */
+    uint64_t text_span = elf->sec[ELF_SEC_TEXT].size;
+    const esp_elf_sec_t *got_loc = &elf->sec[ELF_SEC_GOT_LOC];
+    if (got_loc->size) {
+        uint64_t text_end = (uint64_t)elf->sec[ELF_SEC_TEXT].v_addr + text_size;
+        if (got_loc->v_addr < text_end ||
+                ((got_loc->v_addr - elf->sec[ELF_SEC_TEXT].v_addr) & 3)) {
+            return -EINVAL;
+        }
+        uint64_t got_end = (uint64_t)got_loc->v_addr + got_loc->size;
+        text_span = got_end - elf->sec[ELF_SEC_TEXT].v_addr;
+        if (text_span > UINT32_MAX) {
+            return -EOVERFLOW;
+        }
+    }
+    /* The final executable byte may belong to an incomplete word. Reserve
+     * a complete word for both executable stores and the PLT literal pool. */
+    const uint64_t text_alloc_span = (text_span + sizeof(uint32_t) - 1) & ~(uint64_t)(sizeof(uint32_t) - 1);
+    if (text_alloc_span > UINT32_MAX) {
+        return -EOVERFLOW;
+    }
+    elf->text_alloc_size = (size_t)text_alloc_span;
+    elf->ptext = esp_elf_malloc((uint32_t)text_alloc_span, true);
     if (!elf->ptext) {
         ESP_LOGE(TAG, "Failed to malloc %"PRIu32" bytes for text section",
                  (uint32_t)elf->sec[ELF_SEC_TEXT].size);
@@ -341,9 +401,27 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
     /* Dump ".text" from ELF to executable space memory */
 
-    elf->sec[ELF_SEC_TEXT].addr = (Elf32_Addr)elf->ptext;
-    memset(elf->ptext, 0, elf->sec[ELF_SEC_TEXT].size);
+    elf->sec[ELF_SEC_TEXT].addr = (uintptr_t)elf->ptext;
+#ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
+    memset(elf->ptext, 0, elf->text_alloc_size);
     memcpy(elf->ptext, pbuf + elf->sec[ELF_SEC_TEXT].offset, text_size);
+#else
+    esp_elf_clear_executable(elf->ptext, elf->text_alloc_size);
+    esp_elf_copy_executable(elf->ptext, pbuf + elf->sec[ELF_SEC_TEXT].offset, text_size);
+#endif
+    if (got_loc->size) {
+        /* The pool is shared with .text, but the two mapped section
+         * descriptors stay separate so intervening .rodata maps to DRAM. */
+        elf->sec[ELF_SEC_GOT_LOC].addr =
+            (uintptr_t)(elf->ptext + (got_loc->v_addr - elf->sec[ELF_SEC_TEXT].v_addr));
+#ifdef CONFIG_ELF_LOADER_LOAD_PSRAM
+        memcpy((void *)elf->sec[ELF_SEC_GOT_LOC].addr,
+               pbuf + got_loc->offset, got_loc->size);
+#else
+        esp_elf_copy_executable((void *)elf->sec[ELF_SEC_GOT_LOC].addr,
+                                pbuf + got_loc->offset, got_loc->size);
+#endif
+    }
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
     if (esp_elf_arch_init_mmu(elf)) {
@@ -385,7 +463,7 @@ static int esp_elf_load_section(esp_elf_t *elf, const uint8_t *pbuf)
 
             pdata += padding;
             remaining -= padding;
-            elf->sec[sec].addr = (uint32_t)pdata;
+            elf->sec[sec].addr = (uintptr_t)pdata;
             if (sec != ELF_SEC_BSS) {
                 memcpy(pdata, pbuf + elf->sec[sec].offset, sec_size);
             }
@@ -589,7 +667,7 @@ static void *esp_elf_exported_function_address(esp_elf_t *elf, uint32_t sym_vadd
 
 /* Locate allocated constructor/destructor arrays after all relocations. */
 static int esp_elf_find_lifecycle_arrays(esp_elf_t *elf, const elf32_shdr_t *shdr,
-                                          uint32_t count, const char *names)
+                                         uint32_t count, const char *names)
 {
     for (uint32_t i = 0; i < count; ++i) {
         bool reverse;
@@ -899,6 +977,14 @@ void esp_elf_deinit(esp_elf_t *elf)
         esp_elf_run_lifecycle_array(elf->fini_array, elf->fini_count, elf->fini_reverse);
     }
 
+#ifdef CONFIG_ELF_LOADER_SET_MMU
+    /* Unmap executable PSRAM before returning its pages to the allocator.
+     * Otherwise the I-bus temporarily aliases memory owned by another user. */
+    if (elf->mmu_num) {
+        esp_elf_arch_deinit_mmu(elf);
+    }
+#endif
+
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (elf->pdata) {
         esp_elf_free(elf->pdata);
@@ -914,10 +1000,6 @@ void esp_elf_deinit(esp_elf_t *elf)
         esp_elf_free(elf->psegment);
         elf->psegment = NULL;
     }
-#endif
-
-#ifdef CONFIG_ELF_LOADER_SET_MMU
-    esp_elf_arch_deinit_mmu(elf);
 #endif
 
 #if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
@@ -1062,7 +1144,7 @@ void esp_elf_print_shdr(const uint8_t *pbuf)
 void esp_elf_print_sec(esp_elf_t *elf)
 {
     const char *sec_names[ELF_SECS] = {
-        "text", "bss", "data", "rodata", "data.rel.ro",
+        "text", "bss", "data", "rodata", "data.rel.ro", "got.loc",
         "preinit_array", "init_array", "fini_array"
     };
 

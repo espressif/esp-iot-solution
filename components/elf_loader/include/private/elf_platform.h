@@ -17,6 +17,18 @@ extern "C" {
 #define ELF_ALIGN(_a, align_size) (((_a) + (align_size - 1)) & \
                                    ~(align_size - 1))
 
+/* An MMU mapping begins at the containing page, not at the allocation's
+ * original address. The leading page offset counts toward mapped bytes. */
+static inline uint32_t esp_elf_mmu_page_span(uintptr_t base, size_t bytes, uint32_t page_size)
+{
+    if (!bytes || !page_size || (page_size & (page_size - 1))) {
+        return 0;
+    }
+    uint64_t span = (uint64_t)(base & (page_size - 1)) + bytes;
+    uint64_t pages = (span + page_size - 1) / page_size;
+    return pages <= UINT32_MAX ? (uint32_t)pages : 0;
+}
+
 /**
  * @brief Allocate block of memory.
  *

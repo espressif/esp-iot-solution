@@ -23,14 +23,17 @@ symbol table allocation fails.
 The PSRAM export case additionally checks that dlsym() function addresses use
 the executable alias rather than the data-bus alias.
 
-C++ lifecycle regressions validate initialization/finalization callback ordering,
-legacy `.ctors`/`.dtors`, one-time initialization, and rejection of malformed
-callback arrays (#796) with Xtensa and RISC-V host configurations. The Python
-runner also selects the GNU or macOS dead-section linker flag.
-
-The module-local symbol regression (#789) directly executes the relocation
-loop with and without dynamic shared-object loading. It tests weak definitions,
-host symbols, unresolved references and out-of-image symbol addresses.
+Issue regressions additionally verify module-defined weak-symbol relocation
+with `CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT` both on and off (#789); Xtensa
+`.got.loc` allocation and PLT literal relocation without remapping intervening
+`.rodata` (#686), including an optional test which cross-builds a real
+four-import Xtensa shared library, validates it and runs the actual ELF loader
+and relocation loop without executing target code; and C++ callback ordering,
+legacy `.ctors`/`.dtors`, one-time initialization, and validation of malformed
+callback arrays (#796). These checks run with the Xtensa and RISC-V host
+configurations. The host Python runner selects the appropriate GNU or macOS
+linker option for dead-section removal. ESP32-S2 MMU span arithmetic is also
+tested for unaligned allocation bases and multi-page executable pools.
 
 For ESP-IDF cross-compilation, build the freestanding ELF fixture in
 `components/elf_loader/tests/idf_cpp_lifecycle` with `idf.py set-target
@@ -59,7 +62,7 @@ For an optional sanitizer-backed mutation smoke test, compile the standalone
 macros used by the Python suite. It tests 4096 reproducible byte mutations
 per supplied ELF fixture, without executing embedded code.
 
-CI runs the 33-case Host suite in `check_elf_loader_host` and a separate
+CI runs the 34-case Host suite in `check_elf_loader_host` and a separate
 `check_elf_loader_ubsan` job that mutates both checked-in Xtensa and RISC-V
 ELF images 4096 times with UBSan instrumentation and abort-on-error enabled.
 
@@ -71,4 +74,9 @@ C++ destructor execution at unload. No hardware-dependent result is inferred
 from either the Host suite or a successful firmware build.
 
 The multi-import Xtensa relocation remains covered by the real-toolchain Host
-test; ESP32-S2 PSRAM/MMU board validation needs a suitable configured board.
+test. The simulated ESP32-S2 MMU-register test compiles the real S2 allocator
+and verifies that fragmented I-bus pages return -EIO with unchanged mapping
+state, that the final legal two-page window maps and unmaps safely, that an
+unaligned allocation requires the extra page, and that invalid page spans do
+not disable caches. ESP32-S2 PSRAM/MMU hardware validation still requires an
+S2 board and is not claimed by these Host tests.

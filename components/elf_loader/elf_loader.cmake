@@ -40,7 +40,6 @@ macro(project_elf project_name)
     string(REPLACE "-elf-gcc" "-elf-strip" CMAKE_STRIP ${CMAKE_C_COMPILER})
     set(strip_flags --strip-unneeded
                     --remove-section=.comment
-                    --remove-section=.got.loc
                     --remove-section=.dynamic)
 
     if(CONFIG_IDF_TARGET_ARCH_XTENSA)
@@ -129,7 +128,6 @@ macro(project_so project_name)
         string(REPLACE "-elf-gcc" "-elf-strip" CMAKE_STRIP_SO ${CMAKE_C_COMPILER})
         set(so_strip_flags --strip-unneeded
                            --remove-section=.comment
-                           --remove-section=.got.loc
                            --remove-section=.dynamic)
 
         if(CONFIG_IDF_TARGET_ARCH_XTENSA)

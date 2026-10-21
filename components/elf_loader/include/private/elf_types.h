@@ -124,6 +124,7 @@ extern "C" {
 #define ELF_TEXT        ".text"         /*!< code */
 #define ELF_DATA_REL_RO ".data.rel.ro"  /*!< dynamic read-only data */
 #define ELF_PLT         ".plt"          /*!< procedure linkage table. */
+#define ELF_GOT_LOC     ".got.loc"     /*!< Xtensa PLT literal pool */
 #define ELF_GOT_PLT     ".got.plt"      /*!< a table where resolved addresses from external functions are stored */
 
 /** @brief ELF section and symbol operation */
@@ -133,10 +134,11 @@ extern "C" {
 #define ELF_SEC_DATA            2
 #define ELF_SEC_RODATA          3
 #define ELF_SEC_DRLRO           4
-#define ELF_SEC_PREINIT         5
-#define ELF_SEC_INIT            6
-#define ELF_SEC_FINI            7
-#define ELF_SECS                8
+#define ELF_SEC_GOT_LOC         5
+#define ELF_SEC_PREINIT         6
+#define ELF_SEC_INIT            7
+#define ELF_SEC_FINI            8
+#define ELF_SECS                9
 
 #define ELF_ST_BIND(_i)         ((_i) >> 4)
 #define ELF_ST_TYPE(_i)         ((_i) & 0xf)
@@ -250,6 +252,7 @@ typedef struct esp_symtab {
 typedef struct esp_elf {
 #ifdef CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     unsigned char   *ptext;             /*!< instruction buffer pointer */
+    size_t           text_alloc_size;   /*!< executable allocation including PLT literals */
     unsigned char   *pdata;             /*!< data buffer pointer */
 #else
     unsigned char   *psegment;          /*!< segment buffer pointer */

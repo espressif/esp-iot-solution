@@ -224,6 +224,22 @@ This lifecycle support applies to ELF applications invoked with
 `esp_elf_request()`. A `.so` loaded only by `dlopen()` has no entry invocation;
 its static constructors are not run automatically by `dlopen()`.
 
+### Xtensa PLT literal pools
+
+For shared objects containing several PLT imports, `.got.loc` holds literals
+used by PC-relative `l32r` instructions. The build rules retain this section.
+On Xtensa the loader places it in executable memory at the same virtual offset
+from `.text` as in the ELF file, while mapping intervening `.rodata` separately
+to data memory. This may use more executable memory when the two sections are
+far apart. Modules with malformed or overlapping PLT literal ranges are
+rejected. Host regressions cover three literal entries and relocation, and
+can cross-compile a real multi-PLT shared object when the ESP32 Xtensa toolchain
+is installed. ESP32-S2 MMU mappings include the full executable literal span.
+
+Module-local weak/defined symbols are resolved from the loaded image when the
+host has no matching exported symbol. This fallback is available with
+`CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT` both enabled and disabled.
+
 ### Adding the Component to Your Project
 
 Please use the component manager command add-dependency to add the elf_loader component as a dependency in your project. During the CMake step, the component will be downloaded automatically.

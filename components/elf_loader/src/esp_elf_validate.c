@@ -78,6 +78,7 @@ static bool elf_loaded_section(const uint8_t *pbuf, const elf32_shdr_t *shdr,
         return ((shdr->flags & SHF_EXECINSTR) && strcmp(name, ELF_TEXT) == 0) ||
                ((shdr->flags & SHF_WRITE) && strcmp(name, ELF_DATA) == 0) ||
                strcmp(name, ELF_RODATA) == 0 ||
+               strcmp(name, ELF_GOT_LOC) == 0 ||
                strcmp(name, ELF_DATA_REL_RO) == 0;
     }
 
@@ -274,10 +275,11 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
 #endif
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     uint32_t seen_loaded_sections = 0;
+    uint32_t text_vaddr = 0, text_size = 0, got_loc_vaddr = 0, got_loc_size = 0;
     elf_loaded_range_t loaded_ranges[ELF_SECS];
     size_t loaded_count = 0;
     static const char *const loaded_names[] = {
-        ELF_TEXT, ELF_BSS, ELF_DATA, ELF_RODATA, ELF_DATA_REL_RO
+        ELF_TEXT, ELF_BSS, ELF_DATA, ELF_RODATA, ELF_DATA_REL_RO, ELF_GOT_LOC
     };
 #endif
     for (size_t i = 0; i < ehdr.shnum; ++i) {
@@ -331,6 +333,14 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
             return -EINVAL;  /* callback arrays cannot be non-allocated */
         }
 
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+        if (strcmp(name, ELF_GOT_LOC) == 0 &&
+                (sec.type != SHT_PROGBITS || !(sec.flags & SHF_ALLOC) ||
+                 (sec.flags & SHF_EXECINSTR))) {
+            return -EINVAL;
+        }
+#endif
+
 #ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
         /* The dynamic loader looks up this section by name: require its type. */
         if (strcmp((const char *)pbuf + shstr.offset + sec.name, ELF_DYNSYM) == 0) {
@@ -344,6 +354,13 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
         if (elf_loaded_section(pbuf, &sec, &shstr)) {
             const char *name = (const char *)pbuf + shstr.offset + sec.name;
+            if (strcmp(name, ELF_TEXT) == 0) {
+                text_vaddr = sec.addr;
+                text_size = sec.size;
+            } else if (strcmp(name, ELF_GOT_LOC) == 0) {
+                got_loc_vaddr = sec.addr;
+                got_loc_size = sec.size;
+            }
             int slot = lifecycle_kind;
             if (slot < 0) {
                 for (size_t j = 0; j < sizeof(loaded_names) / sizeof(loaded_names[0]); ++j) {
@@ -405,6 +422,13 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    /* Xtensa PLT literals must retain their word-aligned PC-relative offset
+     * after .text. Never allocate a wraparound or overlapping executable span. */
+    if (got_loc_size && (!text_size ||
+                         (uint64_t)got_loc_vaddr < (uint64_t)text_vaddr + text_size ||
+                         ((got_loc_vaddr - text_vaddr) & (ELF_WORD_SIZE - 1)))) {
+        return -EINVAL;
+    }
     /* All section-mode relocations and lifecycle callbacks use one address
      * mapper: overlapping alloc sections would make the mapping ambiguous. */
     for (size_t i = 0; i < loaded_count; ++i) {

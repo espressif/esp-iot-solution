@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
+  partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
+  without PSRAM (#686).
+* Detach ESP32-S2 executable MMU mappings before releasing PSRAM (#686).
+* Preserve and map Xtensa `.got.loc` PLT literal pools in executable memory at
+  PC-relative offsets; extend relevant PSRAM cache and S2 MMU mappings (#686).
 * Correct local and unnamed section relocations and handle unresolved weak
   symbols without letting host exports preempt module-local definitions (#789).
 * Resolve module-defined symbols even with `ELF_DYNAMIC_LOAD_SHARED_OBJECT=n` (#789).
