@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 targets:
   - esp32
   - esp32s3
@@ -8,6 +8,7 @@ targets:
   - esp32c6
   - esp32c61
   - esp32h2
+  - esp32p4
 description: Controller-side network provisioning client for Wi-Fi and Thread (SoftAP/HTTP, BLE, Console)
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/network_provisioner
 repository: https://github.com/espressif/esp-iot-solution.git

@@ -30,7 +30,7 @@
 - 传输：HTTP / HTTPS、BLE（NimBLE Central）、UART Console
 - 可通过 Kconfig 裁剪未使用的安全版本
 
-**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61
+**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-P4
 
 典型流程
 --------
