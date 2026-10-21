@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Add named C/C++ host exports and explicitly typed C++ overload exports so
+  ELF mangled names can be registered without C-wrapper functions (#560).
 * Export the public libc `vprintf` entry by default so ELF applications using
   ESP-IDF logging can resolve their standard formatting dependency (#497).
 * Copy Xtensa internal executable IRAM with aligned 32-bit stores (including

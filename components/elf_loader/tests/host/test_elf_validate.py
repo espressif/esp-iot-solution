@@ -146,6 +146,58 @@ class ElfValidationTests(unittest.TestCase):
             ctypes.cast(buf, ctypes.c_void_p), len(data)
         )
 
+    def test_cpp_elf_mangled_name_and_overload_exports(self):
+        executable = Path(self.build.name) / 'test_cpp_exports'
+        subprocess.run([
+            os.environ.get('CXX', 'c++'), '-std=c++17', '-Wall', '-Wextra', '-Werror',
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_cpp_exports.cpp'),
+            '-o', str(executable),
+        ], check=True)
+        subprocess.run([str(executable)], check=True)
+
+    def test_cross_compiled_cpp_export_names_match_elf_symbols(self):
+        import shutil
+        symbols = (
+            '_ZN11loader_test5plainEi',
+            '_ZN11loader_test10overloadedEi',
+            '_ZN11loader_test10overloadedEd',
+            '_ZN11loader_test6Widget3runEi',
+        )
+        tested = 0
+        for toolchain in ('riscv32-esp-elf', 'xtensa-esp32s3-elf'):
+            compiler = shutil.which(f'{toolchain}-g++')
+            nm = shutil.which(f'{toolchain}-nm')
+            if not compiler or not nm:
+                continue
+            tested += 1
+            output = Path(self.build.name) / f'{toolchain}-cpp-exports.o'
+            subprocess.run([
+                compiler, '-std=c++17', '-Wall', '-Wextra', '-Werror', '-c',
+                '-I', str(COMPONENT / 'include'),
+                str(COMPONENT / 'tests/host/test_cpp_exports.cpp'),
+                '-o', str(output),
+            ], check=True)
+            defined = subprocess.run([nm, '--defined-only', str(output)],
+                                     check=True, capture_output=True, text=True).stdout
+            data = output.read_bytes()
+            for name in symbols:
+                with self.subTest(target=toolchain, symbol=name):
+                    self.assertIn(name, defined)
+                    self.assertIn(name.encode() + b'\0', data)
+        if not tested:
+            self.skipTest('Xtensa/RISC-V cross compiler unavailable')
+
+    def test_named_c_export_compatibility(self):
+        executable = Path(self.build.name) / 'test_named_c_export'
+        subprocess.run([
+            os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_named_c_export.c'),
+            '-o', str(executable),
+        ], check=True)
+        subprocess.run([str(executable)], check=True)
+
     def test_vprintf_export_matches_available_libc_function(self):
         """Exercise the default export-table entry with the host C runtime."""
         import re

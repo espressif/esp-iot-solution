@@ -240,6 +240,44 @@ Module-local weak/defined symbols are resolved from the loaded image when the
 host has no matching exported symbol. This fallback is available with
 `CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT` both enabled and disabled.
 
+### Exporting C++ functions to ELF modules
+
+`ESP_ELFSYM_EXPORT(name)` stringifies its argument; a C++ qualified function
+name is **not** the mangled name emitted into an ELF module. Use
+`ESP_ELFSYM_EXPORT_NAMED("linker_name", qualified_function)` to register the
+actual symbol name. Obtain the exact name from the target-toolchain `nm`
+(`riscv32-esp-elf-nm` or `xtensa-esp32s3-elf-nm`) rather than guessing. The
+same macro can also give C exports custom names.
+
+For overloaded functions, use the C++-only macro
+`ESP_ELFSYM_EXPORT_CPP_OVERLOAD("linker_name", signature, qualified_function)`;
+`signature` must be a function-pointer typedef or `using` alias, so the
+compiler can select one overload unambiguously:
+
+```cpp
+namespace demo {
+int compute(int);
+int compute(double);
+}
+using ComputeInt = int (*)(int);
+using ComputeDouble = int (*)(double);
+
+const struct esp_elfsym application_symbols[] = {
+    ESP_ELFSYM_EXPORT_CPP_OVERLOAD("_ZN4demo7computeEi", ComputeInt, demo::compute),
+    ESP_ELFSYM_EXPORT_CPP_OVERLOAD("_ZN4demo7computeEd", ComputeDouble, demo::compute),
+    ESP_ELFSYM_END,
+};
+```
+
+Pass this null-terminated table to `esp_elf_register_symbol()` after the host
+has linked the actual C++ functions into its firmware. Names and calling
+conventions depend on the target compiler ABI; build host and module with a
+compatible Xtensa/RISC-V toolchain and ABI. Public/static class methods with
+normal function pointers are eligible, but **non-static C++ member functions,
+C++ object layouts, RTTI, exceptions and cross-module ownership are not
+implicitly made ABI-safe** by these export macros. Prefer an explicit stable C
+ABI for interfaces that must work across toolchain versions.
+
 ### Resolving logging and other host symbols
 
 ELF modules using `ESP_LOGx()` may need the libc formatting function `vprintf`.
