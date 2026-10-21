@@ -738,20 +738,25 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size)
                 if (type == STT_COMMON || type == STT_OBJECT || type == STT_SECTION) {
                     const char *comm_name = strtab + sym->name;
 
-                    if (comm_name[0]) {
+                    /* A local definition, including an unnamed STT_SECTION,
+                     * must never be preempted by a same-name host export.
+                     * Named global/weak definitions retain host preemption. */
+                    if (sym->shndx != SHN_UNDEF &&
+                            (ELF_ST_BIND(sym->info) == STB_LOCAL || !comm_name[0])) {
+                        addr = esp_elf_map_sym(elf, sym->value);
+                    } else if (comm_name[0]) {
                         addr = elf_find_sym(comm_name);
-#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
                         if (!addr && sym->shndx != SHN_UNDEF) {
                             addr = esp_elf_map_sym(elf, sym->value);
                         }
-#endif
-                        if (!addr) {
-                            ESP_LOGE(TAG, "Can't find common %s", strtab + sym->name);
-                            return -ENOSYS;
-                        }
-
-                        ESP_LOGD(TAG, "Find common %s addr=%x", comm_name, addr);
                     }
+
+                    if (!addr && (comm_name[0] || sym->shndx != SHN_UNDEF) &&
+                            !(sym->shndx == SHN_UNDEF && ELF_ST_BIND(sym->info) == STB_WEAK)) {
+                        ESP_LOGE(TAG, "Can't find common %s", comm_name);
+                        return -ENOSYS;
+                    }
+                    ESP_LOGD(TAG, "Find common %s addr=%x", comm_name, addr);
                 } else if (type == STT_FILE) {
                     const char *func_name = strtab + sym->name;
 
@@ -761,12 +766,11 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size)
                         addr = elf_find_sym(func_name);
                     }
 
-#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
                     if (!addr && sym->shndx != SHN_UNDEF) {
                         addr = esp_elf_map_sym(elf, sym->value);
                     }
-#endif
-                    if (!addr) {
+                    if (!addr && !(sym->shndx == SHN_UNDEF &&
+                                   ELF_ST_BIND(sym->info) == STB_WEAK)) {
                         ESP_LOGE(TAG, "Can't find symbol %s", func_name);
                         return -ENOSYS;
                     }

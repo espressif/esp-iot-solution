@@ -655,6 +655,26 @@ class ElfValidationTests(unittest.TestCase):
                     ], check=True)
                     subprocess.run([str(output)], check=True)
 
+    def test_module_local_symbol_resolution_independent_of_dlopen(self):
+        for shared_loading in (False, True):
+            with self.subTest(shared_loading=shared_loading):
+                output = Path(self.build.name) / f'test_local_symbol_{shared_loading}'
+                flags = ['-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1'] if shared_loading else []
+                subprocess.run([
+                    os.environ.get('CC', 'cc'),
+                    '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+                    '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+                    '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+                    '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+                    '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+                    '-DCONFIG_IDF_TARGET_ARCH_RISCV=1', *flags,
+                    '-I', str(COMPONENT / 'tests/host/include'),
+                    '-I', str(COMPONENT / 'include'),
+                    str(COMPONENT / 'tests/host/test_local_symbol.c'),
+                    '-o', str(output),
+                ], check=True)
+                subprocess.run([str(output)], check=True)
+
     def test_segment_first_load_nonzero_base(self):
         for shared_loading in (False, True):
             with self.subTest(shared_loading=shared_loading):

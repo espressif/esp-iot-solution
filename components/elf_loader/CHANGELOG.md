@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* Correct local and unnamed section relocations and handle unresolved weak
+  symbols without letting host exports preempt module-local definitions (#789).
+* Resolve module-defined symbols even with `ELF_DYNAMIC_LOAD_SHARED_OBJECT=n` (#789).
 * Validate C++ callback-array types and entry sizes, and verify that each
   constructor/destructor slot has a distinct relocation (#796).
 * Execute C++ `.preinit_array` / `.init_array` or legacy `.ctors` on the first

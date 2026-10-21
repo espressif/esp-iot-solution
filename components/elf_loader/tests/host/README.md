@@ -28,6 +28,10 @@ legacy `.ctors`/`.dtors`, one-time initialization, and rejection of malformed
 callback arrays (#796) with Xtensa and RISC-V host configurations. The Python
 runner also selects the GNU or macOS dead-section linker flag.
 
+The module-local symbol regression (#789) directly executes the relocation
+loop with and without dynamic shared-object loading. It tests weak definitions,
+host symbols, unresolved references and out-of-image symbol addresses.
+
 For ESP-IDF cross-compilation, build the freestanding ELF fixture in
 `components/elf_loader/tests/idf_cpp_lifecycle` with `idf.py set-target
 <target> build`; then inspect the resulting `elf_cpp_lifecycle.app.elf` for
