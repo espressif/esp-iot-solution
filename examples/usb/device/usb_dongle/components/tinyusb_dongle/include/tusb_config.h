@@ -127,6 +127,9 @@ extern "C" {
 // Number of BTH ISO alternatives
 #define CFG_TUD_BTH_ISO_ALT_COUNT   CONFIG_TINYUSB_BTH_ISO_ALT_COUNT
 
+// Match the ACL receive buffer to the FS/HS bulk endpoint packet size.
+#define CFG_TUD_BTH_DATA_EPSIZE     (TUD_OPT_HIGH_SPEED ? 512 : 64)
+
 // Enabled device class driver
 #define CFG_TUD_CDC                 CONFIG_TINYUSB_CDC_COUNT
 #define CFG_TUD_CUSTOM_CLASS        CONFIG_TINYUSB_CUSTOM_CLASS_ENABLED

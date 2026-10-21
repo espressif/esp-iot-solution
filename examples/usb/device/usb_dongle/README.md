@@ -117,6 +117,7 @@ ESP32-S2/S3 受 USB 端点资源限制，最多支持如下组合：
   * `BTH ISO ALT COUNT` 设置成 1 或者 2，默认为 1。
   * ESP32-S3 可使用 `sdkconfig.ci.bth`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" set-target esp32s3`）。
   * ESP32-S31 可使用 `sdkconfig.ci.bth`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" --preview set-target esp32s31`）。
+  * ESP32-S31 连接 Windows 主机（BR/EDR + BLE 双模）时，可使用 `sdkconfig.ci.esp32s31.bth_windows`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.esp32s31.bth_windows" --preview set-target esp32s31`），测试使用的 ESP-IDF 版本为 release/v6.1（commit `9a97f6c54ec`）。
 
 ### 2.5 固件编译&烧录
 

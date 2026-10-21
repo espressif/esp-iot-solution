@@ -202,9 +202,11 @@ menu "TinyUSB Stack"
         config TINYUSB_BTH_ISO_ALT_COUNT
             depends on TINYUSB_BTH_ENABLED
             int "BTH ISO ALT COUNT"
-            default 0
+            range 1 2
+            default 1
             help
-                BTH ISO ALT COUNT.
+                Number of ISO alternate settings. Alternate setting 0 reserves no bandwidth,
+                alternate setting 1 uses the minimum SCO packet size.
     endmenu # "Bluetooth Host Device Class"
 
     menu "Network driver (ECM/NCM/RNDIS)"
