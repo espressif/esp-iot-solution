@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0] - 2026-10-20
+
+### Added
+- `network_provisioner_create_ble()` owns the NimBLE central transport
+- `network_provisioner_set_security()` for Sec0 / Sec1 PoP / Sec2 username and password
+- `network_provisioner_ble_scan()` / `ble_connect_cfg()` / `ble_has_char()` for controller-side BLE discovery
+- `network_provisioner_add_endpoint()`, `network_provisioner_send()`, and `network_provisioner_get_version()` so an application endpoint does not call protocomm_ext directly
+- BLE scan and characteristic lookup reject a non-BLE transport
+- Name filters use the full advertised name; the stored name stays NUL-terminated
+
+### Changed
+- Require `protocomm_ext` ^1.0.1, which provides `protocomm_ext_get_transport_method()`
+
 ## [1.0.1] - 2026-10-16
 
 ### Added

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/version.cmake)
 
-set(SUPPORTED_TARGETS esp32 esp32s3 esp32c2 esp32c3 esp32c5 esp32c6 esp32c61)
+set(SUPPORTED_TARGETS esp32 esp32s3 esp32c2 esp32c3 esp32c5 esp32c6 esp32c61 esp32p4)
 
 # IDF 6.0 moved unit-test helpers from tools/unit-test-app to tools/test_apps.
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "6.0")

@@ -6,6 +6,7 @@ endif()
 
 set(srcs
     "src/network_provisioner.c"
+    "src/network_provisioner_ble.c"
     "src/network_config_client.c"
     "src/network_scan_client.c"
     "src/network_ctrl_client.c"
@@ -19,3 +20,7 @@ idf_component_register(SRCS "${srcs}"
                     PRIV_INCLUDE_DIRS "private_include"
                     REQUIRES protocomm_ext
                     PRIV_REQUIRES protobuf-c)
+
+if(CONFIG_BT_NIMBLE_ENABLED)
+    idf_component_optional_requires(PRIVATE bt)
+endif()

@@ -54,8 +54,148 @@ void network_provisioner_delete(network_provisioner_t *np)
     if (!np) {
         return;
     }
+    protocomm_ext_t *owned = np->owns_pc ? np->pc : NULL;
     free(np->version_json);
     free(np);
+    if (owned) {
+        protocomm_ext_delete(owned);
+        /* Host task must leave before the next NimBLE init. */
+        vTaskDelay(pdMS_TO_TICKS(300));
+    }
+}
+
+network_provisioner_t *network_provisioner_create_ble(void)
+{
+    protocomm_ext_config_data_t cfg = {
+        .transport_method = PROTOCOMM_EXT_TRANSPORT_METHOD_BLE,
+        .transport_data = NULL,
+        .security_data = NULL,
+    };
+    /* Placeholder only. set_security() replaces it after proto-ver is known.
+     * Sec0 can be compiled out; Sec1 accepts NULL params. Sec2-only builds
+     * need some params so protocomm_ext_new() can finish. */
+#if CONFIG_ESP_PROTOCOMM_EXT_SUPPORT_SECURITY_VERSION_0
+    cfg.security_method = PROTOCOMM_EXT_SECURITY_METHOD_NONE;
+#elif CONFIG_ESP_PROTOCOMM_EXT_SUPPORT_SECURITY_VERSION_1
+    cfg.security_method = PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_1;
+#elif CONFIG_ESP_PROTOCOMM_EXT_SUPPORT_SECURITY_VERSION_2
+    static const protocomm_ext_security2_params_t sec2_placeholder = {
+        .username = "placeholder",
+        .username_len = sizeof("placeholder") - 1,
+        .password = "placeholder",
+        .password_len = sizeof("placeholder") - 1,
+    };
+    cfg.security_method = PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_2;
+    cfg.security_data = &sec2_placeholder;
+#else
+    ESP_LOGE(TAG, "No protocomm security version is enabled");
+    return NULL;
+#endif
+    protocomm_ext_t *pc = protocomm_ext_new(&cfg);
+    if (!pc) {
+        /* new() may have started NimBLE before failing. Let the host task exit. */
+        vTaskDelay(pdMS_TO_TICKS(300));
+        return NULL;
+    }
+    network_provisioner_t *np = network_provisioner_create(pc);
+    if (!np) {
+        protocomm_ext_delete(pc);
+        vTaskDelay(pdMS_TO_TICKS(300));
+        return NULL;
+    }
+    np->owns_pc = true;
+    return np;
+}
+
+static esp_err_t cred_len(const char *src, size_t *out_len)
+{
+    size_t n = src ? strlen(src) : 0;
+    if (n > 64) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    *out_len = n;
+    return ESP_OK;
+}
+
+esp_err_t network_provisioner_set_security(network_provisioner_t *np,
+                                           const network_provisioner_security_t *sec)
+{
+    if (!np || !np->pc || !sec) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (sec->sec_ver < 0 || sec->sec_ver > 2) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    if (sec->sec_ver == 0) {
+        return protocomm_ext_set_security(np->pc, PROTOCOMM_EXT_SECURITY_METHOD_NONE, NULL);
+    }
+
+    if (sec->sec_ver == 1) {
+        if (sec->no_pop || !sec->pop || !sec->pop[0]) {
+            return protocomm_ext_set_security(np->pc, PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_1, NULL);
+        }
+        size_t pop_len = 0;
+        esp_err_t err = cred_len(sec->pop, &pop_len);
+        if (err != ESP_OK) {
+            return err;
+        }
+        protocomm_ext_security1_params_t sec1 = {
+            .data = (const uint8_t *)sec->pop,
+            .len = (uint16_t)pop_len,
+        };
+        return protocomm_ext_set_security(np->pc, PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_1, &sec1);
+    }
+
+    if (!sec->username || !sec->username[0] || !sec->pop) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    size_t user_len = 0;
+    size_t pass_len = 0;
+    esp_err_t err = cred_len(sec->username, &user_len);
+    if (err != ESP_OK) {
+        return err;
+    }
+    err = cred_len(sec->pop, &pass_len);
+    if (err != ESP_OK) {
+        return err;
+    }
+    protocomm_ext_security2_params_t sec2 = {
+        .username = sec->username,
+        .username_len = (uint16_t)user_len,
+        .password = sec->pop,
+        .password_len = (uint16_t)pass_len,
+    };
+    return protocomm_ext_set_security(np->pc, PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_2, &sec2);
+}
+
+esp_err_t network_provisioner_add_endpoint(network_provisioner_t *np,
+                                           const char *name, uint16_t uuid)
+{
+    if (!np || !np->pc || !name || !name[0]) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return protocomm_ext_set_config_endpoint(np->pc, name, uuid);
+}
+
+esp_err_t network_provisioner_send(network_provisioner_t *np, const char *ep_name,
+                                   const uint8_t *req, size_t req_len,
+                                   uint8_t **resp, size_t *resp_len)
+{
+    return network_provisioner_send_ep(np, ep_name, req, req_len, resp, resp_len);
+}
+
+esp_err_t network_provisioner_get_version(network_provisioner_t *np,
+                                          const char **version_json)
+{
+    if (!np || !version_json) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!np->version_json) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    *version_json = np->version_json;
+    return ESP_OK;
 }
 
 protocomm_ext_t *network_provisioner_get_protocomm(network_provisioner_t *np)

@@ -359,11 +359,11 @@ components/esp_gmp/test:
 
 components/protocomm_ext/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61"] and IDF_VERSION >= "5.3"
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32p4"] and IDF_VERSION >= "5.3"
 
 components/network_provisioner/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61"] and IDF_VERSION >= "5.3"
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32p4"] and IDF_VERSION >= "5.3"
 
 examples/display/gui/gsp_showcase:
   enable:
@@ -371,4 +371,4 @@ examples/display/gui/gsp_showcase:
 
 components/esp_local_controller/test_apps:
   enable:
-    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61"] and IDF_VERSION >= "5.3"
+    - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61","esp32p4"] and IDF_VERSION >= "5.3"

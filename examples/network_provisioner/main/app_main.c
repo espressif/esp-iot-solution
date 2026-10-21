@@ -25,13 +25,7 @@
 #include "sdkconfig.h"
 
 #include "protocomm_ext.h"
-#include "protocomm_ext_security.h"
 #include "network_provisioner.h"
-
-#if CONFIG_EXAMPLE_SUPPORT_BLE_WIFI || CONFIG_EXAMPLE_SUPPORT_BLE_THREAD
-#include "protocomm_ext_nimble.h"
-#include "host/ble_gap.h"
-#endif
 
 static const char *TAG = "np_example";
 
@@ -136,18 +130,19 @@ static esp_err_t softap_disconnect(void);
 static esp_err_t softap_reconnect(void);
 #endif
 
-/* Buffers must outlive protocomm_ext_set_security() (params are copied internally). */
-static char s_sec1_pop[64];
-static char s_sec2_user[64];
-static char s_sec2_pass[64];
-static protocomm_ext_security1_params_t s_sec1_params;
-static protocomm_ext_security2_params_t s_sec2_params;
+static void wipe_secret(void *buf, size_t len)
+{
+    volatile uint8_t *p = buf;
+    while (len--) {
+        *p++ = 0;
+    }
+}
 
 /**
- * Configure protocomm security from peer proto-ver capabilities.
+ * Configure security from peer proto-ver capabilities.
  * SoftAP + Sec2: drop SoftAP, finish SRP keygen offline, then rejoin.
  */
-static esp_err_t configure_security_from_caps(protocomm_ext_t *pc,
+static esp_err_t configure_security_from_caps(network_provisioner_t *np,
                                               const network_provisioner_capabilities_t *caps,
                                               bool softap_transport)
 {
@@ -163,74 +158,79 @@ static esp_err_t configure_security_from_caps(protocomm_ext_t *pc,
     }
     printf("\n");
 
+    char sec1_pop[64] = {0};
+    char sec2_user[64] = {0};
+    char sec2_pass[64] = {0};
+    network_provisioner_security_t sec = {
+        .sec_ver = sec_ver,
+        .no_pop = caps->no_pop,
+    };
     esp_err_t err = ESP_OK;
-    const void *sec_data = NULL;
-    protocomm_ext_security_method_t method = PROTOCOMM_EXT_SECURITY_METHOD_NONE;
 
     if (sec_ver == 0) {
-        method = PROTOCOMM_EXT_SECURITY_METHOD_NONE;
         printf("Sec0: no credentials required.\n");
     } else if (sec_ver == 1) {
-        method = PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_1;
         if (caps->no_pop) {
             printf("Sec1: PoP not required (no_pop).\n");
-            sec_data = NULL;
         } else {
-            ESP_RETURN_ON_ERROR(read_console_secret("Enter Proof of Possession (Enter=default): ",
-                                                    s_sec1_pop, sizeof(s_sec1_pop),
-                                                    CONFIG_EXAMPLE_PROV_POP, false),
-                                TAG, "read pop");
-            s_sec1_params.data = (const uint8_t *)s_sec1_pop;
-            s_sec1_params.len = strlen(s_sec1_pop);
-            sec_data = &s_sec1_params;
+            err = read_console_secret("Enter Proof of Possession (Enter=default): ",
+                                      sec1_pop, sizeof(sec1_pop),
+                                      CONFIG_EXAMPLE_PROV_POP, false);
+            if (err != ESP_OK) {
+                wipe_secret(sec1_pop, sizeof(sec1_pop));
+                return err;
+            }
+            sec.pop = sec1_pop;
         }
     } else {
-        method = PROTOCOMM_EXT_SECURITY_METHOD_SECURITY_2;
-        ESP_RETURN_ON_ERROR(read_console_line_default(
-                                "Enter Sec2 username (Enter=default): ",
-                                s_sec2_user, sizeof(s_sec2_user),
-                                CONFIG_EXAMPLE_PROV_SEC2_USERNAME, false, true),
-                            TAG, "read username");
-        ESP_RETURN_ON_ERROR(read_console_secret("Enter Sec2 password (Enter=default): ",
-                                                s_sec2_pass, sizeof(s_sec2_pass),
-                                                CONFIG_EXAMPLE_PROV_SEC2_PASSWORD, false),
-                            TAG, "read password");
-        s_sec2_params.username = s_sec2_user;
-        s_sec2_params.username_len = strlen(s_sec2_user);
-        s_sec2_params.password = s_sec2_pass;
-        s_sec2_params.password_len = strlen(s_sec2_pass);
-        sec_data = &s_sec2_params;
+        err = read_console_line_default(
+                  "Enter Sec2 username (Enter=default): ",
+                  sec2_user, sizeof(sec2_user),
+                  CONFIG_EXAMPLE_PROV_SEC2_USERNAME, false, true);
+        if (err == ESP_OK) {
+            err = read_console_secret("Enter Sec2 password (Enter=default): ",
+                                      sec2_pass, sizeof(sec2_pass),
+                                      CONFIG_EXAMPLE_PROV_SEC2_PASSWORD, false);
+        }
+        if (err != ESP_OK) {
+            wipe_secret(sec2_user, sizeof(sec2_user));
+            wipe_secret(sec2_pass, sizeof(sec2_pass));
+            return err;
+        }
+        sec.username = sec2_user;
+        sec.pop = sec2_pass;
     }
 
 #if CONFIG_EXAMPLE_SUPPORT_SOFTAP_WIFI
     /* Sec2 SRP keygen is slow: do it offline so SoftAP idle-kick / HTTP 408 is avoided. */
-    if (softap_transport && sec_ver == 2) {
+    if (err == ESP_OK && softap_transport && sec_ver == 2) {
+        protocomm_ext_t *pc = network_provisioner_get_protocomm(np);
         ESP_LOGI(TAG, "SoftAP+Sec2: disconnect SoftAP, security_init offline, then rejoin");
         protocomm_ext_close_session(pc);
-        ESP_RETURN_ON_ERROR(softap_disconnect(), TAG, "softap disconnect");
-        ESP_RETURN_ON_ERROR(protocomm_ext_set_security(pc, method, sec_data), TAG, "set_security");
-        ESP_RETURN_ON_ERROR(protocomm_ext_security_init(pc), TAG, "security_init");
-        ESP_RETURN_ON_ERROR(softap_reconnect(), TAG, "softap rejoin");
-        return ESP_OK;
+        err = softap_disconnect();
+        if (err == ESP_OK) {
+            err = network_provisioner_set_security(np, &sec);
+        }
+        if (err == ESP_OK) {
+            err = protocomm_ext_security_init(pc);
+        }
+        if (err == ESP_OK) {
+            err = softap_reconnect();
+        }
+    } else if (err == ESP_OK) {
+        err = network_provisioner_set_security(np, &sec);
     }
 #else
     (void)softap_transport;
+    if (err == ESP_OK) {
+        err = network_provisioner_set_security(np, &sec);
+    }
 #endif
 
-    err = protocomm_ext_set_security(pc, method, sec_data);
-    if (err != ESP_OK) {
-        return err;
-    }
-    return ESP_OK;
-}
-
-static void clear_security_credentials(void)
-{
-    memset(s_sec1_pop, 0, sizeof(s_sec1_pop));
-    memset(s_sec2_user, 0, sizeof(s_sec2_user));
-    memset(s_sec2_pass, 0, sizeof(s_sec2_pass));
-    memset(&s_sec1_params, 0, sizeof(s_sec1_params));
-    memset(&s_sec2_params, 0, sizeof(s_sec2_params));
+    wipe_secret(sec1_pop, sizeof(sec1_pop));
+    wipe_secret(sec2_user, sizeof(sec2_user));
+    wipe_secret(sec2_pass, sizeof(sec2_pass));
+    return err;
 }
 
 #if CONFIG_EXAMPLE_SUPPORT_SOFTAP_WIFI
@@ -459,84 +459,59 @@ static esp_err_t softap_pick_and_connect(void)
 #if CONFIG_EXAMPLE_SUPPORT_BLE_WIFI || CONFIG_EXAMPLE_SUPPORT_BLE_THREAD
 #define BLE_SCAN_SELECT_MAX 32
 
-typedef struct {
-    ble_addr_t addr;
-    char name[32];
-} ble_peer_choice_t;
-
-static esp_err_t ble_pick_device(protocomm_ext_t *pc, ble_addr_t *out_addr)
+static esp_err_t ble_pick_device(network_provisioner_t *np, void *connect_cfg, size_t cfg_size)
 {
-    protocomm_ext_transport_handle_t th = protocomm_ext_get_transport_handle(pc);
-    ESP_RETURN_ON_FALSE(th, ESP_ERR_INVALID_STATE, TAG, "no transport handle");
-
-    protocomm_ext_nimble_scan_config_t scan_cfg = {
-        .scan_timeout_ms = 10000,
-    };
-    ESP_LOGI(TAG, "Scanning BLE (prefix '%s')...", CONFIG_EXAMPLE_PROV_NAME_PREFIX);
-    ESP_RETURN_ON_ERROR(esp_protocomm_ext_nimble_start_scan(th, &scan_cfg), TAG, "scan start");
-    esp_protocomm_ext_nimble_stop_scan(th);
-
-    int count = esp_protocomm_ext_nimble_get_scanned_device_count(th);
+    network_provisioner_ble_device_t *found = calloc(BLE_SCAN_SELECT_MAX, sizeof(*found));
+    if (!found) {
+        return ESP_ERR_NO_MEM;
+    }
+    size_t count = 0;
     const char *prefix = CONFIG_EXAMPLE_PROV_NAME_PREFIX;
-    size_t prefix_len = strlen(prefix);
+    esp_err_t err = ESP_OK;
 
-    ble_peer_choice_t choices[BLE_SCAN_SELECT_MAX];
-    int listed = 0;
-
-    printf("\n=== BLE scan results (prefix '%s') ===\n", prefix);
-    for (int i = 0; i < count && listed < BLE_SCAN_SELECT_MAX; i++) {
-        protocomm_ext_nimble_scanned_device_info_t info = {0};
-        if (esp_protocomm_ext_nimble_get_scanned_device_info(th, i, &info) != ESP_OK) {
-            continue;
-        }
-        if (!info.name || info.name_len == 0) {
-            free(info.name);
-            free(info.mfg_data);
-            continue;
-        }
-
-        bool match = prefix_len == 0 ||
-                     (info.name_len >= prefix_len && memcmp(info.name, prefix, prefix_len) == 0);
-        if (!match) {
-            free(info.name);
-            free(info.mfg_data);
-            continue;
-        }
-
-        size_t copy_len = info.name_len < sizeof(choices[listed].name) - 1 ?
-                          info.name_len : sizeof(choices[listed].name) - 1;
-        memcpy(choices[listed].name, info.name, copy_len);
-        choices[listed].name[copy_len] = '\0';
-        choices[listed].addr = info.addr;
-
-        printf("  %d) %s  %02x:%02x:%02x:%02x:%02x:%02x\n",
-               listed + 1, choices[listed].name,
-               info.addr.val[5], info.addr.val[4], info.addr.val[3],
-               info.addr.val[2], info.addr.val[1], info.addr.val[0]);
-        listed++;
-
-        free(info.name);
-        free(info.mfg_data);
+    ESP_LOGI(TAG, "Scanning BLE (prefix '%s')...", prefix);
+    err = network_provisioner_ble_scan(np, 10000, prefix, false, NULL,
+                                       found, BLE_SCAN_SELECT_MAX, &count);
+    if (err != ESP_OK) {
+        free(found);
+        return err;
     }
 
-    if (listed == 0) {
+    printf("\n=== BLE scan results (prefix '%s') ===\n", prefix);
+    for (size_t i = 0; i < count; i++) {
+        printf("  %u) %s  %02x:%02x:%02x:%02x:%02x:%02x\n",
+               (unsigned)(i + 1),
+               found[i].name[0] ? found[i].name : "(no name)",
+               found[i].addr[0], found[i].addr[1], found[i].addr[2],
+               found[i].addr[3], found[i].addr[4], found[i].addr[5]);
+    }
+
+    if (count == 0) {
         ESP_LOGE(TAG, "No BLE devices matching prefix '%s'", prefix);
+        free(found);
         return ESP_ERR_NOT_FOUND;
     }
 
-    int choice = 1;
-    if (listed > 1) {
-        choice = read_console_int("Select BLE device (0=cancel): ");
-        if (choice <= 0 || choice > listed) {
+    size_t choice = 0;
+    if (count > 1) {
+        int picked = read_console_int("Select BLE device (0=cancel): ");
+        if (picked <= 0 || (size_t)picked > count) {
+            free(found);
             return ESP_ERR_INVALID_ARG;
         }
+        choice = (size_t)picked - 1;
     } else {
-        printf("Only one match, auto-selecting '%s'.\n", choices[0].name);
+        printf("Only one match, auto-selecting '%s'.\n", found[0].name);
     }
 
-    *out_addr = choices[choice - 1].addr;
-    ESP_LOGI(TAG, "Selected BLE peer '%s'", choices[choice - 1].name);
-    return ESP_OK;
+    err = network_provisioner_ble_connect_cfg(found[choice].addr,
+                                              found[choice].addr_type,
+                                              connect_cfg, cfg_size);
+    if (err == ESP_OK) {
+        ESP_LOGI(TAG, "Selected BLE peer '%s'", found[choice].name);
+    }
+    free(found);
+    return err;
 }
 #endif
 
@@ -738,22 +713,6 @@ static esp_err_t run_session_and_provision(protocomm_ext_config_data_t *pe_cfg,
         pc_owned = true;
     }
 
-#if CONFIG_EXAMPLE_SUPPORT_BLE_WIFI || CONFIG_EXAMPLE_SUPPORT_BLE_THREAD
-    static ble_addr_t peer_addr;
-    if (pe_cfg->transport_method == PROTOCOMM_EXT_TRANSPORT_METHOD_BLE) {
-        if (ble_pick_device(pc, &peer_addr) != ESP_OK) {
-            ESP_LOGE(TAG, "BLE device selection failed");
-            if (pc_owned) {
-                protocomm_ext_delete(pc);
-            }
-            return ESP_ERR_NOT_FOUND;
-        }
-        session_cfg = &peer_addr;
-    }
-#else
-    (void)session_cfg;
-#endif
-
     network_provisioner_t *np = network_provisioner_create(pc);
     bool softap = (pe_cfg->transport_method == PROTOCOMM_EXT_TRANSPORT_METHOD_HTTP);
     if (!np) {
@@ -768,6 +727,23 @@ static esp_err_t run_session_and_provision(protocomm_ext_config_data_t *pe_cfg,
 #endif
         return ESP_FAIL;
     }
+
+#if CONFIG_EXAMPLE_SUPPORT_BLE_WIFI || CONFIG_EXAMPLE_SUPPORT_BLE_THREAD
+    uint8_t peer_cfg[NETWORK_PROVISIONER_BLE_CONNECT_CFG_MAX];
+    if (pe_cfg->transport_method == PROTOCOMM_EXT_TRANSPORT_METHOD_BLE) {
+        if (ble_pick_device(np, peer_cfg, sizeof(peer_cfg)) != ESP_OK) {
+            ESP_LOGE(TAG, "BLE device selection failed");
+            network_provisioner_delete(np);
+            if (pc_owned) {
+                protocomm_ext_delete(pc);
+            }
+            return ESP_ERR_NOT_FOUND;
+        }
+        session_cfg = peer_cfg;
+    }
+#else
+    (void)session_cfg;
+#endif
 
     esp_err_t err = ESP_OK;
 
@@ -784,7 +760,7 @@ static esp_err_t run_session_and_provision(protocomm_ext_config_data_t *pe_cfg,
              caps.sec_ver, caps.wifi_prov, caps.thread_prov);
 
     /* 2) Prompt for PoP / username+password and switch security scheme. */
-    err = configure_security_from_caps(pc, &caps, softap);
+    err = configure_security_from_caps(np, &caps, softap);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "configure_security: %s", esp_err_to_name(err));
         goto cleanup;
@@ -863,7 +839,6 @@ cleanup:
     network_provisioner_delete(np);
     /* Always delete pc: network_provisioner does not own it. */
     protocomm_ext_delete(pc);
-    clear_security_credentials();
 #if CONFIG_EXAMPLE_SUPPORT_SOFTAP_WIFI
     if (softap) {
         softap_cleanup();

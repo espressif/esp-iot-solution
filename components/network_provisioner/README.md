@@ -28,10 +28,11 @@ Runtime security discovery (recommended):
 protocomm_ext_t *pc = protocomm_ext_new(&pe_cfg); /* transport + Sec0 placeholder */
 network_provisioner_t *np = network_provisioner_create(pc);
 
-network_provisioner_fetch_capabilities(np, /* BLE: &ble_addr, else NULL */ NULL);
+network_provisioner_fetch_capabilities(np, /* BLE: connect cfg, else NULL */ NULL);
 network_provisioner_capabilities_t caps = {0};
 network_provisioner_get_capabilities(np, &caps);
-/* protocomm_ext_set_security(pc, ...) from caps.sec_ver + PoP / Sec2 creds */
+network_provisioner_security_t sec = { .sec_ver = caps.sec_ver, .pop = "abcd1234" };
+network_provisioner_set_security(np, &sec);
 network_provisioner_establish_security(np);
 
 network_provisioner_wifi_creds_t creds = {
@@ -50,13 +51,17 @@ protocomm_ext_delete(pc);
 If the peer scheme is already known, `network_provisioner_start_session()` still
 covers open → proto-ver → handshake in one call.
 
+A BLE controller can skip `protocomm_ext_new()` and call `network_provisioner_create_ble()`,
+then `network_provisioner_ble_scan()` / `network_provisioner_ble_connect_cfg()`.
+Application endpoints use `network_provisioner_add_endpoint()` and `network_provisioner_send()`.
+
 **Thread safety:** APIs on one instance are not thread-safe; serialize from a single task.
 
 ## Dependency
 
 ```yaml
 dependencies:
-  espressif/network_provisioner: "^1.0.0"
+  espressif/network_provisioner: "^2.0.0"
 ```
 
 Or develop in-tree with `protocomm_ext` via `override_path`.
@@ -72,7 +77,7 @@ idf.py set-target esp32 build
 
 See [`examples/network_provisioner`](../../examples/network_provisioner). Pair with the official device examples `wifi_prov` / `thread_prov` from `network_provisioning`.
 
-**Supported targets:** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2
+**Supported targets:** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2 / ESP32-P4
 
 ## License
 
