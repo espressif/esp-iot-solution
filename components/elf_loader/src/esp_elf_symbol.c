@@ -89,6 +89,7 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
     ESP_ELFSYM_EXPORT(fputc),
     ESP_ELFSYM_EXPORT(fputs),
     ESP_ELFSYM_EXPORT(printf),
+    ESP_ELFSYM_EXPORT(vprintf),
     ESP_ELFSYM_EXPORT(vfprintf),
     ESP_ELFSYM_EXPORT(fprintf),
     ESP_ELFSYM_EXPORT(fwrite),

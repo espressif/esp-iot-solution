@@ -240,6 +240,23 @@ Module-local weak/defined symbols are resolved from the loaded image when the
 host has no matching exported symbol. This fallback is available with
 `CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT` both enabled and disabled.
 
+### Resolving logging and other host symbols
+
+ELF modules using `ESP_LOGx()` may need the libc formatting function `vprintf`.
+It is included in the default libc export table when
+`CONFIG_ELF_LOADER_LIBC_SYMBOLS=y`. Other functions imported by an ELF module
+must also be present in the host's symbol resolver. Build the ELF with the
+required `ELF_COMPONENTS` and generate an export table using the documented
+`components/elf_loader/tool/symbols.py` workflow and
+`CONFIG_ELF_LOADER_CUSTOMER_SYMBOLS=y`, or register application-owned symbols
+with `esp_elf_register_symbol()`. The host firmware must actually link each
+exported function: adding a symbol name cannot provide missing implementation.
+
+Do not indiscriminately add internal FreeRTOS or ESP-IDF functions such as
+`esp_crosscore_int_send_yield` to the public libc table. Internal functions can
+change across ESP-IDF versions and should be exported only when the application's
+specific ABI and dependencies require them.
+
 ### Adding the Component to Your Project
 
 Please use the component manager command add-dependency to add the elf_loader component as a dependency in your project. During the CMake step, the component will be downloaded automatically.

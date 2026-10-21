@@ -146,6 +146,49 @@ class ElfValidationTests(unittest.TestCase):
             ctypes.cast(buf, ctypes.c_void_p), len(data)
         )
 
+    def test_vprintf_export_matches_available_libc_function(self):
+        """Exercise the default export-table entry with the host C runtime."""
+        import re
+        source = (COMPONENT / 'src/esp_elf_symbol.c').read_text()
+        table = source.split('g_esp_libc_elfsyms[] = {', 1)[1].split('};', 1)[0]
+        names = re.findall(r'ESP_ELFSYM_EXPORT\(([^)]+)\)', table)
+        self.assertEqual(names.count('vprintf'), 1)
+        for name in ('printf', 'vfprintf'):
+            self.assertIn(name, names)
+        # Compile entries read from the actual table, not a copy of its names.
+        exported = '\n'.join(f'    ESP_ELFSYM_EXPORT({name}),' for name in names
+                             if name in ('printf', 'vprintf', 'vfprintf'))
+        code = r"""
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+struct export_sym { const char *name; const void *ptr; };
+#define ESP_ELFSYM_EXPORT(x) { #x, (const void *)&x }
+static const struct export_sym exports[] = {
+""" + exported + r"""
+};
+static uintptr_t lookup(const char *name) {
+    for (size_t i = 0; i < sizeof(exports) / sizeof(exports[0]); ++i) {
+        if (strcmp(exports[i].name, name) == 0) return (uintptr_t)exports[i].ptr;
+    }
+    return 0;
+}
+int main(void) {
+    assert(lookup("vprintf") == (uintptr_t)&vprintf);
+    assert(lookup("printf") == (uintptr_t)&printf);
+    assert(lookup("vfprintf") == (uintptr_t)&vfprintf);
+    assert(!lookup("esp_crosscore_int_send_yield"));
+    return 0;
+}
+"""
+        path = Path(self.build.name) / 'test_libc_exports.c'
+        executable = Path(self.build.name) / 'test_libc_exports'
+        path.write_text(code)
+        subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra',
+                        '-Werror', str(path), '-o', str(executable)], check=True)
+        subprocess.run([str(executable)], check=True)
+
     def test_valid_production_fixtures(self):
         for arch, path in FIXTURES.items():
             additional = ROOT / 'examples/elf_loader/elf_console_example/main/fs_image' / arch

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Export the public libc `vprintf` entry by default so ELF applications using
+  ESP-IDF logging can resolve their standard formatting dependency (#497).
 * Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
   partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
   without PSRAM (#686).
