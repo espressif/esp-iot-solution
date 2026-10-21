@@ -278,6 +278,52 @@ C++ object layouts, RTTI, exceptions and cross-module ownership are not
 implicitly made ABI-safe** by these export macros. Prefer an explicit stable C
 ABI for interfaces that must work across toolchain versions.
 
+### Decoding ELF crashes with host-side debug symbols
+
+The published ELF (`project_elf()`) and shared library (`project_so()`) remain
+small by default. To retain DWARF **only on the development machine**, enable
+`-DELF_LOADER_KEEP_DEBUG_ELF=ON` when configuring an ELF project, e.g.:
+
+```sh
+idf.py -D ELF_LOADER_KEEP_DEBUG_ELF=ON build
+```
+
+`project_elf()` then emits `build/<project>.app.elf` (stripped, deployable) and
+`build/<project>.app.elf.debug` (unstripped). `project_so()` similarly emits
+`<project>.so` and `<project>.so.debug`. Build with the same ESP-IDF version,
+optimization settings and matching target toolchain as the firmware that
+produced the crash. Distribute only the normal `.elf`/`.so` image; archive the
+`.debug` companion with its exact build. For the default behavior, omit the
+option or explicitly set it to `OFF`. Do not rely on a stale `.debug` file from
+an earlier build after changing the option.
+
+Before running an explicitly loaded ELF, call `esp_elf_print_sec(&elf)`
+after successful `esp_elf_relocate()`, or query
+`esp_elf_runtime_base(&elf)` directly. For shared objects loaded with
+`dlopen()`, the loader automatically logs the module name and executable
+runtime base after successful relocation. The `ELF debug:` line prints
+`runtime_base` and the ELF
+virtual load base. On ESP32/S2/S3, `runtime_base` is the **executable** `.text`
+address (not necessarily the PSRAM data alias). On RISC-V it is the
+`psegment` base, corresponding to the lowest loadable ELF virtual address.
+Take the exception PC reported by the ESP-IDF panic handler and decode it on
+the host:
+
+```sh
+python3 components/elf_loader/tool/elf_addr2line.py \
+  --elf /path/to/build/app.app.elf.debug \
+  --runtime-base 0x42000000 --pc 0x42000120 \
+  --addr2line /path/to/xtensa-esp32s3-elf-addr2line
+```
+
+Replace the sample runtime base, PC, ELF file and compiler tool with the real
+values; use `riscv32-esp-elf-addr2line` for RISC-V targets. Add another `--pc`
+for additional stack frames. This script checks that each address belongs to
+actual executable ELF memory, converts it back to the linked ELF address and
+calls `addr2line -f -C`. A PC outside the module cannot be decoded using this
+ELF. For an unloaded module, the runtime base must have been recorded before
+unloading. No DWARF parser or symbols need to run on the microcontroller.
+
 ### Resolving logging and other host symbols
 
 ELF modules using `ESP_LOGx()` may need the libc formatting function `vprintf`.

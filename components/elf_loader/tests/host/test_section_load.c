@@ -119,6 +119,11 @@ int main(void)
     esp_elf_t executable = {0};
     assert(esp_elf_load_section(&executable, (const uint8_t *)&image) == 0);
     assert(executable.ptext != NULL);
+    uintptr_t expected_runtime_base = (uintptr_t)executable.ptext;
+#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+    expected_runtime_base = (uint32_t)expected_runtime_base + 0x1000;
+#endif
+    assert(esp_elf_runtime_base(&executable) == expected_runtime_base);
     uint32_t expected_zero_entry = (uint32_t)(uintptr_t)executable.ptext;
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
     expected_zero_entry += 0x1000;

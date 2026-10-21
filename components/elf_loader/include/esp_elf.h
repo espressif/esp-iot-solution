@@ -67,6 +67,17 @@ void esp_elf_close(elf_file_t *file);
 uintptr_t esp_elf_map_sym(esp_elf_t *elf, uintptr_t sym);
 
 /**
+ * @brief Get the runtime executable address corresponding to the ELF load base.
+ *
+ * For mirrored Xtensa targets this is the executable .text bus alias;
+ * for RISC-V it is the allocated lowest PT_LOAD address. Returns zero for
+ * a module that has not been loaded.
+ *
+ * Use together with the matching unstripped ELF to symbolize crash PCs.
+ */
+uintptr_t esp_elf_runtime_base(esp_elf_t *elf);
+
+/**
  * @brief Initialize ELF object.
  *
  * @param elf - ELF object pointer

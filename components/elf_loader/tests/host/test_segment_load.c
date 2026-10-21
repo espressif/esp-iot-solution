@@ -62,8 +62,13 @@ int main(void)
     assert(!esp_elf_file_size_valid((off_t)INT32_MAX + 1));
 
     esp_elf_t elf = {0};
+    assert(esp_elf_runtime_base(&elf) == 0);
+    elf.psegment = (uint8_t *)&image;
+    assert(esp_elf_runtime_base(&elf) == 0); /* incomplete load */
+    elf.psegment = NULL;
     assert(esp_elf_load_segment(&elf, (const uint8_t *)&image) == 0);
     assert(elf.svaddr == 0x1000);
+    assert(esp_elf_runtime_base(&elf) == (uintptr_t)elf.psegment);
     assert(allocated_bytes == 0x2c);
     assert(elf.segment_size == allocated_bytes);
     assert(memcmp(elf.psegment, image.data, 8) == 0);

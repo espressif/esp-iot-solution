@@ -1134,6 +1134,26 @@ void esp_elf_print_shdr(const uint8_t *pbuf)
     }
 }
 
+uintptr_t esp_elf_runtime_base(esp_elf_t *elf)
+{
+    if (!elf) {
+        return 0;
+    }
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    const esp_elf_sec_t *text = &elf->sec[ELF_SEC_TEXT];
+    if (!text->addr || !text->size) {
+        return 0;
+    }
+#ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
+    return elf_remap_text(elf, text->addr);
+#else
+    return text->addr;
+#endif
+#else
+    return elf->psegment && elf->segment_size ? (uintptr_t)elf->psegment : 0;
+#endif
+}
+
 /**
  * @brief Print section information of ELF.
  *
@@ -1153,6 +1173,19 @@ void esp_elf_print_sec(esp_elf_t *elf)
     }
 
     ESP_LOGI(TAG, "entry:  %p", elf->entry);
+
+    /* Print the address mapping needed to decode PCs inside loaded code.
+     * On mirrored buses, .text addr is not necessarily an executable alias. */
+    uintptr_t base = esp_elf_runtime_base(elf);
+    if (base) {
+#if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+        ESP_LOGI(TAG, "ELF debug: runtime_base=0x%" PRIxPTR " ELF_text_vaddr=0x%" PRIxPTR,
+                 base, elf->sec[ELF_SEC_TEXT].v_addr);
+#else
+        ESP_LOGI(TAG, "ELF debug: runtime_base=0x%" PRIxPTR " ELF_segment_vaddr=0x%" PRIx32,
+                 base, elf->svaddr);
+#endif
+    }
 }
 
 /**

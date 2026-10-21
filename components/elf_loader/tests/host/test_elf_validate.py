@@ -146,6 +146,88 @@ class ElfValidationTests(unittest.TestCase):
             ctypes.cast(buf, ctypes.c_void_p), len(data)
         )
 
+    def test_elf_pc_translation_respects_loaded_executable_ranges(self):
+        import importlib.util
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        for arch in FIXTURES:
+            elf = tool.DebugELF(FIXTURES[arch])
+            runtime = 0x42000000
+            if arch == 'xtensa':
+                start = elf.sections['.text'][3]
+                length = elf.sections['.text'][5]
+                self.assertGreater(length, 1)
+                self.assertEqual(elf.virtual_address(runtime + 1, runtime), start + 1)
+                with self.assertRaisesRegex(ValueError, 'not inside'):
+                    elf.virtual_address(runtime + length, runtime)
+            else:
+                start = min(segment[0] for segment in elf.segments)
+                executable = next((vaddr, size, flags) for vaddr, size, flags in elf.segments
+                                  if (flags & tool.PF_X) and size >= 2)
+                offset = executable[0] + 1 - start
+                self.assertEqual(elf.virtual_address(runtime + offset, runtime), executable[0] + 1)
+                with self.assertRaises(ValueError):
+                    elf.virtual_address(runtime - 1, runtime)
+            with self.assertRaises(ValueError):
+                elf.virtual_address(0x100000000, runtime)
+        bad = Path(self.build.name) / 'bad-debug.elf'
+        bad.write_bytes(b'not an elf')
+        with self.assertRaisesRegex(ValueError, 'not an ELF32'):
+            tool.DebugELF(bad)
+
+    def test_elf_addr2line_invokes_target_toolchain_with_rebased_pc(self):
+        import contextlib
+        import importlib.util
+        import io
+        from unittest import mock
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        elf = tool.DebugELF(FIXTURES['xtensa'])
+        addr = elf.sections['.text'][3] + 1
+        output = io.StringIO()
+        with mock.patch.object(tool.DebugELF, 'has_debug_info',
+                               new_callable=mock.PropertyMock, return_value=True), \
+             mock.patch.object(tool.subprocess, 'run', return_value=subprocess.CompletedProcess(
+                 [], 0, 'loaded_function\nsrc/test.cpp:37\n', '')) as spawn, \
+             contextlib.redirect_stdout(output):
+            code = tool.main([
+                '--elf', str(FIXTURES['xtensa']),
+                '--pc', '0x42000001', '--runtime-base', '0x42000000',
+                '--addr2line', '/tmp/xtensa-addr2line',
+            ])
+        self.assertEqual(code, 0)
+        self.assertEqual(spawn.call_args.args[0][-1], f'0x{addr:08x}')
+        self.assertIn('src/test.cpp:37', output.getvalue())
+        self.assertIn('0x42000001', output.getvalue())
+
+    def test_elf_symbolicator_rejects_missing_source_mapping(self):
+        import contextlib
+        import importlib.util
+        import io
+        from unittest import mock
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        with mock.patch.object(tool.DebugELF, 'has_debug_info',
+                               new_callable=mock.PropertyMock, return_value=True), \
+             mock.patch.object(tool.subprocess, 'run', return_value=subprocess.CompletedProcess(
+                 [], 0, '??\n??:0\n', '')):
+            with mock.patch.object(tool.argparse.ArgumentParser, 'exit',
+                                   side_effect=SystemExit(2)) as exit_mock:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as result:
+                        tool.main([
+                            '--elf', str(FIXTURES['xtensa']), '--pc', '0x42000001',
+                            '--runtime-base', '0x42000000', '--addr2line', 'false',
+                        ])
+            self.assertEqual(result.exception.code, 2)
+            self.assertIn('no source location', exit_mock.call_args.args[1])
+
     def test_cpp_elf_mangled_name_and_overload_exports(self):
         executable = Path(self.build.name) / 'test_cpp_exports'
         subprocess.run([

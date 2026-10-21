@@ -2,21 +2,25 @@
 
 ## Unreleased
 
+* Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
+  partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
+  without PSRAM (#686).
+* Expose the executable runtime base and log it for modules loaded via dlopen,
+  allowing offline symbolization without access to private module structs (#561).
+* Detach ESP32-S2 executable MMU mappings before releasing PSRAM (#686).
+* Validate C++ callback-array types and entry sizes, and verify that each
+  constructor/destructor slot has a distinct relocation (#796).
+* Correct local and unnamed section relocations and handle unresolved weak
+  symbols without letting host exports preempt module-local definitions (#789).
+* Optionally generate separate unstripped ELF / shared-object debug companions,
+  log executable load bases and decode crash PCs via host addr2line (#561).
 * Add named C/C++ host exports and explicitly typed C++ overload exports so
   ELF mangled names can be registered without C-wrapper functions (#560).
 * Export the public libc `vprintf` entry by default so ELF applications using
   ESP-IDF logging can resolve their standard formatting dependency (#497).
-* Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
-  partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
-  without PSRAM (#686).
-* Detach ESP32-S2 executable MMU mappings before releasing PSRAM (#686).
+* Resolve module-defined symbols even with `ELF_DYNAMIC_LOAD_SHARED_OBJECT=n` (#789).
 * Preserve and map Xtensa `.got.loc` PLT literal pools in executable memory at
   PC-relative offsets; extend relevant PSRAM cache and S2 MMU mappings (#686).
-* Correct local and unnamed section relocations and handle unresolved weak
-  symbols without letting host exports preempt module-local definitions (#789).
-* Resolve module-defined symbols even with `ELF_DYNAMIC_LOAD_SHARED_OBJECT=n` (#789).
-* Validate C++ callback-array types and entry sizes, and verify that each
-  constructor/destructor slot has a distinct relocation (#796).
 * Execute C++ `.preinit_array` / `.init_array` or legacy `.ctors` on the first
   `esp_elf_request()`, and finalization arrays at `esp_elf_deinit()` (#796).
 * Validate callback arrays, reject duplicate/inconsistent sections, and add

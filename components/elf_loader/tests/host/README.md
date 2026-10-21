@@ -50,6 +50,23 @@ python3 components/elf_loader/tests/idf_cpp_lifecycle/check_elf_arrays.py \
 
 Hardware verification of actual constructor/destructor execution is still required.
 
+Additional regression coverage for ELF issues:
+
+- #497: compile and resolve the actual default `vprintf`/`printf`/`vfprintf`
+  table entries, including a negative lookup for private IDF functions.
+- #560: compile and execute the new named/overloaded C++ export macros,
+  verify the older C macro remains compatible, and (when cross compilers
+  are installed) compare registered names with real Xtensa/RISC-V mangled
+  names in their object files.
+- #561: test runtime-to-ELF PC conversion for Xtensa and RISC-V, reject
+  addresses outside executable sections, and verify addr2line invocation.
+  The tool and `ELF_LOADER_KEEP_DEBUG_ELF=ON` CMake path are additionally
+  integration-tested with actual IDF-generated `.app.elf.debug` and
+  `.so.debug` binaries. `readelf -SW` should show `.debug_line` and `.symtab`
+  only in the debug companion; `addr2line` must resolve to the test source.
+  Verify `ELF_LOADER_KEEP_DEBUG_ELF=OFF` in a clean build directory to ensure
+  no additional debug file is shipped by default.
+
 Run with Python 3, a C compiler, CMake, and binutils (ld and nm). The
 GitLab CI check_elf_loader_host job executes the same suite. The ELF loader
 example build jobs also run check_embedded_alignment.py to check the actual
