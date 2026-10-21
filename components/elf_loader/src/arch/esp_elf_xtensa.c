@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -80,7 +80,21 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
 
     assert(elf && rela);
 
-    where = (uint32_t *)esp_elf_map_sym(elf, rela->offset);
+    /* Check the complete relocation word, not just its first mapped byte. */
+    where = NULL;
+    for (size_t i = 0; i < ELF_SECS; ++i) {
+        const esp_elf_sec_t *sec = &elf->sec[i];
+        if (sec->addr && rela->offset >= sec->v_addr) {
+            uintptr_t displacement = rela->offset - sec->v_addr;
+            if (displacement <= sec->size && sizeof(*where) <= sec->size - displacement) {
+                where = (uint32_t *)(sec->addr + displacement);
+                break;
+            }
+        }
+    }
+    if (!where || ((uintptr_t)where & (sizeof(*where) - 1))) {
+        return -EINVAL;
+    }
 
     ESP_LOGD(TAG, "type: %d, where=%p addr=0x%x offset=0x%x\n",
              ELF_R_TYPE(rela->info), where, (int)addr, (int)rela->offset);

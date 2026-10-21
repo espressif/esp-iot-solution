@@ -84,6 +84,12 @@
   - "components/button/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_elf_loader_host: &patterns-components_elf_loader_host
+  - "components/elf_loader/**/*"
+  - "examples/elf_loader/**/*"
+  - ".gitlab/ci/pre_check.yml"
+  - ".gitlab/ci/rules.yml"
+
 .patterns-components_esp_flux: &patterns-components_esp_flux
   - "components/esp_flux/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
@@ -4052,6 +4058,14 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-docs_md
+
+.rules:pre_check:elf_loader_host:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-pre_check
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader_host
 
 .rules:pre_check:components:
   rules:

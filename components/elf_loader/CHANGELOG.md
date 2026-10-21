@@ -1,5 +1,41 @@
 # ChangeLog
 
+## v2.0.0 - 2026-10-14
+
+* Validate ELF headers, file ranges, section names, symbol tables, and relocation
+  write targets before loading both RISC-V and Xtensa images.
+* Validate forward-linked string table bounds and exported function addresses;
+  enforce full-width Xtensa relocation targets and aligned embedded ELF buffers.
+* Generate aligned ELF embedding assembly on released ESP-IDF versions that do
+  not support the ALIGN option in target_add_binary_data().
+* Pre-index the loaded relocation regions to avoid quadratic validation time
+  for ELF files containing many sections, segments, and relocation entries.
+* Reuse the indexed executable PT_LOAD ranges for exported-function checks
+  instead of scanning every Program Header for each dynamic symbol.
+* Avoid repeated scans of long symbol names by validating string-table
+  terminators before constant-time name-offset checks.
+* Accept entry-less shared libraries only when dynamic loading is enabled,
+  without preventing ET_EXEC images from using a valid zero virtual entry point
+  or allowing entry-less libraries to be invoked as executable applications.
+* Require uniquely named, correctly typed dynamic symbol tables before parsing
+  shared-object exports.
+* Remap exported shared-library function addresses to executable aliases when
+  code is loaded through a mirrored data/instruction bus (e.g. ESP32-S3 PSRAM).
+* Free dynamically allocated symbol tables after an export-name allocation
+  failure, including failures before the first name is populated.
+* Bound locally mapped relocation symbols to loaded ELF memory.
+* Reject RISC-V relocation targets whose word-aligned virtual offsets map
+  to misaligned allocated addresses, before performing any 32-bit write.
+* Reject ELF files whose sizes exceed loader allocation or read limits.
+* Require executable entry points to refer to file-backed code rather than
+  uninitialized PT_LOAD memory.
+* Fix the first PT_LOAD base address and RISC-V relocation offset calculation;
+  propagate unsupported architecture relocation errors.
+* Subtract ELF virtual load bases before forming in-memory pointers to loaded
+  segments or exported functions, including ELF images with high virtual bases.
+* **API change:** `esp_elf_relocate()` now requires the ELF buffer length as its
+  third argument. Applications must update existing calls.
+
 ## v1.3.5 - 2026-10-10
 
 * Added support for ESP32-C5

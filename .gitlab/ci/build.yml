@@ -2134,9 +2134,16 @@ build_example_robot_ragtime_panthera:
     BUILD_RECURSIVE: "0"
     IDF_PY_BUILD_JOBS: "2"
 
-build_example_elf_loader_elf_loader_example:
+.build_elf_loader_aligned_example:
   extends:
     - .build_examples_template
+  script:
+    - !reference [.build_examples_template, script]
+    - python3 components/elf_loader/tests/host/check_embedded_alignment.py ${EXAMPLE_DIR}
+
+build_example_elf_loader_elf_loader_example:
+  extends:
+    - .build_elf_loader_aligned_example
     - .rules:build:example_elf_loader_elf_loader_example
     - .build_idf_ge_than_v5_4_to_v6_2
   variables:
@@ -2152,7 +2159,7 @@ build_example_elf_loader_build_elf_file_example:
 
 build_example_elf_loader_elf_embed_example:
   extends:
-    - .build_examples_template
+    - .build_elf_loader_aligned_example
     - .rules:build:example_elf_loader_elf_embed_example
     - .build_idf_ge_than_v5_4_to_v6_2
   variables:

@@ -41,7 +41,7 @@ static int elf_sample(const char *filename)
 
     printf("Start to relocate ELF file\n");
 
-    ret = esp_elf_relocate(&elf, file.payload);
+    ret = esp_elf_relocate(&elf, file.payload, file.size);
     if (ret < 0) {
         esp_elf_deinit(&elf);
         esp_elf_close(&file);

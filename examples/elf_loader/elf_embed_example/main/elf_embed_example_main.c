@@ -114,7 +114,7 @@ int app_main(void)
         return ret;
     }
 
-    ret = esp_elf_relocate(&elf, buffer);
+    ret = esp_elf_relocate(&elf, buffer, (size_t)(test_elf_end - test_elf_start));
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
         goto cleanup_symbol;

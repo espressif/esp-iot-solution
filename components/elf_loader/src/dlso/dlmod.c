@@ -242,7 +242,7 @@ esp_elf_t *dlmod_relocate(const char *path)
         return NULL;
     }
 
-    ret = esp_elf_relocate(elf_dl, file.payload);
+    ret = esp_elf_relocate(elf_dl, file.payload, file.size);
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to relocate ELF file errno=%d", ret);
         esp_elf_deinit(elf_dl);

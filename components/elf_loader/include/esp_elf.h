@@ -80,10 +80,17 @@ int esp_elf_init(esp_elf_t *elf);
  *
  * @param elf - ELF object pointer
  * @param pbuf - ELF data buffer
+ * @param size - Exact number of accessible bytes in pbuf
+ *
+ * @note The buffer size is mandatory so ELF header, section, symbol and
+ *       relocation references can be checked before loading the image.
+ *       The input buffer must also be 4-byte aligned.
+ *       When dynamic loading is enabled, ET_DYN shared objects with no entry
+ *       point are supported, but they cannot be passed to esp_elf_request().
  *
  * @return ESP_OK if success or other if failed.
  */
-int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf);
+int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size);
 
 /**
  * @brief Request running relocated ELF function.

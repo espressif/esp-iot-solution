@@ -2,6 +2,7 @@
 if(CONFIG_ELF_LOADER)
     set(srcs  "src/esp_elf_symbol.c"
               "src/esp_elf.c"
+              "src/esp_elf_validate.c"
               "src/esp_elf_adapter.c")
 
     if(CONFIG_ELF_LOADER_CUSTOMER_SYMBOLS)
