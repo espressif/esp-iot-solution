@@ -1,0 +1,4 @@
+# The CI generic S3 board has no PSRAM. With memory protection enabled,
+# ESP-IDF removes MALLOC_CAP_EXEC from its internal heaps, so this ELF
+# lifecycle test must explicitly permit execution from allocated IDRAM.
+CONFIG_ESP_SYSTEM_MEMPROT_FEATURE=n

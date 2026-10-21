@@ -8,9 +8,13 @@ import os
 from pathlib import Path
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 
+
+# GNU ld and the macOS linker use different dead-section removal options.
+HOST_GC_LINKER_FLAG = '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections'
 
 ROOT = Path(__file__).resolve().parents[4]
 COMPONENT = ROOT / 'components' / 'elf_loader'
@@ -55,6 +59,52 @@ def first_load_segment(data):
         if u32(data, ph) == 1:
             return ph
     raise AssertionError('missing PT_LOAD')
+
+
+def synthetic_lifecycle_image(arch):
+    """ELF32 fixture with file-backed startup arrays on both architectures."""
+    entries = [
+        ('.text', 1, 6, 0x1000, 8),
+        ('.rodata', 1, 2, 0x1020, 8),
+        ('.preinit_array', 16, 3, 0x1040, 4),
+        ('.init_array', 14, 3, 0x1044, 4),
+        ('.fini_array', 15, 3, 0x1048, 4),
+    ]
+    shstr = b'\0'
+    names = {}
+    for name, _, _, _, _ in entries + [('.shstrtab', 3, 0, 0, 0)]:
+        names[name] = len(shstr)
+        shstr += name.encode() + b'\0'
+
+    num_sections = len(entries) + 2  # null section and .shstrtab
+    shoff = 52 + 32
+    stroff = shoff + 40 * num_sections
+    dataoff = (stroff + len(shstr) + 3) & ~3
+    data = bytearray(dataoff + 0x80)
+    data[:7] = b'\x7fELF\x01\x01\x01'
+    put16(data, 16, 2)  # ET_EXEC
+    put16(data, 18, 94 if arch == 'xtensa' else 243)
+    put32(data, 20, 1)
+    put32(data, 24, 0x1000)
+    put32(data, 28, 52)
+    put32(data, 32, shoff)
+    put16(data, 40, 52)
+    put16(data, 42, 32)
+    put16(data, 44, 1)
+    put16(data, 46, 40)
+    put16(data, 48, num_sections)
+    put16(data, 50, num_sections - 1)
+    struct.pack_into('<IIIIIIII', data, 52, 1, dataoff, 0x1000, 0x1000,
+                     len(data) - dataoff, len(data) - dataoff, 5, 4)
+    data[stroff:stroff + len(shstr)] = shstr
+
+    for i, (name, sec_type, flags, vaddr, sec_size) in enumerate(entries, 1):
+        struct.pack_into('<IIIIIIIIII', data, shoff + 40 * i, names[name],
+                         sec_type, flags, vaddr, dataoff + (vaddr - 0x1000),
+                         sec_size, 0, 0, 4, 0)
+    struct.pack_into('<IIIIIIIIII', data, shoff + 40 * (num_sections - 1),
+                     names['.shstrtab'], 3, 0, 0, stroff, len(shstr), 0, 0, 1, 0)
+    return data
 
 
 class ElfValidationTests(unittest.TestCase):
@@ -520,6 +570,91 @@ class ElfValidationTests(unittest.TestCase):
         subprocess.run([str(output)], check=True)
 
 
+    def test_cpp_lifecycle_elf_validation(self):
+        for arch in ('xtensa', 'riscv'):
+            with self.subTest(arch=arch):
+                sample = synthetic_lifecycle_image(arch)
+                self.assertEqual(self.validate(arch, sample), 0)
+                for label, section_index, field_offset, value in (
+                    ('partial-pointer', 4, 20, 3),
+                    ('invalid-init-entsize', 4, 36, 8),
+                    ('wrong-init-type', 4, 4, 1),
+                    ('misaligned-vaddr', 4, 12, 0x1045),
+                    ('lifecycle-overlap-rodata', 4, 12, 0x1020),
+                    ('misaligned-file-offset', 4, 16, u32(sample, section(sample, 4) + 16) + 1),
+                    ('missing-alloc', 3, 8, 0),
+                    ('duplicate-init', 5, 4, 14),
+                ):
+                    broken = bytearray(sample)
+                    put32(broken, section(broken, section_index) + field_offset, value)
+                    with self.subTest(arch=arch, error=label):
+                        self.assertNotEqual(self.validate(arch, broken), 0)
+                if arch == 'riscv':
+                    for label, field_offset, value in (
+                        ('outside-load', 12, 0x2000),
+                        ('file-offset-mismatch', 16, u32(sample, section(sample, 3) + 16) + 4),
+                    ):
+                        broken = bytearray(sample)
+                        put32(broken, section(broken, 3) + field_offset, value)
+                        with self.subTest(arch=arch, error=label):
+                            self.assertNotEqual(self.validate(arch, broken), 0)
+
+    def test_cpp_array_checker_requires_each_pointer_to_be_relocated(self):
+        import importlib.util
+        script = COMPONENT / 'tests/idf_cpp_lifecycle/check_elf_arrays.py'
+        spec = importlib.util.spec_from_file_location('check_elf_arrays', script)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+
+        image = synthetic_lifecycle_image('riscv')
+        # Expand .init_array to 2 callback words and move .fini_array away.
+        put32(image, section(image, 4) + 20, 8)
+        put32(image, section(image, 5) + 12, 0x1050)
+        fini_file = u32(image, section(image, 5) + 16)
+        put32(image, section(image, 5) + 16, fini_file + 8)
+        offset = (len(image) + 3) & ~3
+        image.extend(bytes(offset - len(image)))
+        for target in (0x1044, 0x1048, 0x1050):
+            image.extend(struct.pack('<III', target, 3, 0))
+        # An SHT_RELA section at index zero is accepted by this fixture
+        # checker; ELF executable input validation is tested independently.
+        put32(image, section(image, 0) + 4, 4)
+        put32(image, section(image, 0) + 16, offset)
+        put32(image, section(image, 0) + 20, 36)
+        valid = Path(self.build.name) / 'array-relocations-valid.elf'
+        valid.write_bytes(image)
+        checker.verify_elf(valid)
+
+        # A duplicate relocation does not initialize the second callback.
+        put32(image, offset + 12, 0x1044)
+        broken = Path(self.build.name) / 'array-relocations-duplicate.elf'
+        broken.write_bytes(image)
+        with self.assertRaises(AssertionError):
+            checker.verify_elf(broken)
+
+    def test_cpp_elf_constructor_destructor_lifecycle(self):
+        for arch in ('riscv', 'xtensa'):
+            for shared_loading in (False, True):
+                with self.subTest(arch=arch, shared_loading=shared_loading):
+                    output = Path(self.build.name) / f'test_lifecycle_{arch}_{shared_loading}'
+                    flags = ['-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1'] if shared_loading else []
+                    if arch == 'xtensa':
+                        flags.append('-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1')
+                    subprocess.run([
+                        os.environ.get('CC', 'cc'),
+                        '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+                        '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+                        '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+                        '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+                        '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+                        f'-DCONFIG_IDF_TARGET_ARCH_{arch.upper()}=1', *flags,
+                        '-I', str(COMPONENT / 'tests/host/include'),
+                        '-I', str(COMPONENT / 'include'),
+                        str(COMPONENT / 'tests/host/test_lifecycle.c'),
+                        '-o', str(output),
+                    ], check=True)
+                    subprocess.run([str(output)], check=True)
+
     def test_segment_first_load_nonzero_base(self):
         for shared_loading in (False, True):
             with self.subTest(shared_loading=shared_loading):
@@ -532,7 +667,7 @@ class ElfValidationTests(unittest.TestCase):
                     '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
                     '-Wno-unused-but-set-variable', '-Wno-sign-compare',
                     '-ffunction-sections', '-fdata-sections',
-                    '-Wl,--gc-sections',
+                    HOST_GC_LINKER_FLAG,
                     '-DCONFIG_IDF_TARGET_ARCH_RISCV=1', *flags,
                     '-I', str(COMPONENT / 'tests/host/include'),
                     '-I', str(COMPONENT / 'include'),
@@ -553,7 +688,7 @@ class ElfValidationTests(unittest.TestCase):
                     '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
                     '-Wno-unused-but-set-variable', '-Wno-sign-compare',
                     '-ffunction-sections', '-fdata-sections',
-                    '-Wl,--gc-sections',
+                    HOST_GC_LINKER_FLAG,
                     '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
                     '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1', *flags,
                     '-I', str(COMPONENT / 'tests/host/include'),
@@ -572,7 +707,7 @@ class ElfValidationTests(unittest.TestCase):
             '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
             '-Wno-unused-but-set-variable', '-Wno-sign-compare',
             '-ffunction-sections', '-fdata-sections',
-            '-Wl,--gc-sections',
+            HOST_GC_LINKER_FLAG,
             '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
             '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1',
             '-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1',

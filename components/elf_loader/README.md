@@ -198,32 +198,31 @@ Linking lib.so completed
 [100%] Built target so
 ```
 
-### C++ ELF Applications
+### C++ ELF startup and shutdown
 
-C++ ELF applications (classes, inheritance, virtual functions, `new`/`delete`, global objects) can be built with `project_elf` and loaded like C applications. This has been tested on ESP32-S31 (RISC-V) and ESP32-S3 (Xtensa). Keep in mind:
+An ELF application built with `project_elf()` can contain C++ static/global
+objects. After relocation, `esp_elf_request()` invokes `.preinit_array` and
+`.init_array` once before calling the entry point. On the legacy Xtensa layout,
+`.ctors` executes in reverse order. `esp_elf_deinit()` runs `.fini_array` in
+reverse order (or legacy `.dtors` in forward order) before freeing the image,
+but only if initialization ran. Calling the ELF entry point repeatedly does not
+repeat static construction. These callbacks run in the calling task.
 
-* **Static constructors:** the loader runs the ELF's `.preinit_array` and `.init_array` once before the entry point is called, and `.fini_array` (in reverse order) in `esp_elf_deinit()`. The Xtensa toolchain uses the legacy `.ctors` / `.dtors` sections instead, which are handled as well (`.ctors` is run backwards, as the C runtime does).
-* **C++ runtime symbols:** the built-in symbol table only contains C library symbols. The host application must export every C++ runtime symbol the ELF uses, for example `operator new`/`operator delete` and `__cxa_pure_virtual`, with `esp_elf_register_symbol()`. The undefined symbols of an ELF can be listed with `readelf -s <file>.app.elf | grep UND`. Mangled names depend on the target, on 32-bit targets `size_t` is `unsigned int`, e.g. `_Znwj` (`operator new(unsigned int)`) and `_ZdlPvj` (sized `operator delete`).
+**C++ runtime dependencies are not bundled into the loader.** The
+`project_elf()` link uses `-nostdlib`: unresolved C++ runtime entry points
+(e.g. `operator new/delete` and `__cxa_pure_virtual`) must be exported by the
+host using `esp_elf_register_symbol()` or supplied by the module. A global
+object with a destructor requires a definition of `__dso_handle` and a
+module-local implementation of `__cxa_atexit`/finalization, or equivalent
+host-provided support; the loader only invokes the finalization callbacks in
+`.fini_array`, it does **not** automatically call `__cxa_finalize` itself.
+See `components/elf_loader/tests/idf_cpp_lifecycle` for a freestanding module
+which defines these runtime hooks and tests actual static-object construction.
+C++ exceptions and RTTI are not covered by this loader API.
 
-```c
-#include <new>
-#include "esp_elf.h"
-#include "private/elf_symbol.h"
-
-static void *cpp_new(size_t n) { return ::operator new(n); }
-static void cpp_delete(void *p) { ::operator delete(p); }
-
-static const struct esp_elfsym s_cpp_syms[] = {
-    { "_Znwj",  (void *)cpp_new },
-    { "_ZdlPv", (void *)cpp_delete },
-    ESP_ELFSYM_END
-};
-
-esp_elf_register_symbol(s_cpp_syms);
-```
-
-* **Global objects with destructors:** the ELF references `__dso_handle` and `__cxa_atexit`, which the loader does not provide. Define them inside the ELF (a small list of `fn, arg` pairs that is run at exit), or export them from the host.
-* **Not covered:** C++ exceptions and RTTI (`typeinfo` symbols) have not been tested.
+This lifecycle support applies to ELF applications invoked with
+`esp_elf_request()`. A `.so` loaded only by `dlopen()` has no entry invocation;
+its static constructors are not run automatically by `dlopen()`.
 
 ### Adding the Component to Your Project
 

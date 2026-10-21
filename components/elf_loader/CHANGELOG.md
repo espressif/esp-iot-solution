@@ -2,8 +2,12 @@
 
 ## Unreleased
 
-* Run `.preinit_array` / `.init_array` (or legacy `.ctors`) of a loaded ELF before its entry point (C++ static constructors), and `.fini_array` (or `.dtors`) in `esp_elf_deinit()`; the arrays are now also loaded into memory in section mode (ESP32/ESP32-S2/ESP32-S3)
-* Documented how to build C++ ELF applications
+* Validate C++ callback-array types and entry sizes, and verify that each
+  constructor/destructor slot has a distinct relocation (#796).
+* Execute C++ `.preinit_array` / `.init_array` or legacy `.ctors` on the first
+  `esp_elf_request()`, and finalization arrays at `esp_elf_deinit()` (#796).
+* Validate callback arrays, reject duplicate/inconsistent sections, and add
+  host regression tests plus a freestanding C++ build fixture.
 
 ## v2.0.0 - 2026-10-14
 

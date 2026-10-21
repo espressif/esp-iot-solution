@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "private/elf_types.h"
+#include "private/elf_lifecycle.h"
 #include "private/elf_validate.h"
 
 #define ELF_PF_EXEC           1
@@ -68,6 +69,10 @@ static bool elf_loaded_section(const uint8_t *pbuf, const elf32_shdr_t *shdr,
                                const elf32_shdr_t *shstr)
 {
     const char *name = (const char *)pbuf + shstr->offset + shdr->name;
+    bool reverse;
+    if (esp_elf_lifecycle_section_kind(shdr, name, &reverse) >= 0) {
+        return true;
+    }
 
     if (shdr->type == SHT_PROGBITS && (shdr->flags & SHF_ALLOC)) {
         return ((shdr->flags & SHF_EXECINSTR) && strcmp(name, ELF_TEXT) == 0) ||
@@ -263,6 +268,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     }
 
     /* Section names, symbol references and relocation targets. */
+    uint32_t seen_lifecycle = 0;
 #ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
     bool seen_dynsym = false;
 #endif
@@ -270,7 +276,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     uint32_t seen_loaded_sections = 0;
     elf_loaded_range_t loaded_ranges[ELF_SECS];
     size_t loaded_count = 0;
-    static const char *const loaded_names[ELF_SECS] = {
+    static const char *const loaded_names[] = {
         ELF_TEXT, ELF_BSS, ELF_DATA, ELF_RODATA, ELF_DATA_REL_RO
     };
 #endif
@@ -278,6 +284,51 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
         elf32_shdr_t sec = elf_section(pbuf, &ehdr, i);
         if (!elf_string_in_range(&shstr, sec.name)) {
             return -EINVAL;
+        }
+        const char *name = (const char *)pbuf + shstr.offset + sec.name;
+        /* Reject callback-array names with incompatible types instead of
+         * silently skipping their startup/shutdown code. */
+        if ((strcmp(name, ".preinit_array") == 0 && sec.type != SHT_PREINIT_ARRAY) ||
+                (strcmp(name, ".init_array") == 0 && sec.type != SHT_INIT_ARRAY) ||
+                (strcmp(name, ".fini_array") == 0 && sec.type != SHT_FINI_ARRAY)) {
+            return -EINVAL;
+        }
+        bool reverse;
+        int lifecycle_kind = esp_elf_lifecycle_section_kind(&sec, name, &reverse);
+        if (lifecycle_kind >= 0) {
+            uint32_t bit = 1U << (lifecycle_kind - ELF_SEC_PREINIT);
+            if (seen_lifecycle & bit) {
+                return -EINVAL; /* competing .init_array and .ctors, etc. */
+            }
+            seen_lifecycle |= bit;
+            /* Every entry is a 32-bit function pointer; reject partial,
+             * misaligned, or non-file-backed callback arrays. */
+            if ((sec.size & (ELF_WORD_SIZE - 1)) ||
+                    (sec.entsize && sec.entsize != ELF_WORD_SIZE) ||
+                    (sec.offset & (ELF_WORD_SIZE - 1)) ||
+                    (sec.addr & (ELF_WORD_SIZE - 1)) ||
+                    (sec.addralign && (sec.addralign & (sec.addralign - 1)))) {
+                return -EINVAL;
+            }
+#if !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+            bool file_backed = false;
+            for (size_t j = 0; j < ehdr.phnum; j++) {
+                elf32_phdr_t seg = elf_segment(pbuf, &ehdr, j);
+                if (seg.type == PT_LOAD &&
+                        elf_address_range(sec.addr, sec.size, seg.vaddr, seg.filesz) &&
+                        sec.offset >= seg.offset &&
+                        sec.offset - seg.offset == sec.addr - seg.vaddr) {
+                    file_backed = true;
+                    break;
+                }
+            }
+            if (!file_backed) {
+                return -EINVAL;
+            }
+#endif
+        } else if ((sec.type == SHT_PREINIT_ARRAY || sec.type == SHT_INIT_ARRAY ||
+                    sec.type == SHT_FINI_ARRAY) && sec.size) {
+            return -EINVAL;  /* callback arrays cannot be non-allocated */
         }
 
 #ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
@@ -293,16 +344,19 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
         if (elf_loaded_section(pbuf, &sec, &shstr)) {
             const char *name = (const char *)pbuf + shstr.offset + sec.name;
-            for (size_t j = 0; j < ELF_SECS; ++j) {
-                if (strcmp(name, loaded_names[j]) == 0) {
-                    uint32_t mask = 1U << j;
-                    if (seen_loaded_sections & mask) {
-                        return -EINVAL; /* loader maps only the last of duplicate sections */
+            int slot = lifecycle_kind;
+            if (slot < 0) {
+                for (size_t j = 0; j < sizeof(loaded_names) / sizeof(loaded_names[0]); ++j) {
+                    if (strcmp(name, loaded_names[j]) == 0) {
+                        slot = (int)j;
+                        break;
                     }
-                    seen_loaded_sections |= mask;
-                    break;
                 }
             }
+            if (slot < 0 || (seen_loaded_sections & (1U << slot))) {
+                return -EINVAL; /* duplicate or unrecognized mapped section */
+            }
+            seen_loaded_sections |= 1U << slot;
             loaded_ranges[loaded_count].addr = sec.addr;
             loaded_ranges[loaded_count].size = sec.size;
             ++loaded_count;
@@ -351,6 +405,19 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    /* All section-mode relocations and lifecycle callbacks use one address
+     * mapper: overlapping alloc sections would make the mapping ambiguous. */
+    for (size_t i = 0; i < loaded_count; ++i) {
+        for (size_t j = i + 1; j < loaded_count; ++j) {
+            if (loaded_ranges[i].size && loaded_ranges[j].size &&
+                    (uint64_t)loaded_ranges[i].addr <
+                    (uint64_t)loaded_ranges[j].addr + loaded_ranges[j].size &&
+                    (uint64_t)loaded_ranges[j].addr <
+                    (uint64_t)loaded_ranges[i].addr + loaded_ranges[i].size) {
+                return -EINVAL;
+            }
+        }
+    }
     if (!executable_entry && !no_entry_shared_object) {
         return -EINVAL;
     }

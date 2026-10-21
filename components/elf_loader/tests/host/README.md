@@ -23,6 +23,26 @@ symbol table allocation fails.
 The PSRAM export case additionally checks that dlsym() function addresses use
 the executable alias rather than the data-bus alias.
 
+C++ lifecycle regressions validate initialization/finalization callback ordering,
+legacy `.ctors`/`.dtors`, one-time initialization, and rejection of malformed
+callback arrays (#796) with Xtensa and RISC-V host configurations. The Python
+runner also selects the GNU or macOS dead-section linker flag.
+
+For ESP-IDF cross-compilation, build the freestanding ELF fixture in
+`components/elf_loader/tests/idf_cpp_lifecycle` with `idf.py set-target
+<target> build`; then inspect the resulting `elf_cpp_lifecycle.app.elf` for
+allocated `.init_array` / `.fini_array` sections and any required relocations.
+The module provides local `__dso_handle`/`__cxa_atexit` hooks, so its global
+object can link without adding C++ runtime symbols to the host. Check the
+compiled module's callback sections and relocation entries using:
+
+```sh
+python3 components/elf_loader/tests/idf_cpp_lifecycle/check_elf_arrays.py \
+    /path/to/build/elf_cpp_lifecycle.app.elf
+```
+
+Hardware verification of actual constructor/destructor execution is still required.
+
 Run with Python 3, a C compiler, CMake, and binutils (ld and nm). The
 GitLab CI check_elf_loader_host job executes the same suite. The ELF loader
 example build jobs also run check_embedded_alignment.py to check the actual
@@ -35,5 +55,16 @@ For an optional sanitizer-backed mutation smoke test, compile the standalone
 macros used by the Python suite. It tests 4096 reproducible byte mutations
 per supplied ELF fixture, without executing embedded code.
 
-These tests do not execute embedded application code or substitute for on-chip
-execution testing.
+CI runs the 33-case Host suite in `check_elf_loader_host` and a separate
+`check_elf_loader_ubsan` job that mutates both checked-in Xtensa and RISC-V
+ELF images 4096 times with UBSan instrumentation and abort-on-error enabled.
+
+`components/elf_loader/tests/idf_runtime` is a separate flashable Unity test
+that embeds the actual `idf_cpp_lifecycle` ELF. The ESP32-S3 and ESP32-P4
+`components_test_elf_loader_runtime` jobs run it on physical boards using
+`pytest-embedded`, checking constructor ordering, one-time initialization, and
+C++ destructor execution at unload. No hardware-dependent result is inferred
+from either the Host suite or a successful firmware build.
+
+The multi-import Xtensa relocation remains covered by the real-toolchain Host
+test; ESP32-S2 PSRAM/MMU board validation needs a suitable configured board.
