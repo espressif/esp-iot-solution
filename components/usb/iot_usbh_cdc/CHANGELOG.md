@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v3.1.1 - 2026-10-21
+
+### Bug Fixes:
+
+* Validate notification header and standard CDC payload lengths before invoking callbacks, while preserving other notification formats.
+* Include the setup packet in control transfer buffer bounds checks.
+* Copy only received control IN data and zero-pad short responses to prevent stale data from being returned.
+* Avoid NULL buffer accesses for control requests without a data stage.
+
 ## v3.1.0 - 2026-06-11
 
 ### Features:

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -86,6 +86,10 @@ typedef struct {
 
     /**
      * @brief Callback function for when a notification is received on the CDC port, set NULL if not use
+     *
+     * Standard CDC notifications must arrive in one transfer; fragments are not reassembled.
+     * Other notification formats are passed through after checking the minimum header size.
+     * The notification buffer is valid only during this callback.
      *
      * @param[in] port_handle Handle to the CDC port that received a notification
      * @param[in] notif Pointer to the notification data structure containing notification details
@@ -232,7 +236,7 @@ esp_err_t usbh_cdc_port_close(usbh_cdc_port_handle_t cdc_port_handle);
  * @param[in] wLength The length of data to transfer
  * @param[in,out] data Pointer to the data buffer:
  *                     - For OUT transfers: data to be sent to device
- *                     - For IN transfers: buffer to store received data
+ *                     - For IN transfers: buffer to store received data; short responses are zero-padded to wLength
  *
  * @return
  *     - ESP_OK: Request sent successfully

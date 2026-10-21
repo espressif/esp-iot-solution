@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 *
 * SPDX-License-Identifier: Apache-2.0
 */
@@ -516,7 +516,14 @@ static void notif_xfer_cb(usb_transfer_t *notif_xfer)
     case USB_TRANSFER_STATUS_COMPLETED: {
         if (cdc_port->cbs.notif_cb) {
             iot_cdc_notification_t *notif = (iot_cdc_notification_t *)notif_xfer->data_buffer;
-            cdc_port->cbs.notif_cb((usbh_cdc_port_handle_t)cdc_port, notif, cdc_port->cbs.user_data);
+            const uint8_t cdc_request_type = USB_BM_REQUEST_TYPE_DIR_IN | USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
+            if (notif_xfer->actual_num_bytes < (int)sizeof(*notif)) {
+                ESP_LOGW(TAG, "Short notification: %d bytes", notif_xfer->actual_num_bytes);
+            } else if (notif->bmRequestType == cdc_request_type && notif->wLength > notif_xfer->actual_num_bytes - (int)sizeof(*notif)) {
+                ESP_LOGW(TAG, "Incomplete CDC notification: %d bytes, payload %u", notif_xfer->actual_num_bytes, notif->wLength);
+            } else {
+                cdc_port->cbs.notif_cb((usbh_cdc_port_handle_t)cdc_port, notif, cdc_port->cbs.user_data);
+            }
         }
         // Start polling for new data again
         ESP_LOGD(TAG, "Submitting poll for INTR IN transfer");
@@ -999,7 +1006,7 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_port_handle_t cdc_port_handle, u
     usbh_cdc_port_t *cdc_port = (usbh_cdc_port_t *) cdc_port_handle;
     ESP_RETURN_ON_FALSE(is_port_opened(cdc_port) == true, ESP_ERR_INVALID_ARG, TAG, "cdc_port_handle is invalid");
     usbh_cdc_dev_t *cdc_dev = cdc_port->cdc_dev;
-    ESP_RETURN_ON_FALSE(cdc_dev->ctrl.xfer->data_buffer_size >= wLength, ESP_ERR_INVALID_ARG, TAG, "data buffer size is too small");
+    ESP_RETURN_ON_FALSE(cdc_dev->ctrl.xfer->data_buffer_size >= sizeof(usb_setup_packet_t) + wLength, ESP_ERR_INVALID_ARG, TAG, "data buffer size is too small");
 
     BaseType_t taken = xSemaphoreTake(cdc_dev->ctrl.mux, pdMS_TO_TICKS(CDC_CTRL_TIMEOUT_MS));
     if (taken == pdFALSE) {
@@ -1014,9 +1021,9 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_port_handle_t cdc_port_handle, u
     req->wIndex = wIndex;
     req->wLength = wLength;
 
-    // For IN transfers we must transfer data ownership to CDC driver
+    // Copy outgoing data after the setup packet.
     const bool in_transfer = bmRequestType & USB_BM_REQUEST_TYPE_DIR_IN;
-    if (!in_transfer) {
+    if (!in_transfer && wLength > 0) {
         memcpy(start_of_data, data, wLength);
     }
 
@@ -1036,9 +1043,12 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_port_handle_t cdc_port_handle, u
     ESP_LOGD(TAG, "cdc_dev->ctrl.xfer->actual_num_bytes = %d\n", cdc_dev->ctrl.xfer->actual_num_bytes);
     ESP_GOTO_ON_FALSE(cdc_dev->ctrl.xfer->status == USB_TRANSFER_STATUS_COMPLETED, ESP_ERR_INVALID_RESPONSE, unblock, TAG, "Control transfer error");
 
-    // For OUT transfers, we must transfer data ownership to user
-    if (in_transfer) {
-        memcpy(data, start_of_data, wLength);
+    // Copy only received bytes; short responses must not expose stale transfer data.
+    if (in_transfer && wLength > 0) {
+        int received = cdc_dev->ctrl.xfer->actual_num_bytes - (int)sizeof(usb_setup_packet_t);
+        ESP_GOTO_ON_FALSE(received >= 0 && received <= wLength, ESP_ERR_INVALID_RESPONSE, unblock, TAG, "Invalid control response length: %d", received);
+        memcpy(data, start_of_data, received);
+        memset(data + received, 0, wLength - received);
     }
     ret = ESP_OK;
 unblock:
