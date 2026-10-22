@@ -34,3 +34,8 @@ CONFIG_LV_USE_DEMO_STRESS=y
 CONFIG_LV_USE_DEMO_MUSIC=y
 CONFIG_LV_DEMO_MUSIC_AUTO_PLAY=y
 CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+# Build for ESP32-P4 revisions <3.0 by default (most EV boards in the field).
+# ESP32-P4 <3.0 and >=3.0 support are mutually exclusive; esp_audio_codec
+# resolves to <2.6.0 for this configuration. See sdkconfig.defaults.p4rev3
+# for the rev >=3.0 build.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y

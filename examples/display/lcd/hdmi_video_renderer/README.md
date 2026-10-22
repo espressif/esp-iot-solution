@@ -27,6 +27,17 @@ This example demonstrates how to display a video in MP4/AVI format on an HDMI mo
     * **Step 3**. Use a USB-C cable to connect the `USB-UART` port to a PC (Used for power supply and viewing serial output).
     * **Step 4**. Turn on the power switch of the board.
 
+### ESP32-P4 Chip Revision
+
+ESP32-P4 revisions <3.0 and >=3.0 are mutually exclusive: one firmware image supports only one side.
+
+* The default build (`sdkconfig.defaults`) targets **ESP32-P4 revisions <3.0**, including the silicon mounted on most existing ESP32-P4-Function-EV-Boards. It resolves `esp_audio_codec` to <2.6.0.
+* To build for **rev >=3.0** silicon (e.g. board v1.5, ECO5), layer `sdkconfig.defaults.p4rev3` on top of the default configuration. This resolves `esp_audio_codec` to >=2.6.0, which enables AAC assembly optimizations but requires the chip to be rev >=3.0:
+
+    ```bash
+    idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.p4rev3" set-target esp32p4 build
+    ```
+
 ### Configure the Project
 
 Run `idf.py menuconfig` and navigate to `HDMI MP4 Player Configuration` menu.
