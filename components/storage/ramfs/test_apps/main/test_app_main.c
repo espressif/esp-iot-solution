@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -70,20 +71,29 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_vfs_fat_spiflash_mount_rw_wl("/fatfs", "storage", &mount_config, &s_wl_handle));
 
+    // The storage partition is dedicated to this test app. A successful mount
+    // may reuse files left by earlier CI runs, even when format_if_mount_failed
+    // is enabled. Format it unconditionally so every run starts with free space.
+    ESP_LOGI(TAG, "Formatting dedicated FATFS test partition");
+    ESP_ERROR_CHECK(esp_vfs_fat_spiflash_format_rw_wl("/fatfs", "storage"));
+
     // Consume FATFS/newlib lazy allocations before Unity starts per-test leak accounting.
     warmup_file = fopen(TEST_FATFS_WARMUP_FILE, "wb");
     if (!warmup_file) {
         ESP_LOGE(TAG, "FATFS warmup open failed: path=%s errno=%d", TEST_FATFS_WARMUP_FILE, errno);
-    } else {
-        if (fputs("warmup", warmup_file) < 0) {
-            ESP_LOGE(TAG, "FATFS warmup write failed: errno=%d", errno);
-        }
-        if (fclose(warmup_file) != 0) {
-            ESP_LOGE(TAG, "FATFS warmup close failed: errno=%d", errno);
-        }
-        if (unlink(TEST_FATFS_WARMUP_FILE) != 0) {
-            ESP_LOGE(TAG, "FATFS warmup unlink failed: path=%s errno=%d", TEST_FATFS_WARMUP_FILE, errno);
-        }
+        abort();
+    }
+    if (fputs("warmup", warmup_file) < 0) {
+        ESP_LOGE(TAG, "FATFS warmup write failed: errno=%d", errno);
+        abort();
+    }
+    if (fclose(warmup_file) != 0) {
+        ESP_LOGE(TAG, "FATFS warmup close failed: errno=%d", errno);
+        abort();
+    }
+    if (unlink(TEST_FATFS_WARMUP_FILE) != 0) {
+        ESP_LOGE(TAG, "FATFS warmup unlink failed: path=%s errno=%d", TEST_FATFS_WARMUP_FILE, errno);
+        abort();
     }
 
     printf(" ____      _    __  __ _____ ____    _____         _\r\n");

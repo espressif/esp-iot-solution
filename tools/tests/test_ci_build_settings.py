@@ -73,6 +73,7 @@ class CIBuildRegressionTests(unittest.TestCase):
             [{'IDF_TARGET': 'esp32p4', 'IDF_VERSION': '5.5', 'ENV_TAG': 'rev_default'}],
         )
         self.assertEqual(p4['tags'], ['esp32p4', 'rev_default', 'SH-AE-TEST-R17'])
+        self.assertEqual(p4['retry'], {'max': 2, 'when': ['script_failure']})
 
     def test_imu_inference_limits_ninja_on_idf_5_2_to_5_4(self):
         source = (ROOT / 'components/imu_gesture/test_apps/inference/CMakeLists.txt').read_text(
