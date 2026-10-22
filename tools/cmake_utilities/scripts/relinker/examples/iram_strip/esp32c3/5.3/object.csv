@@ -2,6 +2,7 @@ library,object,path
 libbootloader_support.a,bootloader_flash.c.obj,esp-idf/bootloader_support/CMakeFiles/__idf_bootloader_support.dir/bootloader_flash/src/bootloader_flash.c.obj
 libbootloader_support.a,flash_encrypt.c.obj,esp-idf/bootloader_support/CMakeFiles/__idf_bootloader_support.dir/src/flash_encrypt.c.obj
 libbt.a,bt_osi_mem.c.obj,esp-idf/bt/CMakeFiles/__idf_bt.dir/porting/mem/bt_osi_mem.c.obj
+libbt.a,esp_nimble_mem.c.obj,esp-idf/bt/CMakeFiles/__idf_bt.dir/host/nimble/port/src/esp_nimble_mem.c.obj
 libbt.a,bt.c.obj,esp-idf/bt/CMakeFiles/__idf_bt.dir/controller/esp32c3/bt.c.obj
 libbt.a,nimble_port.c.obj,esp-idf/bt/CMakeFiles/__idf_bt.dir/host/nimble/nimble/porting/nimble/src/nimble_port.c.obj
 libesp_driver_gpio.a,gpio.c.obj,esp-idf/esp_driver_gpio/CMakeFiles/__idf_esp_driver_gpio.dir/src/gpio.c.obj

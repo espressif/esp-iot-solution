@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 #
-# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 import argparse
 import csv
+import json
 import os
+import shlex
 import subprocess
 import sys
 import re
@@ -169,7 +171,25 @@ class paths_c:
             obj = '*'
         return self.paths[lib].get(obj)
 
-def generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, objdump='riscv32-esp-elf-objdump'):
+def compiled_object_paths(compile_commands_file):
+    """Return the object outputs planned by CMake, even before Ninja builds them."""
+    with open(compile_commands_file, encoding='utf-8') as f:
+        commands = json.load(f)
+
+    outputs = set()
+    for command in commands:
+        output = command.get('output')
+        if not output:
+            # CMake versions before 3.20 do not include an output field.
+            args = command.get('arguments') or shlex.split(command['command'])
+            if '-o' not in args:
+                raise ValueError(f'Missing compiler output in {compile_commands_file}: {command["file"]}')
+            output = args[args.index('-o') + 1]
+        outputs.add(os.path.normcase(os.path.abspath(os.path.join(command['directory'], output))))
+    return outputs
+
+
+def generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, objdump='riscv32-esp-elf-objdump', compile_commands_file=None):
     global espidf_objdump, espidf_missing_function_info
     espidf_objdump = objdump
     espidf_missing_function_info = missing_function_info
@@ -189,6 +209,7 @@ def generator(library_file, object_file, function_file, sdkconfig_file, missing_
             obj_paths.append(row['library'], row['object'], row['path'])
 
     libraries = libraries_c()
+    compiled_objects = None
     with open(function_file, newline='') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
@@ -199,6 +220,22 @@ def generator(library_file, object_file, function_file, sdkconfig_file, missing_
             obj_path = obj_paths.index(row['library'], row['object'])
             if not obj_path:
                 obj_path = lib_path
+
+            # Opt-in rule for objects removed by newer IDF source-selection
+            # logic. Check CMake's compilation graph, never the .obj's current
+            # existence (which depends on Ninja's parallel build scheduling).
+            if_compiled = (row.get('if_compiled') or '').strip().lower()
+            if if_compiled not in ('', 'true', 'false'):
+                raise ValueError(f'Invalid if_compiled value: {if_compiled}')
+            if if_compiled == 'true':
+                if not compile_commands_file:
+                    raise ValueError('if_compiled requires --compile-commands')
+                if compiled_objects is None:
+                    compiled_objects = compiled_object_paths(compile_commands_file)
+                object_file_path = os.path.normcase(os.path.abspath(obj_path[0]))
+                if object_file_path not in compiled_objects:
+                    print(f'skip {row["function"]}: {obj_path[0]} is not compiled')
+                    continue
             libraries.append(row['library'], lib_path[0], row['object'], obj_path, row['function'])
     return libraries
 
