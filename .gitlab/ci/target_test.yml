@@ -220,10 +220,12 @@ components_test_openai:
       artifacts: true
   retry:
     max: 2
+  # External API calls are slow and version-independent. Keep the latest
+  # IDF version for on-target coverage and compile all supported IDF versions.
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.3", "5.4", "5.5"]
+        IDF_VERSION: ["5.5"]
         ENV_TAG: "openai"
   tags:
     - ${IDF_TARGET}

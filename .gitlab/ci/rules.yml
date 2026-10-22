@@ -3315,8 +3315,10 @@
       changes: *patterns-components_motor_servo
 
 # To avoid factors such as unstable wifi or expired openai-key, run ci-test only when the component itself changes.
+# Set BOT_OPENAI_ONLY=1 in API pipelines to run only OpenAI builds and target tests.
 .rules:build:components_openai_test_apps:
   rules:
+    - if: '$CI_PIPELINE_SOURCE == "api" && $BOT_OPENAI_ONLY == "1"'
     - <<: *if-label-build
     - <<: *if-label-target_test
     - <<: *if-trigger-job

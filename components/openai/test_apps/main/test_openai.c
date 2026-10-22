@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -162,8 +162,8 @@ TEST_CASE("test ImageChatCompletion", "[ChatCompletion][Image]")
     chatCompletion->setPresencePenalty(chatCompletion, 0);      //float between -2.0 and 2.0. Positive values increase the model's likelihood to talk about new topics.
     chatCompletion->setFrequencyPenalty(chatCompletion, 0);     //float between -2.0 and 2.0. Positive values decrease the model's likelihood to repeat the same line verbatim.
     chatCompletion->setUser(chatCompletion, "OpenAI-ESP32");    //A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
-    // audio
-    OpenAI_StringResponse_t *result = chatCompletion->multiModalMessage(chatCompletion, "image_url", "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg", false);
+    // Use a stable, public image maintained by this repository.
+    OpenAI_StringResponse_t *result = chatCompletion->multiModalMessage(chatCompletion, "image_url", "https://raw.githubusercontent.com/espressif/esp-iot-solution/master/docs/_static/display.png", false);
     TEST_ASSERT_NOT_NULL(result);
     if (result->getLen(result) == 1) {
         ESP_LOGI(TAG, "Received message. Tokens: %"PRIu32"", result->getUsage(result));
@@ -192,7 +192,7 @@ TEST_CASE("test AudioChatCompletion", "[ChatCompletion][Audio]")
     TEST_ASSERT_NOT_NULL(openai);
     OpenAI_ChatCompletion_t *chatCompletion = openai->chatCreate(openai);
     TEST_ASSERT_NOT_NULL(chatCompletion);
-    chatCompletion->setModel(chatCompletion, "gpt-4o-mini-audio-preview");  //Model to use for completion.
+    chatCompletion->setModel(chatCompletion, "gpt-audio-1.5");  // Supported audio input model.
     chatCompletion->setSystem(chatCompletion, "You are a helpful assistant.");     //Description of the required assistant
     chatCompletion->setMaxTokens(chatCompletion, 1024);         //The maximum number of tokens to generate in the completion.
     chatCompletion->setTemperature(chatCompletion, 0.2);        //float between 0 and 1. Higher value gives more random results.
@@ -319,22 +319,36 @@ TEST_CASE("test AudioSpeech", "[AudioSpeech]")
     vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
+// The Images API returns Base64 for GPT image models. The response is far
+// larger than available ESP32-S3 internal RAM, so test the streaming API.
+static bool image_stream_chunk_cb(const char *chunk, size_t len, void *user_data)
+{
+    size_t *total_bytes = (size_t *)user_data;
+    if (chunk == NULL || len == 0) {
+        return false;
+    }
+    *total_bytes += len;
+    return true;
+}
+
 TEST_CASE("test image generation", "[image]")
 {
     OpenAI_t *openai = OpenAICreate(openai_key);
+    TEST_ASSERT_NOT_NULL(openai);
     OpenAI_ImageGeneration_t *imageGeneration = openai->imageGenerationCreate(openai);
-    imageGeneration->setSize(imageGeneration, OPENAI_IMAGE_SIZE_256x256);
-    imageGeneration->setN(imageGeneration, 1);
-    imageGeneration->setResponseFormat(imageGeneration, OPENAI_IMAGE_RESPONSE_FORMAT_URL);
-    OpenAI_ImageResponse_t *imageResponse = imageGeneration->prompt(imageGeneration, "A cute cat");
-    TEST_ASSERT_NOT_NULL(imageResponse);
-    if (imageResponse->getLen) {
-        char *image_url = imageResponse->getData(imageResponse, 0);
-        ESP_LOGI(TAG, "Image URL: %s\n", image_url);
-    } else {
-        ESP_LOGE(TAG, "Image generation failed");
-    }
-    imageResponse->deleteResponse(imageResponse);
+    TEST_ASSERT_NOT_NULL(imageGeneration);
+    imageGeneration->setModel(imageGeneration, "gpt-image-2");
+    imageGeneration->setQuality(imageGeneration, "low");
+    imageGeneration->setOutputFormat(imageGeneration, "jpeg");
+    imageGeneration->setSize(imageGeneration, OPENAI_IMAGE_SIZE_1024x1024);
+
+    size_t image_base64_length = 0;
+    bool complete = imageGeneration->promptStream(imageGeneration, "A cute cat", image_stream_chunk_cb,
+                                                  &image_base64_length);
+    TEST_ASSERT_TRUE_MESSAGE(complete, "Image stream request did not complete");
+    TEST_ASSERT_GREATER_THAN_UINT32(1024, image_base64_length);
+    ESP_LOGI(TAG, "Received %u Base64 image bytes via stream", (unsigned)image_base64_length);
+
     openai->imageGenerationDelete(imageGeneration);
     OpenAIDelete(openai);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
