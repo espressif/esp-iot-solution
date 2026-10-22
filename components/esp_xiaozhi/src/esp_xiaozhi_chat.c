@@ -38,6 +38,7 @@
 #include "esp_mcp_mgr.h"
 
 #include "esp_xiaozhi_mcp.h"
+#include "esp_xiaozhi_vision.h"
 #include "esp_xiaozhi_transport.h"
 #include "esp_xiaozhi_chat.h"
 
@@ -116,6 +117,7 @@ typedef struct {
     esp_xiaozhi_chat_udp_ctx_t *udp;                    /*!< UDP context for MQTT path; NULL when WebSocket */
 
     char session_id[ESP_XIAOZHI_CHAT_MAX_STRING_SIZE];  /*!< Session ID */
+    esp_xiaozhi_vision_t vision;                        /*!< Vision explain endpoint for this chat */
     int server_sample_rate;                             /*!< Server sample rate */
     int server_frame_duration;                          /*!< Server frame duration */
 
@@ -376,17 +378,6 @@ static esp_err_t esp_xiaozhi_chat_set_device_state(esp_xiaozhi_chat_t *xiaozhi_c
     return ESP_OK;
 }
 
-static void esp_xiaozhi_chat_clear_mcp_session_state(esp_xiaozhi_chat_t *xiaozhi_chat, const char *session_id)
-{
-    if (!xiaozhi_chat->mcp_mgr_handle) {
-        return;
-    }
-    (void)esp_mcp_mgr_clear_session_state(xiaozhi_chat->mcp_mgr_handle, "__default");
-    if (session_id && session_id[0]) {
-        (void)esp_mcp_mgr_clear_session_state(xiaozhi_chat->mcp_mgr_handle, session_id);
-    }
-}
-
 static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat, cJSON *root)
 {
     const cJSON *transport = cJSON_GetObjectItem(root, "transport");
@@ -497,8 +488,6 @@ static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat
         }
     }
 
-    esp_xiaozhi_chat_clear_mcp_session_state(xiaozhi_chat, xiaozhi_chat->session_id);
-
     xEventGroupSetBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO);
 
     return ESP_OK;
@@ -508,11 +497,49 @@ static esp_err_t esp_xiaozhi_chat_goodbye_handler(esp_xiaozhi_chat_t *xiaozhi_ch
 {
     cJSON *session_id = cJSON_GetObjectItem(root, "session_id");
     if (session_id == NULL || strcmp(xiaozhi_chat->session_id, session_id->valuestring) == 0) {
-        esp_xiaozhi_chat_clear_mcp_session_state(xiaozhi_chat, xiaozhi_chat->session_id);
         esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_SERVER_GOODBYE, NULL, 0, portMAX_DELAY);
     }
 
     return ESP_OK;
+}
+
+static void esp_xiaozhi_chat_note_vision(esp_xiaozhi_chat_t *xiaozhi_chat, const cJSON *payload)
+{
+    const cJSON *method = cJSON_GetObjectItem(payload, "method");
+    const cJSON *params = NULL;
+    const cJSON *capabilities = NULL;
+    const cJSON *vision = NULL;
+    const cJSON *url = NULL;
+    const cJSON *token = NULL;
+    const char *token_str = NULL;
+
+    if (!cJSON_IsString(method) || strcmp(method->valuestring, "initialize") != 0) {
+        return;
+    }
+
+    params = cJSON_GetObjectItem(payload, "params");
+    capabilities = cJSON_IsObject(params) ? cJSON_GetObjectItem(params, "capabilities") : NULL;
+    vision = cJSON_IsObject(capabilities) ? cJSON_GetObjectItem(capabilities, "vision") : NULL;
+    if (!cJSON_IsObject(vision)) {
+        /* A re-initialize without vision must not keep the previous endpoint. */
+        (void)esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, NULL, NULL);
+        return;
+    }
+
+    url = cJSON_GetObjectItem(vision, "url");
+    token = cJSON_GetObjectItem(vision, "token");
+    if (!cJSON_IsString(url) || url->valuestring[0] == '\0') {
+        (void)esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, NULL, NULL);
+        return;
+    }
+
+    token_str = cJSON_IsString(token) ? token->valuestring : NULL;
+    if (esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, url->valuestring, token_str) != ESP_OK) {
+        /* Helper already logged */
+        (void)esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, NULL, NULL);
+        return;
+    }
+    ESP_LOGD(TAG, "Vision explain URL: %s", xiaozhi_chat->vision.explain_url);
 }
 
 static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, cJSON *root)
@@ -532,6 +559,7 @@ static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, 
     if (cJSON_IsString(method)) {
         ESP_LOGI(TAG, "Received MCP method: %s", method->valuestring);
     }
+    esp_xiaozhi_chat_note_vision(xiaozhi_chat, payload_obj);
 
     char *payload_mcp = cJSON_PrintUnformatted(payload_obj);
     if (!payload_mcp) {
@@ -539,15 +567,16 @@ static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, 
         return ESP_ERR_NO_MEM;
     }
 
-    ESP_LOGI(TAG, "Received MCP message: %s", payload_mcp);
+    /* Do not log the payload: initialize carries the vision bearer token. */
+    ESP_LOGI(TAG, "Received MCP message: %u bytes", (unsigned)strlen(payload_mcp));
 
-    const char *mcp_session = xiaozhi_chat->session_id[0] ? xiaozhi_chat->session_id : NULL;
-    (void)esp_mcp_mgr_set_request_context(xiaozhi_chat->mcp_mgr_handle, mcp_session, NULL, true);
+    const char *reply_session = xiaozhi_chat->session_id[0] ? xiaozhi_chat->session_id : NULL;
+    (void)esp_mcp_mgr_set_request_context(xiaozhi_chat->mcp_mgr_handle, NULL, NULL, true);
     esp_err_t ret = esp_xiaozhi_mcp_handle_message(xiaozhi_chat->mcp_mgr_handle,
                                                    "mcp_server",
                                                    payload_mcp,
                                                    strlen(payload_mcp),
-                                                   mcp_session);
+                                                   reply_session);
     (void)esp_mcp_mgr_set_request_context(xiaozhi_chat->mcp_mgr_handle, NULL, NULL, false);
 
     cJSON_free(payload_mcp);
@@ -1410,6 +1439,37 @@ esp_err_t esp_xiaozhi_chat_deinit(esp_xiaozhi_chat_handle_t chat_hd)
     return ret;
 }
 
+esp_err_t esp_xiaozhi_chat_get_vision_explain(esp_xiaozhi_chat_handle_t chat_hd, char *url, size_t url_size,
+                                              char *token, size_t token_size)
+{
+    esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)chat_hd;
+
+    if (chat_hd == 0 || url == NULL || url_size == 0 || (token != NULL && token_size == 0)) {
+        ESP_LOGE(TAG, "Get vision explain failed: handle, url, or token size is invalid");
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (xiaozhi_chat->vision.explain_url[0] == '\0') {
+        ESP_LOGW(TAG, "Get vision explain: URL is not set");
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (url_size <= strlen(xiaozhi_chat->vision.explain_url)) {
+        url[0] = '\0';
+        ESP_LOGE(TAG, "Get vision explain failed: URL buffer is too small");
+        return ESP_ERR_INVALID_SIZE;
+    }
+    if (token != NULL && token_size <= strlen(xiaozhi_chat->vision.explain_token)) {
+        token[0] = '\0';
+        ESP_LOGE(TAG, "Get vision explain failed: token buffer is too small");
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    strlcpy(url, xiaozhi_chat->vision.explain_url, url_size);
+    if (token != NULL) {
+        strlcpy(token, xiaozhi_chat->vision.explain_token, token_size);
+    }
+    return ESP_OK;
+}
+
 esp_err_t esp_xiaozhi_chat_start(esp_xiaozhi_chat_handle_t chat_hd)
 {
     ESP_RETURN_ON_FALSE(chat_hd, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
@@ -1545,7 +1605,6 @@ esp_err_t esp_xiaozhi_chat_close_audio_channel(esp_xiaozhi_chat_handle_t chat_hd
         }
     }
 
-    esp_xiaozhi_chat_clear_mcp_session_state(xiaozhi_chat, xiaozhi_chat->session_id);
     memset(xiaozhi_chat->session_id, 0, sizeof(xiaozhi_chat->session_id));
     esp_xiaozhi_chat_audio_close(xiaozhi_chat);
 

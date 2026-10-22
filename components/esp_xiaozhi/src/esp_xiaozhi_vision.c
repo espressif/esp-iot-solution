@@ -60,6 +60,10 @@ esp_err_t esp_xiaozhi_vision_set_endpoint(esp_xiaozhi_vision_t *vision,
                                           const char *token)
 {
     ESP_RETURN_ON_FALSE(vision != NULL, ESP_ERR_INVALID_ARG, "ESP_XIAOZHI_VISION", "Invalid vision");
+    ESP_RETURN_ON_FALSE(url == NULL || strlen(url) < sizeof(vision->explain_url), ESP_ERR_INVALID_SIZE,
+                        "ESP_XIAOZHI_VISION", "Set endpoint failed: URL is too long");
+    ESP_RETURN_ON_FALSE(token == NULL || strlen(token) < sizeof(vision->explain_token), ESP_ERR_INVALID_SIZE,
+                        "ESP_XIAOZHI_VISION", "Set endpoint failed: token is too long");
 
     if (url != NULL) {
         strlcpy(vision->explain_url, url, sizeof(vision->explain_url));
