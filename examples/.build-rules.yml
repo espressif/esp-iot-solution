@@ -580,6 +580,15 @@ examples/gprof/gprof_simple:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3","esp32c3"]
 
+examples/elf_loader/build_shared_library_example:
+  enable:
+    - if: IDF_TARGET in ["esp32", "esp32s2", "esp32s3"]
+    - if: IDF_TARGET == "esp32p4" and IDF_VERSION >= "5.4"
+    - if: IDF_TARGET == "esp32c6" and IDF_VERSION >= "5.4"
+    - if: IDF_TARGET == "esp32c5" and IDF_VERSION >= "5.5.2"
+    - if: IDF_TARGET == "esp32c61" and IDF_VERSION >= "5.5.1"
+    - if: IDF_TARGET == "esp32s31" and IDF_VERSION >= "6.1"
+
 examples/elf_loader/elf_loader_example:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s2","esp32s3"]

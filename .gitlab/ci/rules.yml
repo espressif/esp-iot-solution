@@ -84,6 +84,9 @@
   - "components/button/**/*"
   - "tools/cmake_utilities/package_manager.cmake"
 
+.patterns-components_elf_loader: &patterns-components_elf_loader
+  - "components/elf_loader/**/*"
+
 .patterns-components_elf_loader_host: &patterns-components_elf_loader_host
   - "components/elf_loader/**/*"
   - "examples/elf_loader/**/*"
@@ -979,6 +982,9 @@
 
 .patterns-example_gprof_gprof_simple: &patterns-example_gprof_gprof_simple
   - "examples/gprof/gprof_simple/**/*"
+
+.patterns-example_elf_loader_build_shared_library_example: &patterns-example_elf_loader_build_shared_library_example
+  - "examples/elf_loader/build_shared_library_example/**/*"
 
 .patterns-example_elf_loader_elf_loader_example: &patterns-example_elf_loader_elf_loader_example
   - "examples/elf_loader/elf_loader_example/**/*"
@@ -2511,6 +2517,8 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+    - <<: *if-dev-push
       changes: *patterns-example_elf_loader_elf_loader_example
 
 .rules:build:example_elf_loader_build_elf_file_example:
@@ -2520,6 +2528,8 @@
     - <<: *if-trigger-job
     - <<: *if-dev-push
       changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
     - <<: *if-dev-push
       changes: *patterns-example_elf_loader_build_elf_file_example
 
@@ -2531,6 +2541,8 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+    - <<: *if-dev-push
       changes: *patterns-example_elf_loader_elf_embed_example
 
 .rules:build:example_elf_loader_elf_console_example:
@@ -2541,7 +2553,42 @@
     - <<: *if-dev-push
       changes: *patterns-build_system
     - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+    - <<: *if-dev-push
       changes: *patterns-example_elf_loader_elf_console_example
+
+.rules:build:example_elf_loader_build_shared_library_example:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+    - <<: *if-dev-push
+      changes: *patterns-example_elf_loader_build_shared_library_example
+
+.rules:build:components_elf_loader_runtime_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+
+.rules:build:components_elf_loader_cpp_lifecycle:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
 
 .rules:build:example_relinker:
   rules:

@@ -30,7 +30,7 @@ ExternalProject_Add(elf_cpp_lifecycle_module
 add_custom_command(
     OUTPUT "${module_payload}"
     COMMAND "${CMAKE_COMMAND}" -E copy "${module_elf}" "${module_payload}"
-    DEPENDS elf_cpp_lifecycle_module
+    DEPENDS elf_cpp_lifecycle_module "${module_elf}"
     VERBATIM
 )
 add_custom_target(elf_cpp_lifecycle_payload ALL DEPENDS "${module_payload}")
