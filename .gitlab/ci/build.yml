@@ -156,6 +156,7 @@ build_example_ai_esp_dl_emotion_recognition:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/emotion_recognition
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
@@ -166,6 +167,8 @@ build_example_ai_esp_dl_human_activity_recognition:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
+    # ESP-DL C++ compilation can exceed the runner's memory at Ninja defaults.
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_ai_esp_dl_self_learning_classification:
   extends:
@@ -505,6 +508,17 @@ build_example_display_lcd_hdmi_video_renderer:
     - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+
+build_example_display_lcd_hdmi_video_renderer_p4rev3:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_hdmi_video_renderer
+    - .build_idf_ge_than_v5_4
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+    # ESP32-P4 rev >=3.0 build (esp_audio_codec >=2.6.0)
+    EXAMPLE_CONFIG: "sdkconfig.defaults.p4rev3=p4rev3"
     EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_example_display_lcd_lcd_layer_blending:
@@ -1232,6 +1246,9 @@ build_example_vision_opencv_color_tracker:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/vision/opencv/color_tracker
+    # idf.py invokes Ninja directly, but OpenCV also runs a nested "cmake --build".
+    IDF_PY_BUILD_JOBS: "2"
+    CMAKE_BUILD_PARALLEL_LEVEL: "2"
 
 build_components_audio_adc_mic_test_apps:
   extends:
@@ -1637,8 +1654,27 @@ build_components_imu_gesture_test_apps:
     - .rules:build:components_imu_gesture_test_apps
     - .build_idf_active_release_version
   variables:
-    EXAMPLE_DIR: components/imu_gesture/test_apps
+    # Build the lightweight gesture examples separately from TFLite Micro.
+    EXAMPLE_DIR: "components/imu_gesture/test_apps/knob components/imu_gesture/test_apps/space_switch"
     EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+    IDF_PY_BUILD_JOBS: "2"
+
+build_components_imu_gesture_inference_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_gesture_test_apps
+  parallel:
+    matrix:
+      # TFLite Micro is expensive on IDF 5.3. Split the same target matrix
+      # across two jobs so the 3-hour CI limit cannot interrupt all apps.
+      - IMAGE: ["espressif/idf:release-v5.3", "espressif/idf:release-v5.4", "espressif/idf:release-v5.5"]
+        IMU_BUILD_PARTITION: ["1", "2"]
+  variables:
+    EXAMPLE_DIR: components/imu_gesture/test_apps/inference
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings --parallel-count 2 --parallel-index ${IMU_BUILD_PARTITION}"
+    # IDF 5.2 does not support this inference example; retain the project's
+    # two-job Ninja compile pool to avoid C++ compiler OOM on older IDF.
+    IDF_PY_BUILD_JOBS: "2"
 
 build_components_imu_quaternion_test_apps:
   extends:
@@ -2299,6 +2335,6 @@ build_example_xiaozhi_chat:
     - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/ai/xiaozhi_chat
-    EXAMPLE_BOARD: esp_box_3
+    EXAMPLE_BOARD: esp32_s3_box_3
     IDF_TARGET: esp32s3
   allow_failure: true # See [~>1576] for more details, link: w/6IZmNBnT
