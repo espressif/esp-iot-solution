@@ -2569,6 +2569,19 @@
     - <<: *if-dev-push
       changes: *patterns-example_elf_loader_build_shared_library_example
 
+.rules:build:components_elf_loader_dlopen_test:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-label-target_test
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_elf_loader
+    - <<: *if-dev-push
+      changes: *patterns-example_elf_loader_build_shared_library_example
+
 .rules:build:components_elf_loader_runtime_test:
   rules:
     - <<: *if-protected

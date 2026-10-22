@@ -1,0 +1,7 @@
+# Reproduce issue #776: code is placed in S3 PSRAM; dlsym must return
+# its instruction-bus executable alias rather than the data-bus address.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_USE_MALLOC=y
+CONFIG_ELF_LOADER_LOAD_PSRAM=y

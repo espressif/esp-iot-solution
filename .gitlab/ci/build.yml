@@ -2171,6 +2171,19 @@ build_example_elf_loader_build_shared_library_example:
       - examples/elf_loader/build_shared_library_example/build_*/build_log.txt
     expire_in: 1 week
 
+# #776: build the original project_so library and flashable SPIFFS test app.
+# The base defaults and sdkconfig.ci.psram exercise IRAM and PSRAM.
+build_components_elf_loader_dlopen_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_dlopen_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_dlopen
+    BUILD_RECURSIVE: "0"
+
 # Builds flashable Unity firmware which embeds the actual freestanding C++
 # ELF and checks constructor/destructor results on target hardware.
 build_components_elf_loader_runtime_test:

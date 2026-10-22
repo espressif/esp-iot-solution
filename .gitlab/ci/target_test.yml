@@ -36,6 +36,32 @@ variables:
     - pip install -r tools/requirements/requirement.pytest.txt
     - pytest ${TEST_FOLDER} --target ${TEST_TARGET} --env ${TEST_ENV} --junitxml=XUNIT_RESULT.xml
 
+# #776: actual file-backed dlopen/dlsym/fibonacci/dlclose.
+# esp-box-3 has Octal PSRAM, unlike the generic S3 test board.
+components_test_elf_loader_dlopen:
+  extends:
+    - .pytest_template
+    - .rules:build:components_elf_loader_dlopen_test
+  needs:
+    - job: "build_components_elf_loader_dlopen_test"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: esp-box-3
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/elf_loader/tests/idf_dlopen
+    TEST_ENV: ${ENV_TAG}
+
 components_test_elf_loader_runtime:
   extends:
     - .pytest_template

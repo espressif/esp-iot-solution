@@ -1,3 +1,7 @@
+components/elf_loader/tests/idf_dlopen:
+  enable:
+    - if: IDF_TARGET == "esp32s3" and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+
 components/elf_loader/tests/idf_runtime:
   enable:
     # S3 boards run 5.5; P4 CI boards have 1.x silicon and require 5.4.
