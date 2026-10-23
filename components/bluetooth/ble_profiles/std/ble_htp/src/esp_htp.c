@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -77,13 +77,14 @@ esp_err_t esp_ble_htp_get_temp_type(uint8_t *temp_type)
         return ESP_ERR_INVALID_ARG;
     }
 
+    uint8_t temp_type_value = 0;
     esp_ble_conn_data_t inbuff = {
         .type = BLE_CONN_UUID_TYPE_16,
         .uuid = {
             .uuid16 = BLE_HTP_CHR_UUID16_TEMPERATURE_TYPE,
         },
-        .data = NULL,
-        .data_len = 0,
+        .data = &temp_type_value,
+        .data_len = sizeof(temp_type_value),
     };
 
     esp_err_t rc = esp_ble_conn_read(&inbuff);
@@ -92,7 +93,7 @@ esp_err_t esp_ble_htp_get_temp_type(uint8_t *temp_type)
         return rc;
     }
 
-    *temp_type = *inbuff.data;
+    *temp_type = temp_type_value;
 
     return ESP_OK;
 }
@@ -103,13 +104,14 @@ esp_err_t esp_ble_htp_get_measurement_interval(uint16_t *interval_val)
         return ESP_ERR_INVALID_ARG;
     }
 
+    uint16_t interval_data = 0;
     esp_ble_conn_data_t inbuff = {
         .type = BLE_CONN_UUID_TYPE_16,
         .uuid = {
             .uuid16 = BLE_HTP_CHR_UUID16_MEASUREMENT_INTERVAL,
         },
-        .data = NULL,
-        .data_len = 0,
+        .data = (uint8_t *) &interval_data,
+        .data_len = sizeof(interval_data),
     };
 
     esp_err_t rc = esp_ble_conn_read(&inbuff);
@@ -118,7 +120,7 @@ esp_err_t esp_ble_htp_get_measurement_interval(uint16_t *interval_val)
         return rc;
     }
 
-    memcpy(interval_val, inbuff.data, MIN(inbuff.data_len, sizeof(uint16_t)));
+    memcpy(interval_val, &interval_data, MIN(inbuff.data_len, sizeof(interval_data)));
 
     return ESP_OK;
 }
