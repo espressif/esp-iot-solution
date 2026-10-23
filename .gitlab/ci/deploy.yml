@@ -134,7 +134,7 @@ pack-upload_files:
     - job: "build_example_usb_device_usb_lcd_display: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_device_usb_msc_wireless_disk: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_device_usb_surface_dial: [espressif/idf:release-v5.5]"
-    - job: "build_example_usb_device_usb_uac: [espressif/idf:release-v5.5]"
+    - job: "build_example_usb_device_usb_uac: [espressif/idf:release-v5.5, esp32_p4_function_ev_board, esp32p4, -t esp32p4]"
     - job: "build_example_usb_device_usb_uart_bridge: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_device_usb_uf2_nvs: [espressif/idf:release-v5.5]"
     - job: "build_example_usb_device_usb_uf2_ota: [espressif/idf:release-v5.5]"
