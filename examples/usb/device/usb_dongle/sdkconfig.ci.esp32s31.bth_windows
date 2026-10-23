@@ -1,0 +1,18 @@
+# Windows USB Bluetooth defaults for ESP32-S31 (USB High Speed).
+# Use with: idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.esp32s31.bth_windows" --preview set-target esp32s31
+# ESP-IDF version used for testing: release/v6.1 (commit 9a97f6c54ec).
+CONFIG_IDF_TARGET="esp32s31"
+
+# Expose the BR/EDR + BLE controller to the Windows host over VHCI RAM.
+CONFIG_BT_ENABLED=y
+CONFIG_BT_CONTROLLER_ONLY=y
+CONFIG_BTDM_CTRL_MODE_BTDM=y
+CONFIG_BT_CTRL_HCI_INTERFACE_USE_RAM=y
+
+# Standalone USB Bluetooth device, using the S31 High-Speed controller.
+CONFIG_TINYUSB_RHPORT_HS=y
+CONFIG_TINYUSB_NET_MODE_NONE=y
+CONFIG_TINYUSB_BTH_ENABLED=y
+CONFIG_TINYUSB_CDC_ENABLED=n
+CONFIG_TINYUSB_DFU_ENABLED=n
+CONFIG_TINYUSB_BTH_ISO_ALT_COUNT=2

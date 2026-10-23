@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.3.1 (2026-10-21)
+
+### Bug Fixes
+
+* Fix USB Bluetooth descriptors and ACL buffer sizing for Windows compatibility.
+
 ## v0.3.0 (2026-07-31)
 
 ### Enhancements
