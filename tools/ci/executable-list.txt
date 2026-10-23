@@ -24,6 +24,7 @@ examples/usb/device/bootloader_uf2/utils/redirect.sh
 examples/usb/device/usb_msc_wireless_disk/tools/analyze_upload_log_en.py
 examples/usb/device/usb_msc_wireless_disk/tools/upload_speed_test.py
 examples/usb/host/usb_hub_dual_camera/scripts/gzip_webserver_files.sh
+tools/check_bootloader_xz_iram.py
 tools/ci/check_components.py
 tools/ci/check_executables.py
 tools/ci/check_readme_links.py
