@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "2.0.0"
 targets:
   - esp32
   - esp32s3
@@ -8,6 +8,7 @@ targets:
   - esp32c6
   - esp32c61
   - esp32h2
+  - esp32p4
 description: Controller-side network provisioning client for Wi-Fi and Thread (SoftAP/HTTP, BLE, Console)
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/network_provisioner
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -18,10 +19,11 @@ dependencies:
   idf:
     version: ">=5.3"
   cmake_utilities: "0.*"
-  # Same-repo sibling until protocomm_ext is published to the Component Registry.
+  # BLE helpers call protocomm_ext_get_transport_method(), added in 1.0.1.
+  # ^1.0.0 would still accept 1.0.0 and fail at compile for Registry users.
   # override_path wins for in-tree builds; version is used when consuming from registry.
   protocomm_ext:
-    version: "^1.0.0"
+    version: "^1.0.1"
     override_path: "../protocomm_ext"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

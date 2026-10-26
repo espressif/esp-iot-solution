@@ -31,7 +31,7 @@
 - 从 ``proto-ver`` 解析能力（``prov.cap`` / ``prov.sec_ver``）
 - 高层接口 ``network_provisioner_provision_wifi()`` / ``provision_thread()``
 
-**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2
+**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2 / ESP32-P4
 
 典型流程
 --------
@@ -40,15 +40,18 @@
 
     #include "network_provisioner.h"
     #include "protocomm_ext.h"
-    #include "protocomm_ext_security.h"
 
-    protocomm_ext_t *pc = protocomm_ext_new(&pe_cfg); /* 传输 + Sec0 占位 */
+    protocomm_ext_t *pc = protocomm_ext_new(&pe_cfg);
     network_provisioner_t *np = network_provisioner_create(pc);
 
-    network_provisioner_fetch_capabilities(np, /* BLE: &ble_addr，否则 NULL */ NULL);
+    network_provisioner_fetch_capabilities(np, /* BLE：连接配置，否则 NULL */ NULL);
     network_provisioner_capabilities_t caps = {0};
     network_provisioner_get_capabilities(np, &caps);
-    /* 按 caps.sec_ver 调用 protocomm_ext_set_security() 配置 PoP / Sec2 */
+    network_provisioner_security_t sec = {
+        .sec_ver = caps.sec_ver,
+        .pop = "abcd1234",
+    };
+    network_provisioner_set_security(np, &sec);
     network_provisioner_establish_security(np);
 
     network_provisioner_wifi_creds_t creds = {
@@ -66,6 +69,11 @@
 若安全方案已知，仍可用 ``network_provisioner_start_session()`` 一步完成
 open → proto-ver → handshake。
 
+BLE 控制器可以调用 ``network_provisioner_create_ble()``，再使用
+``network_provisioner_ble_scan()`` 和 ``network_provisioner_ble_connect_cfg()``。
+应用自己的端点使用 ``network_provisioner_add_endpoint()`` 和
+``network_provisioner_send()``。
+
 **线程安全：** 同一实例的 API 非线程安全，请在单任务中串行调用。
 
 添加依赖
@@ -74,7 +82,7 @@ open → proto-ver → handshake。
 .. code:: yaml
 
     dependencies:
-      espressif/network_provisioner: "^1.0.0"
+      espressif/network_provisioner: "^2.0.0"
 
 示例
 ----

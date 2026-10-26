@@ -52,7 +52,7 @@ dependencies:
 - 测试：`components/esp_local_controller/test_apps`
 - 示例：`examples/esp_local_controller`（HTTP / BLE / Console）
 
-**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2
+**支持目标：** ESP32 / ESP32-S3 / ESP32-C2 / ESP32-C3 / ESP32-C5 / ESP32-C6 / ESP32-C61 / ESP32-H2 / ESP32-P4
 
 ## 许可证
 
