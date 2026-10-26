@@ -1,0 +1,8 @@
+# ESP32-P4 rev >=3.0 overlay (e.g. P4-Function-EV-Board v1.5, ECO5 silicon).
+# Layer on top of sdkconfig.defaults:
+#   idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.p4rev3" set-target esp32p4 build
+# esp_audio_codec resolves to ^2.6.0 (AAC assembly optimizations) for this
+# configuration; the resulting firmware requires ESP32-P4 chip rev >=3.0.
+CONFIG_IDF_TARGET="esp32p4"
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=n
+CONFIG_ESP32P4_REV_MIN_300=y

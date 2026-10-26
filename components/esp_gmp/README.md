@@ -20,7 +20,7 @@ Application
 
 GMP does **not** implement `sub_seq` fragmentation or RX reassembly; those belong to the bound transport (for example Flux).
 
-File Transfer migration notes: [`MIGRATION_FT.md`](MIGRATION_FT.md). Unification plan: repo-root `PROFILE_UNIFICATION.md`.
+File Transfer profile API: [`esp_gmp_ft.h`](profiles/file_transfer/include/esp_gmp_ft.h).
 
 ## Features
 

@@ -52,6 +52,20 @@ LV_FONT_DECLARE(font_awesome_30_4);
 LV_FONT_DECLARE(font_puhui_20_4);
 LV_FONT_DECLARE(font_awesome_20_4);
 
+// LVGL 9.6 deprecates the generic flag APIs; keep support for older LVGL 9.x.
+static void esp_xiaozhi_chat_display_set_hidden(lv_obj_t *obj, bool hidden)
+{
+#if LVGL_VERSION_MAJOR > 9 || (LVGL_VERSION_MAJOR == 9 && LVGL_VERSION_MINOR >= 6)
+    lv_obj_set_hidden(obj, hidden);
+#else
+    if (hidden) {
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_remove_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    }
+#endif
+}
+
 typedef struct {
     const lv_font_t *text_font;
     const lv_font_t *icon_font;
@@ -209,10 +223,10 @@ static void esp_xiaozhi_chat_display_notification(void *arg)
         return;
     }
     if (disp->notification_label != NULL) {
-        lv_obj_add_flag(disp->notification_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(disp->notification_label, true);
     }
     if (disp->status_label != NULL) {
-        lv_obj_clear_flag(disp->status_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(disp->status_label, false);
     }
     esp_xiaozhi_chat_display_unlock(disp);
 }
@@ -289,7 +303,7 @@ static esp_err_t esp_xiaozhi_chat_display_setup_ui(lcd_display_t *lcd)
     lcd->preview_image = lv_image_create(lcd->content);
     lv_obj_set_size(lcd->preview_image, disp->width * 0.5, disp->height * 0.5);
     lv_obj_align(lcd->preview_image, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_flag(lcd->preview_image, LV_OBJ_FLAG_HIDDEN);
+    esp_xiaozhi_chat_display_set_hidden(lcd->preview_image, true);
     disp->chat_message_label = lv_label_create(lcd->content);
     lv_label_set_text(disp->chat_message_label, "");
     lv_obj_set_width(disp->chat_message_label, LV_HOR_RES * 0.9);
@@ -313,7 +327,7 @@ static esp_err_t esp_xiaozhi_chat_display_setup_ui(lcd_display_t *lcd)
     lv_obj_set_style_text_align(disp->notification_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(disp->notification_label, lcd->current_theme.text, 0);
     lv_label_set_text(disp->notification_label, "");
-    lv_obj_add_flag(disp->notification_label, LV_OBJ_FLAG_HIDDEN);
+    esp_xiaozhi_chat_display_set_hidden(disp->notification_label, true);
     disp->status_label = lv_label_create(lcd->status_bar);
     lv_obj_set_flex_grow(disp->status_label, 1);
     lv_label_set_long_mode(disp->status_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -338,7 +352,7 @@ static esp_err_t esp_xiaozhi_chat_display_setup_ui(lcd_display_t *lcd)
     lv_label_set_text(disp->low_battery_label, LANG_STR_BATTERY_NEED_CHARGE);
     lv_obj_set_style_text_color(disp->low_battery_label, lv_color_white(), 0);
     lv_obj_center(disp->low_battery_label);
-    lv_obj_add_flag(disp->low_battery_popup, LV_OBJ_FLAG_HIDDEN);
+    esp_xiaozhi_chat_display_set_hidden(disp->low_battery_popup, true);
     esp_xiaozhi_chat_display_unlock(disp);
 
     return ESP_OK;
@@ -560,10 +574,10 @@ esp_err_t esp_xiaozhi_chat_display_set_status(const char *status)
     }
     if (s_display->status_label != NULL) {
         lv_label_set_text(s_display->status_label, status);
-        lv_obj_clear_flag(s_display->status_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->status_label, false);
     }
     if (s_display->notification_label != NULL) {
-        lv_obj_add_flag(s_display->notification_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->notification_label, true);
     }
     esp_xiaozhi_chat_display_unlock(s_display);
     return ESP_OK;
@@ -579,10 +593,10 @@ esp_err_t esp_xiaozhi_chat_display_set_subtitle(const char *subtitle)
     }
     if (s_display->status_label != NULL) {
         lv_label_set_text(s_display->status_label, subtitle);
-        lv_obj_clear_flag(s_display->status_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->status_label, false);
     }
     if (s_display->notification_label != NULL) {
-        lv_obj_add_flag(s_display->notification_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->notification_label, true);
     }
     esp_xiaozhi_chat_display_unlock(s_display);
 
@@ -619,10 +633,10 @@ esp_err_t esp_xiaozhi_chat_display_set_notification(const char *notification, in
     }
     if (s_display->notification_label != NULL) {
         lv_label_set_text(s_display->notification_label, notification);
-        lv_obj_clear_flag(s_display->notification_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->notification_label, false);
     }
     if (s_display->status_label != NULL) {
-        lv_obj_add_flag(s_display->status_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->status_label, true);
     }
     esp_xiaozhi_chat_display_unlock(s_display);
     if (s_display->notification_timer != NULL) {
@@ -651,9 +665,9 @@ esp_err_t esp_xiaozhi_chat_display_set_emotion(const char *emotion)
             }
         }
         lv_label_set_text(s_display->emotion_label, icon);
-        lv_obj_clear_flag(s_display->emotion_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->emotion_label, false);
         if (lcd->preview_image != NULL) {
-            lv_obj_add_flag(lcd->preview_image, LV_OBJ_FLAG_HIDDEN);
+            esp_xiaozhi_chat_display_set_hidden(lcd->preview_image, true);
         }
         esp_xiaozhi_chat_display_unlock(s_display);
         return ESP_OK;
@@ -712,10 +726,10 @@ esp_err_t esp_xiaozhi_chat_display_set_icon(const char *icon)
         }
         lv_obj_set_style_text_font(s_display->emotion_label, &font_awesome_30_4, 0);
         lv_label_set_text(s_display->emotion_label, icon);
-        lv_obj_clear_flag(s_display->emotion_label, LV_OBJ_FLAG_HIDDEN);
+        esp_xiaozhi_chat_display_set_hidden(s_display->emotion_label, false);
         lcd_display_t *lcd = esp_xiaozhi_chat_display_from_base(s_display);
         if (lcd->preview_image != NULL) {
-            lv_obj_add_flag(lcd->preview_image, LV_OBJ_FLAG_HIDDEN);
+            esp_xiaozhi_chat_display_set_hidden(lcd->preview_image, true);
         }
         esp_xiaozhi_chat_display_unlock(s_display);
         return ESP_OK;
@@ -745,14 +759,14 @@ esp_err_t esp_xiaozhi_chat_display_set_image(const void *image)
             int scale = (img_dsc->header.w > 0) ? (128 * s_display->width / img_dsc->header.w) : 256;
             lv_image_set_scale(lcd->preview_image, scale);
             lv_image_set_src(lcd->preview_image, img_dsc);
-            lv_obj_clear_flag(lcd->preview_image, LV_OBJ_FLAG_HIDDEN);
+            esp_xiaozhi_chat_display_set_hidden(lcd->preview_image, false);
             if (s_display->emotion_label != NULL) {
-                lv_obj_add_flag(s_display->emotion_label, LV_OBJ_FLAG_HIDDEN);
+                esp_xiaozhi_chat_display_set_hidden(s_display->emotion_label, true);
             }
         } else {
-            lv_obj_add_flag(lcd->preview_image, LV_OBJ_FLAG_HIDDEN);
+            esp_xiaozhi_chat_display_set_hidden(lcd->preview_image, true);
             if (s_display->emotion_label != NULL) {
-                lv_obj_clear_flag(s_display->emotion_label, LV_OBJ_FLAG_HIDDEN);
+                esp_xiaozhi_chat_display_set_hidden(s_display->emotion_label, false);
             }
         }
     }

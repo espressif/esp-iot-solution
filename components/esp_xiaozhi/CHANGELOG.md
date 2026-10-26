@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.3~1 - 2026-10-23
+
+### Bundled example updates
+
+- Update the bundled `examples/ai/xiaozhi_chat` example for ESP Board Manager v0.7.1 and `esp_codec_dev` v2.0.0-beta3.
+- Migrate touch and ADC audio configuration to current Board Manager APIs and generated board defaults; require ESP-IDF >=5.5.3 for the example.
+- No changes to the `esp_xiaozhi` component API or runtime behavior relative to v0.1.3.
+
 ## v0.1.3
 
 ### Fixed

@@ -1,3 +1,8 @@
+## v1.5.0~1 - 2026.10.15
+
+Documentation:
+- Correct BLE example links in README (no API or behavior changes).
+
 ## v1.5.0 - 2026.07.28
 
 Features:

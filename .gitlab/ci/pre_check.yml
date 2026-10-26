@@ -50,6 +50,9 @@ check_pre_commit:
       echo "MODIFIED_FILES: $MODIFIED_FILES"
     - pre-commit install --allow-missing-config -t pre-commit -t commit-msg
     - pre-commit run --files $MODIFIED_FILES
+    # Host-only Board Manager/CI configuration and relinker regression tests.
+    - python -m unittest discover -s tools/tests -p 'test_*.py'
+    - python -m unittest discover -s tools/cmake_utilities/tests -p 'test_relinker_compilation.py'
 
 check_readme_links:
   extends:

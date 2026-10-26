@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [v2.0.1~1] - 2026-10-22
+
+### Bundled example updates
+
+- Enlarge the ESP32-C6 MCP Client example's factory partition to `0x140000`, so the built example fits the partition.
+- No changes to the MCP SDK component implementation or public API.
+
 ## [v2.0.1] - 2026-05-18
 
 This release keeps `mcp-c-sdk` build-compatible with **ESP-IDF 5.5** and **ESP-IDF 6.0.1+** while preserving the v2.0.0 Streamable HTTP, SSE, OAuth/JWT, and task-capable MCP behavior.

@@ -73,6 +73,25 @@ libfreertos.a,tasks.c.obj,__getreent,CONFIG_FREERTOS_PLACE_FUNCTIONS_INTO_FLASH
 
 This means when only `FREERTOS_PLACE_FUNCTIONS_INTO_FLASH` is enabled in menuconfig, function `__getreent` will be linked from SRAM to Flash.
 
+The optional fifth `if_compiled` column in `function.csv` can be set to `true` for
+objects that exist only in certain ESP-IDF build layouts. The relinker reads
+CMake's `compile_commands.json` to check whether the object is selected for
+compilation; it does **not** check whether Ninja has already built that object.
+When it is selected, the normal relocation and objdump error handling still
+apply. Existing four-column CSV files continue to work unchanged.
+
+For example, the ESP32-C3 / ESP-IDF 5.3 IRAM-strip example relocates the
+`bt_osi_mem_*` functions from `bt_osi_mem.c.obj` on earlier IDF revisions.
+Newer IDF revisions split NimBLE host memory into `esp_nimble_mem.c.obj`, so
+that same example relocates `nimble_mem_malloc`, `nimble_mem_calloc`, and
+`nimble_mem_free` instead. The separate controller-only
+`bt_osi_mem_malloc_internal` has no direct NimBLE-host replacement.
+Each rule is enabled only when CMake actually compiles its object. The new
+NimBLE rules also require NimBLE and skip low-speed mode, where the functions
+are not marked for IRAM placement by IDF. These sample rules move code to
+Flash; evaluate cache-disabled execution requirements before enabling relinker
+in production firmware.
+
 Next step you should add the path of the object file to `object.csv`:
 
 ```

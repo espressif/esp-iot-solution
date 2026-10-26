@@ -106,7 +106,7 @@ idf.py menuconfig
 Navigate to `Component config` → `BLE Session Manager Configuration` to configure:
 - `BLE_MANAGER_MAX_CONNECTIONS` - Maximum number of simultaneous BLE connections
 
-`esp_flux` has no Kconfig options; its protocol parameters (window size defaults, fragment timeout, retransmission, etc.) are compile-time constants in `components/esp_flux/include/flux_transport.h` — see the [esp_flux README](../../components/esp_flux/README.md#configuration).
+`esp_flux` has no Kconfig options; its protocol parameters (window size defaults, fragment timeout, retransmission, etc.) are compile-time constants in `components/esp_flux/include/esp_flux_transport.h` — see the [esp_flux README](../../components/esp_flux/README.md#configuration).
 
 ## Example Output
 
@@ -212,8 +212,8 @@ Key functions:
 For detailed API documentation, please refer to:
 - [ble_manager.h](common_components/ble_session_manager/include/ble_manager.h) - Connection management
 - [gatt_discovery.h](common_components/ble_session_manager/include/gatt_discovery.h) - GATT service discovery
-- [flux_transport.h](../../components/esp_flux/include/flux_transport.h) - Transport-agnostic protocol engine
-- [gatt_session.h](../../components/esp_flux/include/gatt_session.h) - BLE GATT session (reliable transfer)
+- [esp_flux_transport.h](../../components/esp_flux/include/esp_flux_transport.h) - Transport-agnostic protocol engine
+- [flux_gatt_session.h](../../components/esp_flux/include/flux_gatt_session.h) - BLE GATT session (reliable transfer)
 
 ## See Also
 

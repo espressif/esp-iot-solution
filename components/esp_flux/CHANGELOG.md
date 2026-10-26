@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.0.3~1 - 2026-10-15
+
+### Documentation:
+
+* Correct transport and GATT header paths in README (no behavior changes).
+
 ## v0.0.3 - 2026-08-03
 
 ### Bug Fixes:
