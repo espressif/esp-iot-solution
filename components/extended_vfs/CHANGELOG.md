@@ -11,7 +11,7 @@
 * I2C (5.3+): fix transfer timeout unit (ms), ACK-check mapping, 10-bit address rejection
 * I2C (5.3+): map `I2C_SDA_PULLUP` / `I2C_SCL_PULLUP` for master and slave v2 (driver single pull-up flag, then per-pin GPIO restore)
 * I2C (5.3+): slave send/receive buffer depth; sync slave RX via callback; support slave driver v2 / IDF 6.x
-* I2C (5.3+): only clear bus/device handles after successful delete; retry busy deletes and allow next `open()` to finish a failed `close()` cleanup (avoids permanent `EBUSY` after VFS drops the FD)
+* I2C (5.3+): only clear bus/device handles after successful delete; retry busy deletes and allow next `open()` to finish a failed `close()` cleanup (avoids permanent `EBUSY` after VFS drops the FD); never delete the master bus while a device handle remains (IDF 5.3/5.4); per-port mutex serializes open/close/ioctl cleanup
 * I2C (5.3+): restore `I2C_MSG_NO_START` / `I2C_MSG_NO_END` via `i2c_master_execute_defined_operations()`
 * I2C: custom transaction boundaries / zero-length write probe require IDF >= 5.3.4 (5.3.x), >= 5.4.1 (5.4.x), or >= 5.5.0; earlier patches in those lines return `ENOTSUP`
 * I2C (5.3+): custom-ops path emits correct 10-bit address framing; `NO_START` with 10-bit returns `ENOTSUP`

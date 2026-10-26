@@ -118,6 +118,42 @@ static const char *TAG = "ext_vfs_i2c";
 static i2c_stat_t i2c_stat[I2C_PORT_NUM];
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+/*
+ * Serialize open / close / ioctl per port so cleanup_pending recovery cannot
+ * race two tasks through the same bus/device handles (double-free / UAF).
+ * Kept outside i2c_stat[] so open()'s memset does not destroy the mutex.
+ */
+static SemaphoreHandle_t s_i2c_port_mtx[I2C_PORT_NUM];
+
+static void i2c_port_locks_init(void)
+{
+    for (int i = 0; i < I2C_PORT_NUM; i++) {
+        if (s_i2c_port_mtx[i] == NULL) {
+            s_i2c_port_mtx[i] = xSemaphoreCreateMutex();
+        }
+    }
+}
+
+static bool i2c_port_lock(int port)
+{
+    if (s_i2c_port_mtx[port] == NULL) {
+        i2c_port_locks_init();
+    }
+    if (s_i2c_port_mtx[port] == NULL) {
+        return false;
+    }
+    return xSemaphoreTake(s_i2c_port_mtx[port], portMAX_DELAY) == pdTRUE;
+}
+
+static void i2c_port_unlock(int port)
+{
+    if (s_i2c_port_mtx[port]) {
+        xSemaphoreGive(s_i2c_port_mtx[port]);
+    }
+}
+#endif
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
 
 #if defined(I2C_SLAVE_VFS) && EXT_VFS_I2C_SLAVE_API_V2
 static portMUX_TYPE s_slave_rx_mux = portMUX_INITIALIZER_UNLOCKED;
@@ -713,7 +749,13 @@ static esp_err_t i2c_driver_close(int port)
 #endif
 #endif
 
-    if (i2c_stat[port].bus_handle) {
+    /*
+     * IDF 5.3/5.4 i2c_del_master_bus() does not refuse a bus that still has
+     * devices. Freeing the bus while rm_device failed leaves a dangling
+     * dev_handle (UAF on the next cleanup retry). Only destroy the bus after
+     * the device is gone; slave path never owns a master device on this bus.
+     */
+    if (i2c_stat[port].bus_handle && !i2c_stat[port].dev_handle) {
         err = i2c_close_retry(i2c_del_bus_wrap, i2c_stat[port].bus_handle);
         if (err != ESP_OK) {
             if (first_err == ESP_OK) {
@@ -1041,6 +1083,13 @@ static int i2c_open(const char *path, int flags, int mode)
         return -1;
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    if (!i2c_port_lock(fd)) {
+        errno = EIO;
+        return -1;
+    }
+#endif
+
     if (i2c_stat[fd].opened) {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
         /*
@@ -1051,12 +1100,14 @@ static int i2c_open(const char *path, int flags, int mode)
             esp_err_t err = i2c_driver_close(fd);
             if (err != ESP_OK) {
                 ESP_LOGE(TAG, "pending I2C cleanup still failing: %s", esp_err_to_name(err));
+                i2c_port_unlock(fd);
                 errno = EBUSY;
                 return -1;
             }
             i2c_stat[fd].cleanup_pending = 0;
             i2c_stat[fd].opened = 0;
         } else {
+            i2c_port_unlock(fd);
             errno = EBUSY;
             return -1;
         }
@@ -1069,6 +1120,9 @@ static int i2c_open(const char *path, int flags, int mode)
     memset(&i2c_stat[fd], 0, sizeof(i2c_stat_t));
     i2c_stat[fd].opened = 1;
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    i2c_port_unlock(fd);
+#endif
     return fd;
 }
 
@@ -1079,6 +1133,10 @@ static int i2c_close(int fd)
     ESP_LOGV(TAG, "close(%d)", fd);
 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    if (!i2c_port_lock(fd)) {
+        errno = EIO;
+        return -1;
+    }
     err = i2c_driver_close(fd);
 #else
     err = i2c_driver_close_legacy(fd);
@@ -1088,6 +1146,7 @@ static int i2c_close(int fd)
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
         /* Keep handles; mark so a later open() can retry cleanup. */
         i2c_stat[fd].cleanup_pending = 1;
+        i2c_port_unlock(fd);
 #endif
         errno = EIO;
         return -1;
@@ -1098,6 +1157,9 @@ static int i2c_close(int fd)
 #endif
     i2c_stat[fd].opened = 0;
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    i2c_port_unlock(fd);
+#endif
     return 0;
 }
 
@@ -1107,17 +1169,30 @@ static int i2c_ioctl(int fd, int cmd, va_list va_args)
 
     ESP_LOGV(TAG, "cmd=%x", cmd);
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    if (!i2c_port_lock(fd)) {
+        errno = EIO;
+        return -1;
+    }
+#endif
+
     switch (cmd) {
     case I2CIOCSCFG: {
         i2c_cfg_t *cfg = va_arg(va_args, i2c_cfg_t *);
 
         if (!cfg) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             errno = EINVAL;
             return -1;
         }
 
         ret = config_i2c(fd, cfg);
         if (ret < 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             return -1;
         }
 
@@ -1127,12 +1202,18 @@ static int i2c_ioctl(int fd, int cmd, va_list va_args)
         i2c_msg_t *msg = va_arg(va_args, i2c_msg_t *);
 
         if (!msg) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             errno = EINVAL;
             return -1;
         }
 
         ret = i2c_transfer(fd, msg);
         if (ret < 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             return -1;
         }
 
@@ -1142,23 +1223,35 @@ static int i2c_ioctl(int fd, int cmd, va_list va_args)
         i2c_ex_msg_t *ex_msg = va_arg(va_args, i2c_ex_msg_t *);
 
         if (!ex_msg) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             errno = EINVAL;
             return -1;
         }
 
         ret = i2c_exchange(fd, ex_msg);
         if (ret < 0) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+            i2c_port_unlock(fd);
+#endif
             return -1;
         }
 
         break;
     }
     default: {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+        i2c_port_unlock(fd);
+#endif
         errno = EINVAL;
         return -1;
     }
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    i2c_port_unlock(fd);
+#endif
     return 0;
 }
 
@@ -1171,6 +1264,16 @@ int ext_vfs_i2c_init(void)
         .close   = i2c_close,
     };
     const char *base_path = "/dev/i2c";
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 3, 0)
+    i2c_port_locks_init();
+    for (int i = 0; i < I2C_PORT_NUM; i++) {
+        if (s_i2c_port_mtx[i] == NULL) {
+            ESP_LOGE(TAG, "failed to create I2C port mutex");
+            return ESP_ERR_NO_MEM;
+        }
+    }
+#endif
 
     esp_err_t err = esp_vfs_register(base_path, &vfs, NULL);
     if (err != ESP_OK) {
