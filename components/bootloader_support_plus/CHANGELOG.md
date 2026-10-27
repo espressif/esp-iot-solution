@@ -1,10 +1,16 @@
 # ChangeLog
 
+## v0.5.0 - 2026-10-23
+
+### Fix:
+
+- On IDF v6.0 and newer, inject plus/XZ archive rules into `.iram_loader.text` of the generated bootloader linker script (`bootloader.ld` on 6.0/6.0.1, `bootloader.sections.ld` from 6.0.2) so the decompressor is placed in `iram_loader_seg` regardless of `-T` order. IDF versions before v6.0 still use `linker.lf`.
+
 ## v0.4.2 - 2026-08-24
 
 ### Fix:
 
-- Replace deprecated `esp_flash_encryption_enabled()` with `esp_efuse_is_flash_encryption_enabled()` on IDF v6.0 and newer.
+- Replace deprecated `esp_flash_encryption_enabled()` with `esp_efuse_is_flash_encryption_enabled()` on IDF v6.0.1 and newer. IDF v6.0.0 still provides only `esp_flash_encryption_enabled()`.
 
 ## v0.4.1 - 2026-06-10
 

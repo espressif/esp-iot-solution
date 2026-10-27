@@ -566,6 +566,14 @@ void *protocomm_ext_get_transport_handle(protocomm_ext_t *pc)
     return pc->transport_inst;
 }
 
+protocomm_ext_transport_method_t protocomm_ext_get_transport_method(const protocomm_ext_t *pc)
+{
+    if (!pc) {
+        return PROTOCOMM_EXT_TRANSPORT_METHOD_MAX;
+    }
+    return pc->transport_method;
+}
+
 esp_err_t protocomm_ext_set_config_endpoint(protocomm_ext_t *pc,
                                             const char *endpoint_name,
                                             uint16_t uuid)

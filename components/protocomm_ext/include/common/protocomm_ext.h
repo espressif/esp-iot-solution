@@ -190,6 +190,14 @@ esp_err_t protocomm_ext_send_data(protocomm_ext_t *pc, const char *ep_name,
 void *protocomm_ext_get_transport_handle(protocomm_ext_t *pc);
 
 /**
+ * @brief Transport selected when this instance was created
+ *
+ * @param[in] pc Instance
+ * @return Transport method, or PROTOCOMM_EXT_TRANSPORT_METHOD_MAX if @p pc is NULL
+ */
+protocomm_ext_transport_method_t protocomm_ext_get_transport_method(const protocomm_ext_t *pc);
+
+/**
  * @brief Register a logical endpoint name → BLE characteristic UUID16 mapping
  *
  * Required for BLE before get_version / establish_security / send_data that use

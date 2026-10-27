@@ -28,6 +28,7 @@
       - "**/build*/config/sdkconfig.json"
       - "**/build*/bootloader/*.bin"
       - "**/build*/bootloader/*.elf"
+      - "**/build*/bootloader/*.map"
       - "**/build*/partition_table/*.bin"
       - "**/build*/mmap_build/**/*.bin"
       - "**/build*/**/*.bin"
@@ -147,6 +148,20 @@
       - IMAGE: espressif/idf:release-v6.0
       - IMAGE: espressif/idf:release-v6.1
 
+# Compressed OTA bootloader placement changed on IDF 6.x. Keep the active 5.x
+# matrix, cover release-v6.0/6.1, and pin v6.0.1 for the legacy bootloader.ld
+# layout that predates bootloader.sections.ld (introduced in 6.0.2).
+.build_idf_active_release_version_with_idf6_ota:
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.2
+      - IMAGE: espressif/idf:release-v5.3
+      - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:v6.0.1
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+
 build_example_ai_esp_dl_emotion_recognition:
   extends:
     - .build_examples_template
@@ -156,6 +171,7 @@ build_example_ai_esp_dl_emotion_recognition:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/emotion_recognition
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_ai_esp_dl_human_activity_recognition:
   extends:
@@ -166,6 +182,8 @@ build_example_ai_esp_dl_human_activity_recognition:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/ai/esp_dl/human_activity_recognition
+    # ESP-DL C++ compilation can exceed the runner's memory at Ninja defaults.
+    IDF_PY_BUILD_JOBS: "2"
 
 build_example_ai_esp_dl_self_learning_classification:
   extends:
@@ -505,6 +523,17 @@ build_example_display_lcd_hdmi_video_renderer:
     - .build_idf_ge_than_v5_4
   variables:
     EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+
+build_example_display_lcd_hdmi_video_renderer_p4rev3:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_hdmi_video_renderer
+    - .build_idf_ge_than_v5_4
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/hdmi_video_renderer
+    # ESP32-P4 rev >=3.0 build (esp_audio_codec >=2.6.0)
+    EXAMPLE_CONFIG: "sdkconfig.defaults.p4rev3=p4rev3"
     EXAMPLE_APPEND_ARGS: "--ignore-warnings"
 
 build_example_display_lcd_lcd_layer_blending:
@@ -937,10 +966,31 @@ build_example_ota_simple_ota_example:
   extends:
     - .build_examples_template
     - .rules:build:example_ota_simple_ota_example
-    - .build_idf_active_release_version
+    - .build_idf_active_release_version_with_idf6_ota
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
+  # Override script so the IDF 6.x map check is a normal script step. GitLab
+  # after_script failures do not change the job exit status.
+  script:
+    - pip install idf_build_apps ${EXAMPLE_PYTHON_DEPS}
+    - |
+      python tools/build_apps.py ${EXAMPLE_DIR} \
+              --config ${EXAMPLE_CONFIG} \
+              -t all \
+              -r ${BUILD_RECURSIVE} \
+              -vv \
+              --board ${EXAMPLE_BOARD} \
+              ${EXAMPLE_APPEND_ARGS}
+    - |
+      case "${IMAGE}" in
+        *[:/]v6.*|*[:/]release-v6.*)
+          python tools/check_bootloader_xz_iram.py "${EXAMPLE_DIR}"
+          ;;
+        *)
+          echo "Skip IDF 6.x bootloader XZ IRAM check for ${IMAGE}"
+          ;;
+      esac
 
 build_example_sensors_airmouse:
   extends:
@@ -1040,7 +1090,20 @@ build_example_usb_device_usb_uac:
   extends:
     - .build_examples_template
     - .rules:build:example_usb_device_usb_uac
-    - .build_idf_ge_than_v5_4
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+        EXAMPLE_BOARD: esp32_p4_function_ev_board
+        IDF_TARGET: esp32p4
+        EXAMPLE_APPEND_ARGS: "-t esp32p4"
+      - IMAGE: espressif/idf:release-v5.5
+        EXAMPLE_BOARD: esp32_s3_lcd_ev_board
+        IDF_TARGET: esp32s3
+        EXAMPLE_APPEND_ARGS: "-t esp32s3 --ignore-warnings"
+      - IMAGE: espressif/idf:release-v6.1
+        EXAMPLE_BOARD: esp32_s31_korvo_1
+        IDF_TARGET: esp32s31
+        EXAMPLE_APPEND_ARGS: "-t esp32s31"
   variables:
     EXAMPLE_DIR: examples/usb/device/usb_uac
 
@@ -1232,6 +1295,9 @@ build_example_vision_opencv_color_tracker:
       - IMAGE: espressif/idf:release-v5.5
   variables:
     EXAMPLE_DIR: examples/vision/opencv/color_tracker
+    # idf.py invokes Ninja directly, but OpenCV also runs a nested "cmake --build".
+    IDF_PY_BUILD_JOBS: "2"
+    CMAKE_BUILD_PARALLEL_LEVEL: "2"
 
 build_components_audio_adc_mic_test_apps:
   extends:
@@ -1637,8 +1703,27 @@ build_components_imu_gesture_test_apps:
     - .rules:build:components_imu_gesture_test_apps
     - .build_idf_active_release_version
   variables:
-    EXAMPLE_DIR: components/imu_gesture/test_apps
+    # Build the lightweight gesture examples separately from TFLite Micro.
+    EXAMPLE_DIR: "components/imu_gesture/test_apps/knob components/imu_gesture/test_apps/space_switch"
     EXAMPLE_APPEND_ARGS: "--ignore-warnings"
+    IDF_PY_BUILD_JOBS: "2"
+
+build_components_imu_gesture_inference_test_apps:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_imu_gesture_test_apps
+  parallel:
+    matrix:
+      # TFLite Micro is expensive on IDF 5.3. Split the same target matrix
+      # across two jobs so the 3-hour CI limit cannot interrupt all apps.
+      - IMAGE: ["espressif/idf:release-v5.3", "espressif/idf:release-v5.4", "espressif/idf:release-v5.5"]
+        IMU_BUILD_PARTITION: ["1", "2"]
+  variables:
+    EXAMPLE_DIR: components/imu_gesture/test_apps/inference
+    EXAMPLE_APPEND_ARGS: "--ignore-warnings --parallel-count 2 --parallel-index ${IMU_BUILD_PARTITION}"
+    # IDF 5.2 does not support this inference example; retain the project's
+    # two-job Ninja compile pool to avoid C++ compiler OOM on older IDF.
+    IDF_PY_BUILD_JOBS: "2"
 
 build_components_imu_quaternion_test_apps:
   extends:
@@ -2134,9 +2219,91 @@ build_example_robot_ragtime_panthera:
     BUILD_RECURSIVE: "0"
     IDF_PY_BUILD_JOBS: "2"
 
-build_example_elf_loader_elf_loader_example:
+.build_elf_loader_aligned_example:
   extends:
     - .build_examples_template
+  script:
+    - !reference [.build_examples_template, script]
+    - python3 components/elf_loader/tests/host/check_embedded_alignment.py ${EXAMPLE_DIR}
+
+# Keep ELF application/shared-object and C++ constructor builds alongside
+# the existing examples; all are rebuilt when elf_loader itself changes.
+build_example_elf_loader_build_shared_library_example:
+  extends:
+    - .build_template
+    - .rules:build:example_elf_loader_build_shared_library_example
+    - .build_idf_ge_than_v5_4_to_v6_2
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/build_shared_library_example
+  script:
+    # This is a shared-library-only project (project_so), not a firmware app.
+    # idf_build_apps defaults to `idf.py build`, which incorrectly attempts
+    # to link a firmware without app_main. Build the `so` target instead.
+    - |
+      for target in esp32 esp32s2 esp32s3 esp32p4; do
+        (
+          cd "${EXAMPLE_DIR}"
+          idf.py -B "build_${target}" \
+            -D "IDF_TARGET=${target}" \
+            -D "SDKCONFIG=${PWD}/build_${target}/sdkconfig" so
+          test -s "build_${target}/lib.so"
+        )
+      done
+  artifacts:
+    when: always
+    paths:
+      - examples/elf_loader/build_shared_library_example/build_*/lib.so
+      - examples/elf_loader/build_shared_library_example/build_*/build_log.txt
+    expire_in: 1 week
+
+# #776: build the original project_so library and flashable SPIFFS test app.
+# The base defaults and sdkconfig.ci.psram exercise IRAM and PSRAM.
+build_components_elf_loader_dlopen_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_dlopen_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_dlopen
+    BUILD_RECURSIVE: "0"
+
+# Builds flashable Unity firmware which embeds the actual freestanding C++
+# ELF and checks constructor/destructor results on target hardware.
+build_components_elf_loader_runtime_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_runtime_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4 # ESP32-P4 rev 1.x DUT
+      - IMAGE: espressif/idf:release-v5.5 # ESP32-S3 DUT
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_runtime
+    BUILD_RECURSIVE: "0"
+
+build_components_elf_loader_cpp_lifecycle:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_cpp_lifecycle
+    - .build_idf_ge_than_v5_4_to_v6_2
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_cpp_lifecycle
+    BUILD_RECURSIVE: "0"
+  script:
+    - !reference [.build_examples_template, script]
+    - |
+      found=0
+      while IFS= read -r -d '' image; do
+        python3 components/elf_loader/tests/idf_cpp_lifecycle/check_elf_arrays.py "$image"
+        found=$((found + 1))
+      done < <(find "${EXAMPLE_DIR}" -type f -name 'elf_cpp_lifecycle.app.elf' -print0)
+      test "$found" -gt 0
+
+build_example_elf_loader_elf_loader_example:
+  extends:
+    - .build_elf_loader_aligned_example
     - .rules:build:example_elf_loader_elf_loader_example
     - .build_idf_ge_than_v5_4_to_v6_2
   variables:
@@ -2152,7 +2319,7 @@ build_example_elf_loader_build_elf_file_example:
 
 build_example_elf_loader_elf_embed_example:
   extends:
-    - .build_examples_template
+    - .build_elf_loader_aligned_example
     - .rules:build:example_elf_loader_elf_embed_example
     - .build_idf_ge_than_v5_4_to_v6_2
   variables:
@@ -2292,6 +2459,6 @@ build_example_xiaozhi_chat:
     - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: examples/ai/xiaozhi_chat
-    EXAMPLE_BOARD: esp_box_3
+    EXAMPLE_BOARD: esp32_s3_box_3
     IDF_TARGET: esp32s3
   allow_failure: true # See [~>1576] for more details, link: w/6IZmNBnT

@@ -79,21 +79,42 @@ class CustomApp(CMakeApp):
         if os.path.isfile(os.path.join(self.work_dir, 'dependencies.lock')):
             os.remove(os.path.join(self.work_dir, 'dependencies.lock'))
         board_name = BOARD_NAME.strip()
-        if board_name != 'default':
-            if self.is_board_manager_project():
-                self._pre_hook(board_name)
-            else:
-                logger.warning(
-                    "Board '%s' specified but app '%s' has no esp_board_manager dependency; building as normal.",
-                    board_name,
-                    self.name,
-                )
-        super()._build(
-            manifest_rootpath=manifest_rootpath,
-            modified_components=modified_components,
-            modified_files=modified_files,
-            check_app_dependencies=check_app_dependencies,
-        )
+        is_bmgr_project = board_name != 'default' and self.is_board_manager_project()
+        original_extra_actions_path = os.environ.get('IDF_EXTRA_ACTIONS_PATH')
+        try:
+            if board_name != 'default':
+                if is_bmgr_project:
+                    self._pre_hook(board_name)
+                    board_defaults = (
+                        Path(self.work_dir).absolute()
+                        / 'components' / 'gen_bmgr_codes' / 'board_manager.defaults'
+                    )
+                    if not board_defaults.is_file():
+                        raise FileNotFoundError(f'Board Manager defaults were not generated: {board_defaults}')
+                    # idf_build_apps passes -DSDKCONFIG_DEFAULTS on the idf.py command
+                    # line, overriding the environment and Board Manager's idf.py
+                    # hook. Include the generated board config explicitly and last
+                    # so board-specific Kconfig settings take precedence.
+                    if str(board_defaults) not in self._sdkconfig_files:
+                        self._sdkconfig_files.append(str(board_defaults))
+                else:
+                    logger.warning(
+                        "Board '%s' specified but app '%s' has no esp_board_manager dependency; building as normal.",
+                        board_name,
+                        self.name,
+                    )
+            super()._build(
+                manifest_rootpath=manifest_rootpath,
+                modified_components=modified_components,
+                modified_files=modified_files,
+                check_app_dependencies=check_app_dependencies,
+            )
+        finally:
+            if is_bmgr_project:
+                if original_extra_actions_path is None:
+                    os.environ.pop('IDF_EXTRA_ACTIONS_PATH', None)
+                else:
+                    os.environ['IDF_EXTRA_ACTIONS_PATH'] = original_extra_actions_path
 
     def _get_project_manifest_paths(self) -> t.List[Path]:
         proj = Path(self.work_dir).absolute()
@@ -208,9 +229,19 @@ class CustomApp(CMakeApp):
                 logger.error('Failed to download board manager component, cannot generate config')
                 return
 
-        # Set environment variable for IDF_EXTRA_ACTIONS_PATH
+        # Keep the Board Manager extra action available for the generator and build.
+        # The generated board_manager.defaults must additionally be inserted into
+        # idf_build_apps SDKCONFIG_DEFAULTS in _build() to override its explicit
+        # CMake command-line defaults.
+        extra_actions_paths = [
+            path for path in os.environ.get('IDF_EXTRA_ACTIONS_PATH', '').split(';') if path
+        ]
+        # idf.py supports semicolon-separated extension paths. Keep any
+        # existing actions available when the Board Manager hook runs.
+        if os.path.realpath(bmgr_path) not in {os.path.realpath(path) for path in extra_actions_paths}:
+            extra_actions_paths.append(str(bmgr_path))
+        os.environ['IDF_EXTRA_ACTIONS_PATH'] = ';'.join(extra_actions_paths)
         env = os.environ.copy()
-        env['IDF_EXTRA_ACTIONS_PATH'] = str(bmgr_path)
 
         subprocess.run(
             [

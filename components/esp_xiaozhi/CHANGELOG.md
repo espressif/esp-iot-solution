@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.1.3~1 - 2026-10-23
+
+### Bundled example updates
+
+- Update the bundled `examples/ai/xiaozhi_chat` example for ESP Board Manager v0.7.1 and `esp_codec_dev` v2.0.0-beta3.
+- Migrate touch and ADC audio configuration to current Board Manager APIs and generated board defaults; require ESP-IDF >=5.5.3 for the example.
+- No changes to the `esp_xiaozhi` component API or runtime behavior relative to v0.1.3.
+
+## v0.1.3
+
+### Fixed
+
+- **MCP session lifecycle**: Do not clear MCP manager session state on server hello, goodbye, or audio channel close. Clearing it dropped tool state that the server still uses for the same MCP session.
+- **MCP request context**: Handle inbound MCP with a NULL request context. Stamp the current audio `session_id` only on the reply.
+- **Vision explain endpoint**: Store `initialize.params.capabilities.vision` on the chat handle through `esp_xiaozhi_vision_t`, and copy it out with `esp_xiaozhi_chat_get_vision_explain()`. Each agent keeps its own endpoint.
+- **Vision endpoint refresh**: A re-initialize without a usable vision URL clears the previous endpoint. Oversized URLs or tokens are rejected with `ESP_ERR_INVALID_SIZE` instead of being truncated on save or copy-out.
+- **MCP message logging**: Log only the MCP method and payload length. The full payload is no longer printed because `initialize` carries the vision bearer token.
+
 ## v0.1.2
 
 ### Fixed

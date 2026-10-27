@@ -114,7 +114,7 @@ Over BLE GATT, the actual on-air size also includes the ATT header:
 
 ## Configuration
 
-`esp_flux` has **no Kconfig options** — all protocol tunables are compile-time constants in `include/flux_transport.h`:
+`esp_flux` has **no Kconfig options** — all protocol tunables are compile-time constants in `include/esp_flux_transport.h`:
 
 | Constant | Default | Meaning |
 |---|---|---|
@@ -127,7 +127,7 @@ Over BLE GATT, the actual on-air size also includes the ATT header:
 | `FLUX_MAX_RETRANSMIT_RETRIES` | 3 | Max retransmissions per fragment |
 | `FLUX_RETRANSMIT_TIMEOUT_MS` | 500 | Per-fragment retransmission timeout |
 
-To change these, edit `flux_transport.h` (or override via component-level `EXTRA_COMPONENT_DIRS`/local copy) and rebuild.
+To change these, edit `esp_flux_transport.h` (or override via component-level `EXTRA_COMPONENT_DIRS`/local copy) and rebuild.
 
 ## Add Component to Your Project
 
@@ -218,8 +218,8 @@ Complete examples can be found in `examples/esp_flux/`:
 ## API Reference
 
 For detailed API documentation, please refer to the header files:
-- [flux_transport.h](include/flux_transport.h) - Transport-agnostic protocol engine API
-- [gatt_session.h](include/gatt_session.h) - BLE (NimBLE) GATT adapter API
+- [esp_flux_transport.h](include/esp_flux_transport.h) - Transport-agnostic protocol engine API
+- [flux_gatt_session.h](include/flux_gatt_session.h) - BLE (NimBLE) GATT adapter API
 
 ## License
 

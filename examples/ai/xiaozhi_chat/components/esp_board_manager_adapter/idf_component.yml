@@ -1,5 +1,9 @@
 dependencies:
-  espressif/esp_board_manager: "0.5.10"
+  espressif/esp_board_manager: "0.7.1"
+  # Board Manager 0.7.1's audio device API uses esp_codec_dev 2.x.
+  # Declare this explicitly so the first dependency resolution does not
+  # select 1.x before board_manager.defaults enables the audio Kconfig.
+  espressif/esp_codec_dev: "2.0.0-beta3"
   espressif/esp_lcd_touch: ^1.1.2
   espressif/esp_lvgl_port: '*'
 description: Board support package manager for Espressif SOC

@@ -10,4 +10,4 @@ dependencies:
 
   ## Required IDF version
   idf:
-    version: '>=5.5.0'
+    version: '>=5.5.3'

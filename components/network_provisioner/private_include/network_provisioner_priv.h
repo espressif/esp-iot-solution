@@ -22,6 +22,7 @@ extern "C" {
 
 struct network_provisioner {
     protocomm_ext_t *pc;
+    bool owns_pc;
     bool session_started;
     char *version_json;
     network_provisioner_capabilities_t caps;

@@ -57,7 +57,8 @@ if(CONFIG_CU_RELINKER_ENABLE)
                           --sdkconfig ${sdkconfig}
                           --target    ${target}
                           --version   ${version_prefix}
-                          --objdump   ${cmake_objdump})
+                          --objdump   ${cmake_objdump}
+                          --compile-commands ${CMAKE_BINARY_DIR}/compile_commands.json)
 
         if(CONFIG_CU_RELINKER_ENABLE_PRINT_ERROR_INFO_WHEN_MISSING_FUNCTION)
             list(APPEND relinker_opts --missing_function_info)
@@ -82,6 +83,7 @@ if(CONFIG_CU_RELINKER_ENABLE)
                                    "${library_file}"
                                    "${object_file}"
                                    "${function_file}"
+                                   "${CMAKE_BINARY_DIR}/compile_commands.json"
                            VERBATIM)
 
         add_custom_target(customer_sections DEPENDS ${link_dst_file})

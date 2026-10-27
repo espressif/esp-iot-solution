@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.0.1] - 2026-10-16
+
+### Added
+- Target: esp32p4
+- `protocomm_ext_get_transport_method()` reports the transport selected at create time
+
 ## [1.0.0] - 2026-07-14
 
 ### Added

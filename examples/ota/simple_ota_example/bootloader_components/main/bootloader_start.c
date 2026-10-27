@@ -1,11 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "esp_log.h"
-
+#include "sdkconfig.h"
 #include "bootloader_init.h"
 #include "bootloader_common.h"
 #include "bootloader_utility.h"
@@ -67,8 +67,14 @@ static int select_partition_number(bootloader_state_t *bs)
     return bootloader_utility_get_selected_boot_partition(bs);
 }
 
-// Return global reent struct if any newlib functions are linked to bootloader
+/*
+ * Newlib 需要全局 reent。IDF v6.0 之前没有 LibC 选项，始终使用 Newlib，
+ * 因此必须提供 __getreent。v6.0 起默认改为 Picolibc，不再使用该符号；
+ * 只有显式选择 Newlib（未定义 CONFIG_LIBC_PICOLIBC）时才提供。
+ */
+#if !defined(CONFIG_LIBC_PICOLIBC)
 struct _reent *__getreent(void)
 {
     return _GLOBAL_REENT;
 }
+#endif

@@ -35,6 +35,11 @@ const tusb_desc_device_t descriptor_dev_default = {
     .bDeviceClass = TUSB_CLASS_MISC,
     .bDeviceSubClass = MISC_SUBCLASS_COMMON,
     .bDeviceProtocol = MISC_PROTOCOL_IAD,
+#elif CFG_TUD_BTH && !(CFG_TUD_ECM_RNDIS || CFG_TUD_NCM || CFG_TUD_DFU || CFG_TUD_CUSTOM_CLASS)
+    // Identify a standalone Bluetooth controller at the device level.
+    .bDeviceClass = TUD_BT_APP_CLASS,
+    .bDeviceSubClass = TUD_BT_APP_SUBCLASS,
+    .bDeviceProtocol = TUD_BT_PROTOCOL_PRIMARY_CONTROLLER,
 #else
     .bDeviceClass = 0x00,
     .bDeviceSubClass = 0x00,
@@ -76,6 +81,10 @@ const tusb_desc_device_qualifier_t descriptor_qualifier_default = {
     .bDeviceClass = TUSB_CLASS_MISC,
     .bDeviceSubClass = MISC_SUBCLASS_COMMON,
     .bDeviceProtocol = MISC_PROTOCOL_IAD,
+#elif CFG_TUD_BTH && !(CFG_TUD_ECM_RNDIS || CFG_TUD_NCM || CFG_TUD_DFU || CFG_TUD_CUSTOM_CLASS)
+    .bDeviceClass = TUD_BT_APP_CLASS,
+    .bDeviceSubClass = TUD_BT_APP_SUBCLASS,
+    .bDeviceProtocol = TUD_BT_PROTOCOL_PRIMARY_CONTROLLER,
 #else
     .bDeviceClass = 0x00,
     .bDeviceSubClass = 0x00,
@@ -137,6 +146,10 @@ enum {
 
 #if CFG_TUD_BTH
     ITF_NUM_BTH,
+#if CFG_TUD_BTH_ISO_ALT_COUNT > 0
+    // TUD_BTH_DESCRIPTOR uses the next interface number for all ISO alternate settings.
+    ITF_NUM_BTH_ISO,
+#endif
 #endif
 
 #if CFG_TUD_DFU
@@ -244,8 +257,8 @@ uint8_t const descriptor_fs_cfg_default[] = {
 
 #if CFG_TUD_BTH
     // BT Primary controller descriptor
-    // Interface number, string index, attributes, event endpoint, event endpoint size, interval, data in, data out, data endpoint size, iso endpoint sizes
-    TUD_BTH_DESCRIPTOR(ITF_NUM_BTH, STRID_BTH_INTERFACE, (0x80 | EPNUM_BT_EVT), 16, 1, (0x80 | EPNUM_BT_BULK_OUT), EPNUM_BT_BULK_OUT, 64, 64, 64),
+    // ISO alternate setting 0 must reserve no bandwidth. SCO transfers are not implemented.
+    TUD_BTH_DESCRIPTOR(ITF_NUM_BTH, STRID_BTH_INTERFACE, (0x80 | EPNUM_BT_EVT), 16, 1, (0x80 | EPNUM_BT_BULK_OUT), EPNUM_BT_BULK_OUT, 64, 0, 9),
 #endif
 
 #if CFG_TUD_DFU
@@ -287,8 +300,8 @@ uint8_t const descriptor_hs_cfg_default[] = {
 
 #if CFG_TUD_BTH
     // BT Primary controller descriptor
-    // Interface number, string index, attributes, event endpoint, event endpoint size, interval, data in, data out, data endpoint size, iso endpoint sizes
-    TUD_BTH_DESCRIPTOR(ITF_NUM_BTH, STRID_BTH_INTERFACE, (0x80 | EPNUM_BT_EVT), 16, 1, (0x80 | EPNUM_BT_BULK_OUT), EPNUM_BT_BULK_OUT, 512, 1024, 1024),
+    // ISO alternate setting 0 must reserve no bandwidth. SCO transfers are not implemented.
+    TUD_BTH_DESCRIPTOR(ITF_NUM_BTH, STRID_BTH_INTERFACE, (0x80 | EPNUM_BT_EVT), 16, 1, (0x80 | EPNUM_BT_BULK_OUT), EPNUM_BT_BULK_OUT, 512, 0, 9),
 #endif
 
 #if CFG_TUD_DFU

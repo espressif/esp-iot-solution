@@ -5,11 +5,11 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-S3 | ESP32-S31 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | --------- |
 
-`ble_uart_vibe_indicator` is an ESP-IDF device-side example for **vibe coding**: the board exposes one or more red / yellow / green signal-light groups over **ESP-BLE-UART**. The host sends **JSONL** commands (Signal Light Control Protocol v1) such as `query` and `control`; firmware parses them and drives GPIO for off, on, slow blink, and fast blink. End-to-end use is not firmware-only—you also run the [**ESP-BLE-UART Bridge**]($IDF_PATH/tools/ble/ble_uart_bridge) **`daemon`** on the PC (`connection-check`, then `daemon <DEVICE_ID>`). The daemon holds the BLE connection, subscribes to notifications, forwards JSON commands over GATT, and returns responses to scripts or automation. In a vibe coding workflow, this maps coding or task progress and state to visible lamp patterns: the device runs the lamps; the bridge daemon provides the host-side BLE link and integration.
+`ble_uart_vibe_indicator` is an ESP-IDF device-side example for **vibe coding**: the board exposes one or more red / yellow / green signal-light groups over **ESP-BLE-UART**. The host sends **JSONL** commands (Signal Light Control Protocol v1) such as `query` and `control`; firmware parses them and drives GPIO for off, on, slow blink, and fast blink. End-to-end use is not firmware-only—you also run the [**ESP-BLE-UART Bridge**](https://github.com/espressif/esp-idf/tree/master/tools/ble/ble_uart_bridge) **`daemon`** on the PC (`connection-check`, then `daemon <DEVICE_ID>`). The daemon holds the BLE connection, subscribes to notifications, forwards JSON commands over GATT, and returns responses to scripts or automation. In a vibe coding workflow, this maps coding or task progress and state to visible lamp patterns: the device runs the lamps; the bridge daemon provides the host-side BLE link and integration.
 
 ## Features
 
-- Reuses the shared [ble_uart](${IDF_PATH}/examples/bluetooth/common/ble_uart) component (NimBLE default)
+- Reuses the shared [ble_uart](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/common/ble_uart) component (NimBLE default)
 - `op: "command"` with `query` / `control` sub-commands
 - Batch control via `data.payload[]`
 - Kconfig: group count (default 3), per-group GPIO pins, slow/fast blink timing, device name prefix
@@ -113,6 +113,6 @@ python main.py daemon-send --op command \
 
 ## Related examples
 
-- [ble_uart_service]($IDF_PATH/examples/bluetooth/ble_uart_service) — minimal echo server and Console smoke test
-- [ble_uart]($IDF_PATH/examples/bluetooth/common/ble_uart) — shared transport component
-- [ESP-BLE-UART Bridge]($IDF_PATH/tools/ble/ble_uart_bridge) — provides a host-side command-line tool for communicating with the device via the BLE-UART channel
+- [ble_uart_service](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/ble_uart_service) — minimal echo server and Console smoke test
+- [ble_uart](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/common/ble_uart) — shared transport component
+- [ESP-BLE-UART Bridge](https://github.com/espressif/esp-idf/tree/master/tools/ble/ble_uart_bridge) — provides a host-side command-line tool for communicating with the device via the BLE-UART channel

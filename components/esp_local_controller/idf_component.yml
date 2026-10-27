@@ -1,4 +1,4 @@
-version: "1.0.0"
+version: "1.0.1"
 targets:
   - esp32
   - esp32s3
@@ -8,6 +8,7 @@ targets:
   - esp32c6
   - esp32c61
   - esp32h2
+  - esp32p4
 description: Controller-side client for IDF esp_local_ctrl (HTTP, BLE, Console; Sec0/1/2)
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/esp_local_controller
 repository: https://github.com/espressif/esp-iot-solution.git

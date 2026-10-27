@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -31,31 +31,73 @@ static const char *TAG = "ZERO_CROSS_DETECTION_TEST";
 static size_t before_free_8bit;
 static size_t before_free_32bit;
 
-uint32_t delay_gap_begin = 0;
-uint32_t delay_gap_end = 0;
+// GPIO and timer callbacks cannot use Unity assertions; record failures
+// and check them in the test task after unregistering the callbacks.
+static volatile uint32_t delay_gap_begin;
+static volatile uint32_t delay_gap_end;
+static volatile bool s_signal_lost;
+static volatile bool s_signal_invalid;
+static volatile bool s_freq_out_of_range;
+static volatile bool s_latency_exceeded;
+static volatile uint32_t s_rising_edges;
+static volatile uint32_t s_falling_edges;
+
+// Do not depend on an external GPIO5-to-GPIO2 jumper on the ESP32-C3.
+// Use GPIO5 input/output loopback after zero_detect_create().
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+#define ZERO_TEST_CAPTURE_PIN GPIO_NUM_5
+#else
+#define ZERO_TEST_CAPTURE_PIN GPIO_NUM_2
+#endif
+
+static void zero_test_reset_events(void)
+{
+    delay_gap_begin = 0;
+    delay_gap_end = 0;
+    s_signal_lost = false;
+    s_signal_invalid = false;
+    s_freq_out_of_range = false;
+    s_latency_exceeded = false;
+    s_rising_edges = 0;
+    s_falling_edges = 0;
+}
+
+static void zero_test_check_events(bool require_falling_edge)
+{
+    TEST_ASSERT_GREATER_THAN_UINT32(0, s_rising_edges);
+    if (require_falling_edge) {
+        TEST_ASSERT_GREATER_THAN_UINT32(0, s_falling_edges);
+    }
+    TEST_ASSERT_FALSE_MESSAGE(s_signal_lost, "Zero-cross signal was lost");
+    TEST_ASSERT_FALSE_MESSAGE(s_signal_invalid, "Zero-cross signal was invalid");
+    TEST_ASSERT_FALSE_MESSAGE(s_freq_out_of_range, "Zero-cross frequency out of range");
+    TEST_ASSERT_FALSE_MESSAGE(s_latency_exceeded, "Zero-cross latency exceeded 30 us");
+}
 
 static IRAM_ATTR void square_event_cb(zero_detect_event_t zero_detect_event, zero_detect_cb_param_t *param, void *usr_data)  //User's callback API
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
-        TEST_ASSERT(false);
+        s_freq_out_of_range = true;
         break;
     case SIGNAL_LOST:
-        TEST_ASSERT(false);
+        s_signal_lost = true;
         break;
     case SIGNAL_INVALID:
-        TEST_ASSERT(false);
+        s_signal_invalid = true;
         break;
     case SIGNAL_RISING_EDGE:
+        s_rising_edges++;
         delay_gap_end = esp_timer_get_time();
-        if ((delay_gap_end - delay_gap_begin) >= 30) {
-            TEST_ASSERT(false);
+        if ((uint32_t)(delay_gap_end - delay_gap_begin) >= 30) {
+            s_latency_exceeded = true;
         }
         break;
     case SIGNAL_FALLING_EDGE:
+        s_falling_edges++;
         delay_gap_end = esp_timer_get_time();
-        if ((delay_gap_end - delay_gap_begin) >= 30) {
-            TEST_ASSERT(false);
+        if ((uint32_t)(delay_gap_end - delay_gap_begin) >= 30) {
+            s_latency_exceeded = true;
         }
         break;
     default:
@@ -67,18 +109,19 @@ static IRAM_ATTR void pulse_event_cb(zero_detect_event_t zero_detect_event, zero
 {
     switch (zero_detect_event) {
     case SIGNAL_FREQ_OUT_OF_RANGE:
-        TEST_ASSERT(false);
+        s_freq_out_of_range = true;
         break;
     case SIGNAL_LOST:
-        TEST_ASSERT(false);
+        s_signal_lost = true;
         break;
     case SIGNAL_INVALID:
-        TEST_ASSERT(false);
+        s_signal_invalid = true;
         break;
     case SIGNAL_RISING_EDGE:
+        s_rising_edges++;
         delay_gap_end = esp_timer_get_time();
-        if ((delay_gap_end - delay_gap_begin) >= 30) {
-            TEST_ASSERT(false);
+        if ((uint32_t)(delay_gap_end - delay_gap_begin) >= 30) {
+            s_latency_exceeded = true;
         }
         break;
     default:
@@ -89,6 +132,7 @@ static IRAM_ATTR void pulse_event_cb(zero_detect_event_t zero_detect_event, zero
 TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]")
 {
     ESP_LOGI(TAG, "Pulse wave latency test");
+    zero_test_reset_events();
     gpio_config_t io_conf = {};
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
@@ -100,7 +144,7 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
 
     static zero_detect_handle_t g_zcds = NULL;
     zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
-    config.capture_pin = 2;
+    config.capture_pin = ZERO_TEST_CAPTURE_PIN;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
     config.valid_times = 6;
@@ -113,6 +157,11 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
 
     g_zcds = zero_detect_create(&config);
     TEST_ASSERT_NOT_EQUAL(NULL, g_zcds);
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+    // Creating a GPIO detector sets the capture pin to input-only; restore
+    // output on GPIO5 for self-loopback without changing interrupt routing.
+    TEST_ASSERT_EQUAL(ESP_OK, gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT_OUTPUT));
+#endif
 
     zero_detect_register_cb(g_zcds, pulse_event_cb, NULL);
 
@@ -129,11 +178,13 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][pulse]
     }
 
     TEST_ASSERT_EQUAL(ESP_OK, zero_detect_delete(g_zcds));
+    zero_test_check_events(false);
 }
 
 TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square]")
 {
     ESP_LOGI(TAG, "Square wave latency test");
+    zero_test_reset_events();
     gpio_config_t io_conf = {};
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_OUTPUT;
@@ -145,7 +196,7 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square
 
     static zero_detect_handle_t g_zcds = NULL;
     zero_detect_config_t config = ZERO_DETECTION_INIT_CONFIG_DEFAULT(); //Default parameter
-    config.capture_pin = 2;
+    config.capture_pin = ZERO_TEST_CAPTURE_PIN;
     config.freq_range_max_hz = 65;  //Hz
     config.freq_range_min_hz = 45;  //Hz
     config.valid_times = 6;
@@ -154,6 +205,11 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square
 
     g_zcds = zero_detect_create(&config);
     TEST_ASSERT_NOT_EQUAL(NULL, g_zcds);
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+    // Creating a GPIO detector sets the capture pin to input-only; restore
+    // output on GPIO5 for self-loopback without changing interrupt routing.
+    TEST_ASSERT_EQUAL(ESP_OK, gpio_set_direction(GPIO_NUM_5, GPIO_MODE_INPUT_OUTPUT));
+#endif
 
     zero_detect_register_cb(g_zcds, square_event_cb, NULL);
 
@@ -168,6 +224,7 @@ TEST_CASE("custom_zero_cross_detection_test", "[zero_cross_detecion][iot][square
     }
 
     TEST_ASSERT_EQUAL(ESP_OK, zero_detect_delete(g_zcds));
+    zero_test_check_events(true);
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)

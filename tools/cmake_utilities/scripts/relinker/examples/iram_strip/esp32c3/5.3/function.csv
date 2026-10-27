@@ -1,10 +1,13 @@
-library,object,function,option
+library,object,function,option,if_compiled
 libbootloader_support.a,bootloader_flash.c.obj,bootloader_read_flash_id,
 libbootloader_support.a,flash_encrypt.c.obj,esp_flash_encryption_enabled,
-libbt.a,bt_osi_mem.c.obj,bt_osi_mem_calloc,CONFIG_BT_ENABLED
-libbt.a,bt_osi_mem.c.obj,bt_osi_mem_malloc,CONFIG_BT_ENABLED
-libbt.a,bt_osi_mem.c.obj,bt_osi_mem_malloc_internal,CONFIG_BT_ENABLED
-libbt.a,bt_osi_mem.c.obj,bt_osi_mem_free,CONFIG_BT_ENABLED
+libbt.a,bt_osi_mem.c.obj,bt_osi_mem_calloc,CONFIG_BT_ENABLED,true
+libbt.a,bt_osi_mem.c.obj,bt_osi_mem_malloc,CONFIG_BT_ENABLED,true
+libbt.a,bt_osi_mem.c.obj,bt_osi_mem_malloc_internal,CONFIG_BT_ENABLED,true
+libbt.a,bt_osi_mem.c.obj,bt_osi_mem_free,CONFIG_BT_ENABLED,true
+libbt.a,esp_nimble_mem.c.obj,nimble_mem_calloc,CONFIG_BT_NIMBLE_ENABLED && !CONFIG_BT_NIMBLE_LOW_SPEED_MODE,true
+libbt.a,esp_nimble_mem.c.obj,nimble_mem_malloc,CONFIG_BT_NIMBLE_ENABLED && !CONFIG_BT_NIMBLE_LOW_SPEED_MODE,true
+libbt.a,esp_nimble_mem.c.obj,nimble_mem_free,CONFIG_BT_NIMBLE_ENABLED && !CONFIG_BT_NIMBLE_LOW_SPEED_MODE,true
 libbt.a,bt.c.obj,esp_reset_rpa_moudle,CONFIG_BT_ENABLED
 libbt.a,bt.c.obj,osi_assert_wrapper,CONFIG_BT_ENABLED
 libbt.a,bt.c.obj,osi_random_wrapper,CONFIG_BT_ENABLED

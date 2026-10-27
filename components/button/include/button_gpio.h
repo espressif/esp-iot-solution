@@ -6,6 +6,7 @@
 #pragma once
 
 #include "esp_err.h"
+#include "driver/gpio.h"
 #include "button_types.h"
 
 #ifdef __cplusplus
@@ -21,6 +22,9 @@ typedef struct {
     uint8_t active_level;          /**< gpio level when press down */
     bool enable_power_save;        /**< enable power save mode */
     bool disable_pull;             /**< disable internal pull up or down */
+#if SOC_GPIO_SUPPORT_PIN_HYS_FILTER
+    gpio_hys_ctrl_mode_t hys_ctrl_mode; /**< GPIO input hysteresis; prevents spurious PRESS_DOWN/PRESS_UP events when the signal glitches around the switching threshold (e.g. ESP32-P4) */
+#endif
 } button_gpio_config_t;
 
 /**

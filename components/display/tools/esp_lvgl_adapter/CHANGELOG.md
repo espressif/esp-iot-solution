@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.7.3~1 (2026-10-15)
+
+* Use the local button component in benchmark and test app manifests for reproducible CI builds; adapter behavior is unchanged.
+
 ## v0.7.3 (2026-10-09)
 
 * Fix LVGL 8/9 tear-avoid submission races, sequence wrap and early RGB completion.

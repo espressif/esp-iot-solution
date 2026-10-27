@@ -5,11 +5,11 @@
 | Supported Targets | ESP32 | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32-H2 | ESP32-H21 | ESP32-H4 | ESP32-S3 | ESP32-S31 |
 | ----------------- | ----- | -------- | -------- | -------- | -------- | --------- | -------- | --------- | -------- | -------- | --------- |
 
-`ble_uart_vibe_indicator` 是面向 **vibe coding** 场景的 ESP-IDF 设备端示例：开发板通过 **ESP-BLE-UART** 暴露一组或多组红 / 黄 / 绿信号灯，上位机用 **JSONL**（Signal Light Control Protocol v1）发送 `query` / `control` 等命令，固件解析后驱动 GPIO，实现远程点灯、灭灯和快慢闪烁。实际联调不能只烧录固件，还需要在 PC 上运行 [**ESP-BLE-UART Bridge**]($IDF_PATH/tools/ble/ble_uart_bridge) 的 **`daemon`**（先 `connection-check`，再 `daemon <DEVICE_ID>`）：由 daemon 维持 BLE 连接、订阅通知，把 JSON 命令经 GATT 转发给设备并把响应回传给脚本或自动化工具。在 vibe coding 工作流中，这可以把写代码或跑任务的进度与状态映射成可见的灯语反馈——设备端负责执行灯控，bridge daemon 负责 BLE 通道与主机侧集成。
+`ble_uart_vibe_indicator` 是面向 **vibe coding** 场景的 ESP-IDF 设备端示例：开发板通过 **ESP-BLE-UART** 暴露一组或多组红 / 黄 / 绿信号灯，上位机用 **JSONL**（Signal Light Control Protocol v1）发送 `query` / `control` 等命令，固件解析后驱动 GPIO，实现远程点灯、灭灯和快慢闪烁。实际联调不能只烧录固件，还需要在 PC 上运行 [**ESP-BLE-UART Bridge**](https://github.com/espressif/esp-idf/tree/master/tools/ble/ble_uart_bridge) 的 **`daemon`**（先 `connection-check`，再 `daemon <DEVICE_ID>`）：由 daemon 维持 BLE 连接、订阅通知，把 JSON 命令经 GATT 转发给设备并把响应回传给脚本或自动化工具。在 vibe coding 工作流中，这可以把写代码或跑任务的进度与状态映射成可见的灯语反馈——设备端负责执行灯控，bridge daemon 负责 BLE 通道与主机侧集成。
 
 ## 功能特性
 
-- 复用 ESP-IDF 共享组件 [ble_uart]($IDF_PATH/examples/bluetooth/common/ble_uart) （默认 NimBLE）
+- 复用 ESP-IDF 共享组件 [ble_uart](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/common/ble_uart) （默认 NimBLE）
 - `op: "command"`，子命令为 `query` / `control`
 - 通过 `data.payload[]` 批量下发控制
 - Kconfig 可配置：组数（默认 3）、各组 GPIO 引脚、慢闪/快闪周期、设备名前缀
@@ -109,6 +109,6 @@ python main.py daemon-send --op command \
 
 ## 相关示例
 
-- [ble_uart_service]($IDF_PATH/examples/bluetooth/ble_uart_service) — 最小回显服务与 Console 冒烟测试
-- [ble_uart]($IDF_PATH/examples/bluetooth/common/ble_uart) — ESP-IDF 共享传输组件
-- [ESP-BLE-UART Bridge]($IDF_PATH/tools/ble/ble_uart_bridge) — 提供上位机命令行工具，通过 BLE-UART 通道与设备通信
+- [ble_uart_service](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/ble_uart_service) — 最小回显服务与 Console 冒烟测试
+- [ble_uart](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/common/ble_uart) — ESP-IDF 共享传输组件
+- [ESP-BLE-UART Bridge](https://github.com/espressif/esp-idf/tree/master/tools/ble/ble_uart_bridge) — 提供上位机命令行工具，通过 BLE-UART 通道与设备通信

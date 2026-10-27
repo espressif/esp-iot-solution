@@ -47,3 +47,19 @@ idf.py add-dependency "espressif/openai=*"
     OpenAI_t *openai = OpenAICreate(openai_key);
     ```
 3. Connect to a WiFi network that has access to the OpenAI servers.
+
+### Image generation on memory-limited devices
+
+Modern GPT Image models return images as Base64 data instead of image URLs.
+On ESP32 devices without enough PSRAM for a complete image, use
+`imageGeneration->promptStream(...)` instead of `prompt(...)`. The callback
+receives Base64 fragments (not NUL-terminated) and can decode/write them
+incrementally, for example to a file. Return `false` to abort; the method
+returns `true` only after the final image arrives.
+
+Select a model with `setModel` (defaults to `gpt-image-2`). To reduce bandwidth,
+use `setQuality("low")` and `setOutputFormat("jpeg")`. Streaming supports one
+image (`setN(1)`) with size 1024×1024. GPT Image models do not support the
+legacy `response_format=url` or the 256×256 size. The original `prompt()`
+API remains available if enough memory exists to store and parse the full
+response.

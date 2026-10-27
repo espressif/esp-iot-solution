@@ -13,6 +13,47 @@ check_example_paths:
     - pip install pyyaml
     - python ${CI_PROJECT_DIR}/tools/ci/check_components.py
 
+check_elf_loader_host:
+  extends:
+    - .pre_check_template
+    - .rules:pre_check:elf_loader_host
+  image: espressif/idf:release-v5.4
+  tags: ["build"]
+  script:
+    - CC=cc python3 -m unittest discover -s components/elf_loader/tests/host -p test_elf_validate.py -v
+
+# Exercise the actual ELF32 parser with instrumented code and reproducible
+# mutations independently of firmware builds or connected hardware.
+check_elf_loader_ubsan:
+  extends:
+    - .pre_check_template
+    - .rules:pre_check:elf_loader_host
+  image: espressif/idf:release-v5.4
+  tags: ["build"]
+  script:
+    - |
+      set -eu
+      work=$(mktemp -d)
+      trap 'rm -rf "$work"' EXIT
+      for arch in xtensa riscv; do
+        case "$arch" in
+          xtensa)
+            flags="-DCONFIG_IDF_TARGET_ARCH_XTENSA=1 -DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1 -DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1"
+            ;;
+          riscv)
+            flags="-DCONFIG_IDF_TARGET_ARCH_RISCV=1"
+            ;;
+        esac
+        cc -std=c11 -D_GNU_SOURCE -O1 -fsanitize=undefined -fno-omit-frame-pointer \
+          $flags -I components/elf_loader/tests/host/include \
+          -I components/elf_loader/include \
+          components/elf_loader/tests/host/fuzz_elf_validate.c \
+          components/elf_loader/src/esp_elf_validate.c \
+          -o "$work/validate_$arch"
+        UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+          "$work/validate_$arch" "examples/elf_loader/elf_loader_example/main/test_$arch.elf"
+      done
+
 check_pre_commit:
   extends:
     - .pre_check_template
@@ -41,6 +82,9 @@ check_pre_commit:
       echo "MODIFIED_FILES: $MODIFIED_FILES"
     - pre-commit install --allow-missing-config -t pre-commit -t commit-msg
     - pre-commit run --files $MODIFIED_FILES
+    # Host-only Board Manager/CI configuration and relinker regression tests.
+    - python -m unittest discover -s tools/tests -p 'test_*.py'
+    - python -m unittest discover -s tools/cmake_utilities/tests -p 'test_relinker_compilation.py'
 
 check_readme_links:
   extends:

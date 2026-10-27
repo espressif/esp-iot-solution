@@ -163,8 +163,9 @@ typedef struct {
 /**
  * @brief Wrap an existing protocomm_ext instance (session may not be open yet)
  *
- * Ownership of @p pc remains with the caller; call network_provisioner_delete()
- * before protocomm_ext_delete().
+ * Ownership of @p pc remains with the caller. Call network_provisioner_delete()
+ * before protocomm_ext_delete(). For a transport this component creates, use
+ * network_provisioner_create_ble() instead.
  *
  * Registers BLE endpoint UUID mappings (`NETWORK_PROVISIONER_EP_*_UUID`) via
  * `protocomm_ext_set_config_endpoint()` (no-op for HTTP / Console).
@@ -178,7 +179,9 @@ network_provisioner_t *network_provisioner_create(protocomm_ext_t *pc);
 /**
  * @brief Free a network_provisioner instance
  *
- * Does not delete the wrapped protocomm_ext instance.
+ * Does not delete a protocomm_ext passed to network_provisioner_create().
+ * Does delete the transport from network_provisioner_create_ble(), then waits
+ * for the NimBLE host task to exit.
  */
 void network_provisioner_delete(network_provisioner_t *np);
 
@@ -190,7 +193,7 @@ void network_provisioner_delete(network_provisioner_t *np);
  *
  * For runtime discovery from proto-ver (recommended):
  *   1. network_provisioner_fetch_capabilities()
- *   2. protocomm_ext_set_security() with peer sec_ver / PoP or Sec2 creds
+ *   2. network_provisioner_set_security() with peer sec_ver / PoP or Sec2 creds
  *   3. network_provisioner_establish_security()
  *
  * @param np Network provisioner instance
@@ -296,9 +299,141 @@ esp_err_t network_provisioner_provision_thread(network_provisioner_t *np,
                                                network_provisioner_thread_status_t *out_status);
 
 /**
- * @brief Return the wrapped protocomm_ext instance (caller still owns it)
+ * @brief Return the wrapped protocomm_ext instance
+ *
+ * The caller owns it only when the instance came from network_provisioner_create().
+ * network_provisioner_create_ble() owns the transport; network_provisioner_delete()
+ * releases it.
  */
 protocomm_ext_t *network_provisioner_get_protocomm(network_provisioner_t *np);
+
+/**
+ * @brief Create a BLE (NimBLE central) transport and wrap it
+ *
+ * Starts the NimBLE central transport with whichever security version is
+ * enabled (Sec0, otherwise Sec1, otherwise a Sec2 placeholder). Call
+ * network_provisioner_set_security() with the peer scheme before the handshake.
+ * network_provisioner_delete() also deletes this transport and waits for the
+ * NimBLE host task to exit.
+ *
+ * @return Instance, or NULL on allocation / transport failure
+ */
+network_provisioner_t *network_provisioner_create_ble(void);
+
+/**
+ * @brief Credentials for network_provisioner_set_security()
+ *
+ * Strings are copied during the call and need not outlive it.
+ */
+typedef struct {
+    int sec_ver;            /**< 0, 1, or 2 (from capabilities.sec_ver) */
+    bool no_pop;            /**< Sec1: peer advertises no Proof-of-Possession */
+    const char *pop;        /**< Sec1 PoP, or Sec2 password. NULL / empty Sec1 PoP is allowed */
+    const char *username;   /**< Sec2 username. Ignored for Sec0 / Sec1 */
+} network_provisioner_security_t;
+
+/**
+ * @brief Apply Sec0 / Sec1 / Sec2 before network_provisioner_establish_security()
+ *
+ * Sec1 with no_pop, or an empty PoP, uses Security 1 with no PoP.
+ * Sec2 requires a non-empty username. pop / username longer than 64 bytes
+ * are rejected.
+ */
+esp_err_t network_provisioner_set_security(network_provisioner_t *np,
+                                           const network_provisioner_security_t *sec);
+
+/**
+ * @brief Register one extra logical endpoint (BLE characteristic UUID16)
+ *
+ * Built-in prov-* endpoints are registered by network_provisioner_create().
+ * Use this for application endpoints after the standard 0xFF4F..0xFF53 range.
+ * HTTP / Console ignore @p uuid and return ESP_OK.
+ */
+esp_err_t network_provisioner_add_endpoint(network_provisioner_t *np,
+                                           const char *name, uint16_t uuid);
+
+/**
+ * @brief Send one application payload on a named endpoint
+ *
+ * Pipe only: the caller encodes and decodes the protobuf.
+ * Requires an established session. Caller frees *resp on success.
+ */
+esp_err_t network_provisioner_send(network_provisioner_t *np, const char *ep_name,
+                                   const uint8_t *req, size_t req_len,
+                                   uint8_t **resp, size_t *resp_len);
+
+/**
+ * @brief proto-ver JSON stored by fetch_capabilities() / start_session()
+ *
+ * *version_json points at internal storage. It stays valid until the next
+ * fetch/start on this instance, or network_provisioner_delete().
+ */
+esp_err_t network_provisioner_get_version(network_provisioner_t *np,
+                                          const char **version_json);
+
+/** Advertised name copied into network_provisioner_ble_device_t::name, including NUL. */
+#define NETWORK_PROVISIONER_BLE_NAME_MAX  32
+/** Manufacturer data copied into one scan result. Longer payloads are truncated. */
+#define NETWORK_PROVISIONER_BLE_MFG_MAX   32
+/** Bytes required by network_provisioner_ble_connect_cfg(). */
+#define NETWORK_PROVISIONER_BLE_CONNECT_CFG_MAX  8
+/** Address type for a public BLE address (NimBLE BLE_ADDR_PUBLIC). */
+#define NETWORK_PROVISIONER_BLE_ADDR_PUBLIC  0
+
+/**
+ * @brief One controller-side BLE scan result
+ */
+typedef struct {
+    uint8_t addr[6]; /**< Peer address, MSB first, the same order as "AA:BB:CC:DD:EE:FF" */
+    uint8_t addr_type; /**< NimBLE address type. NETWORK_PROVISIONER_BLE_ADDR_PUBLIC is 0 */
+    char name[NETWORK_PROVISIONER_BLE_NAME_MAX]; /**< Advertised Local Name, NUL-terminated. Longer names are truncated */
+    uint8_t mfg_data[NETWORK_PROVISIONER_BLE_MFG_MAX]; /**< Manufacturer data. Longer payloads are truncated */
+    uint8_t mfg_data_len; /**< Number of valid bytes in mfg_data */
+} network_provisioner_ble_device_t;
+
+/**
+ * @brief Active-scan nearby BLE peripherals
+ *
+ * Waits until the NimBLE host is synced. Does not connect.
+ * The instance must use a BLE transport (`network_provisioner_create_ble()`
+ * or `network_provisioner_create()` on a BLE protocomm_ext). HTTP and Console
+ * return ESP_ERR_NOT_SUPPORTED.
+ * @p name NULL or empty matches every advertised name; otherwise it is a prefix,
+ * or an exact name when @p name_exact is true. Matching uses the full advertised
+ * name. The name copied into the result is truncated and NUL-terminated.
+ * @p addr is 6 bytes, MSB first, or NULL to ignore the address.
+ * Only matches are stored. Devices beyond @p capacity are dropped.
+ * @p out_count is the number written.
+ * Returns ESP_ERR_NOT_SUPPORTED when NimBLE is disabled.
+ */
+esp_err_t network_provisioner_ble_scan(network_provisioner_t *np, uint32_t timeout_ms,
+                                       const char *name, bool name_exact,
+                                       const uint8_t *addr,
+                                       network_provisioner_ble_device_t *out,
+                                       size_t capacity, size_t *out_count);
+
+/**
+ * @brief Pack a scan-result address into the blob fetch_capabilities() expects
+ *
+ * @p out must be at least NETWORK_PROVISIONER_BLE_CONNECT_CFG_MAX bytes.
+ * Pass it as transport_connect_cfg. addr[] is MSB first.
+ */
+esp_err_t network_provisioner_ble_connect_cfg(const uint8_t addr[6], uint8_t addr_type,
+                                              void *out, size_t out_size);
+
+/**
+ * @brief True when the connected peer exposes this 16-bit characteristic
+ *
+ * Requires a BLE transport, same as network_provisioner_ble_scan().
+ * Other transports return ESP_ERR_NOT_SUPPORTED.
+ *
+ * @p svc_uuid128 is the 128-bit service UUID in NimBLE byte order (LSB at [0]).
+ * The characteristic UUID is that same base with bytes 12–13 replaced by
+ * @p chr_uuid16 (little-endian), which is how network_provisioning embeds UUID16.
+ */
+esp_err_t network_provisioner_ble_has_char(network_provisioner_t *np,
+                                           const uint8_t svc_uuid128[16],
+                                           uint16_t chr_uuid16);
 
 #ifdef __cplusplus
 }

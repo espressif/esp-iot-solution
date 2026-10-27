@@ -16,9 +16,9 @@
 #include "esp_board_manager_adapter.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_types.h"
-#if CONFIG_ESP_BOARD_DEV_LCD_TOUCH_I2C_SUPPORT
-#include "dev_lcd_touch_i2c.h"
-#endif  /* CONFIG_ESP_BOARD_DEV_LCD_TOUCH_I2C_SUPPORT */
+#if CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUPPORT && CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUB_I2C_SUPPORT
+#include "dev_lcd_touch.h"
+#endif  /* CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUPPORT && CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUB_I2C_SUPPORT */
 
 // LVGL configuration
 #define LVGL_TICK_PERIOD_MS    5
@@ -109,12 +109,12 @@ static esp_err_t esp_board_manager_adapter_init_lvgl_display(void)
     }
     ESP_LOGI(TAG, "LCD display initialized successfully");
 
-#if CONFIG_ESP_BOARD_DEV_LCD_TOUCH_I2C_SUPPORT
+#if CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUPPORT && CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUB_I2C_SUPPORT
     if (basic_info.config.enable_touch) {
         void *touch_device_handle = NULL;
         ret = esp_board_manager_get_device_handle("lcd_touch", &touch_device_handle);
         if (ret == ESP_OK && touch_device_handle != NULL) {
-            dev_lcd_touch_i2c_handles_t *touch_handles = (dev_lcd_touch_i2c_handles_t *)touch_device_handle;
+            dev_lcd_touch_handles_t *touch_handles = (dev_lcd_touch_handles_t *)touch_device_handle;
 
             if (touch_handles->touch_handle != NULL) {
                 const lvgl_port_touch_cfg_t touch_cfg = {
@@ -135,7 +135,7 @@ static esp_err_t esp_board_manager_adapter_init_lvgl_display(void)
             ESP_LOGW(TAG, "Touch device not available: %s (continuing without touch)", esp_err_to_name(ret));
         }
     }
-#endif  /* CONFIG_ESP_BOARD_DEV_LCD_TOUCH_I2C_SUPPORT */
+#endif  /* CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUPPORT && CONFIG_ESP_BOARD_DEV_LCD_TOUCH_SUB_I2C_SUPPORT */
 
     return ESP_OK;
 }
@@ -148,18 +148,26 @@ static esp_err_t calculate_adc_audio_info(esp_board_manager_adapter_info_t *info
         ESP_LOGE(TAG, "Failed to get audio_adc config: %s", esp_err_to_name(ret));
         return ret;
     }
-    if (adc_cfg->adc_channel_mask == 0b0111) {
+    // Board Manager >=0.7 uses codec-dev 2.x and exposes configured channel
+    // labels instead of adc_channel_mask (which is now a stream-open setting).
+    const char *labels = adc_cfg != NULL ? adc_cfg->codec_adc_cfg.label : NULL;
+    if (labels == NULL) {
+        ESP_LOGE(TAG, "Missing audio ADC channel labels");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    if (strcmp(labels, "FL,FR,RE,NA") == 0) {
         memcpy(info->mic_layout, "RMNM", 4);
         info->sample_rate = 16000;
         info->sample_bits = 32;
         info->channels = 2;
-    } else if (adc_cfg->adc_channel_mask == 0b0011) {
+    } else if (strcmp(labels, "FL,FR,NA,NA") == 0 || strcmp(labels, "FL,FR") == 0) {
         memcpy(info->mic_layout, "MR", 2);
         info->sample_rate = 16000;
         info->sample_bits = 16;
         info->channels = 2;
     } else {
-        ESP_LOGE(TAG, "Unsupported adc channel mask: %lx", adc_cfg->adc_channel_mask);
+        ESP_LOGE(TAG, "Unsupported audio ADC channel labels: %s", labels);
         return ESP_ERR_NOT_SUPPORTED;
     }
     return ESP_OK;

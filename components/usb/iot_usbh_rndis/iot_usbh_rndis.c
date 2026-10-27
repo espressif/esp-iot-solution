@@ -6,6 +6,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
@@ -47,6 +48,7 @@ typedef struct {
     uint8_t cdc_dev_addr;
     usbh_cdc_port_handle_t cdc_port;
     EventGroupHandle_t event_group;
+    atomic_uint pending_responses;
     uint32_t request_id;
     uint32_t max_transfer_pkts; /* max packets in one transfer */
     uint32_t max_transfer_size; /* max size in one transfer */
@@ -120,23 +122,26 @@ static esp_err_t usbh_rndis_recv_ctrl_response(usbh_rndis_t *rndis, uint32_t exp
         memset(data, 0, data_len);
         esp_err_t ret = usbh_cdc_send_custom_request(rndis->cdc_port, req_type, CDC_REQ_GET_ENCAPSULATED_RESPONSE, 0, 0, data_len, data);
         if (ret != ESP_OK) {
+            if (expected_type == 0 || rndis->cdc_port == NULL) {
+                return ret;
+            }
             ESP_LOGD(TAG, "RNDIS response read retry %d failed: %s", retry, esp_err_to_name(ret));
             vTaskDelay(pdMS_TO_TICKS(RNDIS_CONTROL_RETRY_DELAY_MS));
             continue;
         }
 
         rndis_generic_msg_t *msg = (rndis_generic_msg_t *)data;
+        // An empty response is a single zero byte, padded by the CDC driver.
+        if (msg->MessageType == 0 && msg->MessageLength == 0 && expected_type == 0) {
+            return ESP_ERR_NOT_FOUND;
+        }
         if (msg->MessageLength < sizeof(rndis_generic_msg_t) || msg->MessageLength > data_len) {
             ESP_LOGD(TAG, "Skip invalid RNDIS response length: %"PRIu32"", msg->MessageLength);
             vTaskDelay(pdMS_TO_TICKS(RNDIS_CONTROL_RETRY_DELAY_MS));
             continue;
         }
 
-        if (msg->MessageType == expected_type) {
-            if (expected_type == 0) {
-                ESP_LOGW(TAG, "Skip unexpected standalone RNDIS completion type: 0x%08"PRIx32"", msg->MessageType);
-                return ESP_OK;
-            }
+        if (expected_type != 0 && msg->MessageType == expected_type) {
             if (msg->MessageLength < sizeof(rndis_set_cmplt_t)) {
                 ESP_LOGW(TAG, "Skip short RNDIS completion length: %"PRIu32"", msg->MessageLength);
                 vTaskDelay(pdMS_TO_TICKS(RNDIS_CONTROL_RETRY_DELAY_MS));
@@ -194,7 +199,17 @@ static esp_err_t usbh_rndis_process_async_response(usbh_rndis_t *rndis)
     uint8_t *data = rndis->ctrl_buffer;
     ESP_RETURN_ON_FALSE(data != NULL, ESP_ERR_INVALID_STATE, TAG, "RNDIS control buffer is not allocated");
 
-    return usbh_rndis_recv_ctrl_response(rndis, 0, 0, data, RNDIS_CONTROL_BUFFER_SIZE);
+    // Read once per notification; some devices repeat their last response instead of returning empty.
+    unsigned pending = atomic_exchange(&rndis->pending_responses, 0);
+    if (pending == 0) {
+        return ESP_OK;
+    }
+    esp_err_t ret = usbh_rndis_recv_ctrl_response(rndis, 0, 0, data, RNDIS_CONTROL_BUFFER_SIZE);
+    if (ret == ESP_OK && pending > 1) {
+        atomic_fetch_add(&rndis->pending_responses, pending - 1);
+        xEventGroupSetBits(rndis->event_group, RNDIS_RESPONSE_AVAILABLE);
+    }
+    return ret;
 }
 
 static esp_err_t usbh_rndis_init_msg_request(usbh_rndis_t *rndis)
@@ -554,23 +569,18 @@ static void _usbh_rndis_notif_cb(usbh_cdc_port_handle_t cdc_port_handle, iot_cdc
 {
     usbh_rndis_t *rndis = (usbh_rndis_t *)arg;
 
-    switch (notif->bNotificationCode) {
-    case USB_CDC_NOTIFY_NETWORK_CONNECTION:
-        bool connected = notif->wValue;
-        ESP_LOGD(TAG, "Notify - network connection changed: %s", connected ? "Connected" : "Disconnected");
-        break;
-    case USB_CDC_NOTIFY_RESPONSE_AVAILABLE:
-        xEventGroupSetBits(rndis->event_group, RNDIS_RESPONSE_AVAILABLE);
-        break;
-    case USB_CDC_NOTIFY_SPEED_CHANGE: {
-        uint32_t *speeds = (uint32_t *)notif->Data;
-        ESP_LOGI(TAG, "Notify - link speeds: %lu kbps ↑, %lu kbps ↓", (speeds[0]) / 1000, (speeds[1]) / 1000);
-        break;
-    }
-    default:
-        ESP_LOGW(TAG, "unexpected notification %02x!", notif->bNotificationCode);
+    // RNDIS uses two little-endian words instead of a CDC notification header.
+    static const uint8_t response_available[8] = {1, 0, 0, 0, 0, 0, 0, 0};
+    // Also accept CDC-formatted response notifications for compatibility.
+    const uint8_t cdc_request_type = USB_BM_REQUEST_TYPE_DIR_IN | USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
+    const bool cdc_response = notif->bmRequestType == cdc_request_type && notif->bNotificationCode == USB_CDC_NOTIFY_RESPONSE_AVAILABLE;
+    if (memcmp(notif, response_available, sizeof(response_available)) != 0 && !cdc_response) {
+        ESP_LOGW(TAG, "Unexpected notification: %02x %02x", notif->bmRequestType, notif->bNotificationCode);
         return;
     }
+
+    atomic_fetch_add(&rndis->pending_responses, 1);
+    xEventGroupSetBits(rndis->event_group, RNDIS_RESPONSE_AVAILABLE);
 }
 
 static void _usbh_rndis_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_device_event_data_t *event_data, void *user_ctx)
@@ -621,6 +631,7 @@ static void _usbh_rndis_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_dev
             rndis->connect_status = false;
             rndis->rx_pending_data_len = 0;
             rndis->cdc_port = NULL;
+            atomic_store(&rndis->pending_responses, 0);
             xEventGroupSetBits(rndis->event_group, RNDIS_DISCONNECTED);
             ESP_LOGI(TAG, "RNDIS disconnected");
         }
@@ -657,7 +668,7 @@ static void _usbh_rndis_task(void *arg)
             rndis->mediator->on_stage_changed(rndis->mediator, IOT_ETH_STAGE_LINK, &link);
             delay_time_ms = rndis->connect_status ? 5000 : 500;
         }
-        if (events & RNDIS_RESPONSE_AVAILABLE) {
+        if ((events & RNDIS_RESPONSE_AVAILABLE) && rndis->cdc_port != NULL) {
             ret = usbh_rndis_process_async_response(rndis);
             if (ret != ESP_OK && ret != ESP_ERR_NOT_FOUND) {
                 ESP_LOGW(TAG, "Failed to process async RNDIS response: %s", esp_err_to_name(ret));
@@ -759,6 +770,7 @@ esp_err_t iot_eth_new_usb_rndis(const iot_usbh_rndis_config_t *config, iot_eth_d
     usbh_rndis_t *rndis = calloc(1, sizeof(usbh_rndis_t));
     ESP_RETURN_ON_FALSE(rndis != NULL, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for usbh_rndis_t");
 
+    atomic_init(&rndis->pending_responses, 0);
     memcpy(&rndis->config, config, sizeof(iot_usbh_rndis_config_t));
     rndis->base.name = "usb_rndis";
     rndis->base.init = usbh_rndis_init;

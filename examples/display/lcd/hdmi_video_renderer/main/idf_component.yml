@@ -5,5 +5,13 @@ dependencies:
     version: "^5.0.0"
 
   espressif/esp_audio_codec:
-    version: ">=2.3.0,<2.6.0"
+    # esp_audio_codec v2.6+ requires ESP32-P4 chip rev >=3.0 (AAC assembly
+    # optimizations). Keep v2.5.x for the default "<3.0" build, and allow
+    # v2.6+ automatically when building for rev >=3.0 silicon
+    # (sdkconfig.defaults.p4rev3).
+    matches:
+      - if: "$CONFIG{ESP32P4_SELECTS_REV_LESS_V3} == False"
+        version: "^2.6.0"
+      - if: "$CONFIG{ESP32P4_SELECTS_REV_LESS_V3} == True"
+        version: ">=2.3.0,<2.6.0"
     public: true

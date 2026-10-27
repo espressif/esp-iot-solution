@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -85,7 +85,18 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
 
     assert(elf && rela);
 
-    where = (uint32_t *)((uint8_t *)elf->psegment + rela->offset + elf->svaddr);
+    if (!elf->psegment || rela->offset < elf->svaddr ||
+            elf->segment_size < sizeof(*where) ||
+            rela->offset - elf->svaddr > elf->segment_size - sizeof(*where) ||
+            (rela->offset & (sizeof(*where) - 1))) {
+        return -EINVAL;
+    }
+
+    where = (uint32_t *)(elf->psegment + (rela->offset - elf->svaddr));
+    /* The virtual offset may be aligned while its mapped host address is not. */
+    if (((uintptr_t)where & (sizeof(*where) - 1)) != 0) {
+        return -EINVAL;
+    }
     ESP_LOGD(TAG, "type: %d, where=%p addr=0x%x offset=0x%x",
              ELF_R_TYPE(rela->info), where, (int)elf->psegment, (int)rela->offset);
 
@@ -98,7 +109,7 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
         *where = addr + rela->addend;
         break;
     case R_RISCV_RELATIVE:
-        *where = (Elf32_Addr)((uint8_t *)elf->psegment - elf->svaddr + rela->addend);
+        *where = (Elf32_Addr)((uintptr_t)elf->psegment - elf->svaddr + rela->addend);
         break;
     case R_RISCV_JUMP_SLOT:
         *where = addr;

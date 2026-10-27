@@ -1,3 +1,6 @@
+| Supported Targets | ESP32-P4 | ESP32-S3 | ESP32-S31 |
+| ----------------- | -------- | -------- | --------- |
+
 ## USB UAC Example
 
 This example demonstrates how to utilize the USB function of ESP32-Sx to implement a UAC (USB Audio Class) device.
@@ -10,20 +13,19 @@ For information about the [usb_device_uac](https://docs.espressif.com/projects/e
 
 ## How to build the example
 
-Please first read the [User Guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html#esp32-s3-lcd-ev-board) of the ESP32-S3-LCD-EV-Board to learn about its software and hardware information.
+Please read the user guide for the selected development board to learn about its software and hardware information, especially the USB and audio connector descriptions.
 
 ### Hardware Required
 
-For ESP32-S3
+This example is based on the [esp_board_manager](https://components.espressif.com/components/espressif/esp_board_manager) component. Any board supported by Board Manager that provides an audio codec device can be used, for example:
 
-* An ESP32-S3-LCD-EV-Board development board
-* At least one USB Type-C cable for Power supply, programming and USB communication.
-* A speaker
+* An ESP32-S3-LCD-EV-Board development board (`esp32_s3_lcd_ev_board`)
+* An ESP32-P4-Function-EV-Board development board (`esp32_p4_function_ev_board`)
+* An [ESP32-S31-Korvo-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s31/esp32-s31-korvo-1/user_guide.html) development board (`esp32_s31_korvo_1`, requires ESP-IDF v6.1 or later)
 
-For ESP32-P4
+Additionally:
 
-* An ESP32_P4_FUNCTION_EV_BOARD development board
-* At least one USB Type-C cable for Power supply, programming and USB communication.
+* USB cables suitable for power supply, programming, and USB communication. On ESP32-S31-Korvo-1, connect the computer to the onboard **USB 2.0 Type-A** port; the onboard USB Type-C ports are not USB-OTG ports.
 * A speaker
 
 ### UAC Device Configuration
@@ -46,11 +48,21 @@ After the programming is completed, insert the USB interface on the development 
     . $HOME/esp/esp-idf/export.sh
     ```
 
-3. Set ESP-IDF build target to `esp32s3` or `esp32-p4`
+3. Select the development board through Board Manager. For example:
 
     ```bash
-    idf.py set-target esp32s3
+    idf.py bmgr -b esp32_s3_lcd_ev_board
     ```
+
+    For ESP32-S31-Korvo-1, use ESP-IDF v6.1 or later and select:
+
+    ```bash
+    idf.py bmgr -b esp32_s31_korvo_1
+    ```
+
+    The board configuration files will be generated to `components/gen_bmgr_codes`. Use `idf.py bmgr -l` to list all supported boards, and `idf.py bmgr -x` to clear the current board configuration.
+
+    > Note: For ESP-IDF versions earlier than v6.0, install `esp-bmgr-assist` in the IDF Python environment first (or configure `IDF_EXTRA_ACTIONS_PATH` manually) to enable the `idf.py bmgr` command. See the [esp_board_manager README](https://components.espressif.com/components/espressif/esp_board_manager) for details.
 
 4. Build, Flash, output log
 

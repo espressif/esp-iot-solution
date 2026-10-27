@@ -1,0 +1,3 @@
+# ESP32-P4 has no on-chip BLE controller. Compile the host-less path.
+CONFIG_BT_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=n

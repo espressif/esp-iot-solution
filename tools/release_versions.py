@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 #generate the components versions table in README.md and README_CN.md
 import os
@@ -18,6 +18,7 @@ def get_components_versions(path):
                 # idf-component-manager local caches.
                 if ('test_apps' in file_path
                         or 'benchmark' in file_path
+                        or '/tests/' in file_path
                         or '/examples/' in file_path
                         or '/managed_components/' in file_path):
                     continue

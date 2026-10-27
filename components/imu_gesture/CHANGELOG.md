@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.0~1 - 2026-10-22
+
+### CI / Test Changes
+
+- Limit compilation parallelism for the inference test app to avoid exhausting memory on shared CI build runners.
+- No changes to the published component implementation or public API.
+
 ## v0.1.0 - 2026-05-15
 
 ### Enhancements:

@@ -23,6 +23,29 @@ extern "C" {
  */
 #define ESP_ELFSYM_EXPORT(_sym)     { #_sym, (void*)&_sym }
 
+/**
+ * @brief Export a symbol using its actual ELF linker name.
+ *
+ * Unlike ESP_ELFSYM_EXPORT, this lets C++ callers register the mangled
+ * symbol name (e.g. obtained from nm) rather than the spelled C++ expression.
+ * The symbol must denote a function or object with an ordinary address.
+ */
+#define ESP_ELFSYM_EXPORT_NAMED(_elf_name, _sym)  { (_elf_name), (const void *)&(_sym) }
+
+#ifdef __cplusplus
+/**
+ * @brief Register one C++ overload with its exact ELF name and signature.
+ *
+ * _signature must be a function-pointer type, preferably a typedef/using
+ * alias, and _sym is the qualified name of the overloaded free or static
+ * member function. Non-static member function pointers are not supported.
+ * Example: using fn_t = int (*)(int);
+ *          ESP_ELFSYM_EXPORT_CPP_OVERLOAD("_ZN4demo3fooEi", fn_t, demo::foo)
+ */
+#define ESP_ELFSYM_EXPORT_CPP_OVERLOAD(_elf_name, _signature, _sym) \
+    { (_elf_name), reinterpret_cast<const void *>(static_cast<_signature>(&_sym)) }
+#endif
+
 /* End of symbol table marker */
 #define ESP_ELFSYM_END              { NULL,  NULL }
 

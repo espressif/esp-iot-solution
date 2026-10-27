@@ -120,6 +120,7 @@ ESP32-S2/S3 have limited USB endpoint resources and support the following maximu
   * Set `BTH ISO ALT COUNT` to 1 or 2; the default is 1.
   * For ESP32-S3, use `sdkconfig.ci.bth` via `idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" set-target esp32s3`.
   * For ESP32-S31, use `sdkconfig.ci.bth` via `idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" --preview set-target esp32s31`.
+  * For ESP32-S31 with a Windows host (BR/EDR + BLE dual mode), use `sdkconfig.ci.esp32s31.bth_windows` via `idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.esp32s31.bth_windows" --preview set-target esp32s31`. The ESP-IDF version used for testing is release/v6.1 (commit `9a97f6c54ec`).
 
 ### 2.5 build & flash & monitor
 

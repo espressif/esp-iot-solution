@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v0.5.2 - 2026-10-21
+
+### Bug Fixes:
+
+* Fix link recovery after USB reconnection by recognizing standard RNDIS response notifications and retaining CDC notification compatibility.
+* Track pending response notifications to avoid losing coalesced events and repeatedly reading unchanged device responses.
+* Stop asynchronous reads on empty responses or transfer errors, and clear pending notifications on disconnect.
+
+### Dependencies:
+
+* Require `iot_usbh_cdc` version `^3.1.1` for notification validation and control response length fixes.
+
 ## v0.5.1 - 2026-10-09
 
 ### Bug Fixes:

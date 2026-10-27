@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v4.2.3 - 2026-10-26
+
+### Feature:
+
+* Added `hys_ctrl_mode` to GPIO button configuration on chips with hardware input hysteresis support, including ESP32-P4. This prevents spurious press events when the input edge is slow or noisy. Fixes [#663](https://github.com/espressif/esp-iot-solution/issues/663).
+
 ## v4.2.2 - 2026-10-13
 
 ### Fix:

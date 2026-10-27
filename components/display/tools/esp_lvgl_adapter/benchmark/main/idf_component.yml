@@ -10,3 +10,7 @@ dependencies:
     version: "*"
     override_path: "../../../esp_lvgl_adapter"
     public: true
+
+  espressif/button:
+    version: "4.*"
+    override_path: "../../../../../button"

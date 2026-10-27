@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.0~1 - 2026-10-22
+
+### CI / Test Changes
+
+- Stabilize ESP32-C3 loopback signal generation and move Unity assertions out of GPIO/timer callbacks.
+- No changes to the zero-crossing driver implementation or public API.
+
 ## v0.1.0 - 2025-02-24
 
 ### Improve:

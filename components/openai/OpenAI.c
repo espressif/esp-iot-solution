@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <sys/cdefs.h>
 #include <inttypes.h>
+#include <limits.h>
 #include "cJSON.h"
 #include "esp_log.h"
 #include "OpenAI.h"
+#include "image_stream_parser.h"
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
 
@@ -1450,120 +1452,214 @@ static OpenAI_Edit_t *OpenAI_EditCreate(OpenAI_t *openai)
 static const char *image_sizes[] = {"1024x1024", "512x512", "256x256"};
 static const char *image_response_formats[] = {"url", "b64_json"};
 
-// images/generations { //Creates an image given a prompt.
-//   "prompt": "A cute baby sea otter",//required
-//   "n": 1,//integer. The number of images to generate. Must be between 1 and 10.
-//   "size": "1024x1024",//string. The size of the generated images. Must be one of "256x256", "512x512", or "1024x1024"
-//   "response_format": "url",//string. The format in which the generated images are returned. Must be one of "url" or "b64_json".
-//   "user": null//string. A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse.
-// }
-
-/**
- * @brief Creates an image given a prompt.
- *
- */
+// GPT Image models require a model name and return Base64, not URLs.
+// Keep the legacy setters for callers selecting an older compatible backend.
 typedef struct {
-    OpenAI_ImageGeneration_t parent;               /*!< The parent object */
-    _OpenAI_t *oai;                                /*!< Pointer to the OpenAI object */
-    OpenAI_Image_Size size;                        /*!< The size of the generated images. Must be one of "256x256", "512x512", or "1024x1024" */
-    OpenAI_Image_Response_Format response_format;  /*!< The format in which the generated images are returned. Must be one of url or b64_json */
-    uint32_t n;                                    /*!< The number of images to generate. Must be between 1 and 10. */
-    char *user;                                    /*!< A unique identifier representing your end-user, which can help OpenAI to monitor and detect abuse. */
+    OpenAI_ImageGeneration_t parent;
+    _OpenAI_t *oai;
+    OpenAI_Image_Size size;
+    OpenAI_Image_Response_Format response_format;
+    uint32_t n;
+    char *model;
+    char *quality;
+    char *output_format;
+    char *user;
 } _OpenAI_ImageGeneration_t;
+
+static bool OpenAI_Image_Post_Stream(const char *base_url, const char *api_key, const char *json_body,
+                                     OpenAI_ImageStreamCallback callback, void *user_data);
 
 static void OpenAI_ImageGenerationDelete(OpenAI_ImageGeneration_t *imageGeneration)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
-    if (_imageGeneration != NULL) {
-        if (_imageGeneration->user != NULL) {
-            free(_imageGeneration->user);
-            _imageGeneration->user = NULL;
-        }
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    free(gen->model);
+    free(gen->quality);
+    free(gen->output_format);
+    free(gen->user);
+    free(gen);
+}
 
-        free(_imageGeneration);
-        _imageGeneration = NULL;
+static void OpenAI_ImageGenerationSetModel(OpenAI_ImageGeneration_t *imageGeneration, const char *model)
+{
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    if (!model || !*model) {
+        return;
+    }
+    char *copy = strdup(model);
+    if (copy) {
+        free(gen->model);
+        gen->model = copy;
     }
 }
 
-static void OpenAI_ImageGenerationSetSize(OpenAI_ImageGeneration_t *imageGeneration, OpenAI_Image_Size s)
+static void OpenAI_ImageGenerationSetQuality(OpenAI_ImageGeneration_t *imageGeneration, const char *quality)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
-    if (s >= OPENAI_IMAGE_SIZE_1024x1024 && s <= OPENAI_IMAGE_SIZE_256x256) {
-        _imageGeneration->size = s;
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    if (!quality || (strcmp(quality, "low") != 0 && strcmp(quality, "medium") != 0 &&
+                     strcmp(quality, "high") != 0 && strcmp(quality, "auto") != 0)) {
+        return;
+    }
+    char *copy = strdup(quality);
+    if (copy) {
+        free(gen->quality);
+        gen->quality = copy;
+    }
+}
+
+static void OpenAI_ImageGenerationSetOutputFormat(OpenAI_ImageGeneration_t *imageGeneration, const char *format)
+{
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    if (!format || (strcmp(format, "jpeg") != 0 && strcmp(format, "png") != 0 && strcmp(format, "webp") != 0)) {
+        return;
+    }
+    char *copy = strdup(format);
+    if (copy) {
+        free(gen->output_format);
+        gen->output_format = copy;
+    }
+}
+
+static void OpenAI_ImageGenerationSetSize(OpenAI_ImageGeneration_t *imageGeneration, OpenAI_Image_Size size)
+{
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    if (size >= OPENAI_IMAGE_SIZE_1024x1024 && size <= OPENAI_IMAGE_SIZE_256x256) {
+        gen->size = size;
     }
 }
 
 static void OpenAI_ImageGenerationSetResponseFormat(OpenAI_ImageGeneration_t *imageGeneration, OpenAI_Image_Response_Format rf)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
     if (rf >= OPENAI_IMAGE_RESPONSE_FORMAT_URL && rf <= OPENAI_IMAGE_RESPONSE_FORMAT_B64_JSON) {
-        _imageGeneration->response_format = rf;
+        gen->response_format = rf;
     }
 }
 
 static void OpenAI_ImageGenerationSetN(OpenAI_ImageGeneration_t *imageGeneration, uint32_t n)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
     if (n > 0 && n <= 10) {
-        _imageGeneration->n = n;
+        gen->n = n;
     }
 }
 
-static void OpenAI_ImageGenerationSetUser(OpenAI_ImageGeneration_t *imageGeneration, const char *u)
+static void OpenAI_ImageGenerationSetUser(OpenAI_ImageGeneration_t *imageGeneration, const char *user)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
-    if (_imageGeneration->user != NULL) {
-        free(_imageGeneration->user);
-        _imageGeneration->user = NULL;
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    if (!user) {
+        return;
     }
-
-    _imageGeneration->user = strdup(u);
+    char *copy = strdup(user);
+    if (copy) {
+        free(gen->user);
+        gen->user = copy;
+    }
 }
 
-static OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *imageGeneration, char *p)
+static bool OpenAI_ImageGenerationIsGPT(const char *model)
 {
-    const char *endpoint = "images/generations";
-    OpenAI_ImageResponse_t *result = NULL;
+    return strncmp(model, "gpt-image-", strlen("gpt-image-")) == 0 ||
+           strcmp(model, "chatgpt-image-latest") == 0;
+}
+
+static char *OpenAI_ImageGenerationCreateBody(const _OpenAI_ImageGeneration_t *gen, const char *prompt, bool stream)
+{
+    if (!prompt || !*prompt) {
+        return NULL;
+    }
+    const char *model = gen->model ? gen->model : "gpt-image-2";
+    bool gpt_image = OpenAI_ImageGenerationIsGPT(model);
+    if (gpt_image && gen->size != OPENAI_IMAGE_SIZE_1024x1024) {
+        ESP_LOGE(TAG, "GPT Image requires a supported size (1024x1024 for this component)");
+        return NULL;
+    }
+    if (stream && (!gpt_image || gen->n != 1)) {
+        ESP_LOGE(TAG, "Stream mode requires a GPT Image model and exactly one image");
+        return NULL;
+    }
+
     cJSON *req = cJSON_CreateObject();
-    OPENAI_ERROR_CHECK(req != NULL, "cJSON_CreateObject failed!", NULL);
-    reqAddString("prompt", p);
-    _OpenAI_ImageGeneration_t *_imageGeneration = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
-    if (_imageGeneration->size != OPENAI_IMAGE_SIZE_1024x1024) {
-        reqAddString("size", image_sizes[_imageGeneration->size]);
+    if (!req) {
+        return NULL;
     }
-    if (_imageGeneration->response_format != OPENAI_IMAGE_RESPONSE_FORMAT_URL) {
-        reqAddString("response_format", image_response_formats[_imageGeneration->response_format]);
+    bool ok = cJSON_AddStringToObject(req, "model", model) &&
+              cJSON_AddStringToObject(req, "prompt", prompt);
+    // GPT Image defaults to "auto", so always send the selected dimensions.
+    // Preserve omission of 1024x1024 for old URL-based image backends.
+    if (ok && (gpt_image || gen->size != OPENAI_IMAGE_SIZE_1024x1024)) {
+        ok = cJSON_AddStringToObject(req, "size", image_sizes[gen->size]) != NULL;
     }
-    if (_imageGeneration->n != 1) {
-        reqAddNumber("n", _imageGeneration->n);
+    if (ok && !gpt_image && gen->response_format != OPENAI_IMAGE_RESPONSE_FORMAT_URL) {
+        ok = cJSON_AddStringToObject(req, "response_format", image_response_formats[gen->response_format]) != NULL;
     }
-    if (_imageGeneration->user != NULL) {
-        reqAddString("user", _imageGeneration->user);
+    if (ok && gen->n != 1) {
+        ok = cJSON_AddNumberToObject(req, "n", gen->n) != NULL;
     }
-    char *jsonBody = cJSON_Print(req);
+    if (ok && gen->quality && gpt_image) {
+        ok = cJSON_AddStringToObject(req, "quality", gen->quality) != NULL;
+    }
+    if (ok && gen->output_format && gpt_image) {
+        ok = cJSON_AddStringToObject(req, "output_format", gen->output_format) != NULL;
+    }
+    if (ok && gen->user) {
+        ok = cJSON_AddStringToObject(req, gpt_image ? "safety_identifier" : "user", gen->user) != NULL;
+    }
+    if (ok && stream) {
+        ok = cJSON_AddBoolToObject(req, "stream", true) != NULL;
+    }
+    char *body = ok ? cJSON_PrintUnformatted(req) : NULL;
     cJSON_Delete(req);
-    char *res = _imageGeneration->oai->post(_imageGeneration->oai->base_url, _imageGeneration->oai->api_key, endpoint, jsonBody, NULL);
-    free(jsonBody);
-    OPENAI_ERROR_CHECK(res != NULL, "Empty result!", result);
-    return OpenAI_ImageResponseCreate(res);
+    return body;
+}
+
+static OpenAI_ImageResponse_t *OpenAI_ImageGenerationPrompt(OpenAI_ImageGeneration_t *imageGeneration, char *prompt)
+{
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    char *body = OpenAI_ImageGenerationCreateBody(gen, prompt, false);
+    OPENAI_ERROR_CHECK(body, "Failed to prepare image request", NULL);
+    char *res = gen->oai->post(gen->oai->base_url, gen->oai->api_key, "images/generations", body, NULL);
+    free(body);
+    OPENAI_ERROR_CHECK(res, "Empty image response", NULL);
+    OpenAI_ImageResponse_t *result = OpenAI_ImageResponseCreate(res);
+    free(res);
+    return result;
+}
+
+static bool OpenAI_ImageGenerationPromptStream(OpenAI_ImageGeneration_t *imageGeneration, const char *prompt,
+                                               OpenAI_ImageStreamCallback callback, void *user_data)
+{
+    if (!callback) {
+        return false;
+    }
+    _OpenAI_ImageGeneration_t *gen = __containerof(imageGeneration, _OpenAI_ImageGeneration_t, parent);
+    char *body = OpenAI_ImageGenerationCreateBody(gen, prompt, true);
+    if (!body) {
+        return false;
+    }
+    bool result = OpenAI_Image_Post_Stream(gen->oai->base_url, gen->oai->api_key, body, callback, user_data);
+    free(body);
+    return result;
 }
 
 static OpenAI_ImageGeneration_t *OpenAI_ImageGenerationCreate(OpenAI_t *openai)
 {
-    _OpenAI_ImageGeneration_t *_imageGeneration = (_OpenAI_ImageGeneration_t *)calloc(1, sizeof(_OpenAI_ImageGeneration_t));
-    OPENAI_ERROR_CHECK(_imageGeneration != NULL, "_imageGeneration calloc failed!", NULL);
-    _imageGeneration->oai = __containerof(openai, _OpenAI_t, parent);;
-    _imageGeneration->size = OPENAI_IMAGE_SIZE_1024x1024;
-    _imageGeneration->response_format = OPENAI_IMAGE_RESPONSE_FORMAT_URL;
-    _imageGeneration->n = 1;
-
-    _imageGeneration->parent.setSize = &OpenAI_ImageGenerationSetSize;
-    _imageGeneration->parent.setResponseFormat = &OpenAI_ImageGenerationSetResponseFormat;
-    _imageGeneration->parent.setN = &OpenAI_ImageGenerationSetN;
-    _imageGeneration->parent.setUser = &OpenAI_ImageGenerationSetUser;
-    _imageGeneration->parent.prompt = &OpenAI_ImageGenerationPrompt;
-
-    return &_imageGeneration->parent;
+    _OpenAI_ImageGeneration_t *gen = calloc(1, sizeof(_OpenAI_ImageGeneration_t));
+    OPENAI_ERROR_CHECK(gen, "Image generation allocation failed", NULL);
+    gen->oai = __containerof(openai, _OpenAI_t, parent);
+    gen->size = OPENAI_IMAGE_SIZE_1024x1024;
+    gen->n = 1;
+    // Keep the legacy default for non-GPT image backends; GPT models ignore it.
+    gen->response_format = OPENAI_IMAGE_RESPONSE_FORMAT_URL;
+    gen->parent.setSize = &OpenAI_ImageGenerationSetSize;
+    gen->parent.setResponseFormat = &OpenAI_ImageGenerationSetResponseFormat;
+    gen->parent.setN = &OpenAI_ImageGenerationSetN;
+    gen->parent.setUser = &OpenAI_ImageGenerationSetUser;
+    gen->parent.setModel = &OpenAI_ImageGenerationSetModel;
+    gen->parent.setQuality = &OpenAI_ImageGenerationSetQuality;
+    gen->parent.setOutputFormat = &OpenAI_ImageGenerationSetOutputFormat;
+    gen->parent.prompt = &OpenAI_ImageGenerationPrompt;
+    gen->parent.promptStream = &OpenAI_ImageGenerationPromptStream;
+    return &gen->parent;
 }
 
 // images/variations { //Creates a variation of a given image.
@@ -2616,6 +2712,83 @@ end:
         *output_len = total_read;
     }
     return result != NULL ? result : NULL;
+}
+
+// Do not use OpenAI_Request() for GPT image streams: buffering a 1024-pixel
+// Base64 image (and then parsing it as cJSON) exhausts internal ESP32 RAM.
+// Keep the SSE parser and HTTP read buffer on the heap, since the main task
+// also needs stack space for HTTP, TLS and the Unity test harness.
+typedef struct {
+    openai_image_sse_parser_t parser;
+    char buffer[1024];
+} OpenAI_ImageStreamWorkspace_t;
+
+static bool OpenAI_Image_Post_Stream(const char *base_url, const char *api_key, const char *json_body,
+                                     OpenAI_ImageStreamCallback callback, void *user_data)
+{
+    char *url = NULL;
+    char *authorization = NULL;
+    esp_http_client_handle_t client = NULL;
+    bool success = false;
+    OpenAI_ImageStreamWorkspace_t *workspace = malloc(sizeof(*workspace));
+    if (!workspace) {
+        ESP_LOGE(TAG, "Failed to allocate image stream workspace");
+        return false;
+    }
+    openai_image_sse_init(&workspace->parser, callback, user_data);
+
+    if (asprintf(&url, "%simages/generations", base_url) < 0 || !url) {
+        goto cleanup;
+    }
+    esp_http_client_config_t config = {
+        .url = url,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = 180000,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+    };
+    client = esp_http_client_init(&config);
+    if (!client || asprintf(&authorization, "Bearer %s", api_key) < 0 || !authorization) {
+        goto cleanup;
+    }
+    if (esp_http_client_set_header(client, "Authorization", authorization) != ESP_OK ||
+            esp_http_client_set_header(client, "Content-Type", "application/json") != ESP_OK) {
+        goto cleanup;
+    }
+    size_t request_len = strlen(json_body);
+    if (request_len > INT_MAX || esp_http_client_open(client, (int)request_len) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open image stream");
+        goto cleanup;
+    }
+    if (esp_http_client_write(client, json_body, (int)request_len) != (int)request_len ||
+            esp_http_client_fetch_headers(client) < 0) {
+        ESP_LOGE(TAG, "Image stream request failed");
+        goto cleanup;
+    }
+    if (esp_http_client_get_status_code(client) != 200) {
+        ESP_LOGE(TAG, "Image stream API returned HTTP %d", esp_http_client_get_status_code(client));
+        goto cleanup;
+    }
+
+    int read_len;
+    while ((read_len = esp_http_client_read_response(client, workspace->buffer, sizeof(workspace->buffer))) > 0) {
+        if (!openai_image_sse_feed(&workspace->parser, workspace->buffer, read_len)) {
+            ESP_LOGE(TAG, "Invalid image stream or consumer aborted");
+            goto cleanup;
+        }
+    }
+    success = read_len == 0 && openai_image_sse_complete(&workspace->parser);
+    if (!success) {
+        ESP_LOGE(TAG, "Image stream ended without a complete image");
+    }
+cleanup:
+    free(authorization);
+    free(url);
+    if (client) {
+        esp_http_client_close(client);
+        esp_http_client_cleanup(client);
+    }
+    free(workspace);
+    return success;
 }
 
 static char *OpenAI_Speech_Post(const char *base_url, const char *api_key, const char *endpoint, char *jsonBody, size_t *output_len)
