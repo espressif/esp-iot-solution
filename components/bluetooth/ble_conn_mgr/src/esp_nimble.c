@@ -243,6 +243,7 @@ typedef struct attr_mbuf_t {
     uint16_t attr_handle;                               /* Executed handle when characteristic is read or written */
     uint8_t type;                                       /* Type of the UUID */
     esp_ble_conn_uuid_t uuid;                           /* Universal UUID, to be used for any-UUID static allocation */
+    uint32_t chr_flags;                                 /* NimBLE characteristic flags, checked before a notify or indicate */
 } attr_mbuf_t;
 SLIST_HEAD(attr_mbuf_list, attr_mbuf_t);
 
@@ -1885,6 +1886,41 @@ static esp_err_t esp_ble_conn_on_gatts_attr_value_set(uint16_t attr_handle, cons
     return ESP_OK;
 }
 
+/* NimBLE enforces NOTIFY_INDICATE_ENC/AUTHEN on the CCCD write, but
+ * ble_gattc_notify_custom() and ble_gattc_indicate_custom() send regardless of
+ * the link's security, so the send has to check it too. */
+static esp_err_t esp_ble_conn_tx_security_check(uint16_t conn_handle, const attr_mbuf_t *attr_mbuf)
+{
+    uint32_t need = 0;
+#ifdef BLE_GATT_CHR_F_NOTIFY_INDICATE_ENC
+    need |= BLE_GATT_CHR_F_NOTIFY_INDICATE_ENC;
+#endif
+#ifdef BLE_GATT_CHR_F_NOTIFY_INDICATE_AUTHEN
+    need |= BLE_GATT_CHR_F_NOTIFY_INDICATE_AUTHEN;
+#endif
+    need &= attr_mbuf ? attr_mbuf->chr_flags : 0;
+    if (!need) {
+        return ESP_OK;
+    }
+
+    struct ble_gap_conn_desc desc;
+    if (ble_gap_conn_find(conn_handle, &desc) != 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    bool ok = desc.sec_state.encrypted;
+#ifdef BLE_GATT_CHR_F_NOTIFY_INDICATE_AUTHEN
+    if (need & BLE_GATT_CHR_F_NOTIFY_INDICATE_AUTHEN) {
+        ok = ok && desc.sec_state.authenticated;
+    }
+#endif
+    if (!ok) {
+        ESP_LOGD(TAG, "attr_handle %u needs a secured link, conn %u has none",
+                 (unsigned)attr_mbuf->attr_handle, (unsigned)conn_handle);
+        return ESP_ERR_INVALID_STATE;
+    }
+    return ESP_OK;
+}
+
 static esp_err_t esp_ble_conn_on_gatts_attr_value_get(uint16_t attr_handle, uint16_t *outlen, uint8_t **outbuf)
 {
     attr_mbuf_t *attr_mbuf = esp_ble_conn_find_attr_with_handle(attr_handle);
@@ -3159,6 +3195,10 @@ static void esp_ble_conn_on_gatts_register(struct ble_gatt_register_ctxt *ctxt, 
             ESP_LOGD(TAG, "No characteristic(%s) found", ble_uuid_to_str(ctxt->chr.chr_def->uuid, buf));
         }
         esp_ble_conn_on_gatts_attr_value_set(ctxt->chr.val_handle, ctxt->chr.chr_def->uuid, outlen, outbuf);
+        attr_mbuf_t *registered = esp_ble_conn_find_attr_with_handle(ctxt->chr.val_handle);
+        if (registered) {
+            registered->chr_flags = ctxt->chr.chr_def->flags;
+        }
         break;
 
     case BLE_GATT_REGISTER_OP_DSC:
@@ -6180,6 +6220,12 @@ esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn
         return ESP_ERR_INVALID_ARG;
     }
 
+    rc = esp_ble_conn_tx_security_check(conn_handle, attr_mbuf);
+    if (rc != ESP_OK) {
+        esp_ble_conn_link_unref(link);
+        return rc;
+    }
+
     om = ble_hs_mbuf_from_flat(inbuff->data, inbuff->data_len);
     if (!om) {
         ESP_LOGE(TAG, "Failed to allocate mbuf for notify");
@@ -6216,6 +6262,12 @@ static esp_err_t esp_ble_conn_tx_by_attr(uint16_t conn_handle, uint16_t attr_han
     link = esp_ble_conn_link_find_by_handle(conn_handle);
     if (!link) {
         return ESP_ERR_INVALID_ARG;
+    }
+
+    rc = esp_ble_conn_tx_security_check(conn_handle, esp_ble_conn_find_attr_with_handle(attr_handle));
+    if (rc != ESP_OK) {
+        esp_ble_conn_link_unref(link);
+        return rc;
     }
 
     while (xSemaphoreTake(link->semaphore, 0) == pdPASS) {}
@@ -6452,6 +6504,12 @@ esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_
         }
         esp_ble_conn_link_unref(link);
         return ESP_ERR_INVALID_ARG;
+    }
+    rc = esp_ble_conn_tx_security_check(conn_handle, attr_mbuf);
+    if (rc != ESP_OK) {
+        os_mbuf_free_chain(om);
+        esp_ble_conn_link_unref(link);
+        return rc;
     }
     chr_val_handle = attr_mbuf->attr_handle;
     rc = ble_gattc_indicate_custom(conn_handle, chr_val_handle, om);
