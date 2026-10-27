@@ -1,4 +1,4 @@
-version: "0.5.1"
+version: "0.5.2"
 targets:
   - esp32s2
   - esp32s3
@@ -12,7 +12,7 @@ issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   idf: ">=5.2"
   espressif/iot_usbh_cdc:
-    version: "^3.1"
+    version: "^3.1.1"
     override_path: "../iot_usbh_cdc"
     public: true
   espressif/iot_eth:
