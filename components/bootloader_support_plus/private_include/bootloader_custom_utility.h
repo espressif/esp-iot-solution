@@ -8,7 +8,7 @@
 
 #include "esp_flash_partitions.h"
 #include "esp_idf_version.h"
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 1)
 #include "esp_efuse.h"
 #else
 #include "esp_flash_encrypt.h"
@@ -36,7 +36,7 @@ extern "C" {
 
 static inline bool bootloader_custom_flash_encryption_enabled(void)
 {
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 1)
     return esp_efuse_is_flash_encryption_enabled();
 #else
     return esp_flash_encryption_enabled();
