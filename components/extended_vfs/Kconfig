@@ -17,7 +17,9 @@ menu "Extended VFS"
                 default y
                 help
                     Select this option, then "/dev/i2c/x" (x=0, 1, ...) will be registered
-                    to VFS.
+                    to VFS. On ESP-IDF 5.3+, I2C slave needs slave driver v2
+                    (CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2, or IDF >= 6.0);
+                    otherwise slave I2CIOCSCFG / transfer returns ENOTSUP.
 
             config EXTENDED_VFS_LEDC
                 bool "LEDC"

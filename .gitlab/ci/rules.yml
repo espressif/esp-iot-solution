@@ -782,7 +782,7 @@
   - "examples/extended_vfs/gpio/gpio_simple/**/*"
 
 .patterns-example_extended_vfs_i2c_i2c_bh1750: &patterns-example_extended_vfs_i2c_i2c_bh1750
-  - "examples/extended_vfs/i2c/i2c_hb1750/**/*"
+  - "examples/extended_vfs/i2c/i2c_bh1750/**/*"
 
 .patterns-example_extended_vfs_i2c_i2c_tt21100: &patterns-example_extended_vfs_i2c_i2c_tt21100
   - "examples/extended_vfs/i2c/i2c_tt21100/**/*"
