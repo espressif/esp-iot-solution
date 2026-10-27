@@ -17,6 +17,8 @@ The `bootloader support plus` is an enhanced bootloader based on [custom_bootloa
 | ESP32-C6 | N/A | Supported | Supported | Supported |
 | ESP32-H2 | N/A | Supported | Supported | Supported |
 | ESP32-C61 | N/A | N/A  | N/A | Supported |
+| ESP32-P4 | N/A | N/A | N/A | v5.5.5+, rev ≥ 3 |
+| ESP32-S31 | N/A | N/A | N/A | v6.1+ (preview: `idf.py --preview set-target esp32s31`) |
 
 ## Compression ratio
 
