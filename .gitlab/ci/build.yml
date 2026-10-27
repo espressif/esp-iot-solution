@@ -2226,6 +2226,81 @@ build_example_robot_ragtime_panthera:
     - !reference [.build_examples_template, script]
     - python3 components/elf_loader/tests/host/check_embedded_alignment.py ${EXAMPLE_DIR}
 
+# Keep ELF application/shared-object and C++ constructor builds alongside
+# the existing examples; all are rebuilt when elf_loader itself changes.
+build_example_elf_loader_build_shared_library_example:
+  extends:
+    - .build_template
+    - .rules:build:example_elf_loader_build_shared_library_example
+    - .build_idf_ge_than_v5_4_to_v6_2
+  variables:
+    EXAMPLE_DIR: examples/elf_loader/build_shared_library_example
+  script:
+    # This is a shared-library-only project (project_so), not a firmware app.
+    # idf_build_apps defaults to `idf.py build`, which incorrectly attempts
+    # to link a firmware without app_main. Build the `so` target instead.
+    - |
+      for target in esp32 esp32s2 esp32s3 esp32p4; do
+        (
+          cd "${EXAMPLE_DIR}"
+          idf.py -B "build_${target}" \
+            -D "IDF_TARGET=${target}" \
+            -D "SDKCONFIG=${PWD}/build_${target}/sdkconfig" so
+          test -s "build_${target}/lib.so"
+        )
+      done
+  artifacts:
+    when: always
+    paths:
+      - examples/elf_loader/build_shared_library_example/build_*/lib.so
+      - examples/elf_loader/build_shared_library_example/build_*/build_log.txt
+    expire_in: 1 week
+
+# #776: build the original project_so library and flashable SPIFFS test app.
+# The base defaults and sdkconfig.ci.psram exercise IRAM and PSRAM.
+build_components_elf_loader_dlopen_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_dlopen_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.5
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_dlopen
+    BUILD_RECURSIVE: "0"
+
+# Builds flashable Unity firmware which embeds the actual freestanding C++
+# ELF and checks constructor/destructor results on target hardware.
+build_components_elf_loader_runtime_test:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_runtime_test
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v5.4 # ESP32-P4 rev 1.x DUT
+      - IMAGE: espressif/idf:release-v5.5 # ESP32-S3 DUT
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_runtime
+    BUILD_RECURSIVE: "0"
+
+build_components_elf_loader_cpp_lifecycle:
+  extends:
+    - .build_examples_template
+    - .rules:build:components_elf_loader_cpp_lifecycle
+    - .build_idf_ge_than_v5_4_to_v6_2
+  variables:
+    EXAMPLE_DIR: components/elf_loader/tests/idf_cpp_lifecycle
+    BUILD_RECURSIVE: "0"
+  script:
+    - !reference [.build_examples_template, script]
+    - |
+      found=0
+      while IFS= read -r -d '' image; do
+        python3 components/elf_loader/tests/idf_cpp_lifecycle/check_elf_arrays.py "$image"
+        found=$((found + 1))
+      done < <(find "${EXAMPLE_DIR}" -type f -name 'elf_cpp_lifecycle.app.elf' -print0)
+      test "$found" -gt 0
+
 build_example_elf_loader_elf_loader_example:
   extends:
     - .build_elf_loader_aligned_example

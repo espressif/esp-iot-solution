@@ -134,8 +134,10 @@ int IRAM_ATTR esp_elf_arch_flush(esp_elf_t *elf)
 {
 #if CONFIG_IDF_TARGET_ESP32S3 && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
     esp_elf_sec_t *text = &elf->sec[ELF_SEC_TEXT];
-    if (text->addr && text->size) {
-        esp_err_t ret = esp_cache_msync((void *)text->addr, text->size,
+    if (text->addr && elf->text_alloc_size) {
+        /* .got.loc is part of the executable PC-relative span, even though
+         * it is a separate section for symbol lookup. */
+        esp_err_t ret = esp_cache_msync((void *)text->addr, elf->text_alloc_size,
                                         ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
         if (ret != ESP_OK) {
             return -EIO;
@@ -144,7 +146,7 @@ int IRAM_ATTR esp_elf_arch_flush(esp_elf_t *elf)
         const uintptr_t instruction_addr = elf_remap_text(elf, text->addr);
         const uintptr_t line_size = CONFIG_ESP32S3_INSTRUCTION_CACHE_LINE_SIZE;
         const uintptr_t aligned_begin = instruction_addr & ~(line_size - 1);
-        const uintptr_t aligned_end = ELF_ALIGN(instruction_addr + text->size, line_size);
+        const uintptr_t aligned_end = ELF_ALIGN(instruction_addr + elf->text_alloc_size, line_size);
         ret = esp_cache_msync((void *)aligned_begin, aligned_end - aligned_begin,
                               ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_TYPE_INST);
         if (ret != ESP_OK) {

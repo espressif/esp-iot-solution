@@ -14,6 +14,8 @@ function(_project_elf)
 endfunction()
 
 macro(project_elf project_name)
+    # Opt in at CMake configure time with -DELF_LOADER_KEEP_DEBUG_ELF=ON.
+    option(ELF_LOADER_KEEP_DEBUG_ELF "Save unstripped ELF debug files" OFF)
     # Enable these options to remove unused symbols and reduce linked objects
     set(cflags -nostartfiles
                -nostdlib
@@ -25,10 +27,14 @@ macro(project_elf project_name)
                -Wl,--gc-sections
                -fvisibility=hidden)
 
-    # Enable this options to remove unnecessary sections in
-    list(APPEND cflags -Wl,--strip-all
-                       -Wl,--strip-debug
-                       -Wl,--strip-discarded)
+    # Only preserve DWARF at link time when producing the optional sidecar.
+    # Runtime app.elf is stripped in both modes below.
+    if(ELF_LOADER_KEEP_DEBUG_ELF)
+        list(APPEND cflags -g)
+    else()
+        list(APPEND cflags -Wl,--strip-all -Wl,--strip-debug)
+    endif()
+    list(APPEND cflags -Wl,--strip-discarded)
 
     list(APPEND cflags -Dmain=app_main)
 
@@ -40,7 +46,6 @@ macro(project_elf project_name)
     string(REPLACE "-elf-gcc" "-elf-strip" CMAKE_STRIP ${CMAKE_C_COMPILER})
     set(strip_flags --strip-unneeded
                     --remove-section=.comment
-                    --remove-section=.got.loc
                     --remove-section=.dynamic)
 
     if(CONFIG_IDF_TARGET_ARCH_XTENSA)
@@ -74,17 +79,25 @@ macro(project_elf project_name)
     endif()
     spaces2list(elf_libs)
 
-    # Define how to build the ELF file
+    if(ELF_LOADER_KEEP_DEBUG_ELF)
+        set(elf_debug "${elf_app}.debug")
+        set(elf_debug_command COMMAND ${CMAKE_COMMAND} -E copy ${elf_app} ${elf_debug})
+    else()
+        set(elf_debug "")
+        set(elf_debug_command "")
+    endif()
+
+    # Copy before stripping: both outputs are declared for incremental builds.
     add_custom_command(
-        OUTPUT ${elf_app}
+        OUTPUT ${elf_app} ${elf_debug}
         COMMAND ${CMAKE_C_COMPILER} ${cflags} ${elf_libs} -o ${elf_app}
+        ${elf_debug_command}
         COMMAND ${CMAKE_STRIP} ${strip_flags} ${elf_app}
         DEPENDS ${elf_dependencies}
         COMMENT "Build ELF: ${elf_app}"
     )
 
-    # Create a custom target to generate the ELF file
-    add_custom_target(elf ALL DEPENDS ${elf_app})
+    add_custom_target(elf ALL DEPENDS ${elf_app} ${elf_debug})
 endmacro()
 
 # Trick to temporarily redefine project(). When functions are overridden in CMake, the originals can still be accessed
@@ -97,11 +110,15 @@ function(_project_so)
 endfunction()
 
 macro(project_so project_name)
+    option(ELF_LOADER_KEEP_DEBUG_ELF "Save unstripped ELF debug files" OFF)
     if(CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT)
         # Compile flags for building component sources into position-independent .o files
         set(so_compile_flags -c
                              -fPIC
                              -DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT)
+        if(ELF_LOADER_KEEP_DEBUG_ELF)
+            list(APPEND so_compile_flags -g)
+        endif()
 
         # Link flags for producing a shared object from the collected .o files.
         # This setup favors size reduction (gc-sections, hidden visibility) and
@@ -118,9 +135,10 @@ macro(project_so project_name)
                           -Wl,--gc-sections
                           -fvisibility=hidden)
 
-        list(APPEND so_link_flags -Wl,--strip-all
-                                  -Wl,--strip-debug
-                                  -Wl,--strip-discarded)
+        if(NOT ELF_LOADER_KEEP_DEBUG_ELF)
+            list(APPEND so_link_flags -Wl,--strip-all -Wl,--strip-debug)
+        endif()
+        list(APPEND so_link_flags -Wl,--strip-discarded)
         # Output file name for shared object
         set(so_output "${CMAKE_PROJECT_NAME}.so")
 
@@ -129,7 +147,6 @@ macro(project_so project_name)
         string(REPLACE "-elf-gcc" "-elf-strip" CMAKE_STRIP_SO ${CMAKE_C_COMPILER})
         set(so_strip_flags --strip-unneeded
                            --remove-section=.comment
-                           --remove-section=.got.loc
                            --remove-section=.dynamic)
 
         if(CONFIG_IDF_TARGET_ARCH_XTENSA)
@@ -241,18 +258,26 @@ macro(project_so project_name)
                     )
         endforeach()
 
-        # Link all .o files to .so file
-        # Use list variables directly for link flags
-        add_custom_command(OUTPUT ${so_output}
-                # Undefined symbols are allowed to support modules resolved at runtime.
+        if(ELF_LOADER_KEEP_DEBUG_ELF)
+            set(so_debug "${so_output}.debug")
+            set(so_debug_command COMMAND ${CMAKE_COMMAND} -E copy ${so_output} ${so_debug})
+        else()
+            set(so_debug "")
+            set(so_debug_command "")
+        endif()
+
+        # Save optional unstripped shared-library image after validation and
+        # before stripping the deployable .so. Declare both build outputs.
+        add_custom_command(OUTPUT ${so_output} ${so_debug}
                 COMMAND ${CMAKE_C_COMPILER} ${so_link_flags} -o ${so_output} ${so_obj_files} ${so_link_libs} -Wl,--allow-shlib-undefined
                 COMMAND ${CMAKE_COMMAND} -DOUT=${so_output} -P ${ELF_LOADER_CMAKE_DIR}/check_shared_object.cmake
+                ${so_debug_command}
                 COMMAND ${CMAKE_COMMAND} -E echo "Linking ${so_output} completed"
                 COMMAND ${CMAKE_STRIP_SO} ${so_strip_flags} ${so_output}
                 DEPENDS ${so_dependencies} ${so_obj_files}
                 COMMENT "Build Shared Object: ${so_output}"
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
                 )
-        add_custom_target(so ALL DEPENDS ${so_output})
+        add_custom_target(so ALL DEPENDS ${so_output} ${so_debug})
     endif()
 endmacro()

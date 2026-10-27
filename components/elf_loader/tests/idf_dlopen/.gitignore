@@ -1,0 +1,11 @@
+# ESP-IDF build outputs
+managed_components/
+dependencies.lock
+sdkconfig
+sdkconfig.old
+build*/
+__pycache__/
+.pytest_cache/
+pytest_embedded_log/
+XUNIT_RESULT.xml
+[0-9].[0-9]*/

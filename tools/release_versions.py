@@ -18,6 +18,7 @@ def get_components_versions(path):
                 # idf-component-manager local caches.
                 if ('test_apps' in file_path
                         or 'benchmark' in file_path
+                        or '/tests/' in file_path
                         or '/examples/' in file_path
                         or '/managed_components/' in file_path):
                     continue

@@ -252,6 +252,10 @@ esp_elf_t *dlmod_relocate(const char *path)
     }
 
     esp_elf_close(&file);
+    /* dlopen() callers cannot access the private esp_elf_t. Record the
+     * executable alias with the module identity for offline crash decoding. */
+    ESP_LOGI(TAG, "ELF debug: module=%s runtime_base=%p", path,
+             (void *)esp_elf_runtime_base(elf_dl));
     return elf_dl;
 }
 

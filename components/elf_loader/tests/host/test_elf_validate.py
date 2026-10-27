@@ -5,12 +5,17 @@
 
 import ctypes
 import os
+import shutil
 from pathlib import Path
 import struct
 import subprocess
+import sys
 import tempfile
 import unittest
 
+
+# GNU ld and the macOS linker use different dead-section removal options.
+HOST_GC_LINKER_FLAG = '-Wl,-dead_strip' if sys.platform == 'darwin' else '-Wl,--gc-sections'
 
 ROOT = Path(__file__).resolve().parents[4]
 COMPONENT = ROOT / 'components' / 'elf_loader'
@@ -57,6 +62,54 @@ def first_load_segment(data):
     raise AssertionError('missing PT_LOAD')
 
 
+def synthetic_lifecycle_image(arch, got_loc=False):
+    """ELF32 fixture with file-backed startup arrays on both architectures."""
+    entries = [
+        ('.text', 1, 6, 0x1000, 8),
+        ('.rodata', 1, 2, 0x1020, 8),
+        ('.preinit_array', 16, 3, 0x1040, 4),
+        ('.init_array', 14, 3, 0x1044, 4),
+        ('.fini_array', 15, 3, 0x1048, 4),
+    ]
+    if got_loc:
+        entries.append(('.got.loc', 1, 2, 0x1080, 12))
+    shstr = b'\0'
+    names = {}
+    for name, _, _, _, _ in entries + [('.shstrtab', 3, 0, 0, 0)]:
+        names[name] = len(shstr)
+        shstr += name.encode() + b'\0'
+
+    num_sections = len(entries) + 2  # null section and .shstrtab
+    shoff = 52 + 32
+    stroff = shoff + 40 * num_sections
+    dataoff = (stroff + len(shstr) + 3) & ~3
+    data = bytearray(dataoff + (0xa0 if got_loc else 0x80))
+    data[:7] = b'\x7fELF\x01\x01\x01'
+    put16(data, 16, 2)  # ET_EXEC
+    put16(data, 18, 94 if arch == 'xtensa' else 243)
+    put32(data, 20, 1)
+    put32(data, 24, 0x1000)
+    put32(data, 28, 52)
+    put32(data, 32, shoff)
+    put16(data, 40, 52)
+    put16(data, 42, 32)
+    put16(data, 44, 1)
+    put16(data, 46, 40)
+    put16(data, 48, num_sections)
+    put16(data, 50, num_sections - 1)
+    struct.pack_into('<IIIIIIII', data, 52, 1, dataoff, 0x1000, 0x1000,
+                     len(data) - dataoff, len(data) - dataoff, 5, 4)
+    data[stroff:stroff + len(shstr)] = shstr
+
+    for i, (name, sec_type, flags, vaddr, sec_size) in enumerate(entries, 1):
+        struct.pack_into('<IIIIIIIIII', data, shoff + 40 * i, names[name],
+                         sec_type, flags, vaddr, dataoff + (vaddr - 0x1000),
+                         sec_size, 0, 0, 4, 0)
+    struct.pack_into('<IIIIIIIIII', data, shoff + 40 * (num_sections - 1),
+                     names['.shstrtab'], 3, 0, 0, stroff, len(shstr), 0, 0, 1, 0)
+    return data
+
+
 class ElfValidationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -92,6 +145,183 @@ class ElfValidationTests(unittest.TestCase):
         return self.libs[arch].esp_elf_validate(
             ctypes.cast(buf, ctypes.c_void_p), len(data)
         )
+
+    def test_elf_pc_translation_respects_loaded_executable_ranges(self):
+        import importlib.util
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        for arch in FIXTURES:
+            elf = tool.DebugELF(FIXTURES[arch])
+            runtime = 0x42000000
+            if arch == 'xtensa':
+                start = elf.sections['.text'][3]
+                length = elf.sections['.text'][5]
+                self.assertGreater(length, 1)
+                self.assertEqual(elf.virtual_address(runtime + 1, runtime), start + 1)
+                with self.assertRaisesRegex(ValueError, 'not inside'):
+                    elf.virtual_address(runtime + length, runtime)
+            else:
+                start = min(segment[0] for segment in elf.segments)
+                executable = next((vaddr, size, flags) for vaddr, size, flags in elf.segments
+                                  if (flags & tool.PF_X) and size >= 2)
+                offset = executable[0] + 1 - start
+                self.assertEqual(elf.virtual_address(runtime + offset, runtime), executable[0] + 1)
+                with self.assertRaises(ValueError):
+                    elf.virtual_address(runtime - 1, runtime)
+            with self.assertRaises(ValueError):
+                elf.virtual_address(0x100000000, runtime)
+        bad = Path(self.build.name) / 'bad-debug.elf'
+        bad.write_bytes(b'not an elf')
+        with self.assertRaisesRegex(ValueError, 'not an ELF32'):
+            tool.DebugELF(bad)
+
+    def test_elf_addr2line_invokes_target_toolchain_with_rebased_pc(self):
+        import contextlib
+        import importlib.util
+        import io
+        from unittest import mock
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        elf = tool.DebugELF(FIXTURES['xtensa'])
+        addr = elf.sections['.text'][3] + 1
+        output = io.StringIO()
+        with mock.patch.object(tool.DebugELF, 'has_debug_info',
+                               new_callable=mock.PropertyMock, return_value=True), \
+             mock.patch.object(tool.subprocess, 'run', return_value=subprocess.CompletedProcess(
+                 [], 0, 'loaded_function\nsrc/test.cpp:37\n', '')) as spawn, \
+             contextlib.redirect_stdout(output):
+            code = tool.main([
+                '--elf', str(FIXTURES['xtensa']),
+                '--pc', '0x42000001', '--runtime-base', '0x42000000',
+                '--addr2line', '/tmp/xtensa-addr2line',
+            ])
+        self.assertEqual(code, 0)
+        self.assertEqual(spawn.call_args.args[0][-1], f'0x{addr:08x}')
+        self.assertIn('src/test.cpp:37', output.getvalue())
+        self.assertIn('0x42000001', output.getvalue())
+
+    def test_elf_symbolicator_rejects_missing_source_mapping(self):
+        import contextlib
+        import importlib.util
+        import io
+        from unittest import mock
+        script = COMPONENT / 'tool/elf_addr2line.py'
+        spec = importlib.util.spec_from_file_location('elf_addr2line', script)
+        tool = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tool)
+        with mock.patch.object(tool.DebugELF, 'has_debug_info',
+                               new_callable=mock.PropertyMock, return_value=True), \
+             mock.patch.object(tool.subprocess, 'run', return_value=subprocess.CompletedProcess(
+                 [], 0, '??\n??:0\n', '')):
+            with mock.patch.object(tool.argparse.ArgumentParser, 'exit',
+                                   side_effect=SystemExit(2)) as exit_mock:
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as result:
+                        tool.main([
+                            '--elf', str(FIXTURES['xtensa']), '--pc', '0x42000001',
+                            '--runtime-base', '0x42000000', '--addr2line', 'false',
+                        ])
+            self.assertEqual(result.exception.code, 2)
+            self.assertIn('no source location', exit_mock.call_args.args[1])
+
+    def test_cpp_elf_mangled_name_and_overload_exports(self):
+        executable = Path(self.build.name) / 'test_cpp_exports'
+        subprocess.run([
+            os.environ.get('CXX', 'c++'), '-std=c++17', '-Wall', '-Wextra', '-Werror',
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_cpp_exports.cpp'),
+            '-o', str(executable),
+        ], check=True)
+        subprocess.run([str(executable)], check=True)
+
+    def test_cross_compiled_cpp_export_names_match_elf_symbols(self):
+        import shutil
+        symbols = (
+            '_ZN11loader_test5plainEi',
+            '_ZN11loader_test10overloadedEi',
+            '_ZN11loader_test10overloadedEd',
+            '_ZN11loader_test6Widget3runEi',
+        )
+        tested = 0
+        for toolchain in ('riscv32-esp-elf', 'xtensa-esp32s3-elf'):
+            compiler = shutil.which(f'{toolchain}-g++')
+            nm = shutil.which(f'{toolchain}-nm')
+            if not compiler or not nm:
+                continue
+            tested += 1
+            output = Path(self.build.name) / f'{toolchain}-cpp-exports.o'
+            subprocess.run([
+                compiler, '-std=c++17', '-Wall', '-Wextra', '-Werror', '-c',
+                '-I', str(COMPONENT / 'include'),
+                str(COMPONENT / 'tests/host/test_cpp_exports.cpp'),
+                '-o', str(output),
+            ], check=True)
+            defined = subprocess.run([nm, '--defined-only', str(output)],
+                                     check=True, capture_output=True, text=True).stdout
+            data = output.read_bytes()
+            for name in symbols:
+                with self.subTest(target=toolchain, symbol=name):
+                    self.assertIn(name, defined)
+                    self.assertIn(name.encode() + b'\0', data)
+        if not tested:
+            self.skipTest('Xtensa/RISC-V cross compiler unavailable')
+
+    def test_named_c_export_compatibility(self):
+        executable = Path(self.build.name) / 'test_named_c_export'
+        subprocess.run([
+            os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_named_c_export.c'),
+            '-o', str(executable),
+        ], check=True)
+        subprocess.run([str(executable)], check=True)
+
+    def test_vprintf_export_matches_available_libc_function(self):
+        """Exercise the default export-table entry with the host C runtime."""
+        import re
+        source = (COMPONENT / 'src/esp_elf_symbol.c').read_text()
+        table = source.split('g_esp_libc_elfsyms[] = {', 1)[1].split('};', 1)[0]
+        names = re.findall(r'ESP_ELFSYM_EXPORT\(([^)]+)\)', table)
+        self.assertEqual(names.count('vprintf'), 1)
+        for name in ('printf', 'vfprintf'):
+            self.assertIn(name, names)
+        # Compile entries read from the actual table, not a copy of its names.
+        exported = '\n'.join(f'    ESP_ELFSYM_EXPORT({name}),' for name in names
+                             if name in ('printf', 'vprintf', 'vfprintf'))
+        code = r"""
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+struct export_sym { const char *name; const void *ptr; };
+#define ESP_ELFSYM_EXPORT(x) { #x, (const void *)&x }
+static const struct export_sym exports[] = {
+""" + exported + r"""
+};
+static uintptr_t lookup(const char *name) {
+    for (size_t i = 0; i < sizeof(exports) / sizeof(exports[0]); ++i) {
+        if (strcmp(exports[i].name, name) == 0) return (uintptr_t)exports[i].ptr;
+    }
+    return 0;
+}
+int main(void) {
+    assert(lookup("vprintf") == (uintptr_t)&vprintf);
+    assert(lookup("printf") == (uintptr_t)&printf);
+    assert(lookup("vfprintf") == (uintptr_t)&vfprintf);
+    assert(!lookup("esp_crosscore_int_send_yield"));
+    return 0;
+}
+"""
+        path = Path(self.build.name) / 'test_libc_exports.c'
+        executable = Path(self.build.name) / 'test_libc_exports'
+        path.write_text(code)
+        subprocess.run([os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra',
+                        '-Werror', str(path), '-o', str(executable)], check=True)
+        subprocess.run([str(executable)], check=True)
 
     def test_valid_production_fixtures(self):
         for arch, path in FIXTURES.items():
@@ -520,6 +750,229 @@ class ElfValidationTests(unittest.TestCase):
         subprocess.run([str(output)], check=True)
 
 
+    def test_cpp_lifecycle_elf_validation(self):
+        for arch in ('xtensa', 'riscv'):
+            with self.subTest(arch=arch):
+                sample = synthetic_lifecycle_image(arch)
+                self.assertEqual(self.validate(arch, sample), 0)
+                for label, section_index, field_offset, value in (
+                    ('partial-pointer', 4, 20, 3),
+                    ('invalid-init-entsize', 4, 36, 8),
+                    ('wrong-init-type', 4, 4, 1),
+                    ('misaligned-vaddr', 4, 12, 0x1045),
+                    ('lifecycle-overlap-rodata', 4, 12, 0x1020),
+                    ('misaligned-file-offset', 4, 16, u32(sample, section(sample, 4) + 16) + 1),
+                    ('missing-alloc', 3, 8, 0),
+                    ('duplicate-init', 5, 4, 14),
+                ):
+                    broken = bytearray(sample)
+                    put32(broken, section(broken, section_index) + field_offset, value)
+                    with self.subTest(arch=arch, error=label):
+                        self.assertNotEqual(self.validate(arch, broken), 0)
+                if arch == 'riscv':
+                    for label, field_offset, value in (
+                        ('outside-load', 12, 0x2000),
+                        ('file-offset-mismatch', 16, u32(sample, section(sample, 3) + 16) + 4),
+                    ):
+                        broken = bytearray(sample)
+                        put32(broken, section(broken, 3) + field_offset, value)
+                        with self.subTest(arch=arch, error=label):
+                            self.assertNotEqual(self.validate(arch, broken), 0)
+
+    def test_cpp_array_checker_requires_each_pointer_to_be_relocated(self):
+        import importlib.util
+        script = COMPONENT / 'tests/idf_cpp_lifecycle/check_elf_arrays.py'
+        spec = importlib.util.spec_from_file_location('check_elf_arrays', script)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+
+        image = synthetic_lifecycle_image('riscv')
+        # Expand .init_array to 2 callback words and move .fini_array away.
+        put32(image, section(image, 4) + 20, 8)
+        put32(image, section(image, 5) + 12, 0x1050)
+        fini_file = u32(image, section(image, 5) + 16)
+        put32(image, section(image, 5) + 16, fini_file + 8)
+        offset = (len(image) + 3) & ~3
+        image.extend(bytes(offset - len(image)))
+        for target in (0x1044, 0x1048, 0x1050):
+            image.extend(struct.pack('<III', target, 3, 0))
+        # An SHT_RELA section at index zero is accepted by this fixture
+        # checker; ELF executable input validation is tested independently.
+        put32(image, section(image, 0) + 4, 4)
+        put32(image, section(image, 0) + 16, offset)
+        put32(image, section(image, 0) + 20, 36)
+        valid = Path(self.build.name) / 'array-relocations-valid.elf'
+        valid.write_bytes(image)
+        checker.verify_elf(valid)
+
+        # A duplicate relocation does not initialize the second callback.
+        put32(image, offset + 12, 0x1044)
+        broken = Path(self.build.name) / 'array-relocations-duplicate.elf'
+        broken.write_bytes(image)
+        with self.assertRaises(AssertionError):
+            checker.verify_elf(broken)
+
+    def test_s2_mmu_unmaps_executable_range_before_heap_free(self):
+        output = Path(self.build.name) / 'test_mmu_teardown'
+        subprocess.run([
+            os.environ.get('CC', 'cc'),
+            '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+            '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+            '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+            '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+            '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+            '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
+            '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1',
+            '-DCONFIG_ELF_LOADER_SET_MMU=1',
+            '-I', str(COMPONENT / 'tests/host/include'),
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_mmu_teardown.c'),
+            '-o', str(output),
+        ], check=True)
+        subprocess.run([str(output)], check=True)
+
+    def test_s2_mmu_executable_span_includes_literal_pool_and_page_offset(self):
+        output = Path(self.build.name) / 'test_mmu_span'
+        subprocess.run([
+            os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra', '-Werror',
+            '-I', str(COMPONENT / 'tests/host/include'),
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_mmu_span.c'),
+            '-o', str(output),
+        ], check=True)
+        subprocess.run([str(output)], check=True)
+
+    def test_s2_mmu_window_requires_successful_mapping(self):
+        # Compile the production S2 MMU allocator with a simulated I-bus MMU
+        # register array. Fragmented pages must return -EIO without changing
+        # ELF mapping fields; a window ending at the last page must work.
+        output = Path(self.build.name) / 'test_s2_mmu_window'
+        subprocess.run([
+            os.environ.get('CC', 'cc'), '-std=c11', '-Wall', '-Wextra',
+            '-Werror', '-Wno-sign-compare',
+            '-I', str(COMPONENT / 'tests/host/s2_mmu_stubs'),
+            '-I', str(COMPONENT / 'tests/host/include'),
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_s2_mmu_window.c'),
+            '-o', str(output),
+        ], check=True)
+        subprocess.run([str(output)], check=True)
+
+    def test_xtensa_real_toolchain_multi_plt_relocation(self):
+        # Optional on generic CI hosts; synthetic .got.loc load/relocation
+        # tests always run regardless of toolchain availability.
+        compiler = shutil.which('xtensa-esp32-elf-gcc')
+        stripper = shutil.which('xtensa-esp32-elf-strip')
+        readelf = shutil.which('xtensa-esp32-elf-readelf')
+        if not all((compiler, stripper, readelf)):
+            self.skipTest('ESP32 Xtensa cross-compiler/strip/readelf not installed')
+        output = Path(self.build.name) / 'elf_multi_plt.so'
+        subprocess.run([
+            compiler, '-shared', '-fPIC', '-nostdlib', '-Wl,-e,0',
+            '-mlongcalls', '-mtext-section-literals',
+            str(COMPONENT / 'tests/host/fixtures/plt_multi_imports.c'),
+            '-o', str(output),
+        ], check=True)
+        subprocess.run([
+            stripper, '--strip-unneeded', '--remove-section=.comment',
+            '--remove-section=.dynamic', str(output),
+        ], check=True)
+        sections = subprocess.run([readelf, '-W', '-S', str(output)],
+                                  check=True, capture_output=True, text=True).stdout
+        self.assertIn('.got.loc', sections)
+        self.assertIn('.rodata', sections)
+        relocations = subprocess.run([readelf, '-r', str(output)],
+                                     check=True, capture_output=True, text=True).stdout
+        self.assertGreaterEqual(relocations.count('R_XTENSA_JMP_SLOT'), 3)
+        self.assertEqual(self.validate('xtensa', output.read_bytes()), 0)
+
+        # The actual host-compiled loader must map and relocate the real
+        # Xtensa ELF, not merely accept its metadata in the validator.
+        executable = Path(self.build.name) / 'test_multi_plt_load'
+        subprocess.run([
+            os.environ.get('CC', 'cc'),
+            '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+            '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+            '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+            '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+            '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+            '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
+            '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1',
+            '-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1',
+            '-I', str(COMPONENT / 'tests/host/include'),
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_multi_plt_load.c'),
+            str(COMPONENT / 'src/arch/esp_elf_xtensa.c'),
+            str(COMPONENT / 'src/esp_elf_validate.c'),
+            '-o', str(executable),
+        ], check=True)
+        subprocess.run([str(executable), str(output)], check=True)
+
+    def test_xtensa_got_loc_elf_validation(self):
+        sample = synthetic_lifecycle_image('xtensa', got_loc=True)
+        self.assertEqual(self.validate('xtensa', sample), 0)
+        got = section(sample, 6)
+        for label, value in (
+            ('overlap-text', 0x1004),
+            ('misaligned-literal-pool', 0x1082),
+            ('overlap-rodata', 0x1020),
+            ('overlap-init-array', 0x1044),
+        ):
+            broken = bytearray(sample)
+            put32(broken, got + 12, value)
+            with self.subTest(error=label):
+                self.assertNotEqual(self.validate('xtensa', broken), 0)
+        broken = bytearray(sample)
+        put32(broken, got + 8, 0)  # non-allocated .got.loc is invalid
+        self.assertNotEqual(self.validate('xtensa', broken), 0)
+
+    def test_build_scripts_preserve_plt_literals(self):
+        cmake = (COMPONENT / 'elf_loader.cmake').read_text()
+        self.assertNotIn('--remove-section=.got.loc', cmake)
+
+    def test_cpp_elf_constructor_destructor_lifecycle(self):
+        for arch in ('riscv', 'xtensa'):
+            for shared_loading in (False, True):
+                with self.subTest(arch=arch, shared_loading=shared_loading):
+                    output = Path(self.build.name) / f'test_lifecycle_{arch}_{shared_loading}'
+                    flags = ['-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1'] if shared_loading else []
+                    if arch == 'xtensa':
+                        flags.append('-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1')
+                    subprocess.run([
+                        os.environ.get('CC', 'cc'),
+                        '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+                        '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+                        '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+                        '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+                        '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+                        f'-DCONFIG_IDF_TARGET_ARCH_{arch.upper()}=1', *flags,
+                        '-I', str(COMPONENT / 'tests/host/include'),
+                        '-I', str(COMPONENT / 'include'),
+                        str(COMPONENT / 'tests/host/test_lifecycle.c'),
+                        '-o', str(output),
+                    ], check=True)
+                    subprocess.run([str(output)], check=True)
+
+    def test_module_local_symbol_resolution_independent_of_dlopen(self):
+        for shared_loading in (False, True):
+            with self.subTest(shared_loading=shared_loading):
+                output = Path(self.build.name) / f'test_local_symbol_{shared_loading}'
+                flags = ['-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1'] if shared_loading else []
+                subprocess.run([
+                    os.environ.get('CC', 'cc'),
+                    '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+                    '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+                    '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+                    '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+                    '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+                    '-DCONFIG_IDF_TARGET_ARCH_RISCV=1', *flags,
+                    '-I', str(COMPONENT / 'tests/host/include'),
+                    '-I', str(COMPONENT / 'include'),
+                    str(COMPONENT / 'tests/host/test_local_symbol.c'),
+                    '-o', str(output),
+                ], check=True)
+                subprocess.run([str(output)], check=True)
+
     def test_segment_first_load_nonzero_base(self):
         for shared_loading in (False, True):
             with self.subTest(shared_loading=shared_loading):
@@ -532,7 +985,7 @@ class ElfValidationTests(unittest.TestCase):
                     '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
                     '-Wno-unused-but-set-variable', '-Wno-sign-compare',
                     '-ffunction-sections', '-fdata-sections',
-                    '-Wl,--gc-sections',
+                    HOST_GC_LINKER_FLAG,
                     '-DCONFIG_IDF_TARGET_ARCH_RISCV=1', *flags,
                     '-I', str(COMPONENT / 'tests/host/include'),
                     '-I', str(COMPONENT / 'include'),
@@ -553,12 +1006,13 @@ class ElfValidationTests(unittest.TestCase):
                     '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
                     '-Wno-unused-but-set-variable', '-Wno-sign-compare',
                     '-ffunction-sections', '-fdata-sections',
-                    '-Wl,--gc-sections',
+                    HOST_GC_LINKER_FLAG,
                     '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
                     '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1', *flags,
                     '-I', str(COMPONENT / 'tests/host/include'),
                     '-I', str(COMPONENT / 'include'),
                     str(COMPONENT / 'tests/host/test_section_load.c'),
+                    str(COMPONENT / 'src/arch/esp_elf_xtensa.c'),
                     '-o', str(output),
                 ], check=True)
                 subprocess.run([str(output)], check=True)
@@ -572,7 +1026,7 @@ class ElfValidationTests(unittest.TestCase):
             '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
             '-Wno-unused-but-set-variable', '-Wno-sign-compare',
             '-ffunction-sections', '-fdata-sections',
-            '-Wl,--gc-sections',
+            HOST_GC_LINKER_FLAG,
             '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
             '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1',
             '-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1',
@@ -580,6 +1034,7 @@ class ElfValidationTests(unittest.TestCase):
             '-I', str(COMPONENT / 'tests/host/include'),
             '-I', str(COMPONENT / 'include'),
             str(COMPONENT / 'tests/host/test_section_load.c'),
+            str(COMPONENT / 'src/arch/esp_elf_xtensa.c'),
             '-o', str(output),
         ], check=True)
         subprocess.run([str(output)], check=True)

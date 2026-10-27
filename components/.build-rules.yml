@@ -1,3 +1,17 @@
+components/elf_loader/tests/idf_dlopen:
+  enable:
+    - if: IDF_TARGET == "esp32s3" and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+
+components/elf_loader/tests/idf_runtime:
+  enable:
+    # S3 boards run 5.5; P4 CI boards have 1.x silicon and require 5.4.
+    - if: IDF_TARGET == "esp32s3" and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+    - if: IDF_TARGET == "esp32p4" and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 4
+
+components/elf_loader/tests/idf_cpp_lifecycle:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4"] and IDF_VERSION >= "5.4"
+
 components/audio/adc_mic/test_apps:
   enable:
     - if: SOC_ADC_DMA_SUPPORTED == 1
