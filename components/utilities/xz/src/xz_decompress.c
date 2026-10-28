@@ -152,14 +152,21 @@ int xz_decompress(unsigned char *in, int in_size,
 		b.out_size = (size_t)-1;
 	} else {
 		b.out_size = XZ_IOBUF_SIZE;
-		b.out = vmalloc(XZ_IOBUF_SIZE);
+		/*
+		 * I/O buffers must stay on the cacheable heap (kmalloc). On
+		 * ESP32-P4 the bootloader maps vmalloc to the non-cacheable
+		 * alias for the LZMA2 dictionary only; ROM SPI flash reads
+		 * into that alias do not land correctly and surface as
+		 * XZ_FORMAT_ERROR after the 12-byte stream header.
+		 */
+		b.out = kmalloc(XZ_IOBUF_SIZE, 0);
 		if (b.out == NULL)
 			goto error_alloc_out;
 	}
 
 	if (in == NULL) {
 		must_free_in = true;
-		in = vmalloc(XZ_IOBUF_SIZE);
+		in = kmalloc(XZ_IOBUF_SIZE, 0);
 		if (in == NULL)
 			goto error_alloc_in;
 	}
@@ -209,10 +216,10 @@ int xz_decompress(unsigned char *in, int in_size,
 		} while (ret == XZ_OK);
 
 		if (must_free_in)
-			vfree(in);
+			kfree(in);
 
 		if (flush != NULL)
-			vfree(b.out);
+			kfree(b.out);
 	}
 
 	if (in_used != NULL)
@@ -252,7 +259,7 @@ int xz_decompress(unsigned char *in, int in_size,
 
 error_alloc_in:
 	if (flush != NULL)
-		vfree(b.out);
+		kfree(b.out);
 
 error_alloc_out:
 	xz_dec_end(s);
