@@ -305,6 +305,27 @@ components_test_esp_lcd_axs15231b:
     TEST_FOLDER: components/display/lcd/esp_lcd_axs15231b
     TEST_ENV: esp32_s3_lcd_ev_board
 
+components_test_esp_lcd_touch_mux:
+  extends:
+    - .pytest_template
+    - .rules:build:components_display_lcd_touch_esp_lcd_touch_mux_test_apps
+  needs:
+    - job: "build_components_display_lcd_touch_esp_lcd_touch_mux_test_apps"
+      artifacts: true
+      optional: false
+  parallel:
+    matrix:
+      - IDF_TARGET: esp32s3
+        IDF_VERSION: "5.5"
+        ENV_TAG: generic
+  tags:
+    - ${IDF_TARGET}
+    - ${ENV_TAG}
+  variables:
+    TEST_TARGET: ${IDF_TARGET}
+    TEST_FOLDER: components/display/lcd_touch/esp_lcd_touch_mux
+    TEST_ENV: ${ENV_TAG}
+
 components_test_esp_lcd_gc9b71:
   extends:
     - .pytest_template

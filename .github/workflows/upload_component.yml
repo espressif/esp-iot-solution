@@ -86,6 +86,7 @@ jobs:
             components/display/lcd_touch/esp_lcd_touch_ili2118;
             components/display/lcd_touch/esp_lcd_touch_spd2010;
             components/display/lcd_touch/esp_lcd_touch_st7123;
+            components/display/lcd_touch/esp_lcd_touch_mux;
             components/display/tools/esp_display_present;
             components/display/tools/esp_lv_present;
             components/display/tools/esp_lv_decoder;
