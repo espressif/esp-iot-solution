@@ -498,6 +498,21 @@ build_example_camera_video_stream_server:
   variables:
     EXAMPLE_DIR: examples/camera/video_stream_server
 
+build_example_camera_video_lcd_display:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_camera_video_lcd_display
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:v5.5.6
+      - IMAGE: espressif/idf:release-v5.5
+      - IMAGE: espressif/idf:release-v6.0
+      - IMAGE: espressif/idf:release-v6.1
+      - IMAGE: espressif/idf:latest
+  variables:
+    EXAMPLE_DIR: examples/camera/video_lcd_display
+    BUILD_RECURSIVE: "0"
+
 build_example_display_lcd_hdmi_video_renderer:
   extends:
     - .build_examples_template

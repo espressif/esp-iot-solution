@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+# Base: esp_video 2.5.0, b15af0372a792a0ec86f4520775c254ae8fdc0d4
+# Support the CSI API backported to IDF 5.5.6 and used by newer IDF releases.
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -11,10 +11,6 @@
+ set(priv_include_dirs "private_include")
+ set(priv_requires "vfs"  "esp_timer")
+ set(requires "esp_driver_cam" "esp_cam_sensor" "lwip")
+-
+-if(CONFIG_IDF_TARGET_ESP32P4)
+-    list(APPEND priv_requires "esp_hal_cam")
+-endif()
+ 
+ if(CONFIG_IDF_TARGET_ESP32P4)
+     if(CONFIG_ESP_VIDEO_ENABLE_SWAP_SHORT)
+@@ -78,6 +74,7 @@
+ endif()
+ 
+ if(CONFIG_IDF_TARGET_ESP32P4)
++    idf_component_optional_requires(PRIVATE "esp_hal_cam")
+     if(CONFIG_ESP_VIDEO_ENABLE_ISP)
+         # Supply the header files to applications
+         idf_component_optional_requires(PUBLIC "esp_driver_isp")
+--- a/src/device/esp_video_csi_format.c
++++ b/src/device/esp_video_csi_format.c
+@@ -57,11 +57,11 @@
+     {V4L2_PIX_FMT_YUYV, CAM_CTLR_COLOR_YUV422_YUYV, ISP_COLOR_YUV422, 16},
+     {V4L2_PIX_FMT_YVYU, CAM_CTLR_COLOR_YUV422_YVYU, ISP_COLOR_YUV422, 16},
+ #else /* ESP_VIDEO_CSI_DEVICE_CONV_FORMAT */
+-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
++#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 6)
+     {V4L2_PIX_FMT_UYVY, CAM_CTLR_COLOR_YUV422_UYVY, ISP_COLOR_YUV422, 16},
+-#else /* ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0) */
++#else /* ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 6) */
+     {V4L2_PIX_FMT_UYVY, CAM_CTLR_COLOR_YUV422, ISP_COLOR_YUV422, 16},
+-#endif /* ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0) */
++#endif /* ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 6) */
+ #endif /* ESP_VIDEO_CSI_DEVICE_CONV_FORMAT */
+     {V4L2_PIX_FMT_GREY, CAM_CTLR_COLOR_GRAY8, ISP_COLOR_RAW8, 8},
+ };
+@@ -507,7 +507,7 @@
+         in_out_format->isp_output_fmt = v4l2_to_isp_color(requested_fmt);
+ 
+         /* ISP output to CSI output */
+-#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
++#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 5, 6)
+         /* Old IDF version: use sensor format as CSI input */
+         in_out_format->csi_input_fmt = v4l2_to_csi_color(sensor_v4l2_fmt);
+ #else
