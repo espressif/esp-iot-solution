@@ -34,6 +34,11 @@
 
 static bool s_skip_teardown_leak_check;
 
+void protocomm_ext_test_skip_leak_check(void)
+{
+    s_skip_teardown_leak_check = true;
+}
+
 static const char pop[] = "test_pop";
 static const char sec2_user[] = "wifiprov";
 static const char sec2_pass[] = "abcd1234";
@@ -168,6 +173,51 @@ TEST_CASE("protocomm_ext_open_session: ble transport requires config", "[protoco
     TEST_ASSERT_NOT_NULL(pc);
     TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, protocomm_ext_open_session(pc, NULL));
     protocomm_ext_delete(pc);
+}
+
+/* Object isolation only. HTTP I/O, cookies, and Sec1 are covered by
+ * "two HTTP peers round-trip Sec1 on loopback". */
+TEST_CASE("protocomm_ext: two HTTP peers stay open together", "[protocomm_ext]")
+{
+    static const esp_http_client_config_t cfg_a = {
+        .url = "http://192.0.2.1",
+        .timeout_ms = 50,
+    };
+    static const esp_http_client_config_t cfg_b = {
+        .url = "http://192.0.2.2",
+        .timeout_ms = 50,
+    };
+    protocomm_ext_config_data_t cfg = {
+        .transport_method = PROTOCOMM_EXT_TRANSPORT_METHOD_HTTP,
+        .security_method = PROTOCOMM_EXT_SECURITY_METHOD_NONE,
+        .transport_data = (void *) &cfg_a,
+        .security_data = NULL,
+    };
+    protocomm_ext_t *peer_a = protocomm_ext_new(&cfg);
+    cfg.transport_data = (void *) &cfg_b;
+    protocomm_ext_t *peer_b = protocomm_ext_new(&cfg);
+    TEST_ASSERT_NOT_NULL(peer_a);
+    TEST_ASSERT_NOT_NULL(peer_b);
+    TEST_ASSERT_NOT_EQUAL(peer_a, peer_b);
+
+    void *transport_a = protocomm_ext_get_transport_handle(peer_a);
+    void *transport_b = protocomm_ext_get_transport_handle(peer_b);
+    TEST_ASSERT_NOT_NULL(transport_a);
+    TEST_ASSERT_NOT_NULL(transport_b);
+    TEST_ASSERT_NOT_EQUAL(transport_a, transport_b);
+
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_open_session(peer_a, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_open_session(peer_b, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_security_init(peer_a));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_security_init(peer_b));
+
+    /* Closing one peer must leave the other instance usable. */
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_close_session(peer_a));
+    protocomm_ext_delete(peer_a);
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_close_session(peer_b));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_open_session(peer_b, NULL));
+    protocomm_ext_close_session(peer_b);
+    protocomm_ext_delete(peer_b);
 }
 
 TEST_CASE("protocomm_ext_open_session/close_session basic flow", "[protocomm_ext]")

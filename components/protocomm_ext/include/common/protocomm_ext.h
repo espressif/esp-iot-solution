@@ -75,6 +75,12 @@ typedef struct protocomm_ext protocomm_ext_t;
 /**
  * @brief Create a new protocomm_ext instance
  *
+ * One instance is one peer: its own transport connection and security
+ * session. Create one instance per device to keep several HTTP sessions
+ * open together. Instances do not share cookies, keys, or sockets.
+ * A second client to the same device replaces that device's only HTTP
+ * session. APIs on one instance are not thread-safe.
+ *
  * @param[in] config Configuration data
  * @return
  *  - non-NULL : Success

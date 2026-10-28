@@ -22,8 +22,12 @@
 #include <protocomm_ext_transports.h>
 #include <protocomm_ext_http.h>
 #include <protocomm_ext_console.h>
-#if CONFIG_BT_NIMBLE_ENABLED
+#if CONFIG_BT_NIMBLE_ENABLED && CONFIG_BT_NIMBLE_ROLE_CENTRAL && \
+    CONFIG_BT_NIMBLE_ROLE_OBSERVER && CONFIG_BT_NIMBLE_GATT_CLIENT
 #include <protocomm_ext_nimble.h>
+#define PROTOCOMM_EXT_NIMBLE_CENTRAL 1
+#else
+#define PROTOCOMM_EXT_NIMBLE_CENTRAL 0
 #endif
 #include <protocomm_ext_priv.h>
 
@@ -163,11 +167,13 @@ protocomm_ext_t *protocomm_ext_new(protocomm_ext_config_data_t *config)
         pc->transport = &protocomm_ext_transport_console;
         break;
     case PROTOCOMM_EXT_TRANSPORT_METHOD_BLE:
-#if CONFIG_BT_NIMBLE_ENABLED
+#if PROTOCOMM_EXT_NIMBLE_CENTRAL
         pc->transport = &protocomm_ext_transport_nimble;
         break;
 #else
-        ESP_LOGE(TAG, "NimBLE transport requires CONFIG_BT_NIMBLE_ENABLED");
+        ESP_LOGE(TAG, "NimBLE central transport requires CONFIG_BT_NIMBLE_ENABLED, "
+                 "CONFIG_BT_NIMBLE_ROLE_CENTRAL, CONFIG_BT_NIMBLE_ROLE_OBSERVER "
+                 "and CONFIG_BT_NIMBLE_GATT_CLIENT");
         goto error;
 #endif
     default:

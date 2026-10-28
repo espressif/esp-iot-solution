@@ -87,6 +87,11 @@ typedef struct {
  * Ownership of @p pc remains with the caller; call esp_local_controller_delete()
  * before protocomm_ext_delete().
  *
+ * Each instance is one device session. Hold one controller per device so a
+ * UI can keep HTTP sessions to several peers at the same time; switching
+ * peers does not close the others. One device still accepts only one HTTP
+ * client. APIs on one instance are not thread-safe.
+ *
  * Registers BLE endpoint UUID mappings (`ESP_LOCAL_CONTROLLER_EP_*_UUID`).
  *
  * @param[in] pc Existing protocomm_ext instance (must not be NULL)

@@ -69,8 +69,8 @@ protocomm_ext_delete(pc);
 
 ### 传输说明
 
-- **HTTP**：`transport_data` 传 `esp_http_client_config_t *`；自动保存 SoftAP `protocomm_httpd` 的 session Cookie。
-- **BLE**：需开启 `CONFIG_BT_NIMBLE_ENABLED`；通过 `esp_protocomm_ext_nimble_start_scan()` / `open_session(pc, &ble_addr)` 连接。
+- **HTTP**：`transport_data` 传 `esp_http_client_config_t *`。每个实例各自保持连接、TCP keepalive 和 session Cookie。一台设备建一个实例，即可同时连着多台设备。同一台设备只接受一个 HTTP 客户端，第二个客户端会顶掉前一个。
+- **BLE**：需开启 `CONFIG_BT_NIMBLE_ENABLED`，以及 central、observer 角色和 GATT client。通过 `esp_protocomm_ext_nimble_start_scan()` / `open_session(pc, &ble_addr)` 连接。BLE 是单连接，不是会话池。关闭 GATT client 时，HTTP 与 console 传输仍然可以编译。
 - **Console**：`transport_data` 传 `protocomm_ext_console_config_t *`，协议与 IDF `protocomm_console` 一致（`<ep> <sid> <hex>\r`）。
 
 ### 安全说明
@@ -82,7 +82,7 @@ protocomm_ext_delete(pc);
 
 ```yaml
 dependencies:
-  espressif/protocomm_ext: "^1.0.0"
+  espressif/protocomm_ext: "^1.1.0"
 ```
 
 ## 测试

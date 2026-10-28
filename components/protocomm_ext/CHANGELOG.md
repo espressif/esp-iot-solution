@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.0] - 2026-10-27
+
+### Added
+- Several HTTP peers can stay connected at once: one `protocomm_ext` instance is one device, with its own client, cookie, TCP keepalive, and security state
+- Loopback test: two HTTP peers complete Sec1 and an encrypted request with separate cookies; closing one leaves the other usable
+
+### Changed
+- Sec0 uses a per-instance handle, so two plaintext sessions no longer alias each other
+- NimBLE central transport is compiled only when `CONFIG_BT_NIMBLE_ROLE_CENTRAL`, `CONFIG_BT_NIMBLE_ROLE_OBSERVER`, and `CONFIG_BT_NIMBLE_GATT_CLIENT` are set, so an HTTP-only controller does not link `ble_gattc_*`
+
 ## [1.0.1] - 2026-10-16
 
 ### Added

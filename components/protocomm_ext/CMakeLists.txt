@@ -40,8 +40,12 @@ endif()
 
 # Always REQUIRES bt so NimBLE public headers resolve when the app enables BT.
 # (CONFIG_BT_* may be unavailable during early component CMake evaluation.)
-# NimBLE transport sources remain gated on CONFIG_BT_NIMBLE_ENABLED.
-if(CONFIG_BT_ENABLED AND CONFIG_BT_NIMBLE_ENABLED)
+# NimBLE client sources need central, observer, and GATT client.
+# GATT Client is a separate Kconfig switch. Compiling these files without it
+# references ble_gattc_* symbols that NimBLE then leaves out of the link.
+# A peripheral-only or HTTP-only build must not pull them in.
+if(CONFIG_BT_ENABLED AND CONFIG_BT_NIMBLE_ENABLED AND CONFIG_BT_NIMBLE_ROLE_CENTRAL
+        AND CONFIG_BT_NIMBLE_ROLE_OBSERVER AND CONFIG_BT_NIMBLE_GATT_CLIENT)
     list(APPEND srcs
         "src/transports/nimble/protocomm_ext_nimble.c"
         "src/transports/nimble/nimble_central_utils/protocomm_ext_nimble_peer.c")

@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0] - 2026-10-27
+
+### Added
+- One instance is one device session. Create one controller per peer to keep several HTTP local-control sessions open together
+- Depends on `protocomm_ext` ^1.1.0
+- Loopback test: two Sec1 HTTP peers, separate cookies, property reads, then close one peer and keep using the other
+
 ## [1.0.1] - 2026-10-16
 
 ### Added

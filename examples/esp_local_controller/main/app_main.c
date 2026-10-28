@@ -11,6 +11,7 @@
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <inttypes.h>
 
 #include "freertos/FreeRTOS.h"
@@ -54,7 +55,197 @@ typedef enum {
     MODE_HTTP = 1,
     MODE_BLE = 2,
     MODE_CONSOLE = 3,
+    MODE_HTTP_RESUME = 4,
+    MODE_HTTP_CLOSE = 5,
 } ctrl_mode_t;
+
+#if CONFIG_EXAMPLE_SUPPORT_HTTP
+#define HELD_HTTP_MAX 4
+
+typedef struct {
+    bool used;
+    char url[128];
+    protocomm_ext_t *pc;
+    esp_local_controller_t *ctrl;
+} held_http_t;
+
+static held_http_t s_held_http[HELD_HTTP_MAX];
+
+static int held_http_count(void)
+{
+    int n = 0;
+    for (int i = 0; i < HELD_HTTP_MAX; i++) {
+        if (s_held_http[i].used) {
+            n++;
+        }
+    }
+    return n;
+}
+
+static void held_http_release_slot(held_http_t *slot)
+{
+    if (!slot || !slot->used) {
+        return;
+    }
+    if (slot->ctrl) {
+        esp_local_controller_stop_session(slot->ctrl);
+        esp_local_controller_delete(slot->ctrl);
+    }
+    protocomm_ext_delete(slot->pc);
+    memset(slot, 0, sizeof(*slot));
+}
+
+static void held_http_release_all(void)
+{
+    for (int i = 0; i < HELD_HTTP_MAX; i++) {
+        held_http_release_slot(&s_held_http[i]);
+    }
+}
+
+static held_http_t *held_http_reserve(void)
+{
+    for (int i = 0; i < HELD_HTTP_MAX; i++) {
+        if (!s_held_http[i].used) {
+            return &s_held_http[i];
+        }
+    }
+    return NULL;
+}
+
+typedef struct {
+    char scheme[8];
+    char host[96];
+    int port;
+} http_peer_key_t;
+
+/* Compare scheme, host, and port. http defaults to 80, https to 443. */
+static bool http_peer_key_parse(const char *url, http_peer_key_t *out)
+{
+    if (!url || !out) {
+        return false;
+    }
+    const char *p = url;
+    while (*p == ' ' || *p == '\t') {
+        p++;
+    }
+    const char *scheme_end = strstr(p, "://");
+    if (!scheme_end) {
+        return false;
+    }
+    size_t slen = (size_t)(scheme_end - p);
+    if (slen == 0 || slen >= sizeof(out->scheme)) {
+        return false;
+    }
+    for (size_t i = 0; i < slen; i++) {
+        out->scheme[i] = (char)tolower((unsigned char)p[i]);
+    }
+    out->scheme[slen] = '\0';
+
+    p = scheme_end + 3;
+    const char *host_end = p;
+    int port = 0;
+    /* An IPv6 literal is "[2001:db8::1]". The port separator is the colon
+     * after the closing bracket. Splitting on the first colon makes every
+     * IPv6 host look like "[2001" and resume the wrong session. */
+    if (*p == '[') {
+        const char *rb = strchr(p + 1, ']');
+        if (!rb || rb == p + 1) {
+            return false;
+        }
+        host_end = rb + 1;
+        if (*host_end == ':') {
+            port = atoi(host_end + 1);
+        } else if (*host_end != '\0' && *host_end != '/' && *host_end != '?') {
+            return false;
+        }
+    } else {
+        while (*host_end && *host_end != ':' && *host_end != '/' && *host_end != '?') {
+            host_end++;
+        }
+        if (*host_end == ':') {
+            port = atoi(host_end + 1);
+        }
+    }
+    size_t hlen = (size_t)(host_end - p);
+    if (hlen == 0 || hlen >= sizeof(out->host)) {
+        return false;
+    }
+    for (size_t i = 0; i < hlen; i++) {
+        out->host[i] = (char)tolower((unsigned char)p[i]);
+    }
+    out->host[hlen] = '\0';
+    if (port <= 0) {
+        port = (strcmp(out->scheme, "https") == 0) ? 443 : 80;
+    }
+    out->port = port;
+    return strcmp(out->scheme, "http") == 0 || strcmp(out->scheme, "https") == 0;
+}
+
+static bool http_url_same_device(const char *a, const char *b)
+{
+    http_peer_key_t ka;
+    http_peer_key_t kb;
+    if (http_peer_key_parse(a, &ka) && http_peer_key_parse(b, &kb)) {
+        return strcmp(ka.scheme, kb.scheme) == 0 &&
+               strcmp(ka.host, kb.host) == 0 &&
+               ka.port == kb.port;
+    }
+    return a && b && strcmp(a, b) == 0;
+}
+
+static held_http_t *held_http_find(const char *url)
+{
+    for (int i = 0; i < HELD_HTTP_MAX; i++) {
+        if (s_held_http[i].used && http_url_same_device(s_held_http[i].url, url)) {
+            return &s_held_http[i];
+        }
+    }
+    return NULL;
+}
+
+static int read_console_int(const char *prompt);
+static esp_err_t read_console_line_default(const char *prompt, char *buf, size_t buf_len,
+                                           const char *default_val, bool allow_empty, bool echo);
+static esp_err_t interactive_control(esp_local_controller_t *ctrl);
+
+static bool read_yes(const char *prompt, bool default_yes)
+{
+    char line[8];
+    if (read_console_line_default(prompt, line, sizeof(line), NULL, true, true) != ESP_OK) {
+        return default_yes;
+    }
+    if (line[0] == '\0') {
+        return default_yes;
+    }
+    return line[0] == 'y' || line[0] == 'Y';
+}
+
+static void held_http_resume(void)
+{
+    int map[HELD_HTTP_MAX];
+    int shown = 0;
+    printf("\nOpen HTTP sessions:\n");
+    for (int i = 0; i < HELD_HTTP_MAX; i++) {
+        if (!s_held_http[i].used) {
+            continue;
+        }
+        map[shown] = i;
+        shown++;
+        printf("  %d) %s\n", shown, s_held_http[i].url);
+    }
+    if (shown == 0) {
+        printf("None.\n");
+        return;
+    }
+    int choice = read_console_int("Select session (0=cancel): ");
+    if (choice <= 0 || choice > shown) {
+        return;
+    }
+    held_http_t *slot = &s_held_http[map[choice - 1]];
+    esp_err_t err = interactive_control(slot->ctrl);
+    printf("Session %s: %s\n", slot->url, esp_err_to_name(err));
+}
+#endif
 
 static int read_console_int(const char *prompt)
 {
@@ -468,7 +659,8 @@ cleanup:
     return err;
 }
 
-static esp_err_t run_session(protocomm_ext_config_data_t *pe_cfg, const void *session_cfg)
+static esp_err_t run_session(protocomm_ext_config_data_t *pe_cfg, const void *session_cfg,
+                             const char *keep_url)
 {
     pe_cfg->security_method = PROTOCOMM_EXT_SECURITY_METHOD_NONE;
     pe_cfg->security_data = NULL;
@@ -482,13 +674,13 @@ static esp_err_t run_session(protocomm_ext_config_data_t *pe_cfg, const void *se
         return ESP_ERR_NO_MEM;
     }
 
+    esp_local_controller_version_t ver = {0};
     esp_err_t err = esp_local_controller_fetch_version(ctrl, session_cfg);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "fetch_version: %s", esp_err_to_name(err));
         goto done;
     }
 
-    esp_local_controller_version_t ver = {0};
     err = esp_local_controller_get_version(ctrl, &ver);
     if (err != ESP_OK) {
         goto done;
@@ -511,9 +703,37 @@ static esp_err_t run_session(protocomm_ext_config_data_t *pe_cfg, const void *se
     err = interactive_control(ctrl);
 
 done:
+    ;
+#if CONFIG_EXAMPLE_SUPPORT_HTTP
+    bool keep = false;
+    if (keep_url && err == ESP_OK) {
+        keep = read_yes("Keep this HTTP session open? [Y/n]: ", true);
+        if (keep) {
+            held_http_t *slot = held_http_reserve();
+            if (!slot) {
+                printf("No free HTTP session slot (max %d). Closing this one.\n", HELD_HTTP_MAX);
+                keep = false;
+            } else {
+                slot->used = true;
+                slot->pc = pc;
+                slot->ctrl = ctrl;
+                strncpy(slot->url, keep_url, sizeof(slot->url) - 1);
+                slot->url[sizeof(slot->url) - 1] = '\0';
+                printf("Held %s (%d/%d open).\n", slot->url, held_http_count(), HELD_HTTP_MAX);
+            }
+        }
+    }
+    if (!keep) {
+        esp_local_controller_stop_session(ctrl);
+        esp_local_controller_delete(ctrl);
+        protocomm_ext_delete(pc);
+    }
+#else
+    (void)keep_url;
     esp_local_controller_stop_session(ctrl);
     esp_local_controller_delete(ctrl);
     protocomm_ext_delete(pc);
+#endif
     clear_security_credentials();
     return err;
 }
@@ -522,13 +742,18 @@ static int pick_mode(void)
 {
     printf("\nESP Local Controller — select transport:\n");
 #if CONFIG_EXAMPLE_SUPPORT_HTTP
-    printf("  1) HTTP\n");
+    printf("  1) HTTP (new device; other HTTP sessions stay open, %d/%d)\n",
+           held_http_count(), HELD_HTTP_MAX);
 #endif
 #if CONFIG_EXAMPLE_SUPPORT_BLE
     printf("  2) BLE\n");
 #endif
 #if CONFIG_EXAMPLE_SUPPORT_CONSOLE
     printf("  3) Console (UART)\n");
+#endif
+#if CONFIG_EXAMPLE_SUPPORT_HTTP
+    printf("  4) Use an open HTTP session\n");
+    printf("  5) Close all open HTTP sessions\n");
 #endif
     return read_console_int("Select: ");
 }
@@ -548,6 +773,17 @@ void app_main(void)
 
     while (1) {
         int mode = pick_mode();
+#if CONFIG_EXAMPLE_SUPPORT_HTTP
+        if (mode == MODE_HTTP_RESUME) {
+            held_http_resume();
+            continue;
+        }
+        if (mode == MODE_HTTP_CLOSE) {
+            held_http_release_all();
+            printf("Closed open HTTP sessions.\n");
+            continue;
+        }
+#endif
         protocomm_ext_config_data_t pe_cfg = {0};
         const void *session_cfg = NULL;
 #if CONFIG_EXAMPLE_SUPPORT_BLE
@@ -571,10 +807,24 @@ void app_main(void)
                 wifi_ready = true;
             }
             strncpy(http_url, CONFIG_EXAMPLE_HTTP_URL, sizeof(http_url) - 1);
+            http_url[sizeof(http_url) - 1] = '\0';
             char prompt[160];
             snprintf(prompt, sizeof(prompt), "HTTP URL [default: %s]: ", CONFIG_EXAMPLE_HTTP_URL);
             if (read_console_line_default(prompt, http_url, sizeof(http_url),
                                           CONFIG_EXAMPLE_HTTP_URL, false, true) != ESP_OK) {
+                continue;
+            }
+            /* One device has one server session. A second client would replace it
+             * and leave the previous slot pointing at a dead cookie. */
+            held_http_t *existing = held_http_find(http_url);
+            if (existing) {
+                printf("Already holding %s. Resuming that session.\n", existing->url);
+                esp_err_t held_err = interactive_control(existing->ctrl);
+                printf("Session %s: %s\n", existing->url, esp_err_to_name(held_err));
+                continue;
+            }
+            if (held_http_count() >= HELD_HTTP_MAX) {
+                printf("Already holding %d HTTP sessions. Close one first.\n", HELD_HTTP_MAX);
                 continue;
             }
             memset(&http_cfg, 0, sizeof(http_cfg));
@@ -622,7 +872,13 @@ void app_main(void)
             continue;
         }
 
-        esp_err_t err = run_session(&pe_cfg, session_cfg);
+        const char *keep_url = NULL;
+#if CONFIG_EXAMPLE_SUPPORT_HTTP
+        if (mode == MODE_HTTP) {
+            keep_url = http_url;
+        }
+#endif
+        esp_err_t err = run_session(&pe_cfg, session_cfg, keep_url);
         printf("Session finished: %s\n", esp_err_to_name(err));
     }
 }

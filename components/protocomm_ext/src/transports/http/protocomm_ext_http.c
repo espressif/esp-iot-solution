@@ -88,12 +88,24 @@ static esp_err_t http_init(protocomm_ext_transport_handle_t *handle, const void 
         return ESP_ERR_NO_MEM;
     }
 
-    /* Copy caller config so we can install our event handler for Set-Cookie. */
+    /* Copy caller config so we can install our event handler for Set-Cookie.
+     * TCP keepalive belongs to this client only, so an idle peer stays up
+     * while another protocomm_ext instance talks to a different device. */
     esp_http_client_config_t http_config = *(const esp_http_client_config_t *)config;
     http->caller_event_handler = http_config.event_handler;
     http->caller_user_data = http_config.user_data;
     http_config.event_handler = http_event_handler;
     http_config.user_data = http;
+    http_config.keep_alive_enable = true;
+    if (http_config.keep_alive_idle <= 0) {
+        http_config.keep_alive_idle = 30;
+    }
+    if (http_config.keep_alive_interval <= 0) {
+        http_config.keep_alive_interval = 5;
+    }
+    if (http_config.keep_alive_count <= 0) {
+        http_config.keep_alive_count = 3;
+    }
 
     http->http_client = esp_http_client_init(&http_config);
     if (!http->http_client) {
@@ -213,10 +225,13 @@ static esp_err_t http_send_data(protocomm_ext_transport_handle_t handle, const c
     }
     ESP_LOGD(TAG, "HTTP POST %s (%d bytes)", url, (int)data_len);
 
-    /* Match esp_prov: keep-alive + Cookie for protocomm session continuity. */
+    /* Match esp_prov: keep-alive + Cookie for protocomm session continuity.
+     * Each HTTP instance has its own client and cookie, so several peers can
+     * stay connected at the same time. */
     esp_http_client_set_method(http->http_client, HTTP_METHOD_POST);
     esp_http_client_set_header(http->http_client, "Content-Type", "application/x-www-form-urlencoded");
     esp_http_client_set_header(http->http_client, "Accept", "text/plain");
+    esp_http_client_set_header(http->http_client, "Connection", "keep-alive");
     if (http->cookie) {
         esp_http_client_set_header(http->http_client, "Cookie", http->cookie);
     } else {
