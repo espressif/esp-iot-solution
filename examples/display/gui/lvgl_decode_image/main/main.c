@@ -21,6 +21,7 @@
 #include "example_lvgl_init.h"
 #include "lvgl.h"
 #include "esp_lv_decoder.h"
+#include "esp_lv_decoder_config.h"
 #include "esp_mmap_assets.h"
 
 #include "mmap_generate_spng.h"
@@ -33,7 +34,7 @@
 #include "mmap_generate_qoi.h"
 #endif
 
-#if CONFIG_IDF_TARGET_ESP32P4
+#if !CONFIG_IDF_TARGET_ESP32C3 && ESP_LV_ENABLE_PJPG
 #include "mmap_generate_pjpg.h"
 #endif
 
@@ -75,7 +76,7 @@ static image_format_ctx_t s_formats[] = {
     { .label = "SPNG", .partition = "spng", .drive = 'S', .max_files = MMAP_SPNG_FILES, .checksum = MMAP_SPNG_CHECKSUM },
     { .label = "SQOI", .partition = "sqoi", .drive = 'O', .max_files = MMAP_SQOI_FILES, .checksum = MMAP_SQOI_CHECKSUM },
     { .label = "SJPG", .partition = "sjpg", .drive = 'T', .max_files = MMAP_SJPG_FILES, .checksum = MMAP_SJPG_CHECKSUM },
-#if CONFIG_IDF_TARGET_ESP32P4
+#if !CONFIG_IDF_TARGET_ESP32C3 && ESP_LV_ENABLE_PJPG
     { .label = "PJPG", .partition = "pjpg", .drive = 'U', .max_files = MMAP_PJPG_FILES, .checksum = MMAP_PJPG_CHECKSUM },
 #endif
 };

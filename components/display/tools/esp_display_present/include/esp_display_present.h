@@ -28,6 +28,9 @@ extern "C" {
 /** Default FB pipeline free-buffer acquire budget. */
 #define ESP_DISPLAY_PRESENT_DEFAULT_PIPELINE_ACQUIRE_TIMEOUT_MS 1000U
 
+/** Frame receipt API version. */
+#define ESP_DISPLAY_PRESENT_FRAME_COMPLETION_API_VERSION 1U
+
 /**
  * Query the minimum number of panel framebuffers before creating the panel.
  *
@@ -308,6 +311,32 @@ esp_err_t esp_display_presenter_submit_buffer(
 esp_err_t esp_display_presenter_commit_frame(
     esp_display_presenter_t *presenter,
     const esp_display_presenter_submit_t *submit);
+
+/** Commit the active frame and return a receipt; clear it on failure.
+ * Use instead of commit_frame(). Success identifies the frame; query status
+ * for completion, checking that the status and receipt generations match.
+ * track_display=false keeps the ordinary pipeline. true requires hardware
+ * VSYNC and holds later frames until the switch fence plus two VSYNCs, or
+ * cancel_frame_tracking(). A tracking-setup failure leaves the frame active:
+ * retry without tracking or call cancel_frame() before starting another. */
+esp_err_t esp_display_presenter_commit_frame_with_receipt(
+    esp_display_presenter_t *presenter,
+    const esp_display_presenter_submit_t *submit,
+    bool track_display,
+    esp_display_presenter_frame_receipt_t *out_receipt);
+
+/** Read a coherent completion snapshot from task context without waiting.
+ * Serialize with deletion. The endpoint determines the completion evidence. */
+esp_err_t esp_display_presenter_get_frame_status(
+    esp_display_presenter_t *presenter,
+    esp_display_presenter_frame_status_t *out_status);
+
+/** Cancel the confirmation wait matching frame_id and generation.
+ * Returns ESP_ERR_NOT_FOUND if no matching wait remains. This neither confirms
+ * the frame nor releases hardware-owned buffers. Task context; serialize with
+ * deletion as for get_frame_status(). */
+esp_err_t esp_display_presenter_cancel_frame_tracking(
+    esp_display_presenter_t *presenter, uint64_t frame_id, uint32_t generation);
 
 /** @brief Cancel the active pre-commit frame and any held region from its
  *  bound producer task. */

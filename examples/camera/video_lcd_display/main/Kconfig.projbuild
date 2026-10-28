@@ -41,21 +41,24 @@ menu "Example Configuration"
     endif
 
     config EXAMPLE_ENABLE_PRINT_FPS_RATE_VALUE
-        bool "enable print fps rate value"
+        bool "Print capture FPS"
         default y
 
     config EXAMPLE_USE_MEMORY_MAPPING
         bool "Use Memory Mapping for Buffer Allocation"
         default n
         help
-        Enable this option if you want to allocate memory using memory mapping.
-        This is typically useful for performance optimization or when working
-        with hardware that requires mapped memory access
+            Use V4L2_MEMORY_MMAP buffers allocated by esp_video.
+            Otherwise, provide application-owned V4L2_MEMORY_USERPTR buffers.
 
     config EXAMPLE_CAM_BUF_COUNT
-        int "Camera Buffer Count"
+        int "Capture Buffer Count for Copy Mode"
         default 2
         range 2 3
+        help
+            Used for MMAP or when the capture size differs from the LCD.
+            Matching USERPTR capture uses three shared LCD buffers: two
+            queued for capture and one held for scanout.
 
     choice
         prompt "Choose the color format of the LCD"
@@ -70,13 +73,9 @@ menu "Example Configuration"
     config EXAMPLE_ENABLE_CAM_SENSOR_PIC_VFLIP
         bool "Enable Camera Sensor Picture Vertical Flip"
         default y
-        help
-            Select this option, enable camera sensor picture vertical flip.
 
     config EXAMPLE_ENABLE_CAM_SENSOR_PIC_HFLIP
         bool "Enable Camera Sensor Picture Horizontal Flip"
         default y
-        help
-            Select this option, enable camera sensor picture horizontal flip.
 
 endmenu

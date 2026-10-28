@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -31,15 +31,7 @@
 #include "esp_heap_caps.h"
 
 #if ESP_LV_ENABLE_PJPG
-#define PJPG_MAGIC "_PJPG__"
-#define PJPG_MAGIC_LEN 7
-#define PJPG_HEADER_SIZE 22
-typedef struct {
-    uint16_t width;
-    uint16_t height;
-    uint32_t rgb_jpeg_size;
-    uint32_t alpha_jpeg_size;
-} pjpg_info_t;
+#include "esp_lv_decoder_pjpg.h"
 #endif
 
 /*********************
@@ -122,10 +114,9 @@ static lv_res_t jpeg_decode_header(uint32_t *w, uint32_t *h, const uint8_t *in, 
 static lv_res_t jpeg_decode_hw_or_sw(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize, bool *out_is_hw);
 static int is_pjpg(const uint8_t *raw_data, size_t len);
 #if ESP_LV_ENABLE_HW_JPEG
-static esp_err_t safe_cache_sync(void *addr, size_t size, int flags);
+static void safe_cache_sync(void *addr, size_t size, int flags);
 #endif
 #if ESP_LV_ENABLE_PJPG
-static lv_res_t pjpg_parse_header(const uint8_t *buf, size_t len, pjpg_info_t *info);
 static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize);
 #endif
 
@@ -136,7 +127,7 @@ static uint32_t s_jpeg_header_read_size = 1024;
 static jpeg_decoder_handle_t jpgd_handle;
 #endif
 
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
 static uint8_t *s_pjpg_rx_rgb = NULL;
 static size_t s_pjpg_rx_rgb_size = 0;
 static uint8_t *s_pjpg_rx_a = NULL;
@@ -211,7 +202,7 @@ esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
     lv_img_decoder_set_close_cb(dec, decoder_close);
     lv_img_decoder_set_read_line_cb(dec, decoder_read_line);
 
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
     if (!s_pjpg_mutex) {
         s_pjpg_mutex = xSemaphoreCreateMutex();
         if (!s_pjpg_mutex) {
@@ -243,7 +234,7 @@ esp_err_t esp_lv_decoder_deinit(esp_lv_decoder_handle_t handle)
         jpgd_handle = NULL;
     }
 #endif
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
     if (s_pjpg_rx_rgb) {
         jpeg_free_align(s_pjpg_rx_rgb);
         s_pjpg_rx_rgb = NULL;
@@ -385,7 +376,9 @@ cleanup0:
 
 static lv_fs_res_t load_image_file(const char *filename, uint8_t **buffer, size_t *size, bool read_head)
 {
-    uint32_t len;
+    *buffer = NULL;
+    *size = 0;
+    uint32_t len = 0;
     lv_fs_file_t f;
     lv_fs_res_t res = lv_fs_open(&f, filename, LV_FS_MODE_RD);
     if (res != LV_FS_RES_OK) {
@@ -393,9 +386,12 @@ static lv_fs_res_t load_image_file(const char *filename, uint8_t **buffer, size_
         return res;
     }
 
-    lv_fs_seek(&f, 0, LV_FS_SEEK_END);
-    lv_fs_tell(&f, &len);
-    lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
+    if (lv_fs_seek(&f, 0, LV_FS_SEEK_END) != LV_FS_RES_OK ||
+            lv_fs_tell(&f, &len) != LV_FS_RES_OK ||
+            lv_fs_seek(&f, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) {
+        lv_fs_close(&f);
+        return LV_FS_RES_FS_ERR;
+    }
 
     if (read_head && len > 1024) {
         len = 1024;
@@ -456,7 +452,8 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
         } else if (is_pjpg(img_dsc_data, img_dsc_size) == true) {
 #if ESP_LV_ENABLE_PJPG
             pjpg_info_t info;
-            if (pjpg_parse_header(img_dsc_data, img_dsc_size, &info) != LV_RES_OK) {
+            if (esp_lv_pjpg_parse_header(img_dsc_data, img_dsc_size, &info) != ESP_OK ||
+                    LV_COLOR_DEPTH != 16 || info.width > 2047 || info.height > 2047) {
                 return LV_RES_INV;
             }
             header->always_zero = 0;
@@ -640,7 +637,8 @@ static lv_res_t decoder_info(struct _lv_img_decoder_t *decoder, const void *src,
 
 #if ESP_LV_ENABLE_PJPG
             pjpg_info_t info;
-            if (pjpg_parse_header(load_img_data, load_img_size, &info) != LV_RES_OK) {
+            if (esp_lv_pjpg_parse_header(load_img_data, load_img_size, &info) != ESP_OK ||
+                    LV_COLOR_DEPTH != 16 || info.width > 2047 || info.height > 2047) {
                 free(load_img_data);
                 return LV_RES_INV;
             }
@@ -849,10 +847,8 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
             }
 
             if (load_image_file(fn, &load_img_data, &load_img_size, false) != LV_FS_RES_OK) {
-                if (load_img_data) {
-                    free(load_img_data);
-                    decoder_cleanup(img_dec);
-                }
+                free(load_img_data);
+                decoder_cleanup(img_dec);
                 return LV_RES_INV;
             }
 
@@ -883,7 +879,7 @@ static lv_res_t decoder_open(lv_img_decoder_t *decoder, lv_img_decoder_dsc_t *ds
                 img_dec = NULL;
                 return LV_RES_INV;
             } else {
-                if (strcmp(lv_fs_get_ext(fn), "jpg")) {
+                if (!strcmp(lv_fs_get_ext(fn), "png") || !strcmp(lv_fs_get_ext(fn), "qoi")) {
                     /*Convert the image to the system's color depth*/
                     convert_color_depth(img_data,  img_width * img_height);
                 }
@@ -1323,25 +1319,6 @@ static lv_res_t jpeg_decode_hw_or_sw(uint8_t **out, uint32_t *w, uint32_t *h, co
 }
 
 #if ESP_LV_ENABLE_PJPG
-static lv_res_t pjpg_parse_header(const uint8_t *buf, size_t len, pjpg_info_t *info)
-{
-    if (len < PJPG_HEADER_SIZE) {
-        ESP_LOGE(TAG, "PJPG hdr too small len=%u", (unsigned)len);
-        return LV_RES_INV;
-    }
-    if (memcmp(buf, PJPG_MAGIC, PJPG_MAGIC_LEN) != 0) {
-        ESP_LOGE(TAG, "PJPG magic mismatch: %02X %02X %02X %02X %02X %02X %02X", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6]);
-        return LV_RES_INV;
-    }
-    const uint8_t *p = buf + PJPG_MAGIC_LEN + 1;
-    info->width = *(uint16_t *)p; p += 2;
-    info->height = *(uint16_t *)p; p += 2;
-    info->rgb_jpeg_size = *(uint32_t *)p; p += 4;
-    info->alpha_jpeg_size = *(uint32_t *)p;
-
-    return LV_RES_OK;
-}
-
 #if ESP_LV_ENABLE_HW_JPEG
 static esp_err_t ensure_jpeg_output_buffer(uint8_t **buf, size_t *buf_size, size_t min_need)
 {
@@ -1403,36 +1380,29 @@ static esp_err_t decode_jpeg_plane_to_dst(const uint8_t *jpeg,
 
 static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize)
 {
+#if LV_COLOR_DEPTH == 16
     lv_res_t res = LV_RES_INV;
     pjpg_info_t info;
-    bool mutex_locked = false;
-#if LV_COLOR_DEPTH == 16
-    uint8_t *dst = NULL;
-#endif
-#if ESP_LV_ENABLE_PJPG
-    if (s_pjpg_mutex) {
-        if (xSemaphoreTake(s_pjpg_mutex, portMAX_DELAY) != pdTRUE) {
-            ESP_LOGE(TAG, "Failed to acquire PJPG mutex");
-            return LV_RES_INV;
-        }
-        mutex_locked = true;
-    }
-#endif
-
-    if (pjpg_parse_header(in, insize, &info) != LV_RES_OK) {
-        goto exit;
-    }
-    size_t need = PJPG_HEADER_SIZE + info.rgb_jpeg_size + info.alpha_jpeg_size;
-    if (insize < need) {
-        goto exit;
+    *out = NULL;
+    if (esp_lv_pjpg_validate_data(in, insize, &info) != ESP_OK || info.width > 2047 || info.height > 2047) {
+        return LV_RES_INV;
     }
     *w = info.width;
     *h = info.height;
-#if LV_COLOR_DEPTH == 16
-    size_t final_size = (size_t)(*w) * (*h) * 3;
-    dst = (uint8_t *)decoder_aligned_alloc(16, final_size);
+    size_t final_size = (size_t)info.width * info.height * 3;
+    uint8_t *dst = decoder_aligned_alloc(16, final_size);
     if (!dst) {
-        goto exit;
+        return LV_RES_INV;
+    }
+
+#if ESP_LV_ENABLE_HW_JPEG
+    bool mutex_locked = false;
+    if (s_pjpg_mutex) {
+        if (xSemaphoreTake(s_pjpg_mutex, portMAX_DELAY) != pdTRUE) {
+            ESP_LOGE(TAG, "Failed to acquire PJPG mutex");
+            goto exit;
+        }
+        mutex_locked = true;
     }
     uint32_t aligned_w = ((*w) + 15) & ~15;
     uint32_t aligned_h = ((*h) + 15) & ~15;
@@ -1442,8 +1412,6 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
     safe_cache_sync((void *)in, insize, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     if (!jpgd_handle) {
         ESP_LOGE(TAG, "PJPG no handle");
-        free(dst);
-        dst = NULL;
         goto exit;
     }
 
@@ -1454,8 +1422,6 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
                                  &s_pjpg_rx_rgb, &s_pjpg_rx_rgb_size,
                                  aligned_w, aligned_h, *w, *h, 2,
                                  rgb_plane, (*w) * 2) != ESP_OK) {
-        free(dst);
-        dst = NULL;
         goto exit;
     }
 
@@ -1468,40 +1434,52 @@ static lv_res_t pjpg_decode(uint8_t **out, uint32_t *w, uint32_t *h, const uint8
                                      &s_pjpg_rx_a, &s_pjpg_rx_a_size,
                                      aligned_w, aligned_h, *w, *h, 1,
                                      alpha_plane, (*w)) != ESP_OK) {
-            free(dst);
-            dst = NULL;
             goto exit;
         }
     } else {
         memset(alpha_plane, 0xFF, alpha_plane_size);
     }
 
+#if LV_BIG_ENDIAN_SYSTEM == 1 || LV_COLOR_16_SWAP == 1
+    for (size_t i = 0; i < rgb_plane_size; i += 2) {
+        uint8_t byte = dst[i];
+        dst[i] = dst[i + 1];
+        dst[i + 1] = byte;
+    }
+#endif
     safe_cache_sync(dst, final_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-
-    *out = dst;
     res = LV_RES_OK;
+#else
+#if LV_BIG_ENDIAN_SYSTEM == 1 || LV_COLOR_16_SWAP == 1
+    const pjpg_output_format_t format = PJPG_RGB565_BE;
+#else
+    const pjpg_output_format_t format = PJPG_RGB565_LE;
+#endif
+    if (esp_lv_pjpg_decode_sw(in, insize, dst, final_size, (size_t)info.width * 2, format) == ESP_OK) {
+        res = LV_RES_OK;
+    }
+#endif
+
+#if ESP_LV_ENABLE_HW_JPEG
+exit:
+    if (mutex_locked) {
+        xSemaphoreGive(s_pjpg_mutex);
+    }
+#endif
+    if (res == LV_RES_OK) {
+        *out = dst;
+    } else {
+        free(dst);
+    }
+    return res;
 #else
     LV_UNUSED(out);
     LV_UNUSED(w);
     LV_UNUSED(h);
     LV_UNUSED(in);
     LV_UNUSED(insize);
-    goto exit;
+    return LV_RES_INV;
 #endif
-
-exit:
-#if LV_COLOR_DEPTH == 16
-    if (res != LV_RES_OK && dst) {
-        free(dst);
-        dst = NULL;
-    }
-#endif
-#if ESP_LV_ENABLE_PJPG
-    if (mutex_locked) {
-        xSemaphoreGive(s_pjpg_mutex);
-    }
-#endif
-    return res;
 }
 #endif
 
@@ -1518,14 +1496,11 @@ static int is_pjpg(const uint8_t *raw_data, size_t len)
 }
 
 #if ESP_LV_ENABLE_HW_JPEG
-static esp_err_t safe_cache_sync(void *addr, size_t size, int flags)
+static void safe_cache_sync(void *addr, size_t size, int flags)
 {
-    /*
-     * Align the cache sync range to cache line boundaries. This wrapper keeps
-     * the call sites concise and centralizes the alignment logic.
-     */
+    /* Synchronize complete cache lines. */
     if (!addr || size == 0) {
-        return ESP_OK;
+        return;
     }
 
     const size_t CACHE_LINE_SIZE = 128;
@@ -1535,9 +1510,7 @@ static esp_err_t safe_cache_sync(void *addr, size_t size, int flags)
     size_t aligned_end = (end_addr + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
     size_t aligned_size = aligned_end - aligned_start;
 
-    esp_err_t ret = esp_cache_msync((void*)aligned_start, aligned_size, flags);
-    if (ret != ESP_OK) { }
-    return ESP_OK;
+    esp_cache_msync((void*)aligned_start, aligned_size, flags);
 }
 #endif
 

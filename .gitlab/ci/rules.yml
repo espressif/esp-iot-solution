@@ -693,6 +693,9 @@
 .patterns-example_camera_video_stream_server: &patterns-example_camera_video_stream_server
   - "examples/camera/video_stream_server/**/*"
 
+.patterns-example_camera_video_lcd_display: &patterns-example_camera_video_lcd_display
+  - "examples/camera/video_lcd_display/**/*"
+
 .patterns-example_common_components_boards: &patterns-example_common_components_boards
   - "examples/common_components/boards/**/*"
 
@@ -1372,6 +1375,16 @@
       changes: *patterns-example_camera_video_stream_server
     - <<: *if-dev-push
       changes: *patterns-example_common_components_camera
+
+.rules:build:example_camera_video_lcd_display:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-example_camera_video_lcd_display
 
 .rules:build:example_display_lcd_hdmi_video_renderer:
   rules:

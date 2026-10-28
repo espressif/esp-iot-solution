@@ -2,6 +2,7 @@ menu "ESP LV Decoder"
 
 config ESP_LV_DECODER_PJPG_HW_ALPHA_BLEND
     bool "PPA hardware alpha blending for transparent PJPG images (RGB888 displays)"
+    depends on SOC_PPA_SUPPORTED
     default n
     help
         Offload alpha blending of transparent PJPG images to the PPA hardware on

@@ -46,6 +46,38 @@ typedef enum {
     ESP_DISPLAY_PRESENT_FAULT_TRANSFER_TIMEOUT,
 } esp_display_present_fault_reason_t;
 
+/** Driver completion feedback. */
+typedef enum {
+    /** All frame transfers completed; no scanout event is available. */
+    ESP_DISPLAY_PRESENT_COMPLETION_TRANSFER = 0,
+    /** Hardware VSYNC available; confirmed_present_frame tracks display confirmation. */
+    ESP_DISPLAY_PRESENT_COMPLETION_FRAMEBUFFER,
+} esp_display_present_completion_t;
+
+/** Frame and binding identity. Rotation changes generation; frame_id=0 means
+ * commit failed. IDs are valid only during this presenter's lifetime. */
+typedef struct {
+    uint64_t frame_id; /**< Committed frame ID; zero on failure. */
+    uint32_t generation; /**< Binding generation that issued this receipt. */
+    bool display_tracked; /**< Only tracked receipts use confirmed_present_frame. */
+} esp_display_presenter_frame_receipt_t;
+
+/** Coherent frame timeline; zero means no frame has reached that point. */
+typedef struct {
+    uint32_t generation; /**< Current binding generation. */
+    uint64_t last_submitted_frame; /**< Latest submitted frame ID. */
+    uint64_t completed_transfer_frame; /**< Latest frame with completed transfers. */
+    /** Ownership fence; coalesced submissions do not prove every frame was displayed. */
+    uint64_t completed_present_frame;
+    /** Tracked frames only: switch fence plus two later RGB/MIPI VSYNCs. */
+    uint64_t confirmed_present_frame;
+    esp_display_present_completion_t completion; /**< Available driver completion feedback. */
+    esp_display_present_fault_reason_t fault_reason; /**< Latched transfer or protocol fault. */
+    /** Separate transfer queue; otherwise transfer follows the present fence. */
+    bool tracks_transfer;
+    bool accepting_callbacks; /**< Whether completion callbacks are currently accepted. */
+} esp_display_presenter_frame_status_t;
+
 /** Logical pixel coordinate. */
 typedef struct {
     int32_t x; /**< Horizontal coordinate. */

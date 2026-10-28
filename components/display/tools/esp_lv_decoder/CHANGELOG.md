@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.5.0 (2026-10-20)
+
+* Added software PJPG decoding through `esp_new_jpeg` on supported targets; requires LVGL >= 8.3.
+* Fixed PJPG validation, strides, file handling, and LVGL version detection.
+
 ## v0.4.3 (2026-06-24)
 
 * Added missing `esp32c61` and `esp32h4` entries to the supported targets list in the component manifest.

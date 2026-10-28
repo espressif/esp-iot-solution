@@ -42,6 +42,37 @@ Frame-done callbacks may arrive during submission. RGB replays an early
 completion only after color transfer completes. Pending state, submit readiness
 and buffer retirement are updated together before waking the producer.
 
+## Tracked display confirmation
+
+A receipt pairs its frame ticket with the current binding generation. Rotation
+rebuilds that binding, clears confirmation, and preserves monotonic frame IDs.
+Tracked commits hold the next `begin` within the pipeline acquire budget until
+the switch fence and two later RGB/MIPI VSYNCs. A timeout retains hardware
+ownership. Cancellation clears only the matching frame ID and generation;
+stale/repeated cancellation returns `ESP_ERR_NOT_FOUND`, and late feedback cannot
+confirm a cancelled frame.
+
+The switch completion records its VSYNC sequence in the tracker. Delayed status
+queries use that event timestamp and do not restart the confirmation wait.
+
+The first tracked commit installs VSYNC callbacks, retained until binding
+teardown. Ordinary commits do not enable them or introduce a confirmation hold.
+Tracking adds no task or framebuffer.
+
+Status readers join `active_calls` only in `OPEN` or `FAULTED`. They acquire the
+lifecycle lock before the tracker lock so the pending ticket and event counters
+form one snapshot. ISR updates acquire only the tracker lock; an older counter
+snapshot cannot confirm a ticket installed concurrently.
+
+## TE phase wakeups
+
+On IDF 6.2+, a TE context may allocate one one-shot `esp_timer` on the shared
+timer task. It only wakes the producer; the TE timestamp and phase window still
+control transfer admission. Allocation/arm failure keeps the edge/tick fallback.
+Teardown waits for the timer callback before releasing its semaphore or context.
+Panel and GPIO callback removal also drain already-entered ISRs on other cores
+before freeing their contexts.
+
 ## Lifecycle
 
 | State | Meaning | Invariant |

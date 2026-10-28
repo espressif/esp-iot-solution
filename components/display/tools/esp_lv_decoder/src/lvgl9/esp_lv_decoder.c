@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -36,9 +36,7 @@
 #define image_cache_draw_buf_handlers &(LV_GLOBAL_DEFAULT()->image_cache_draw_buf_handlers)
 
 #if ESP_LV_ENABLE_PJPG
-#define PJPG_MAGIC "_PJPG__"
-#define PJPG_MAGIC_LEN 7
-#define PJPG_HEADER_SIZE 22
+#include "esp_lv_decoder_pjpg.h"
 #endif
 
 #define SP_TAG_SPNG        "_SPNG__"
@@ -48,16 +46,7 @@
 #define SP_META_OFFSET     14
 #define SP_FILE_HEADER_SIZE 22
 
-#if ESP_LV_ENABLE_PJPG
-typedef struct {
-    uint16_t width;
-    uint16_t height;
-    uint32_t rgb_jpeg_size;
-    uint32_t alpha_jpeg_size;
-} pjpg_info_t;
-#endif
-
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
 static uint8_t *s_pjpg_rx_rgb = NULL;
 static size_t s_pjpg_rx_rgb_size = 0;
 static uint8_t *s_pjpg_rx_a = NULL;
@@ -159,8 +148,7 @@ static lv_draw_buf_t * qoi_decode_qoi(lv_image_decoder_dsc_t * dsc);
 static bool png_dimensions_allowed(uint32_t width, uint32_t height);
 static void * decoder_malloc(size_t size);
 static void * decoder_aligned_alloc(size_t alignment, size_t size);
-static void * file_buffer_alloc(size_t size);
-static uint8_t * alloc_file(const char * filename, uint32_t * size);
+static esp_err_t load_file(const char *filename, uint8_t **data, uint32_t *size);
 
 static lv_res_t jpeg_decode_header(
     uint32_t *w,
@@ -175,7 +163,6 @@ static lv_res_t jpeg_decode_header(
 static lv_result_t sp_open_session(lv_image_decoder_dsc_t * dsc);
 
 #if ESP_LV_ENABLE_PJPG
-static esp_err_t pjpg_parse_header(const uint8_t *buf, size_t len, pjpg_info_t *info);
 static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc);
 static esp_err_t load_source_data(lv_image_decoder_dsc_t * dsc, uint8_t **data, uint32_t *size);
 #endif
@@ -233,11 +220,6 @@ static void * decoder_aligned_alloc(size_t alignment, size_t size)
     return heap_caps_aligned_alloc(alignment, size, MALLOC_CAP_DEFAULT);
 }
 
-static void * file_buffer_alloc(size_t size)
-{
-    return decoder_malloc(size);
-}
-
 static lv_color_format_t get_target_rgb_format(void)
 {
     lv_display_t *disp = lv_display_get_default();
@@ -289,7 +271,7 @@ esp_err_t esp_lv_decoder_init(esp_lv_decoder_handle_t *ret_handle)
     ESP_ERROR_CHECK(jpeg_new_decoder_engine(&decode_eng_cfg, &jpgd_handle));
 #endif
 
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
     if (!s_pjpg_mutex) {
         s_pjpg_mutex = xSemaphoreCreateMutex();
         if (!s_pjpg_mutex) {
@@ -319,7 +301,7 @@ esp_err_t esp_lv_decoder_deinit(esp_lv_decoder_handle_t handle)
 #if ESP_LV_ENABLE_HW_JPEG
     ESP_ERROR_CHECK(jpeg_del_decoder_engine(jpgd_handle));
 #endif
-#if ESP_LV_ENABLE_PJPG
+#if ESP_LV_ENABLE_PJPG && ESP_LV_ENABLE_HW_JPEG
     if (s_pjpg_rx_rgb) {
         jpeg_free_align(s_pjpg_rx_rgb);
         s_pjpg_rx_rgb = NULL;
@@ -350,47 +332,35 @@ static lv_result_t decoder_info(lv_image_decoder_t * decoder, lv_image_decoder_d
     if (src_type == LV_IMAGE_SRC_FILE || src_type == LV_IMAGE_SRC_VARIABLE) {
 #if ESP_LV_ENABLE_PJPG
         if (src_type == LV_IMAGE_SRC_FILE) {
-            uint32_t rn;
-            uint32_t file_size;
-            lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_END);
-            lv_fs_tell(&dsc->file, &file_size);
-            lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
-
-            if (file_size >= PJPG_HEADER_SIZE) {
-                uint8_t *pjpg_header = decoder_malloc(PJPG_HEADER_SIZE);
-                if (pjpg_header) {
-                    lv_fs_read(&dsc->file, pjpg_header, PJPG_HEADER_SIZE, &rn);
-                    lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
-
-                    if (rn == PJPG_HEADER_SIZE && memcmp(pjpg_header, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
-                        pjpg_info_t pjpg_info;
-                        if (pjpg_parse_header(pjpg_header, PJPG_HEADER_SIZE, &pjpg_info) == ESP_OK) {
-                            lv_color_format_t pjpg_cf = get_pjpg_output_format();
-                            header->cf = pjpg_cf;
-                            header->w = pjpg_info.width;
-                            header->h = pjpg_info.height;
-                            header->stride = (pjpg_cf == LV_COLOR_FORMAT_ARGB8888)
-                                             ? (pjpg_info.width * 4) : (pjpg_info.width * 2);
-                            free(pjpg_header);
-                            return LV_RESULT_OK;
-                        }
-                    }
-                    free(pjpg_header);
+            uint8_t pjpg_header[PJPG_HEADER_SIZE];
+            uint32_t rn = 0;
+            if (lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK ||
+                    lv_fs_read(&dsc->file, pjpg_header, sizeof(pjpg_header), &rn) != LV_FS_RES_OK ||
+                    lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) {
+                return LV_RESULT_INVALID;
+            }
+            if (rn == PJPG_HEADER_SIZE && memcmp(pjpg_header, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
+                pjpg_info_t pjpg_info;
+                if (esp_lv_pjpg_parse_header(pjpg_header, sizeof(pjpg_header), &pjpg_info) == ESP_OK) {
+                    lv_color_format_t pjpg_cf = get_pjpg_output_format();
+                    header->cf = pjpg_cf;
+                    header->w = pjpg_info.width;
+                    header->h = pjpg_info.height;
+                    header->stride = width_to_stride(pjpg_info.width, pjpg_cf);
+                    return LV_RESULT_OK;
                 }
             }
-            lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
         } else if (src_type == LV_IMAGE_SRC_VARIABLE) {
             const lv_image_dsc_t * img_dsc = dsc->src;
             if (img_dsc->data_size >= PJPG_HEADER_SIZE &&
                     memcmp(img_dsc->data, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
                 pjpg_info_t pjpg_info;
-                if (pjpg_parse_header(img_dsc->data, img_dsc->data_size, &pjpg_info) == ESP_OK) {
+                if (esp_lv_pjpg_parse_header(img_dsc->data, img_dsc->data_size, &pjpg_info) == ESP_OK) {
                     lv_color_format_t pjpg_cf = get_pjpg_output_format();
                     header->cf = pjpg_cf;
                     header->w = pjpg_info.width;
                     header->h = pjpg_info.height;
-                    header->stride = (pjpg_cf == LV_COLOR_FORMAT_ARGB8888)
-                                     ? (pjpg_info.width * 4) : (pjpg_info.width * 2);
+                    header->stride = width_to_stride(pjpg_info.width, pjpg_cf);
                     return LV_RESULT_OK;
                 }
             }
@@ -680,6 +650,15 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
         const char *ext = lv_fs_get_ext(dsc->src);
         if (ext && lv_strcmp(ext, "pjpg") == 0) {
             is_pjpg = true;
+        } else {
+            uint8_t magic[PJPG_MAGIC_LEN];
+            uint32_t rn = 0;
+            if (lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK ||
+                    lv_fs_read(&dsc->file, magic, sizeof(magic), &rn) != LV_FS_RES_OK ||
+                    lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) {
+                return LV_RESULT_INVALID;
+            }
+            is_pjpg = rn == sizeof(magic) && memcmp(magic, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0;
         }
     } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
         const lv_image_dsc_t * img_dsc = dsc->src;
@@ -1257,40 +1236,46 @@ static void decoder_close(lv_image_decoder_t * decoder, lv_image_decoder_dsc_t *
     }
 }
 
-static uint8_t * alloc_file(const char * filename, uint32_t * size)
+static esp_err_t load_file(const char *filename, uint8_t **data, uint32_t *size)
 {
-    uint8_t * data = NULL;
-    lv_fs_file_t f;
-    uint32_t data_size;
-    uint32_t rn;
-    lv_fs_res_t res;
-    esp_err_t ret;
+    *data = NULL;
     *size = 0;
-    res = lv_fs_open(&f, filename, LV_FS_MODE_RD);
-    if (res != LV_FS_RES_OK) {
-        ESP_LOGE(TAG, "can't open %s", filename);
-        return NULL;
+    lv_fs_file_t f;
+    if (lv_fs_open(&f, filename, LV_FS_MODE_RD) != LV_FS_RES_OK) {
+        ESP_LOGE(TAG, "Failed to open file: %s", filename);
+        return ESP_ERR_INVALID_STATE;
     }
-    res = lv_fs_seek(&f, 0, LV_FS_SEEK_END);
-    ESP_GOTO_ON_ERROR(res == LV_FS_RES_OK ? ESP_OK : ESP_FAIL, failed, TAG, "lv_fs_seek end failed");
-    res = lv_fs_tell(&f, &data_size);
-    ESP_GOTO_ON_ERROR(res == LV_FS_RES_OK ? ESP_OK : ESP_FAIL, failed, TAG, "lv_fs_tell failed");
-    res = lv_fs_seek(&f, 0, LV_FS_SEEK_SET);
-    ESP_GOTO_ON_ERROR(res == LV_FS_RES_OK ? ESP_OK : ESP_FAIL, failed, TAG, "lv_fs_seek set failed");
-    data = file_buffer_alloc(data_size);
-    ESP_GOTO_ON_ERROR(data ? ESP_OK : ESP_ERR_NO_MEM, failed, TAG, "alloc %uB file buffer failed", (unsigned)data_size);
-    res = lv_fs_read(&f, data, data_size, &rn);
-    if (res == LV_FS_RES_OK && rn == data_size) {
-        *size = rn;
-    } else {
-        ESP_LOGE(TAG, "read file failed");
-        free(data);
-        data = NULL;
+
+    uint32_t file_size = 0, read_size = 0;
+    if (lv_fs_seek(&f, 0, LV_FS_SEEK_END) != LV_FS_RES_OK ||
+            lv_fs_tell(&f, &file_size) != LV_FS_RES_OK ||
+            lv_fs_seek(&f, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) {
+        ESP_LOGE(TAG, "Failed to get file size: %s", filename);
+        lv_fs_close(&f);
+        return ESP_ERR_INVALID_STATE;
     }
-failed:
+
+    if (file_size == 0) {
+        lv_fs_close(&f);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    *data = decoder_malloc(file_size);
+    if (!*data) {
+        ESP_LOGE(TAG, "Failed to allocate %lu bytes", file_size);
+        lv_fs_close(&f);
+        return ESP_ERR_NO_MEM;
+    }
+
+    lv_fs_res_t res = lv_fs_read(&f, *data, file_size, &read_size);
     lv_fs_close(&f);
-    (void)ret;
-    return data;
+    if (res != LV_FS_RES_OK || read_size != file_size) {
+        ESP_LOGE(TAG, "Failed to read file: %s", filename);
+        free(*data);
+        *data = NULL;
+        return ESP_ERR_INVALID_SIZE;
+    }
+    *size = file_size;
+    return ESP_OK;
 }
 
 static lv_res_t jpeg_decode_header(uint32_t *w, uint32_t *h, const uint8_t *in, uint32_t insize,
@@ -1370,8 +1355,7 @@ static lv_draw_buf_t * jpeg_decode_jpg(lv_image_decoder_dsc_t * dsc)
         if (!ext || (lv_strcmp(ext, "jpg") != 0 && lv_strcmp(ext, "jpeg") != 0)) {
             return NULL;
         }
-        src_data = alloc_file(dsc->src, &src_data_size);
-        if (src_data == NULL) {
+        if (load_file(dsc->src, &src_data, &src_data_size) != ESP_OK) {
             return NULL;
         }
     } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
@@ -1469,8 +1453,7 @@ static lv_draw_buf_t * png_decode_rgba(lv_image_decoder_dsc_t * dsc)
         if (!ext || lv_strcmp(ext, "png") != 0) {
             return NULL;
         }
-        src_data = alloc_file(dsc->src, &src_data_size);
-        if (!src_data) {
+        if (load_file(dsc->src, &src_data, &src_data_size) != ESP_OK) {
             return NULL;
         }
     } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
@@ -1533,8 +1516,7 @@ static lv_draw_buf_t * qoi_decode_qoi(lv_image_decoder_dsc_t * dsc)
         if (!ext || lv_strcmp(ext, "qoi") != 0) {
             return NULL;
         }
-        src_data = alloc_file(dsc->src, &src_data_size);
-        if (!src_data) {
+        if (load_file(dsc->src, &src_data, &src_data_size) != ESP_OK) {
             return NULL;
         }
     } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
@@ -1604,88 +1586,24 @@ cleanup:
 
 #if ESP_LV_ENABLE_PJPG
 
-static esp_err_t safe_cache_sync(void *addr, size_t size, int flags)
+#if ESP_LV_ENABLE_HW_JPEG
+static void pjpg_flush_output(lv_draw_buf_t *decoded)
 {
-    /*
-     * Align the cache sync range to cache line boundaries. This wrapper keeps
-     * the call sites concise and centralizes the alignment logic.
-     */
-    if (!addr || size == 0) {
-        return ESP_OK;
-    }
-
-    const size_t CACHE_LINE_SIZE = 128;
-    uintptr_t start_addr = (uintptr_t)addr;
-    uintptr_t aligned_start = start_addr & ~(CACHE_LINE_SIZE - 1);
-    size_t end_addr = start_addr + size;
-    size_t aligned_end = (end_addr + CACHE_LINE_SIZE - 1) & ~(CACHE_LINE_SIZE - 1);
-    size_t aligned_size = aligned_end - aligned_start;
-
-    esp_err_t ret = esp_cache_msync((void*)aligned_start, aligned_size, flags);
-    if (ret != ESP_OK) { }
-    return ESP_OK;
+    /* JPEG owns its DMA cache synchronization. Publish CPU-written pixels. */
+    esp_cache_msync(decoded->data, decoded->data_size,
+                    ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
 }
 
-static esp_err_t pjpg_parse_header(const uint8_t *buf, size_t len, pjpg_info_t *info)
-{
-    if (len < PJPG_HEADER_SIZE || memcmp(buf, PJPG_MAGIC, PJPG_MAGIC_LEN) != 0) {
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    const uint8_t *p = buf + PJPG_MAGIC_LEN + 1;
-    info->width = *(uint16_t *)p;
-    p += 2;
-    info->height = *(uint16_t *)p;
-    p += 2;
-    info->rgb_jpeg_size = *(uint32_t *)p;
-    p += 4;
-    info->alpha_jpeg_size = *(uint32_t *)p;
-
-    return ESP_OK;
-}
+#endif /* ESP_LV_ENABLE_HW_JPEG */
 
 static esp_err_t load_source_data(lv_image_decoder_dsc_t * dsc, uint8_t **data, uint32_t *size)
 {
     if (dsc->src_type == LV_IMAGE_SRC_FILE) {
-        lv_fs_file_t temp_file;
-        lv_fs_res_t open_res = lv_fs_open(&temp_file, dsc->src, LV_FS_MODE_RD);
-
-        if (open_res != LV_FS_RES_OK) {
-            ESP_LOGE(TAG, "Failed to open file: %s", (const char*)dsc->src);
-            return ESP_ERR_INVALID_STATE;
-        }
-
-        uint32_t file_size, read_size;
-        lv_fs_seek(&temp_file, 0, LV_FS_SEEK_END);
-        lv_fs_tell(&temp_file, &file_size);
-        lv_fs_seek(&temp_file, 0, LV_FS_SEEK_SET);
-
-        if (file_size == 0) {
-            ESP_LOGE(TAG, "File size is 0");
-            lv_fs_close(&temp_file);
-            return ESP_ERR_INVALID_SIZE;
-        }
-
-        *data = decoder_malloc(file_size);
-        if (!*data) {
-            ESP_LOGE(TAG, "Failed to allocate %lu bytes", file_size);
-            lv_fs_close(&temp_file);
-            return ESP_ERR_NO_MEM;
-        }
-
-        lv_fs_res_t read_res = lv_fs_read(&temp_file, *data, file_size, &read_size);
-        lv_fs_close(&temp_file);
-
-        if (read_res != LV_FS_RES_OK || read_size != file_size) {
-            ESP_LOGE(TAG, "Failed to read file: expected %lu bytes, got %lu", file_size, read_size);
-            free(*data);
-            *data = NULL;
-            return ESP_ERR_INVALID_SIZE;
-        }
-
-        *size = file_size;
-
-    } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
+        return load_file(dsc->src, data, size);
+    }
+    *data = NULL;
+    *size = 0;
+    if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
         const lv_image_dsc_t * img_dsc = dsc->src;
         *data = (uint8_t *)img_dsc->data;
         *size = img_dsc->data_size;
@@ -1696,7 +1614,7 @@ static esp_err_t load_source_data(lv_image_decoder_dsc_t * dsc, uint8_t **data, 
     return ESP_OK;
 }
 
-#if ESP_LV_PJPG_PREFER_ARGB8888
+#if ESP_LV_ENABLE_HW_JPEG && ESP_LV_PJPG_PREFER_ARGB8888
 /* HW-decode RGB segment to RGB888 and alpha to A8, then interleave to ARGB8888.
  * Shares the s_pjpg_rx_* scratch buffers; caller holds s_pjpg_mutex. */
 static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_data, lv_draw_buf_t *decoded)
@@ -1720,7 +1638,6 @@ static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_
         ESP_RETURN_ON_FALSE(s_pjpg_rx_rgb, ESP_ERR_NO_MEM, TAG, "alloc PJPG RGB888 scratch failed");
         s_pjpg_rx_rgb_size = got;
     }
-    safe_cache_sync((void *)rgb_data, info->rgb_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
     uint32_t rgb_out = 0;
     ESP_RETURN_ON_ERROR(jpeg_decoder_process(jpgd_handle, &decode_cfg_rgb888,
                                              rgb_data, info->rgb_jpeg_size,
@@ -1742,7 +1659,6 @@ static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_
             s_pjpg_rx_a_size = got;
         }
         const uint8_t *alpha_data = src_data + PJPG_HEADER_SIZE + info->rgb_jpeg_size;
-        safe_cache_sync((void *)alpha_data, info->alpha_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
         jpeg_decode_cfg_t alpha_cfg = { .output_format = JPEG_DECODE_OUT_FORMAT_GRAY };
         uint32_t a_out = 0;
         ESP_RETURN_ON_ERROR(jpeg_decoder_process(jpgd_handle, &alpha_cfg,
@@ -1757,7 +1673,7 @@ static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_
     for (uint32_t y = 0; y < h; y++) {
         const uint8_t *rgb_row = s_pjpg_rx_rgb + (size_t)y * aligned_w * 3;
         const uint8_t *a_row = alpha_buf ? (alpha_buf + (size_t)y * aligned_w) : NULL;
-        uint8_t *d = dst + (size_t)y * w * 4;
+        uint8_t *d = dst + (size_t)y * decoded->header.stride;
         for (uint32_t x = 0; x < w; x++) {
             d[0] = rgb_row[0];
             d[1] = rgb_row[1];
@@ -1767,7 +1683,7 @@ static esp_err_t pjpg_fill_argb8888(const pjpg_info_t *info, const uint8_t *src_
             rgb_row += 3;
         }
     }
-    safe_cache_sync(decoded->data, decoded->data_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    pjpg_flush_output(decoded);
     return ESP_OK;
 }
 #endif /* ESP_LV_PJPG_PREFER_ARGB8888 */
@@ -1780,6 +1696,7 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
     bool need_free_src = false;
     esp_err_t ret;
 
+#if ESP_LV_ENABLE_HW_JPEG
     // Acquire mutex to protect PJPG global buffers (s_pjpg_rx_rgb/s_pjpg_rx_a) from concurrent access
     if (s_pjpg_mutex) {
         if (xSemaphoreTake(s_pjpg_mutex, portMAX_DELAY) != pdTRUE) {
@@ -1787,16 +1704,14 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
             return NULL;
         }
     }
+#endif
 
     esp_err_t load_ret = load_source_data(dsc, &src_data, &src_size);
     ESP_GOTO_ON_ERROR(load_ret, cleanup, TAG, "load PJPG source data failed");
     need_free_src = (dsc->src_type == LV_IMAGE_SRC_FILE);
 
     pjpg_info_t info;
-    ESP_GOTO_ON_ERROR(pjpg_parse_header(src_data, src_size, &info), cleanup, TAG, "parse PJPG header failed");
-
-    size_t expected_min_size = PJPG_HEADER_SIZE + info.rgb_jpeg_size + info.alpha_jpeg_size;
-    ESP_GOTO_ON_FALSE(src_size >= expected_min_size, ESP_ERR_INVALID_SIZE, cleanup, TAG, "PJPG too small: need %zu got %lu", expected_min_size, src_size);
+    ESP_GOTO_ON_ERROR(esp_lv_pjpg_validate_data(src_data, src_size, &info), cleanup, TAG, "invalid PJPG data");
 
     lv_color_format_t pjpg_cf = get_pjpg_output_format();
     decoded = lv_draw_buf_create_ex(image_cache_draw_buf_handlers,
@@ -1805,6 +1720,7 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
                                     LV_STRIDE_AUTO);
     ESP_GOTO_ON_FALSE(decoded, ESP_ERR_NO_MEM, cleanup, TAG, "alloc PJPG decode buffer failed");
 
+#if ESP_LV_ENABLE_HW_JPEG
 #if ESP_LV_PJPG_PREFER_ARGB8888
     if (pjpg_cf == LV_COLOR_FORMAT_ARGB8888) {
         ESP_GOTO_ON_ERROR(pjpg_fill_argb8888(&info, src_data, decoded), cleanup, TAG, "PJPG ARGB8888 decode failed");
@@ -1820,24 +1736,23 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
 
     uint8_t *rgb_data = src_data + PJPG_HEADER_SIZE;
     uint16_t *rgb565_ptr = (uint16_t *)decoded->data;
-    size_t rgb_output_size = info.width * info.height * 2;
+    const size_t rgb_stride = decoded->header.stride;
+    const size_t alpha_stride = rgb_stride / 2;
+    size_t rgb_output_size = rgb_stride * info.height;
     jpeg_decode_cfg_t rgb_cfg = {
         .output_format = JPEG_DECODE_OUT_FORMAT_RGB565,
         .rgb_order = JPEG_DEC_RGB_ELEMENT_ORDER_BGR,
     };
-    safe_cache_sync(rgb_data, info.rgb_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
     uint32_t aligned_w = (info.width + 15) & ~15;
     uint32_t aligned_h = (info.height + 15) & ~15;
 
     uint32_t rgb_out_size = 0;
-    if (aligned_w == info.width && aligned_h == info.height) {
-        safe_cache_sync((void*)rgb565_ptr, rgb_output_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
+    if (aligned_w == info.width && aligned_h == info.height && rgb_stride == (size_t)info.width * 2) {
         esp_err_t rgb_ret = jpeg_decoder_process(jpgd_handle, &rgb_cfg,
                                                  rgb_data, info.rgb_jpeg_size,
                                                  (uint8_t *)rgb565_ptr, rgb_output_size,
                                                  &rgb_out_size);
         ESP_GOTO_ON_ERROR(rgb_ret, cleanup, TAG, "RGB HW decode failed");
-        safe_cache_sync((void*)rgb565_ptr, rgb_output_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     } else {
         size_t rgb_aligned_output_size = (size_t)aligned_w * aligned_h * 2;
         jpeg_decode_memory_alloc_cfg_t rx_mem_cfg = { .buffer_direction = JPEG_DEC_ALLOC_OUTPUT_BUFFER };
@@ -1859,28 +1774,23 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
                                                  &rgb_out_size);
         ESP_GOTO_ON_ERROR(rgb_ret, cleanup, TAG, "RGB HW decode failed");
         for (uint32_t y = 0; y < info.height; y++) {
-            memcpy((uint8_t *)rgb565_ptr + y * info.width * 2, s_pjpg_rx_rgb + y * aligned_w * 2, info.width * 2);
+            memcpy((uint8_t *)rgb565_ptr + y * rgb_stride, s_pjpg_rx_rgb + y * aligned_w * 2, info.width * 2);
         }
-        safe_cache_sync((void*)rgb565_ptr, rgb_output_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     }
 
     // Alpha channel decoding (if exists)
     if (info.alpha_jpeg_size > 0) {
         uint8_t *alpha_data = src_data + PJPG_HEADER_SIZE + info.rgb_jpeg_size;
         uint8_t *alpha_ptr = (uint8_t *)decoded->data + rgb_output_size;
-        size_t alpha_output_size = info.width * info.height;
+        size_t alpha_output_size = alpha_stride * info.height;
         jpeg_decode_cfg_t alpha_cfg = { .output_format = JPEG_DECODE_OUT_FORMAT_GRAY };
-        safe_cache_sync(alpha_data, info.alpha_jpeg_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-        if (aligned_w == info.width && aligned_h == info.height) {
-            safe_cache_sync(alpha_ptr, alpha_output_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C | ESP_CACHE_MSYNC_FLAG_INVALIDATE);
-
+        if (aligned_w == info.width && aligned_h == info.height && alpha_stride == info.width) {
             uint32_t alpha_out_size = 0;
             esp_err_t alpha_ret = jpeg_decoder_process(jpgd_handle, &alpha_cfg,
                                                        alpha_data, info.alpha_jpeg_size,
                                                        alpha_ptr, alpha_output_size,
                                                        &alpha_out_size);
             ESP_GOTO_ON_ERROR(alpha_ret, cleanup, TAG, "Alpha HW decode failed");
-            safe_cache_sync(alpha_ptr, alpha_output_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
         } else {
 
             uint32_t alpha_out_size = 0;
@@ -1904,26 +1814,31 @@ static lv_draw_buf_t * pjpg_decode_jpg(lv_image_decoder_dsc_t * dsc)
                                                        &alpha_out_size);
             ESP_GOTO_ON_ERROR(alpha_ret, cleanup, TAG, "Alpha HW decode failed");
             for (uint32_t y = 0; y < info.height; y++) {
-                memcpy(alpha_ptr + y * info.width, s_pjpg_rx_a + y * aligned_w, info.width);
+                memcpy(alpha_ptr + y * alpha_stride, s_pjpg_rx_a + y * aligned_w, info.width);
             }
-            safe_cache_sync(alpha_ptr, alpha_output_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
         }
     } else {
         uint8_t *alpha_ptr = (uint8_t *)decoded->data + rgb_output_size;
-        memset(alpha_ptr, 255, info.width * info.height);
-        safe_cache_sync(alpha_ptr, info.width * info.height, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+        memset(alpha_ptr, 255, alpha_stride * info.height);
     }
 
-    safe_cache_sync(decoded->data, decoded->data_size, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    pjpg_flush_output(decoded);
+#else
+    pjpg_output_format_t format = pjpg_cf == LV_COLOR_FORMAT_ARGB8888 ? PJPG_ARGB8888 : PJPG_RGB565_LE;
+    ESP_GOTO_ON_ERROR(esp_lv_pjpg_decode_sw(src_data, src_size, decoded->data, decoded->data_size,
+                                            decoded->header.stride, format), cleanup, TAG, "PJPG SW decode failed");
+#endif
 
     if (need_free_src && src_data) {
         free(src_data);
     }
 
+#if ESP_LV_ENABLE_HW_JPEG
     // Release mutex before returning
     if (s_pjpg_mutex) {
         xSemaphoreGive(s_pjpg_mutex);
     }
+#endif
 
     return decoded;
 
@@ -1935,10 +1850,12 @@ cleanup:
         free(src_data);
     }
 
+#if ESP_LV_ENABLE_HW_JPEG
     // Release mutex before returning
     if (s_pjpg_mutex) {
         xSemaphoreGive(s_pjpg_mutex);
     }
+#endif
 
     (void)ret;
     return NULL;

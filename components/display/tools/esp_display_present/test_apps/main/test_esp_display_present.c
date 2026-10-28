@@ -124,6 +124,7 @@ typedef struct {
 
 static dummy_io_t s_dummy_io;
 static dummy_panel_t s_dummy_panel;
+static bool s_auto_complete;
 #if SOC_LCD_RGB_SUPPORTED
 static esp_lcd_rgb_panel_event_callbacks_t s_rgb_cbs;
 static void *s_rgb_user_ctx;
@@ -166,6 +167,9 @@ static void IRAM_ATTR fake_rgb_complete_frame(void)
 
 static void IRAM_ATTR dummy_color_done_timer(void *arg)
 {
+    if (!s_auto_complete) {
+        return;
+    }
     dummy_io_t *io = arg;
     if (io->on_color_trans_done != NULL) {
         (void)io->on_color_trans_done(&io->base, NULL, io->user_ctx);
@@ -199,7 +203,7 @@ static esp_err_t dummy_draw_bitmap(esp_lcd_panel_t *panel, int x_start, int y_st
     if (dummy->draw_result != ESP_OK) {
         return dummy->draw_result;
     }
-    if (s_dummy_io.done_timer != NULL &&
+    if (s_auto_complete && s_dummy_io.done_timer != NULL &&
             s_dummy_io.on_color_trans_done != NULL) {
         (void)esp_timer_stop(s_dummy_io.done_timer);
         (void)esp_timer_start_once(s_dummy_io.done_timer, 0);
@@ -211,6 +215,7 @@ static void dummy_panel_init(void)
 {
     memset(&s_dummy_io, 0, sizeof(s_dummy_io));
     memset(&s_dummy_panel, 0, sizeof(s_dummy_panel));
+    s_auto_complete = true;
 #if SOC_LCD_RGB_SUPPORTED
     memset(&s_rgb_cbs, 0, sizeof(s_rgb_cbs));
     s_rgb_user_ctx = NULL;
@@ -489,6 +494,12 @@ TEST_CASE("presenter create/delete arguments", "[present][basic]")
     esp_display_presenter_t *presenter = NULL;
     TEST_ESP_ERR(ESP_ERR_INVALID_ARG, esp_display_presenter_create(NULL, &presenter));
     TEST_ESP_ERR(ESP_ERR_INVALID_ARG, esp_display_presenter_delete(NULL));
+    esp_display_presenter_frame_receipt_t receipt = {.frame_id = 99, .generation = 99};
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, esp_display_presenter_commit_frame_with_receipt(
+                     NULL, NULL, false, &receipt));
+    TEST_ASSERT_EQUAL_UINT64(0, receipt.frame_id);
+    TEST_ASSERT_EQUAL_UINT32(0, receipt.generation);
+    TEST_ESP_ERR(ESP_ERR_INVALID_ARG, esp_display_presenter_get_frame_status(NULL, NULL));
 
     test_presenter_create(&presenter);
 
@@ -555,12 +566,71 @@ TEST_CASE("presenter submits a PARTITION frame", "[present][basic]")
         .coverage = ESP_DISPLAY_PRESENT_COVERAGE_FULL,
     };
     TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENT_CONTRACT_PARTITION, caps.contract);
-    TEST_ESP_OK(esp_display_presenter_commit_frame(presenter, &submit));
+    esp_display_presenter_frame_receipt_t receipt = {0};
+    TEST_ESP_OK(esp_display_presenter_commit_frame_with_receipt(
+                    presenter, &submit, false, &receipt));
+    TEST_ASSERT_NOT_EQUAL(0, receipt.frame_id);
     TEST_ESP_OK(esp_display_presenter_quiesce(presenter, TEST_QUIESCE_TIMEOUT_MS));
+    esp_display_presenter_frame_status_t status;
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_EQUAL_UINT64(receipt.frame_id, status.last_submitted_frame);
+    TEST_ASSERT_EQUAL_UINT64(receipt.frame_id, status.completed_transfer_frame);
+    TEST_ASSERT_EQUAL_UINT64(receipt.frame_id, status.completed_present_frame);
+    TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENT_COMPLETION_TRANSFER, status.completion);
+    TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENT_FAULT_NONE, status.fault_reason);
+    TEST_ASSERT_EQUAL_UINT32(receipt.generation, status.generation);
+    receipt.frame_id = 99;
+    TEST_ESP_ERR(ESP_ERR_INVALID_STATE, esp_display_presenter_commit_frame_with_receipt(
+                     presenter, &submit, false, &receipt));
+    TEST_ASSERT_EQUAL_UINT64(0, receipt.frame_id);
     test_presenter_delete(presenter);
 }
 
 #if SOC_LCD_RGB_SUPPORTED
+TEST_CASE("tracked RGB receipt waits for scanout and survives binding changes",
+          "[present][receipt]")
+{
+    esp_display_presenter_t *presenter;
+    test_fb_presenter_create(ESP_DISPLAY_PRESENT_MODE_TRIPLE_FULL,
+                             ESP_DISPLAY_PRESENT_ROTATE_0, &presenter);
+    TEST_ASSERT_NULL(s_rgb_cbs.on_vsync);
+    s_auto_complete = false;
+    esp_display_present_area_t areas[8];
+    size_t count;
+    bool full;
+    TEST_ESP_OK(esp_display_presenter_begin_next_frame(presenter, NULL, areas, 8, &count, &full));
+    esp_display_presenter_buffer_t buffer;
+    TEST_ESP_OK(esp_display_presenter_acquire_buffer(presenter, &buffer));
+    fill_surface_pattern(&buffer, 1);
+    const esp_display_present_area_t area = {.x1 = 0, .y1 = 0, .x2 = TEST_FB_W - 1, .y2 = TEST_FB_H - 1};
+    TEST_ESP_OK(esp_display_presenter_submit_buffer(presenter, &buffer, &area,
+                                                    TEST_FB_W * sizeof(uint16_t)));
+    const esp_display_presenter_submit_t submit = {.coverage = ESP_DISPLAY_PRESENT_COVERAGE_FULL};
+    esp_display_presenter_frame_receipt_t receipt;
+    TEST_ESP_OK(esp_display_presenter_commit_frame_with_receipt(presenter, &submit, true, &receipt));
+    esp_display_presenter_frame_status_t status;
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_EQUAL_UINT64(0, status.confirmed_present_frame);
+    TEST_ASSERT_NOT_NULL(s_rgb_cbs.on_vsync);
+    fake_rgb_complete_frame();
+    (void)s_rgb_cbs.on_vsync(&s_dummy_panel.base, NULL, s_rgb_user_ctx);
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_EQUAL_UINT64(receipt.frame_id, status.completed_present_frame);
+    TEST_ASSERT_EQUAL_UINT64(0, status.confirmed_present_frame);
+    (void)s_rgb_cbs.on_vsync(&s_dummy_panel.base, NULL, s_rgb_user_ctx);
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_EQUAL_UINT64(receipt.frame_id, status.confirmed_present_frame);
+    TEST_ESP_OK(esp_display_presenter_set_rotation(presenter, ESP_DISPLAY_PRESENT_ROTATE_180));
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_NOT_EQUAL(receipt.generation, status.generation);
+    TEST_ASSERT_EQUAL_UINT64(0, status.confirmed_present_frame);
+    render_full_surface_frame(presenter, 2);
+    fake_rgb_complete_frame();
+    TEST_ESP_OK(esp_display_presenter_get_frame_status(presenter, &status));
+    TEST_ASSERT_GREATER_THAN(receipt.frame_id, status.last_submitted_frame);
+    test_presenter_delete(presenter);
+}
+
 TEST_CASE("FULL presenter produces exact rotated pixels", "[present][pixels]")
 {
     const esp_display_present_rotation_t rotations[] = {

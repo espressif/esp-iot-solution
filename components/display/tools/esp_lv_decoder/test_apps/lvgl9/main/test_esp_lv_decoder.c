@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -272,9 +272,10 @@ TEST_CASE("Validate decoder functionality in LVGL", "[decoder][MMAP sjpg]")
 
 #if !CONFIG_IDF_TARGET_ESP32C3
 #if ESP_LV_ENABLE_PJPG
-TEST_CASE("Validate decoder functionality in LVGL", "[decoder][MMAP pjpg]")
+TEST_CASE("Decode PJPG memory and file sources", "[decoder][pjpg]")
 {
     esp_lv_decoder_handle_t decoder_handle = NULL;
+    TEST_ESP_OK(test_spiffs_init());
     lv_display_t *disp = test_lvgl_init();
     lv_display_set_flush_cb(disp, test_flush_callback);
     TEST_ESP_OK(esp_lv_decoder_init(&decoder_handle));
@@ -298,13 +299,24 @@ TEST_CASE("Validate decoder functionality in LVGL", "[decoder][MMAP pjpg]")
     dsc.data = mmap_assets_get_mem(assets, 0);
     dsc.data_size = mmap_assets_get_size(assets, 0);
 
-    lv_img_set_src(img, &dsc);
-    lv_refr_now(NULL);
-    TEST_ASSERT_TRUE(xSemaphoreTake(flush_sem, pdMS_TO_TICKS(5 * 1000)));
+    FILE *file = fopen("/assets/test.pjpg.bin", "wb");
+    TEST_ASSERT_NOT_NULL(file);
+    TEST_ASSERT_EQUAL(dsc.data_size, fwrite(dsc.data, 1, dsc.data_size, file));
+    TEST_ASSERT_EQUAL(0, fclose(file));
 
+    const void *sources[] = { &dsc, "A:/assets/test.pjpg.bin" };
+    for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        lv_img_set_src(img, sources[i]);
+        lv_refr_now(NULL);
+        TEST_ASSERT_TRUE(xSemaphoreTake(flush_sem, pdMS_TO_TICKS(5 * 1000)));
+    }
+
+    lv_obj_del(img);
     TEST_ESP_OK(mmap_assets_del(assets));
     TEST_ESP_OK(esp_lv_decoder_deinit(decoder_handle));
     test_lvgl_deinit(disp);
+    TEST_ASSERT_EQUAL(0, remove("/assets/test.pjpg.bin"));
+    TEST_ESP_OK(test_spiffs_deinit());
 }
 #endif
 #endif /* !CONFIG_IDF_TARGET_ESP32C3 */

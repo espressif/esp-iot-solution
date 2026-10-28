@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-10-27
+
+- Add correlated frame receipts, coherent transfer/display status and tracking cancellation.
+- Track RGB/MIPI VSYNC on demand and preserve frame IDs across rotation.
+- Wake TE at phase boundaries on IDF 6.2+, with callback-safe teardown and edge/tick fallback.
+
 ## 1.1.2 - 2026-10-09
 
 - Align renderer buffers and expose their guaranteed base alignment.

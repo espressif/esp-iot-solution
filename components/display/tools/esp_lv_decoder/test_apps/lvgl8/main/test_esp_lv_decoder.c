@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_spiffs.h"
+#include <stdio.h>
 
 #include "unity.h"
 #include "unity_test_runner.h"
@@ -180,7 +181,7 @@ TEST_CASE("Validate decoder functionality in LVGL", "[decoder][File qoi]")
 }
 
 #if ESP_LV_ENABLE_PJPG
-TEST_CASE("Validate decoder functionality in LVGL", "[decoder][File pjpg]")
+TEST_CASE("Decode PJPG memory and file sources", "[decoder][pjpg]")
 {
     lv_disp_drv_t *disp_drv = NULL;
     lv_disp_draw_buf_t *disp_buf = NULL;
@@ -204,14 +205,23 @@ TEST_CASE("Validate decoder functionality in LVGL", "[decoder][File pjpg]")
     lv_img_dsc_t d2 = {0};
     d2.data = mmap_assets_get_mem(a2, 0);
     d2.data_size = mmap_assets_get_size(a2, 0);
-    lv_img_set_src(img, &d2);
-    lv_refr_now(NULL);
+    FILE *file = fopen("/assets/test.pjpg", "wb");
+    TEST_ASSERT_NOT_NULL(file);
+    TEST_ASSERT_EQUAL(d2.data_size, fwrite(d2.data, 1, d2.data_size, file));
+    TEST_ASSERT_EQUAL(0, fclose(file));
 
-    TEST_ASSERT_TRUE(xSemaphoreTake(flush_sem, pdMS_TO_TICKS(3 * 1000)));
+    const void *sources[] = { &d2, "A:/assets/test.pjpg" };
+    for (size_t i = 0; i < sizeof(sources) / sizeof(sources[0]); i++) {
+        lv_img_set_src(img, sources[i]);
+        lv_refr_now(NULL);
+        TEST_ASSERT_TRUE(xSemaphoreTake(flush_sem, pdMS_TO_TICKS(3 * 1000)));
+    }
 
+    lv_obj_del(img);
     TEST_ESP_OK(mmap_assets_del(a2));
     TEST_ESP_OK(esp_lv_decoder_deinit(decoder_handle));
     test_lvgl_deinit(disp_drv, disp_buf);
+    TEST_ASSERT_EQUAL(0, remove("/assets/test.pjpg"));
     TEST_ESP_OK(test_spiffs_deinit());
 }
 #endif
