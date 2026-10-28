@@ -102,18 +102,31 @@ esp_err_t esp_ble_eslp_ap_configure_tag(uint16_t conn_handle, const esp_ble_eslp
         return ESP_ERR_INVALID_STATE;
     }
 
+    uint16_t mtu = 0;
+    if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) != ESP_OK) {
+        mtu = 23;
+    }
+    ESP_LOGI(TAG, "configure_tag conn=%u mtu=%u", (unsigned)conn_handle, (unsigned)mtu);
+    if (mtu < (uint16_t)(sizeof(cfg->ap_sync_key) + 3)) {
+        ESP_LOGE(TAG, "ATT MTU %u too small for key material (need >= %u)",
+                 (unsigned)mtu, (unsigned)(sizeof(cfg->ap_sync_key) + 3));
+        return ESP_ERR_INVALID_SIZE;
+    }
+
     esp_err_t ret;
     esp_ble_esl_abs_time_t abs_time = cfg->abs_time;
     if (abs_time == 0) {
         abs_time = (esp_ble_esl_abs_time_t)esp_log_timestamp();
     }
 
+    ESP_LOGI(TAG, "configure_tag write ADDRESS");
     ret = ap_write_uuid16(conn_handle, BLE_ESL_CHR_UUID16_ADDRESS, &cfg->address, sizeof(cfg->address));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "write ADDRESS failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
+    ESP_LOGI(TAG, "configure_tag write AP_SYNC_KEY");
     ret = ap_write_uuid16(conn_handle, BLE_ESL_CHR_UUID16_AP_SYNC_KEY, &cfg->ap_sync_key, sizeof(cfg->ap_sync_key));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "write AP_SYNC_KEY failed: %s", esp_err_to_name(ret));
@@ -122,12 +135,14 @@ esp_err_t esp_ble_eslp_ap_configure_tag(uint16_t conn_handle, const esp_ble_eslp
     s_ap.ap_sync_key = cfg->ap_sync_key;
     s_ap.has_ap_sync_key = true;
 
+    ESP_LOGI(TAG, "configure_tag write RESP_KEY");
     ret = ap_write_uuid16(conn_handle, BLE_ESL_CHR_UUID16_RESP_KEY, &cfg->resp_key, sizeof(cfg->resp_key));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "write RESP_KEY failed: %s", esp_err_to_name(ret));
         return ret;
     }
 
+    ESP_LOGI(TAG, "configure_tag write ABS_TIME");
     ret = ap_write_uuid16(conn_handle, BLE_ESL_CHR_UUID16_CURRENT_ABS_TIME, &abs_time, sizeof(abs_time));
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "write ABS_TIME failed: %s", esp_err_to_name(ret));
@@ -289,6 +304,14 @@ esp_err_t esp_ble_eslp_ap_sync_transfer(uint16_t conn_handle, uint16_t service_d
 #endif
 }
 
+bool esp_ble_eslp_ap_keeps_sync_without_past(uint16_t conn_handle)
+{
+    if (!s_ap.inited) {
+        return false;
+    }
+    return eslp_ap_lifecycle_keeps_sync_without_past(conn_handle);
+}
+
 esp_err_t esp_ble_eslp_ap_queue_pawr_command(uint8_t subevent, const uint8_t *tlv, uint8_t tlv_len,
                                              uint8_t rsp_slot_start, uint8_t rsp_slot_count)
 {
@@ -374,12 +397,15 @@ static void ap_on_conn_event(void *handler_args, esp_event_base_t base, int32_t 
     }
     case ESP_BLE_CONN_EVENT_DISCONNECTED: {
         uint16_t conn_handle = BLE_CONN_HANDLE_INVALID;
+        uint16_t reason = 0;
         if (event_data) {
-            conn_handle = ((const uint16_t *)event_data)[0];
+            const esp_ble_conn_event_data_t *ev = event_data;
+            conn_handle = ev->disconnected.conn_handle;
+            reason = ev->disconnected.reason;
         }
         if (conn_handle != BLE_CONN_HANDLE_INVALID) {
             eslp_ap_cmd_on_disconnected(conn_handle);
-            (void)eslp_ap_lifecycle_on_disconnected(conn_handle);
+            (void)eslp_ap_lifecycle_on_disconnected(conn_handle, reason);
         }
         break;
     }
@@ -421,31 +447,32 @@ static void ap_on_conn_event(void *handler_args, esp_event_base_t base, int32_t 
         uint8_t filled = 0;
         for (uint8_t i = 0; i < count; i++) {
             uint8_t sub = (uint8_t)(req->subevent_start + i);
-            items[filled].subevent = sub;
-            if (sub < CONFIG_BLE_ESL_PROFILE_AP_MAX_SUBEVENTS && s_ap.subev[sub].valid) {
-                eslp_ap_subev_cmd_t *slot = &s_ap.subev[sub];
-                items[filled].data = slot->data;
-                items[filled].data_len = slot->len;
-                items[filled].response_slot_start = slot->rsp_slot_start;
-                items[filled].response_slot_count = slot->rsp_slot_count;
-                pending_clear[pending_clear_n++] = sub;
-            } else {
-                items[filled].data = NULL;
-                items[filled].data_len = 0;
-                items[filled].response_slot_start = 0;
-                items[filled].response_slot_count = 0;
+            /* Skip idle subevents. Answering DATA_REQ with empty payload and
+             * response_slot_count=0 makes the ESP32-C6 controller schedule a
+             * full PAwR train (starves GAP scan) and can assert in
+             * pawrBcast_hal_sched_subevent. Spec: no Host data => skip TX. */
+            if (sub >= CONFIG_BLE_ESL_PROFILE_AP_MAX_SUBEVENTS || !s_ap.subev[sub].valid) {
+                continue;
             }
+            eslp_ap_subev_cmd_t *slot = &s_ap.subev[sub];
+            items[filled].subevent = sub;
+            items[filled].data = slot->data;
+            items[filled].data_len = slot->len;
+            items[filled].response_slot_start = slot->rsp_slot_start;
+            items[filled].response_slot_count = slot->rsp_slot_count;
+            pending_clear[pending_clear_n++] = sub;
             filled++;
         }
-        if (filled > 0) {
-            esp_err_t ret = esp_ble_conn_pawr_subev_data_set(filled, items);
-            if (ret == ESP_OK) {
-                for (uint8_t j = 0; j < pending_clear_n; j++) {
-                    s_ap.subev[pending_clear[j]].valid = false;
-                }
-            } else {
-                ESP_LOGW(TAG, "pawr_subev_data_set failed: %s (queue kept)", esp_err_to_name(ret));
+        if (filled == 0) {
+            break;
+        }
+        esp_err_t ret = esp_ble_conn_pawr_subev_data_set(filled, items);
+        if (ret == ESP_OK) {
+            for (uint8_t j = 0; j < pending_clear_n; j++) {
+                s_ap.subev[pending_clear[j]].valid = false;
             }
+        } else {
+            ESP_LOGW(TAG, "pawr_subev_data_set failed: %s (queue kept)", esp_err_to_name(ret));
         }
         break;
     }
@@ -534,4 +561,40 @@ esp_err_t esp_ble_eslp_ap_deinit(void)
     (void)eslp_ap_lifecycle_deinit();
     memset(&s_ap, 0, sizeof(s_ap));
     return ESP_OK;
+}
+
+esp_err_t esp_ble_eslp_ap_set_ap_sync_key(const esp_ble_esl_key_material_t *key)
+{
+    if (!s_ap.inited || key == NULL) {
+        return key == NULL ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
+    }
+    s_ap.ap_sync_key = *key;
+    s_ap.has_ap_sync_key = true;
+    return ESP_OK;
+}
+
+esp_err_t esp_ble_eslp_ap_restore_persisted(const esp_ble_esl_address_t *addr,
+                                            const uint8_t ble_addr[6], uint8_t ble_addr_type,
+                                            const esp_ble_esl_key_material_t *resp_key)
+{
+    if (!s_ap.inited) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return eslp_ap_lifecycle_restore(addr, ble_addr, ble_addr_type, resp_key);
+}
+
+esp_err_t esp_ble_eslp_ap_forget_tag(uint8_t esl_id, uint8_t group_id)
+{
+    if (!s_ap.inited) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (esl_id == BLE_ESL_BROADCAST_ADDRESS || group_id > 0x7F) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    esp_ble_esl_address_t addr = {
+        .esl_id = esl_id,
+    };
+    BLE_ESL_ADDR_SET_GROUP_ID(addr, group_id);
+    return eslp_ap_lifecycle_forget(&addr);
 }

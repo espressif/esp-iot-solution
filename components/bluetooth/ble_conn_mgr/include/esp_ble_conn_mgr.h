@@ -431,6 +431,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ   = 17,   /*!< PAwR: controller requests subevent data; see esp_ble_conn_pawr_subev_data_req_t */
     ESP_BLE_CONN_EVENT_PER_SUBEV_RESP       = 18,   /*!< PAwR: response received in a response slot; see esp_ble_conn_pawr_subev_resp_t */
     ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER    = 19,   /*!< PAST: sync established via transfer; see esp_ble_conn_periodic_transfer_t */
+    ESP_BLE_CONN_EVENT_CONNECT_FAILED        = 20,   /*!< Outgoing connection attempt failed before a handle was assigned */
 } esp_ble_conn_event_t;
 
 /**
@@ -765,6 +766,11 @@ typedef struct {
             uint8_t peer_addr_type;                      /*!< Peer address type: esp_ble_conn_addr_type_t */
         } connected;                                     /*!< ESP_BLE_CONN_EVENT_CONNECTED */
         struct {
+            int status;                                   /*!< GAP connect failure status */
+            uint8_t peer_addr[6];                         /*!< Pending peer address */
+            uint8_t peer_addr_type;                       /*!< Pending peer address type */
+        } connect_failed;                                /*!< ESP_BLE_CONN_EVENT_CONNECT_FAILED */
+        struct {
             uint16_t conn_handle;                         /*!< Connection handle */
             uint16_t reason;                              /*!< Disconnect reason (stack/HCI error code) */
             uint8_t peer_addr[6];                         /*!< Peer address (big-endian) */
@@ -918,13 +924,55 @@ esp_err_t esp_ble_conn_disconnect(void);
  *       Returns ESP_ERR_INVALID_STATE if a connection attempt is already in progress.
  *
  * @return
- *  - ESP_OK on success (connection initiated; result via ESP_BLE_CONN_EVENT_CONNECTED/DISCONNECTED)
+ *  - ESP_OK on success (connection initiated; result via ESP_BLE_CONN_EVENT_CONNECTED/CONNECT_FAILED)
  *  - ESP_ERR_INVALID_ARG on invalid parameters
  *  - ESP_ERR_INVALID_STATE if max connections reached, peer already connected/pending, or another attempt in progress
  *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
  *  - ESP_FAIL if connection initiation fails
  */
 esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type);
+
+/**
+ * @brief   Connect to a synchronized peer via PAwR AUX_CONNECT_REQ.
+ *
+ * Used after PAST: the Tag is no longer connectable-advertising, so ACL
+ * `esp_ble_conn_connect_to_addr()` cannot find it. The connection request is
+ * sent in the given PAwR subevent of the local periodic advertising train
+ * (`ext_adv_handle`).
+ *
+ * @param[in] peer_addr       Peer BLE address (6 bytes)
+ * @param[in] peer_addr_type  Peer address type: esp_ble_conn_addr_type_t
+ * @param[in] subevent        PAwR subevent index (ESL Group_ID)
+ *
+ * @return
+ *  - ESP_OK on success (connection initiated; result via ESP_BLE_CONN_EVENT_CONNECTED/CONNECT_FAILED)
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_INVALID_STATE if max connections reached, peer already connected/pending, or another attempt in progress
+ *  - ESP_ERR_NOT_SUPPORTED if Central role or PAwR is not enabled
+ *  - ESP_FAIL if connection initiation fails
+ */
+esp_err_t esp_ble_conn_connect_with_synced(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                           uint8_t subevent);
+
+/**
+ * @brief   Cancel an in-progress outgoing GAP connect.
+ *
+ * Blocks until NimBLE reports the attempt failed (or 1 s). The pending entry
+ * is removed only by the CONNECT failure event. On timeout, if
+ * `ble_gap_conn_cancel()` fails, or if no GAP connect is active, pending is
+ * left in place so a late CONNECT success still runs GATT discovery.
+ * Safe to call when no connect is active. Must not be invoked from the NimBLE
+ * host / GAP callback.
+ *
+ * @return
+ *  - ESP_OK if the GAP connect procedure is idle, or NimBLE reported failure
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_TIMEOUT if the controller did not drop the procedure in time
+ *    (pending entry kept)
+ *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
+ *  - ESP_FAIL if `ble_gap_conn_cancel()` fails (pending entry kept)
+ */
+esp_err_t esp_ble_conn_connect_cancel(void);
 
 /**
  * @brief   Disconnect a BLE connection by handle.
@@ -934,6 +982,7 @@ esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_
  * @return
  *  - ESP_OK on success
  *  - ESP_ERR_INVALID_ARG if conn_handle is BLE_CONN_HANDLE_INVALID or out of range
+ *  - ESP_ERR_NOT_FOUND if the link is already gone, usually closed by the peer
  *  - ESP_FAIL if disconnect fails
  */
 esp_err_t esp_ble_conn_disconnect_by_handle(uint16_t conn_handle);
@@ -1925,7 +1974,12 @@ esp_err_t esp_ble_conn_indicate_by_attr_handle(uint16_t conn_handle, uint16_t at
 /**
  * @brief This api is typically used to read actively
  *
- * @param[in]  outbuf The pointer to store read data.
+ * @param[in,out] outbuf Read request/response buffer. If `outbuf->data` is NULL, this function returns a
+ *                       borrowed pointer to the internal read cache and sets `data_len` to the full value
+ *                       length; do not free that pointer, and do not use it after disconnect, a later
+ *                       read that replaces the cache, or deinit. Otherwise, `data_len` is the caller-owned
+ *                       buffer capacity and is updated to the number of bytes copied (truncated when the
+ *                       buffer is smaller than the characteristic value).
  *
  * @return
  *  - ESP_OK on success
@@ -1938,7 +1992,12 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *outbuf);
  * @brief Read characteristic on a specific connection.
  *
  * @param[in]     conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
- * @param[in,out] outbuf      Read request/response buffer (UUID and optional write_conn_id; response in outbuf).
+ * @param[in,out] outbuf      Read request/response buffer. If `outbuf->data` is NULL, this function returns a
+ *                            borrowed pointer to the internal read cache and sets `data_len` to the full
+ *                            value length; do not free that pointer, and do not use it after disconnect, a
+ *                            later read that replaces the cache, or deinit. Otherwise, `data_len` is the
+ *                            caller-owned buffer capacity and is updated to the number of bytes copied
+ *                            (truncated when the buffer is smaller than the characteristic value).
  *
  * @return
  *  - ESP_OK on success

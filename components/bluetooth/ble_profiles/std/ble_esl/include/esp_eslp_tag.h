@@ -344,6 +344,37 @@ esp_err_t esp_ble_eslp_report_sensor_data(uint8_t sensor_index, uint8_t error_co
  */
 esp_err_t esp_ble_eslp_get_image(uint8_t image_index, const uint8_t **data, uint32_t *len);
 
+/**
+ * @brief Copy a stored image into a caller buffer
+ */
+esp_err_t esp_ble_eslp_image_snapshot(uint8_t image_index, uint8_t *out, uint32_t out_cap, uint32_t *out_len);
+
+/**
+ * @brief Load an image slot from flash/RAM backup
+ */
+esp_err_t esp_ble_eslp_image_restore(uint8_t image_index, const uint8_t *data, uint32_t len);
+
+/**
+ * @brief Clear all OTP image slots
+ */
+void esp_ble_eslp_image_invalidate_all(void);
+
+/**
+ * @brief Restore association from NVS after reboot (Unsynchronized)
+ */
+esp_err_t esp_ble_eslp_restore_association(const esp_ble_esl_address_t *addr,
+                                           const esp_ble_esl_key_material_t *ap_sync_key,
+                                           const esp_ble_esl_key_material_t *resp_key,
+                                           uint8_t peer_addr_type, const uint8_t peer_addr[6]);
+
+/**
+ * @brief Export current association for NVS snapshot
+ */
+esp_err_t esp_ble_eslp_export_association(esp_ble_esl_address_t *addr,
+                                          esp_ble_esl_key_material_t *ap_sync_key,
+                                          esp_ble_esl_key_material_t *resp_key,
+                                          uint8_t *peer_addr_type, uint8_t peer_addr[6]);
+
 #ifdef __cplusplus
 }
 #endif

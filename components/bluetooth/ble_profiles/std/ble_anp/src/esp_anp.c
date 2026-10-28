@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -221,13 +221,14 @@ esp_err_t esp_ble_anp_get_new_alert(uint8_t cat_id, uint8_t *cat_val)
         return ESP_ERR_INVALID_ARG;
     }
 
+    uint8_t new_alert_cat = 0;
     esp_ble_conn_data_t inbuff = {
         .type = BLE_CONN_UUID_TYPE_16,
         .uuid = {
             .uuid16 = BLE_ANP_CHR_UUID16_SUP_NEW_ALERT_CAT,
         },
-        .data = NULL,
-        .data_len = 0,
+        .data = &new_alert_cat,
+        .data_len = sizeof(new_alert_cat),
     };
 
     esp_err_t rc = esp_ble_conn_read(&inbuff);
@@ -236,7 +237,7 @@ esp_err_t esp_ble_anp_get_new_alert(uint8_t cat_id, uint8_t *cat_val)
         return rc;
     }
 
-    ble_svc_ans_new_alert_cat = *inbuff.data;
+    ble_svc_ans_new_alert_cat = new_alert_cat;
 
     ESP_LOG_BUFFER_HEX_LEVEL(TAG, inbuff.data, inbuff.data_len, ESP_LOG_INFO);
 
@@ -296,13 +297,14 @@ esp_err_t esp_ble_anp_get_unr_alert(uint8_t cat_id, uint8_t *cat_val)
         return ESP_ERR_INVALID_ARG;
     }
 
+    uint8_t unr_alert_cat = 0;
     esp_ble_conn_data_t inbuff = {
         .type = BLE_CONN_UUID_TYPE_16,
         .uuid = {
             .uuid16 = BLE_ANP_CHR_UUID16_SUP_UNR_ALERT_CAT,
         },
-        .data = NULL,
-        .data_len = 0,
+        .data = &unr_alert_cat,
+        .data_len = sizeof(unr_alert_cat),
     };
 
     esp_err_t rc = esp_ble_conn_read(&inbuff);
@@ -311,7 +313,7 @@ esp_err_t esp_ble_anp_get_unr_alert(uint8_t cat_id, uint8_t *cat_val)
         return rc;
     }
 
-    ble_svc_ans_unr_alert_cat = *inbuff.data;
+    ble_svc_ans_unr_alert_cat = unr_alert_cat;
 
     ESP_LOG_BUFFER_HEX_LEVEL(TAG, &ble_svc_ans_unr_alert_cat, sizeof(ble_svc_ans_unr_alert_cat), ESP_LOG_INFO);
 

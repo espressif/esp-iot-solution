@@ -235,12 +235,23 @@ esp_err_t eslp_ap_cmd_write_ecp(uint16_t conn_handle, const uint8_t *tlv, uint8_
         .data = (uint8_t *)tlv,
         .data_len = tlv_len,
     };
+    /* Arm before the GATT write so a Tag 0x13 that arrives before the write
+     * result can be correlated, but only a successful write confirms UC. */
+    if (tlv[0] == BLE_ESL_CMD_UPDATE_COMPLETE) {
+        (void)eslp_ap_lifecycle_begin_update_complete(conn_handle);
+    }
     esp_err_t ret = esp_ble_conn_write_by_handle(conn_handle, &buff);
     if (ret != ESP_OK) {
         if (slot) {
             ecp_clear(slot);
         }
+        if (tlv[0] == BLE_ESL_CMD_UPDATE_COMPLETE) {
+            (void)eslp_ap_lifecycle_cancel_update_complete(conn_handle);
+        }
         return ret;
+    }
+    if (tlv[0] == BLE_ESL_CMD_UPDATE_COMPLETE) {
+        (void)eslp_ap_lifecycle_confirm_update_complete(conn_handle);
     }
     return ESP_OK;
 }

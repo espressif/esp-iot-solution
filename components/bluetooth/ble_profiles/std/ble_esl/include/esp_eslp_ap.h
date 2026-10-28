@@ -297,6 +297,23 @@ esp_err_t esp_ble_eslp_ap_ping(uint8_t esl_id, uint8_t group_id);
 esp_err_t esp_ble_eslp_ap_unassociate(uint8_t esl_id, uint8_t group_id);
 
 /**
+ * @brief Forget an unassociated Tag and release its AP lifecycle slot
+ *
+ * Call only after the Unassociate procedure has been confirmed. Ordinary ACL
+ * disconnects must retain the slot so the AP can recover the association.
+ *
+ * @param[in] esl_id   ESL ID
+ * @param[in] group_id ESL Group ID
+ *
+ * @return
+ *  - ESP_OK on successful
+ *  - ESP_ERR_NOT_FOUND if the Tag is not tracked
+ *  - ESP_ERR_INVALID_ARG on wrong parameter
+ *  - ESP_ERR_INVALID_STATE on wrong initialization
+ */
+esp_err_t esp_ble_eslp_ap_forget_tag(uint8_t esl_id, uint8_t group_id);
+
+/**
  * @brief Send Service Reset (opcode 0x02)
  *
  * @param[in]  esl_id   ESL ID
@@ -466,6 +483,18 @@ esp_err_t esp_ble_eslp_ap_pawr_stop(void);
 esp_err_t esp_ble_eslp_ap_sync_transfer(uint16_t conn_handle, uint16_t service_data);
 
 /**
+ * @brief Whether this ACL was opened while the Tag was already Synchronized
+ *
+ * Image updates via PAwR connection (ESLP UPD/BV-02) keep periodic sync; the Tag
+ * disconnects on Update Complete without requiring another PAST.
+ *
+ * @param[in] conn_handle  Connection handle
+ *
+ * @return true if Update Complete alone should restore Synchronized
+ */
+bool esp_ble_eslp_ap_keeps_sync_without_past(uint16_t conn_handle);
+
+/**
  * @brief Queue an ESL command TLV for a PAwR subevent
  *
  * For unicast, set rsp_slot_start to the response slot of the last addressed TLV
@@ -534,6 +563,18 @@ esp_err_t esp_ble_eslp_ap_get_tag_state(const esp_ble_esl_address_t *addr, esp_b
  *  - ESP_ERR_NOT_FOUND if no tracked Tag matches the connection
  */
 esp_err_t esp_ble_eslp_ap_note_tag_sync_activity(uint16_t conn_handle);
+
+/**
+ * @brief Install AP Sync Key used to encrypt PAwR commands (after restore)
+ */
+esp_err_t esp_ble_eslp_ap_set_ap_sync_key(const esp_ble_esl_key_material_t *key);
+
+/**
+ * @brief Re-track a previously associated Tag after AP reboot
+ */
+esp_err_t esp_ble_eslp_ap_restore_persisted(const esp_ble_esl_address_t *addr,
+                                            const uint8_t ble_addr[6], uint8_t ble_addr_type,
+                                            const esp_ble_esl_key_material_t *resp_key);
 
 #ifdef __cplusplus
 }

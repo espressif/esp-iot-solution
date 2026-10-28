@@ -1,37 +1,32 @@
-menu "Example Configuration"
+menu "BLE ESL Tag Product Example"
 
-    config EXAMPLE_BLE_ADV_NAME
-        string "Advertisement name"
+    config ESL_TAG_ADV_NAME
+        string "Tag advertisement name"
         default "ESP_ESL_TAG"
         help
-            Device name used in BLE advertising.
+            Complete Local Name used by ble_conn_mgr advertising.
 
-    config EXAMPLE_BLE_SUB_ADV
-        string "Subsequent advertisement data"
-        default "ESL_TAG"
-        help
-            Extra subsequent advertisement payload text.
-
-    config EXAMPLE_ESL_DISPLAY_WIDTH
-        int "Demo display width"
-        range 1 4095
+    config ESL_TAG_DISPLAY_WIDTH
+        int "Display width (metadata)"
         default 296
-        help
-            Width reported by ESL Display Information.
 
-    config EXAMPLE_ESL_DISPLAY_HEIGHT
-        int "Demo display height"
-        range 1 4095
+    config ESL_TAG_DISPLAY_HEIGHT
+        int "Display height (metadata)"
         default 128
-        help
-            Height reported by ESL Display Information.
 
-    config EXAMPLE_ESL_MAX_IMAGE_INDEX
-        int "Demo Max Image Index"
-        range 0 255
-        default 0
+    config ESL_TAG_MAX_IMAGES
+        int "Maximum stored image slots (Max_Image_Index + 1)"
+        range 1 255
+        default 4
         help
-            Highest image index reported by ESL Image Information.
-            Keep aligned with CONFIG_BLE_ESL_MAX_IMAGES - 1.
+            Reported via ESL Image Information. OTS flash persistence
+            covers physical slots 0..3.
+
+    config ESL_TAG_LED_MULTI_DEMO
+        bool "Enable multi-Tag LED demo local green on SYNCHRONIZED"
+        depends on ESL_TAG_LED_BACKEND_WS2812 || ESL_TAG_LED_BACKEND_GPIO
+        default n
+        help
+            Keep disabled for mode 2 so association NVS is saved and restored.
 
 endmenu

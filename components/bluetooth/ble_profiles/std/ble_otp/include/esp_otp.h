@@ -131,7 +131,13 @@ typedef union {
 
     struct {
         esp_ble_ots_feature_t feature;                     /*!< OTS Feature */
+        uint16_t conn_handle;                               /*!< Connection where OTS was found */
     } ots_discovered;                                       /*!< OTS discovered event data */
+
+    struct {
+        uint16_t conn_handle;                               /*!< Connection that failed OTS discovery */
+        esp_err_t error;                                    /*!< Feature-read error */
+    } ots_discovery_failed;                                 /*!< OTS discovery failed event data */
 
     struct {
         esp_ble_otp_object_info_t object_info;             /*!< Selected object information */
@@ -772,6 +778,9 @@ esp_err_t esp_ble_otp_client_abort(uint16_t conn_handle);
 
 /**
  * @brief Send data over Object Transfer Channel (after read/write operation initiated)
+ *
+ * A successful call reports exactly one BLE_OTP_EVENT_TRANSFER_DATA_SENT,
+ * either after the immediate send or when a flow-controlled SDU is unstalled.
  *
  * @param[in] transfer_info  Transfer channel information (from event)
  * @param[in] data            Data to send

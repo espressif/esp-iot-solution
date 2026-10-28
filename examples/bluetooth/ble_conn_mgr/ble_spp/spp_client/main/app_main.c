@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -24,6 +24,7 @@ static const char *TAG = "app_main";
 
 /* 16 Bit SPP Service Characteristic UUID */
 #define GATT_SPP_CHR_UUID                                  0xABF1
+#define GATT_SPP_READ_BUF_LEN                              512
 
 #ifdef CONFIG_BT_NIMBLE_ENABLED
 #define ATTRIBUTE_MAX_CONNECTIONS                   CONFIG_BT_NIMBLE_MAX_CONNECTIONS
@@ -67,13 +68,14 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
 
         ESP_LOG_BUFFER_CHAR(TAG, conn_data->data, conn_data->data_len);
 
+        uint8_t read_buf[GATT_SPP_READ_BUF_LEN];
         esp_ble_conn_data_t inbuff = {
             .type = BLE_CONN_UUID_TYPE_16,
             .uuid = {
                 .uuid16 = GATT_SPP_CHR_UUID,
             },
-            .data = NULL,
-            .data_len = 0,
+            .data = read_buf,
+            .data_len = sizeof(read_buf),
         };
         esp_err_t rc = esp_ble_conn_read(&inbuff);
         if (rc == 0) {

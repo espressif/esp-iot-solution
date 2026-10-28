@@ -1,0 +1,95 @@
+menu "ESL Tag HAL"
+
+    choice ESL_TAG_DISPLAY_BACKEND
+        prompt "Display output backend"
+        default ESL_TAG_DISPLAY_BACKEND_EPAPER if IDF_TARGET_ESP32H4 || IDF_TARGET_ESP32C6
+        default ESL_TAG_DISPLAY_BACKEND_MOCK
+
+        config ESL_TAG_DISPLAY_BACKEND_MOCK
+            bool "Mock (log only)"
+
+        config ESL_TAG_DISPLAY_BACKEND_EPAPER
+            bool "SSD1680 e-paper (epaper component)"
+    endchoice
+
+    config ESL_TAG_EPAPER_PWR_GPIO
+        int "E-paper power control GPIO"
+        range 0 54
+        default 37 if IDF_TARGET_ESP32H4
+        default 8 if IDF_TARGET_ESP32C6
+        default 37
+        depends on ESL_TAG_DISPLAY_BACKEND_EPAPER
+        help
+            GPIO that enables the e-paper panel power rail. Polarity is set by
+            ESL_TAG_EPAPER_PWR_ACTIVE_HIGH.
+
+    config ESL_TAG_EPAPER_PWR_ACTIVE_HIGH
+        bool "E-paper power GPIO is active-high"
+        default y if IDF_TARGET_ESP32H4
+        default n if IDF_TARGET_ESP32C6
+        default y
+        depends on ESL_TAG_DISPLAY_BACKEND_EPAPER
+        help
+            When enabled, the power GPIO is driven high to power the panel and
+            low to cut power. This matches esp_esl_demo on ESP32-H4 (GPIO37 held
+            high during init/refresh). Disable for active-low power rails.
+
+    config ESL_TAG_EPAPER_SPI_HOST
+        int "E-paper SPI host id (SPI2_HOST=1 on most chips)"
+        range 0 2
+        default 1
+        depends on ESL_TAG_DISPLAY_BACKEND_EPAPER
+
+    choice ESL_TAG_LED_BACKEND
+        prompt "LED output backend"
+        # Epaper owns SPI2 + GPIO38 on H4; keep LED off to avoid bus/pin clash.
+        default ESL_TAG_LED_BACKEND_NONE if ESL_TAG_DISPLAY_BACKEND_EPAPER
+        default ESL_TAG_LED_BACKEND_WS2812 if IDF_TARGET_ESP32C6
+        default ESL_TAG_LED_BACKEND_WS2812 if IDF_TARGET_ESP32H4
+        default ESL_TAG_LED_BACKEND_NONE
+
+        config ESL_TAG_LED_BACKEND_NONE
+            bool "Disabled (log only)"
+
+        config ESL_TAG_LED_BACKEND_GPIO
+            bool "Discrete GPIO LED"
+
+        config ESL_TAG_LED_BACKEND_WS2812
+            bool "Addressable WS2812 (e.g. C6/H4 DevKit onboard RGB)"
+    endchoice
+
+    config ESL_TAG_LED_GPIO
+        int "GPIO for discrete LED (-1 disabled)"
+        range -1 54
+        default -1
+        depends on ESL_TAG_LED_BACKEND_GPIO
+
+    config ESL_TAG_LED_ACTIVE_LEVEL
+        int "Discrete LED active level (0=active low, 1=active high)"
+        range 0 1
+        default 1
+        depends on ESL_TAG_LED_BACKEND_GPIO
+
+    config ESL_TAG_WS2812_GPIO
+        int "WS2812 data GPIO"
+        range 0 54
+        default 38 if IDF_TARGET_ESP32H4
+        default 8
+        depends on ESL_TAG_LED_BACKEND_WS2812
+
+    choice ESL_TAG_WS2812_BACKEND
+        depends on ESL_TAG_LED_BACKEND_WS2812
+        prompt "WS2812 peripheral backend"
+        default ESL_TAG_WS2812_BACKEND_SPI if IDF_TARGET_ESP32H4
+        default ESL_TAG_WS2812_BACKEND_RMT if SOC_RMT_SUPPORTED
+        default ESL_TAG_WS2812_BACKEND_SPI
+
+        config ESL_TAG_WS2812_BACKEND_RMT
+            depends on SOC_RMT_SUPPORTED
+            bool "RMT"
+
+        config ESL_TAG_WS2812_BACKEND_SPI
+            bool "SPI"
+    endchoice
+
+endmenu

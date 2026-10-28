@@ -1,72 +1,53 @@
-| Supported Targets | ESP32-H4 | ESP32-S31 |
-| ----------------- | -------- | --------- |
+| Supported Targets | ESP32-H4 | ESP32-C6 | ESP32-S31 |
+| ----------------- | -------- | -------- | --------- |
 
-# BLE ESL Access Point Example
+# BLE ESL Access Point (profile example)
 
-Minimal AP demo for the Electronic Shelf Label Profile. Main flow:
+Default build is **mode 2**: AP + existing Android App over NUS JSONL. The App is **not** changed — command names, events, NUS UUIDs, `max_chunk:192`, `max_line:1024`, `protocol: esl-jsonl-v1`, and `device_name: ESP-ESL-AP` stay byte-compatible with the product firmware.
 
-1. Scans and connects to a Tag advertising name `ESP_ESL_TAG`
-2. Bonds with LE Secure Connections (`SM_CAP=10`)
-3. After **ENC**: `configure_tag` writes Address, **non-zero demo Keys**, and Absolute Time (**not** Update Complete)
-4. Reads Tag info (Display / Image / LED / Sensor)
-5. Waits for **OTS discovered**, then transfers a 64-byte demo image via OTP
-6. Sends Display Image, LED Control, and Read Sensor over ECP (one pending at a time)
-7. Sends **Update Complete**, starts PAwR, PAST (`sync_transfer`), and queues a Ping
+This example sits on iot-solution `esp_ble_eslp_*` + `ble_conn_mgr` (not ESP-IDF `ble_esl_*`). Pair with [`ble_esl_tag`](../ble_esl_tag/README.md).
+
+The original product tree `examples/bluetooth/ble_esl/` is unchanged and remains in the repo.
 
 ## Requirements
 
 - ESP-IDF **v6.1 or newer**
-- Target chip: **ESP32-H4** or **ESP32-S31**
-- A second board running `ble_esl_tag`
+- PAwR-capable chip: **ESP32-H4**, **ESP32-C6**, or **ESP32-S31** (H4/S31 are preview: `idf.py --preview`)
+- One Tag board running `ble_esl_tag` (SSD1680 e-paper on H4/C6)
+- Existing Android ESL App (no APK change)
 
-## How to Use Example
+## How to use
 
 ```bash
 cd examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap
-idf.py set-target esp32h4
+idf.py set-target esp32c6    # or: idf.py --preview set-target esp32h4
+idf.py erase-flash
 idf.py build flash monitor
 ```
 
-Or use `esp32s31` as the target. Flash `ble_esl_tag` on another board first.
+First bring-up: erase flash on AP and Tag so old NVS/bonds do not leak.
 
 ### Configure
 
-```bash
-idf.py menuconfig
-```
+`sdkconfig.defaults` already selects:
 
-- `Example Configuration` - Tag name, ESL ID, Group ID
-- `BLE Connection Management` - Extended Adv, Periodic Adv, PAST, PAwR; SM Bond + SC
-- `BLE Profile: Electronic Shelf Label` - AP role
+| Option | Value |
+|--------|--------|
+| AP operation mode | AP + phone app (`ESL_AP_MODE_WITH_APP`) |
+| PAwR subevents | 4 |
+| Ext-adv instances | 2 (PAwR instance 0, NUS instance 1) |
+| NimBLE dynamic GATT | on (`CONFIG_BT_NIMBLE_DYNAMIC_SERVICE`; required so NUS can be registered after the host starts) |
+| Max BLE connections | 3 (phone + Tag) |
 
-## Demo keys
+## Expected App flow
 
-AP Sync / Response Key Material are filled with fixed demo patterns in
-`app_main.c` (`0xA0…` / `0xB0…` session keys). They are for lab demos only.
+1. Phone connects to **ESP-ESL-AP** (NUS)
+2. `provision_tag` → Tag associates and PAST-syncs
+3. `upload_image_*` (4736-byte 1bpp SSD1680 frame) → `transfer_image_to_tag`
+4. `display_image` / `refresh_display`
 
-## Example Output
+JSONL image upload over NUS is a demo transport (`max_chunk:192`).
 
-```
-I (xxx) ble_esl_ap: ESL AP started. Scanning for Tag name 'ESP_ESL_TAG'
-I (xxx) ble_esl_ap: Connected conn=1
-I (xxx) ble_esl_ap: Discovery complete
-I (xxx) ble_esl_ap: Link encrypted
-I (xxx) ble_esl_ap: Tag provisioned (GATT writes): conn=1 esl_id=0x00 group=0
-I (xxx) ble_esl_ap: Tag info: displays=1 image=yes sensors=3 leds=1 pnp=no
-I (xxx) ble_esl_ap: OTS discovered on Tag
-I (xxx) ble_esl_ap: Image transfer started: index=0 len=64
-I (xxx) ble_esl_ap: Image transferred: index=0 status=ESP_OK
-I (xxx) ble_esl_ap: display_image: ESP_OK
-I (xxx) ble_esl_ap: ECP response conn=1 len=...
-I (xxx) ble_esl_ap: led_control: ESP_OK
-I (xxx) ble_esl_ap: read_sensor: ESP_OK
-I (xxx) ble_esl_ap: update_complete: ESP_OK
-I (xxx) ble_esl_ap: PAwR started
-I (xxx) ble_esl_ap: PAST set_info done
-```
+## Testing
 
-Display → LED → Sensor run one at a time (single ECP pending). Update Complete and PAST run after the Sensor response (or timeout). Image transfer waits for `BLE_OTP_EVENT_OTS_DISCOVERED` (or skips with a clear log if discovery fails).
-
-## Troubleshooting
-
-For any technical queries, please open an [issue](https://github.com/espressif/esp-iot-solution/issues) on GitHub.
+There is no host-side unit-test target for this example yet. Validate on hardware with a PAwR-capable AP, a `ble_esl_tag` board, and the Android ESL App (provision → image upload/transfer → display). Cover recovery after AP reboot and repeated `transfer_image_to_tag` while the Tag is synchronized.

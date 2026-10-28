@@ -1,0 +1,4 @@
+# ESP32-C6 mode-2 demo: SSD1680, LED off.
+# Panel power is GPIO8 (active-low), the same pin as the DevKit WS2812.
+CONFIG_ESL_TAG_DISPLAY_BACKEND_EPAPER=y
+CONFIG_ESL_TAG_LED_BACKEND_NONE=y

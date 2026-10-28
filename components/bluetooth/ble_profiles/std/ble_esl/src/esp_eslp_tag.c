@@ -31,6 +31,7 @@
 #endif
 
 #define ESLP_ECP_TIMEOUT_US     ((uint64_t)BLE_ESL_ECP_PROCEDURE_TIMEOUT_S * 1000000ULL)
+#define ESLP_UPDATE_COMPLETE_STABLE_US 1500000ULL
 
 static const char *TAG = "ble_eslp";
 
@@ -48,6 +49,7 @@ typedef struct {
     bool abs_time_written;
     bool factory_reset_pending; /* Reject further ECP until disconnect */
     bool update_complete_pending; /* Wait for PAST, then disconnect */
+    bool update_complete_disconnect_pending; /* Wait for PAwR report or bounded delay before ACL drop */
     bool ecp_proc_pending;      /* ECP procedure awaiting Notification */
     bool has_bonded_peer;       /* Peer BD_ADDR stored after successful encryption */
     uint8_t bonded_peer_addr[6];
@@ -56,6 +58,7 @@ typedef struct {
     uint16_t sync_handle;
     uint16_t basic_state;
     esp_timer_handle_t ecp_proc_timer;
+    esp_timer_handle_t update_complete_disconnect_timer;
     esp_ble_eslp_sm_t sm;
     esp_ble_eslp_ecp_handler_t ecp_handler;
     void *ecp_handler_priv;
@@ -74,6 +77,7 @@ static void eslp_post_event(esp_ble_eslp_event_t id, const void *data, size_t le
 }
 
 static void eslp_clear_association(void);
+static void eslp_update_complete_cancel_disconnect(void);
 
 static bool eslp_config_complete(void)
 {
@@ -100,6 +104,13 @@ static void eslp_sm_on_changed(const esp_ble_eslp_state_changed_t *changed, void
 {
     (void)ctx;
     if (changed) {
+        /* Updating and Synchronized are PAwR-owned states. Keep connectable
+         * advertising off so it cannot starve sync reception or accept a
+         * second ACL while Update Complete is still settling. */
+        if (changed->new_state == BLE_ESLP_STATE_UPDATING ||
+                changed->new_state == BLE_ESLP_STATE_SYNCHRONIZED) {
+            (void)esp_ble_conn_adv_stop();
+        }
         eslp_post_event(BLE_ESLP_EVENT_STATE_CHANGED, changed, sizeof(*changed));
     }
 }
@@ -156,18 +167,26 @@ static void eslp_clear_association(void)
     s_eslp.resp_key_written = false;
     s_eslp.abs_time_written = false;
     s_eslp.sync_handle = 0;
+    s_eslp.update_complete_pending = false;
+    eslp_update_complete_cancel_disconnect();
     s_eslp.basic_state &= (uint16_t)~BLE_ESL_BASIC_STATE_SYNCHRONIZED;
 }
 
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
-static void eslp_enable_past_receive(uint16_t conn_handle)
+static esp_err_t eslp_enable_past_receive(uint16_t conn_handle)
 {
-    if (!s_eslp.enable_past_receive || conn_handle == BLE_CONN_HANDLE_INVALID) {
-        return;
+    if (!s_eslp.enable_past_receive) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (conn_handle == BLE_CONN_HANDLE_INVALID) {
+        return ESP_ERR_INVALID_STATE;
     }
     esp_ble_conn_periodic_sync_params_t params = {
         .skip = 0,
-        .sync_timeout = 4000,
+        /* 10 ms units. PAwR interval is 400 ms; Core requires at least 6
+         * intervals (2.4 s). 8 s still rides through a few missed events and
+         * lets the Tag advertise again shortly after the AP reboots. */
+        .sync_timeout = 800,
         .reports_disabled = false,
     };
     esp_err_t ret = esp_ble_conn_periodic_sync_receive(conn_handle, &params);
@@ -176,8 +195,73 @@ static void eslp_enable_past_receive(uint16_t conn_handle)
     } else {
         ESP_LOGI(TAG, "PAST receive enabled on conn=%u", (unsigned)conn_handle);
     }
+    return ret;
 }
 #endif
+
+static void eslp_disconnect_acl(void)
+{
+    if (s_eslp.conn_handle != BLE_CONN_HANDLE_INVALID) {
+        (void)esp_ble_conn_disconnect_by_handle(s_eslp.conn_handle);
+    } else {
+        (void)esp_ble_conn_disconnect();
+    }
+}
+
+static void eslp_update_complete_disconnect_now(const char *reason)
+{
+    if (!s_eslp.update_complete_disconnect_pending) {
+        return;
+    }
+    if (s_eslp.update_complete_disconnect_timer) {
+        (void)esp_timer_stop(s_eslp.update_complete_disconnect_timer);
+    }
+    s_eslp.update_complete_disconnect_pending = false;
+    s_eslp.update_complete_pending = false;
+    ESP_LOGI(TAG, "Update Complete stable after %s; drop ACL", reason ? reason : "wait");
+    eslp_disconnect_acl();
+}
+
+static void eslp_update_complete_stable_timeout_cb(void *arg)
+{
+    (void)arg;
+    eslp_update_complete_disconnect_now("bounded wait");
+}
+
+static void eslp_update_complete_disconnect_after_sync(void)
+{
+    if (s_eslp.update_complete_disconnect_pending) {
+        return;
+    }
+    s_eslp.update_complete_disconnect_pending = true;
+
+    if (!s_eslp.update_complete_disconnect_timer) {
+        const esp_timer_create_args_t args = {
+            .callback = eslp_update_complete_stable_timeout_cb,
+            .arg = NULL,
+            .dispatch_method = ESP_TIMER_TASK,
+            .name = "eslp_uc_disc",
+        };
+        if (esp_timer_create(&args, &s_eslp.update_complete_disconnect_timer) != ESP_OK) {
+            ESP_LOGW(TAG, "Update Complete stable timer create failed; drop ACL now");
+            eslp_update_complete_disconnect_now("timer create failed");
+            return;
+        }
+    }
+    if (esp_timer_start_once(s_eslp.update_complete_disconnect_timer,
+                             ESLP_UPDATE_COMPLETE_STABLE_US) != ESP_OK) {
+        ESP_LOGW(TAG, "Update Complete stable timer start failed; drop ACL now");
+        eslp_update_complete_disconnect_now("timer start failed");
+    }
+}
+
+static void eslp_update_complete_cancel_disconnect(void)
+{
+    if (s_eslp.update_complete_disconnect_timer) {
+        (void)esp_timer_stop(s_eslp.update_complete_disconnect_timer);
+    }
+    s_eslp.update_complete_disconnect_pending = false;
+}
 
 static void eslp_ecp_proc_complete(void)
 {
@@ -434,15 +518,38 @@ static esp_err_t eslp_default_handle_ecp(const esp_ble_eslp_ecp_command_t *cmd)
         (void)esp_ble_conn_sm_set_bonding(false);
         eslp_post_event(BLE_ESLP_EVENT_ASSOCIATED, NULL, 0);
 
-        /* Already synchronized: drop ACL immediately. */
-        if ((s_eslp.basic_state & BLE_ESL_BASIC_STATE_SYNCHRONIZED) != 0) {
-            s_eslp.update_complete_pending = false;
-            (void)eslp_set_state(BLE_ESLP_STATE_SYNCHRONIZED);
-            if (s_eslp.conn_handle != BLE_CONN_HANDLE_INVALID) {
-                (void)esp_ble_conn_disconnect_by_handle(s_eslp.conn_handle);
-            } else {
-                (void)esp_ble_conn_disconnect();
+        /* An ACL opened from PAwR enters Updating while the previous sync can
+         * still appear active. Reusing that sync is unsafe: the controller may
+         * drop it after Update Complete, leaving no receive parameters for the
+         * AP's next PAST. Terminate it while ACL is still available and arm
+         * PAST reception from SYNC_LOST after the controller frees the slot. */
+        if (esp_ble_eslp_sm_get_state(&s_eslp.sm) == BLE_ESLP_STATE_UPDATING) {
+            uint16_t old_sync = s_eslp.sync_handle;
+            s_eslp.sync_handle = 0;
+            s_eslp.basic_state &= (uint16_t)~BLE_ESL_BASIC_STATE_SYNCHRONIZED;
+            s_eslp.update_complete_pending = true;
+            eslp_update_complete_cancel_disconnect();
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+            esp_err_t terminate_ret = esp_ble_conn_periodic_sync_terminate(old_sync);
+#else
+            esp_err_t terminate_ret = ESP_ERR_NOT_SUPPORTED;
+#endif
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+            if (terminate_ret != ESP_OK) {
+                eslp_enable_past_receive(s_eslp.conn_handle);
             }
+#else
+            (void)terminate_ret;
+            eslp_disconnect_acl();
+#endif
+            return ESP_OK;
+        }
+
+        /* Already synchronized: wait for one PAwR report, or a bounded delay,
+         * before dropping ACL so a stale sync can report SYNC_LOST first. */
+        if ((s_eslp.basic_state & BLE_ESL_BASIC_STATE_SYNCHRONIZED) != 0) {
+            (void)eslp_set_state(BLE_ESLP_STATE_SYNCHRONIZED);
+            eslp_update_complete_disconnect_after_sync();
             return ESP_OK;
         }
 
@@ -451,11 +558,7 @@ static esp_err_t eslp_default_handle_ecp(const esp_ble_eslp_ecp_command_t *cmd)
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
         eslp_enable_past_receive(s_eslp.conn_handle);
 #else
-        if (s_eslp.conn_handle != BLE_CONN_HANDLE_INVALID) {
-            (void)esp_ble_conn_disconnect_by_handle(s_eslp.conn_handle);
-        } else {
-            (void)esp_ble_conn_disconnect();
-        }
+        eslp_disconnect_acl();
 #endif
         return ESP_OK;
 
@@ -603,6 +706,7 @@ static void eslp_handle_pawr_report(const esp_ble_conn_periodic_report_t *report
     eslp_post_event(BLE_ESLP_EVENT_PAWR_COMMAND, &ev, sizeof(ev));
 
     (void)esp_ble_eslp_sm_note_sync_activity(&s_eslp.sm);
+    eslp_update_complete_disconnect_now("PAwR report");
 
     if (!s_eslp.auto_pawr_response) {
         return;
@@ -912,9 +1016,14 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
         }
         break;
     }
-    case ESP_BLE_CONN_EVENT_DISCONNECTED:
+    case ESP_BLE_CONN_EVENT_DISCONNECTED: {
+        /* disconnect_now() clears this flag before the Tag intentionally drops
+         * ACL. If it is still set, the AP aborted an unconfirmed transaction;
+         * do not preserve a local SYNCHRONIZED state that the AP rejected. */
+        bool update_complete_uncommitted = s_eslp.update_complete_pending;
         s_eslp.conn_handle = BLE_CONN_HANDLE_INVALID;
         eslp_ecp_proc_complete();
+        eslp_update_complete_cancel_disconnect();
         if (s_eslp.factory_reset_pending) {
             s_eslp.factory_reset_pending = false;
             s_eslp.update_complete_pending = false;
@@ -925,7 +1034,8 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
         }
         s_eslp.update_complete_pending = false;
         /* Keep Synchronized if PAST already completed */
-        if (esp_ble_eslp_sm_get_state(&s_eslp.sm) == BLE_ESLP_STATE_SYNCHRONIZED) {
+        if (!update_complete_uncommitted &&
+                esp_ble_eslp_sm_get_state(&s_eslp.sm) == BLE_ESLP_STATE_SYNCHRONIZED) {
             break;
         }
         if (s_eslp.associated) {
@@ -945,11 +1055,17 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
             (void)eslp_set_state(BLE_ESLP_STATE_UNASSOCIATED);
         }
         break;
+    }
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
     case ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER: {
         const esp_ble_conn_periodic_transfer_t *tr = event_data;
         if (!tr || tr->status != 0) {
             ESP_LOGW(TAG, "PAST failed status=%u", tr ? (unsigned)tr->status : 0);
+            if (s_eslp.update_complete_pending) {
+                /* A transfer event consumes the receive registration even on
+                 * failure. Re-arm it for the AP's bounded retry sequence. */
+                (void)eslp_enable_past_receive(s_eslp.conn_handle);
+            }
             break;
         }
 
@@ -958,10 +1074,17 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
         if (st == BLE_ESLP_STATE_SYNCHRONIZED) {
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
             if (eslp_select_pawr_subev(tr->sync_handle, tr->num_subevents) != ESP_OK) {
+                if (s_eslp.update_complete_pending) {
+                    (void)esp_ble_conn_periodic_sync_terminate(tr->sync_handle);
+                }
                 break;
             }
 #endif
             s_eslp.sync_handle = tr->sync_handle;
+            s_eslp.basic_state |= BLE_ESL_BASIC_STATE_SYNCHRONIZED;
+            if (s_eslp.update_complete_pending) {
+                eslp_update_complete_disconnect_after_sync();
+            }
             break;
         }
         if (st != BLE_ESLP_STATE_CONFIGURING && st != BLE_ESLP_STATE_UPDATING) {
@@ -971,6 +1094,9 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
 
 #if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
         if (eslp_select_pawr_subev(tr->sync_handle, tr->num_subevents) != ESP_OK) {
+            if (s_eslp.update_complete_pending) {
+                (void)esp_ble_conn_periodic_sync_terminate(tr->sync_handle);
+            }
             break;
         }
 #endif
@@ -978,20 +1104,19 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
         if (eslp_set_state(BLE_ESLP_STATE_SYNCHRONIZED) != ESP_OK) {
             ESP_LOGW(TAG, "PAST: Synchronized transition rejected");
             s_eslp.sync_handle = 0;
+            if (s_eslp.update_complete_pending) {
+                (void)esp_ble_conn_periodic_sync_terminate(tr->sync_handle);
+            }
             break;
         }
 
         s_eslp.basic_state |= BLE_ESL_BASIC_STATE_SYNCHRONIZED;
         eslp_post_event(BLE_ESLP_EVENT_SYNCHRONIZED, NULL, 0);
 
-        /* Update Complete already received: drop the ACL link. */
+        /* Update Complete already received: keep ACL until one PAwR report
+         * confirms sync activity, or a bounded delay elapses. */
         if (s_eslp.update_complete_pending) {
-            s_eslp.update_complete_pending = false;
-            if (s_eslp.conn_handle != BLE_CONN_HANDLE_INVALID) {
-                (void)esp_ble_conn_disconnect_by_handle(s_eslp.conn_handle);
-            } else {
-                (void)esp_ble_conn_disconnect();
-            }
+            eslp_update_complete_disconnect_after_sync();
         }
         break;
     }
@@ -1000,6 +1125,25 @@ static void eslp_on_conn_event(void *handler_args, esp_event_base_t base, int32_
     case ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST:
         s_eslp.sync_handle = 0;
         s_eslp.basic_state &= (uint16_t)~BLE_ESL_BASIC_STATE_SYNCHRONIZED;
+        /* Update Complete deliberately terminates the old sync while keeping
+         * ACL. The controller has now freed the sync slot, so receive a fresh
+         * PAST on this ACL and remain Updating until it succeeds. */
+        if (s_eslp.update_complete_pending) {
+            ESP_LOGI(TAG, "SYNC_LOST while waiting for re-PAST after Update Complete");
+            eslp_update_complete_cancel_disconnect();
+            if (esp_ble_eslp_sm_get_state(&s_eslp.sm) == BLE_ESLP_STATE_SYNCHRONIZED) {
+                (void)eslp_set_state(BLE_ESLP_STATE_UPDATING);
+            }
+            /* conn_mgr restarts connectable advertising for every sync-lost
+             * event. This transaction still owns the ACL and PAwR radio. */
+            (void)esp_ble_conn_adv_stop();
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+            (void)eslp_enable_past_receive(s_eslp.conn_handle);
+#endif
+            break;
+        }
+        s_eslp.update_complete_pending = false;
+        eslp_update_complete_cancel_disconnect();
         eslp_post_event(BLE_ESLP_EVENT_SYNC_LOST, event_data, sizeof(esp_ble_conn_periodic_sync_lost_t));
         if (s_eslp.associated) {
             (void)eslp_set_state(BLE_ESLP_STATE_UNSYNCHRONIZED);
@@ -1125,6 +1269,11 @@ esp_err_t esp_ble_eslp_deinit(void)
         (void)esp_timer_delete(s_eslp.ecp_proc_timer);
         s_eslp.ecp_proc_timer = NULL;
     }
+    eslp_update_complete_cancel_disconnect();
+    if (s_eslp.update_complete_disconnect_timer) {
+        (void)esp_timer_delete(s_eslp.update_complete_disconnect_timer);
+        s_eslp.update_complete_disconnect_timer = NULL;
+    }
 
     (void)esp_event_handler_unregister(BLE_ESL_EVENTS, ESP_EVENT_ANY_ID, eslp_on_esl_event);
     (void)esp_event_handler_unregister(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID, eslp_on_conn_event);
@@ -1148,3 +1297,73 @@ esp_err_t esp_ble_eslp_get_image(uint8_t image_index, const uint8_t **data, uint
     return ESP_ERR_NOT_SUPPORTED;
 }
 #endif
+
+esp_err_t esp_ble_eslp_restore_association(const esp_ble_esl_address_t *addr,
+                                           const esp_ble_esl_key_material_t *ap_sync_key,
+                                           const esp_ble_esl_key_material_t *resp_key,
+                                           uint8_t peer_addr_type, const uint8_t peer_addr[6])
+{
+    if (addr == NULL || ap_sync_key == NULL || resp_key == NULL || peer_addr == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_eslp.inited) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_err_t ret = esp_ble_esl_set_address(addr);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    ret = esp_ble_esl_set_ap_sync_key(ap_sync_key);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    ret = esp_ble_esl_set_resp_key(resp_key);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+
+    s_eslp.address_written = true;
+    s_eslp.ap_sync_key_written = true;
+    s_eslp.resp_key_written = true;
+    s_eslp.abs_time_written = true;
+    s_eslp.associated = true;
+    s_eslp.has_bonded_peer = true;
+    s_eslp.bonded_peer_addr_type = peer_addr_type;
+    memcpy(s_eslp.bonded_peer_addr, peer_addr, 6);
+    (void)esp_ble_conn_sm_set_bonding(false);
+
+    /* Flags-only AD so the first post-restore packets are not ESL-UUID
+     * (AP treats UUID ads as Unassociated). App may also prefetch this. */
+    static const uint8_t unsync_adv[] = { 0x02, 0x01, 0x06 };
+    (void)esp_ble_conn_adv_data_set(unsync_adv, sizeof(unsync_adv));
+
+    /* Valid path: Unassociated -> Configuring -> Unsynchronized */
+    ret = eslp_set_state(BLE_ESLP_STATE_CONFIGURING);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    return eslp_set_state(BLE_ESLP_STATE_UNSYNCHRONIZED);
+}
+
+esp_err_t esp_ble_eslp_export_association(esp_ble_esl_address_t *addr,
+                                          esp_ble_esl_key_material_t *ap_sync_key,
+                                          esp_ble_esl_key_material_t *resp_key,
+                                          uint8_t *peer_addr_type, uint8_t peer_addr[6])
+{
+    if (!s_eslp.inited || !s_eslp.associated) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (addr == NULL || ap_sync_key == NULL || resp_key == NULL ||
+            peer_addr_type == NULL || peer_addr == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (esp_ble_esl_get_address(addr) != ESP_OK ||
+            esp_ble_esl_get_ap_sync_key(ap_sync_key) != ESP_OK ||
+            esp_ble_esl_get_resp_key(resp_key) != ESP_OK) {
+        return ESP_FAIL;
+    }
+    *peer_addr_type = s_eslp.bonded_peer_addr_type;
+    memcpy(peer_addr, s_eslp.bonded_peer_addr, 6);
+    return ESP_OK;
+}
