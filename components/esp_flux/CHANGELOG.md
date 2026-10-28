@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.0.3~2 - 2026-10-28
+
+### Examples:
+
+* `examples/esp_flux/back_client.c`: GATT Read uses a caller-owned 512-byte buffer instead of `data = NULL`.
+
 ## v0.0.3~1 - 2026-10-15
 
 ### Documentation:
