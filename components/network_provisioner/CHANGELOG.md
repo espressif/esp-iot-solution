@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.0.1] - 2026-10-28
+
+### Fixed
+- Compile the NimBLE central implementation only when Central, Observer, and GATT client are all enabled. Otherwise BLE scan and characteristic lookup return `ESP_ERR_NOT_SUPPORTED` instead of referencing `protocomm_ext` symbols that are not linked.
+
+### Changed
+- Require `protocomm_ext` ^1.1.0. Version 1.0.x still compiles NimBLE central sources whenever NimBLE is enabled, so a GATT-client-off build would keep linking `ble_gattc_*`.
+
 ## [2.0.0] - 2026-10-20
 
 ### Added

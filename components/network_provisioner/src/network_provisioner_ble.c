@@ -14,7 +14,8 @@
 
 #include "network_provisioner_priv.h"
 
-#if CONFIG_BT_NIMBLE_ENABLED
+#if CONFIG_BT_NIMBLE_ENABLED && CONFIG_BT_NIMBLE_ROLE_CENTRAL && \
+    CONFIG_BT_NIMBLE_ROLE_OBSERVER && CONFIG_BT_NIMBLE_GATT_CLIENT
 
 static const char *TAG = "net_prov_ble";
 

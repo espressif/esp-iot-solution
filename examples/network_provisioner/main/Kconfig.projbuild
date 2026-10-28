@@ -11,15 +11,15 @@ menu "Network Provisioner Example"
     config EXAMPLE_SUPPORT_BLE_WIFI
         bool "Build BLE + Wi-Fi provisioning"
         default y
-        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER && BT_NIMBLE_GATT_CLIENT
         help
-            Provision Wi-Fi credentials over BLE (NimBLE central + observer).
+            Provision Wi-Fi credentials over BLE (NimBLE central, observer, and GATT client).
             Can be combined with SoftAP / Thread.
 
     config EXAMPLE_SUPPORT_BLE_THREAD
         bool "Build BLE + Thread provisioning"
         default y
-        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER && BT_NIMBLE_GATT_CLIENT
         help
             Provision Thread Active Operational Dataset over BLE.
             The peer device needs IEEE 802.15.4 (e.g. ESP32-H2 / C6); the

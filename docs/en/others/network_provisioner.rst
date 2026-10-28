@@ -82,7 +82,7 @@ Add Dependency
 .. code:: yaml
 
     dependencies:
-      espressif/network_provisioner: "^2.0.0"
+      espressif/network_provisioner: "^2.0.1"
 
 Example
 -------

@@ -82,7 +82,7 @@ BLE 控制器可以调用 ``network_provisioner_create_ble()``，再使用
 .. code:: yaml
 
     dependencies:
-      espressif/network_provisioner: "^2.0.0"
+      espressif/network_provisioner: "^2.0.1"
 
 示例
 ----
