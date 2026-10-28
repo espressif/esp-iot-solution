@@ -41,6 +41,12 @@ struct esp_display_presenter {
         esp_display_present_render_alignment_t render_alignment;
         esp_display_presenter_region_t region;
     } frame;
+    struct {
+        uint64_t pending;
+        uint64_t confirmed;
+        bool hold;
+    } confirmation;
+    uint32_t binding_generation;
     uint64_t next_ticket;
     uint32_t next_lease_id;
     portMUX_TYPE lifecycle_lock;
@@ -257,9 +263,17 @@ static bool IRAM_ATTR presenter_frame_done(void *user_ctx)
     return request || need_yield == pdTRUE;
 }
 
+static bool IRAM_ATTR presenter_vsync(void *user_ctx)
+{
+    esp_display_presenter_t *presenter = user_ctx;
+    esp_display_present_tracker_vsync_isr(presenter->tracker);
+    return false;
+}
+
 static const esp_display_present_target_callbacks_t s_target_callbacks = {
     .on_transfer_done = presenter_transfer_done,
     .on_frame_done = presenter_frame_done,
+    .on_vsync = presenter_vsync,
 };
 
 static void log_presenter_caps(const esp_display_presenter_t *presenter)
@@ -311,6 +325,10 @@ static esp_err_t presenter_bind_config(
     if (ret != ESP_OK) {
         (void)presenter_release_binding(presenter);
         return ret;
+    }
+    memset(&presenter->confirmation, 0, sizeof(presenter->confirmation));
+    if (++presenter->binding_generation == 0) {
+        ++presenter->binding_generation;
     }
     presenter->config = *config;
     log_presenter_caps(presenter);
@@ -467,7 +485,6 @@ esp_err_t esp_display_presenter_set_rotation(
         return ret;
     }
     frame_reset(presenter);
-    presenter->next_ticket = 0;
     presenter->next_lease_id = 0;
     ret = presenter_bind_config(presenter, &next);
     if (ret == ESP_OK) {
@@ -717,6 +734,38 @@ static esp_err_t presenter_plan_frame(
     return ESP_OK;
 }
 
+static esp_err_t wait_tracked_frame(esp_display_presenter_t *presenter)
+{
+    portENTER_CRITICAL(&presenter->lifecycle_lock);
+    bool pending = presenter->confirmation.pending != 0;
+    portEXIT_CRITICAL(&presenter->lifecycle_lock);
+    if (!pending) {
+        return ESP_OK;
+    }
+    uint32_t timeout_ms = presenter->tracker->pool.acquire_timeout_ms;
+    TickType_t budget = pdMS_TO_TICKS(timeout_ms != 0 ? timeout_ms : 1000);
+    if (budget == 0) {
+        budget = 1;
+    }
+    TickType_t start = xTaskGetTickCount();
+    do {
+        esp_display_presenter_frame_status_t status;
+        esp_err_t ret = esp_display_presenter_get_frame_status(presenter, &status);
+        if (ret != ESP_OK || status.fault_reason != ESP_DISPLAY_PRESENT_FAULT_NONE ||
+                !status.accepting_callbacks) {
+            return ret != ESP_OK ? ret : ESP_ERR_INVALID_STATE;
+        }
+        portENTER_CRITICAL(&presenter->lifecycle_lock);
+        pending = presenter->confirmation.pending != 0;
+        portEXIT_CRITICAL(&presenter->lifecycle_lock);
+        if (!pending) {
+            return ESP_OK;
+        }
+        vTaskDelay(1);
+    } while ((TickType_t)(xTaskGetTickCount() - start) < budget);
+    return ESP_ERR_TIMEOUT;
+}
+
 static esp_err_t presenter_begin_frame_id(
     esp_display_presenter_t *presenter,
     uint64_t frame_id,
@@ -751,6 +800,14 @@ static esp_err_t presenter_begin_frame_id(
             (partition && presenter->caps.drawbuf_bytes == 0)) {
         presenter_leave(presenter);
         return ESP_ERR_INVALID_STATE;
+    }
+    if (presenter->confirmation.hold) {
+        ret = wait_tracked_frame(presenter);
+        if (ret != ESP_OK) {
+            presenter_leave(presenter);
+            return ret;
+        }
+        presenter->confirmation.hold = false;
     }
     /* The mode context belongs to the frame being opened.  Publish its
      * alignment before invoking any mode callback so begin/acquire stages
@@ -793,8 +850,14 @@ esp_err_t esp_display_presenter_begin_next_frame(
         return ESP_ERR_INVALID_ARG;
     }
     uint64_t frame_id = presenter->next_ticket;
+    if (frame_id == UINT64_MAX) {
+        return ESP_ERR_INVALID_STATE;
+    }
     if (frame_id == 0) {
         frame_id = presenter_next_internal_ticket(presenter);
+        if (frame_id == UINT64_MAX) {
+            return ESP_ERR_INVALID_STATE;
+        }
     }
     return presenter_begin_frame_id(
                presenter, frame_id, request, out_render_areas,
@@ -928,10 +991,16 @@ esp_err_t esp_display_presenter_submit_buffer(
     return ESP_OK;
 }
 
-esp_err_t esp_display_presenter_commit_frame(
+static esp_err_t presenter_commit_frame(
     esp_display_presenter_t *presenter,
-    const esp_display_presenter_submit_t *submit)
+    const esp_display_presenter_submit_t *submit,
+    esp_display_presenter_frame_receipt_t *out_receipt, bool confirm)
 {
+    if (out_receipt != NULL) {
+        *out_receipt = (esp_display_presenter_frame_receipt_t) {
+            0
+        };
+    }
     if (presenter == NULL || !submit_is_valid(presenter, submit)) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -955,6 +1024,19 @@ esp_err_t esp_display_presenter_commit_frame(
     if (!presenter->frame.active || presenter->frame.region_held) {
         presenter_leave(presenter);
         return ESP_ERR_INVALID_STATE;
+    }
+    if (confirm) {
+        const esp_display_present_target_info_t *tracked_info = esp_display_present_target_get_info(presenter->target);
+        if (tracked_info == NULL || tracked_info->fb.profile.storage != ESP_DISPLAY_PRESENT_STORAGE_PIPELINE_FB ||
+                !tracked_info->hw.has_scanout_vsync) {
+            presenter_leave(presenter);
+            return ESP_ERR_NOT_SUPPORTED;
+        }
+        ret = esp_display_present_target_enable_scanout_clock(presenter->target);
+        if (ret != ESP_OK) {
+            presenter_leave(presenter);
+            return ret;
+        }
     }
     present_frame_ctx_t ctx = presenter_frame_ctx(
                                   presenter, presenter->frame.id);
@@ -985,8 +1067,116 @@ esp_err_t esp_display_presenter_commit_frame(
     }
     if (ret == ESP_OK) {
         presenter->frame.presented = true;
+        if (confirm) {
+            portENTER_CRITICAL(&presenter->lifecycle_lock);
+            presenter->confirmation.pending = ctx.frame_id;
+            portEXIT_CRITICAL(&presenter->lifecycle_lock);
+            presenter->confirmation.hold = true;
+        }
+        if (out_receipt != NULL) {
+            *out_receipt = (esp_display_presenter_frame_receipt_t) {
+                .frame_id = ctx.frame_id, .generation = presenter->binding_generation,
+                .display_tracked = confirm,
+            };
+        }
     }
     frame_reset(presenter);
+    presenter_leave(presenter);
+    return ret;
+}
+
+esp_err_t esp_display_presenter_commit_frame(
+    esp_display_presenter_t *presenter,
+    const esp_display_presenter_submit_t *submit)
+{
+    return presenter_commit_frame(presenter, submit, NULL, false);
+}
+
+esp_err_t esp_display_presenter_commit_frame_with_receipt(
+    esp_display_presenter_t *presenter,
+    const esp_display_presenter_submit_t *submit, bool track_display,
+    esp_display_presenter_frame_receipt_t *out_receipt)
+{
+    if (out_receipt == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return presenter_commit_frame(presenter, submit, out_receipt, track_display);
+}
+
+esp_err_t esp_display_presenter_get_frame_status(
+    esp_display_presenter_t *presenter,
+    esp_display_presenter_frame_status_t *out_status)
+{
+    if (presenter == NULL || out_status == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    portENTER_CRITICAL(&presenter->lifecycle_lock);
+    bool allowed = presenter->state == ESP_DISPLAY_PRESENTER_STATE_OPEN ||
+                   presenter->state == ESP_DISPLAY_PRESENTER_STATE_FAULTED;
+    if (allowed) {
+        ++presenter->active_calls;
+    }
+    portEXIT_CRITICAL(&presenter->lifecycle_lock);
+    if (!allowed) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (presenter->tracker == NULL || presenter->target == NULL) {
+        presenter_leave(presenter);
+        return ESP_ERR_INVALID_STATE;
+    }
+    const esp_display_present_target_info_t *info =
+        esp_display_present_target_get_info(presenter->target);
+    if (info == NULL) {
+        presenter_leave(presenter);
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_display_presenter_frame_status_t status;
+    uint32_t vsync, present_vsync;
+    /* Keep the pending marker and clock snapshot in the same lock order.
+     * An older snapshot must not confirm a marker installed concurrently. */
+    portENTER_CRITICAL(&presenter->lifecycle_lock);
+    esp_err_t ret = esp_display_present_tracker_get_frame_status(
+                        presenter->tracker, &status, &vsync, &present_vsync);
+    if (ret == ESP_OK) {
+        status.generation = presenter->binding_generation;
+        status.completion = info->fb.profile.storage == ESP_DISPLAY_PRESENT_STORAGE_PIPELINE_FB &&
+                            info->hw.has_scanout_vsync
+                            ? ESP_DISPLAY_PRESENT_COMPLETION_FRAMEBUFFER
+                            : ESP_DISPLAY_PRESENT_COMPLETION_TRANSFER;
+        if (presenter->confirmation.pending != 0 &&
+                status.fault_reason == ESP_DISPLAY_PRESENT_FAULT_NONE) {
+            uint32_t elapsed = vsync - present_vsync;
+            if (status.completed_present_frame >= presenter->confirmation.pending && elapsed >= 2U) {
+                presenter->confirmation.confirmed = presenter->confirmation.pending;
+                presenter->confirmation.pending = 0;
+            }
+        }
+        status.confirmed_present_frame = presenter->confirmation.confirmed;
+        *out_status = status;
+    }
+    portEXIT_CRITICAL(&presenter->lifecycle_lock);
+    presenter_leave(presenter);
+    return ret;
+}
+
+esp_err_t esp_display_presenter_cancel_frame_tracking(
+    esp_display_presenter_t *presenter, uint64_t frame_id, uint32_t generation)
+{
+    if (presenter == NULL || frame_id == 0 || generation == 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_err_t ret = presenter_enter(presenter, false);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    portENTER_CRITICAL(&presenter->lifecycle_lock);
+    if (presenter->binding_generation == generation &&
+            presenter->confirmation.pending == frame_id) {
+        presenter->confirmation.pending = 0;
+    } else {
+        ret = ESP_ERR_NOT_FOUND;
+    }
+    portEXIT_CRITICAL(&presenter->lifecycle_lock);
     presenter_leave(presenter);
     return ret;
 }
@@ -1030,8 +1220,7 @@ static uint64_t presenter_next_internal_ticket(
     if (present > latest) {
         latest = present;
     }
-    ++latest;
-    return latest == 0 ? 1 : latest;
+    return latest == UINT64_MAX ? UINT64_MAX : latest + 1;
 }
 
 esp_err_t esp_display_presenter_quiesce(

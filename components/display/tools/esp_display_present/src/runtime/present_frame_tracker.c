@@ -312,6 +312,7 @@ esp_err_t esp_display_present_tracker_complete_frame(
              * too would hide a producer that never closed its frame instead
              * of letting end_frame fault on it. */
             tracker->frame.completed_present_frame = frame_id;
+            tracker->frame.completed_present_vsync = tracker->frame.vsync_sequence;
         }
     }
     if (!valid) {
@@ -473,6 +474,7 @@ bool esp_display_present_tracker_complete_present_isr(
          * Closing the build here would strand that end_frame with a
          * mismatched id, which latches the tracker faulted for good. */
         tracker->frame.completed_present_frame = *out_frame_id;
+        tracker->frame.completed_present_vsync = tracker->frame.vsync_sequence;
     } else {
         fault_locked(tracker, ESP_DISPLAY_PRESENT_FAULT_PRODUCER_PROTOCOL);
     }
@@ -494,6 +496,7 @@ bool esp_display_present_tracker_complete_present_frame_isr(
                      completed_frame == frame_id;
     if (completed) {
         tracker->frame.completed_present_frame = frame_id;
+        tracker->frame.completed_present_vsync = tracker->frame.vsync_sequence;
     } else {
         fault_locked(tracker, ESP_DISPLAY_PRESENT_FAULT_PRODUCER_PROTOCOL);
     }
@@ -649,6 +652,54 @@ uint64_t esp_display_present_tracker_get_last_submitted_frame(
     uint64_t frame_id = tracker->frame.last_submitted_frame;
     portEXIT_CRITICAL((portMUX_TYPE *)&tracker->lock);
     return frame_id;
+}
+
+void esp_display_present_tracker_vsync_isr(
+    esp_display_present_frame_tracker_t *tracker)
+{
+    if (tracker == NULL) {
+        return;
+    }
+    portENTER_CRITICAL_ISR(&tracker->lock);
+    if (tracker->frame.accepting_callbacks) {
+        ++tracker->frame.vsync_sequence;
+    }
+    portEXIT_CRITICAL_ISR(&tracker->lock);
+}
+
+esp_err_t esp_display_present_tracker_get_frame_status(
+    const esp_display_present_frame_tracker_t *tracker,
+    esp_display_presenter_frame_status_t *out_status,
+    uint32_t *out_vsync_sequence,
+    uint32_t *out_present_vsync)
+{
+    if (tracker == NULL || out_status == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    portENTER_CRITICAL((portMUX_TYPE *)&tracker->lock);
+    if (!tracker->frame.initialized) {
+        portEXIT_CRITICAL((portMUX_TYPE *)&tracker->lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_display_presenter_frame_status_t status = {
+        .last_submitted_frame = tracker->frame.last_submitted_frame,
+        .completed_present_frame = tracker->frame.completed_present_frame,
+        .completed_transfer_frame = tracker->frame.track_transfer_completion
+        ? tracker->frame.completed_transfer_frame
+        : tracker->frame.completed_present_frame,
+        .tracks_transfer = tracker->frame.track_transfer_completion,
+        .accepting_callbacks = tracker->frame.accepting_callbacks,
+        .fault_reason = tracker->frame.fault_reason,
+    };
+    if (out_vsync_sequence != NULL) {
+        *out_vsync_sequence = tracker->frame.vsync_sequence;
+    }
+    if (out_present_vsync != NULL) {
+        *out_present_vsync = tracker->frame.completed_present_vsync;
+    }
+    portEXIT_CRITICAL((portMUX_TYPE *)&tracker->lock);
+    *out_status = status;
+    return ESP_OK;
 }
 
 bool esp_display_present_tracker_is_faulted(

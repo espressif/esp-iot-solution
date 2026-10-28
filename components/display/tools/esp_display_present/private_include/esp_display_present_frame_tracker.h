@@ -72,6 +72,8 @@ typedef struct {
         esp_display_present_frame_queue_t present_queue;
         volatile uint64_t completed_transfer_frame;
         volatile uint64_t completed_present_frame;
+        uint32_t vsync_sequence;
+        uint32_t completed_present_vsync;
         volatile uint32_t active_isr_count;
         uint64_t last_submitted_frame;
         uint64_t building_frame;
@@ -270,11 +272,23 @@ bool IRAM_ATTR esp_display_present_tracker_tracks_transfer(
 uint64_t esp_display_present_tracker_get_completed_transfer_frame(
     const esp_display_present_frame_tracker_t *tracker);
 
+/** Scanout clock; separate from buffer ownership notifications. */
+void IRAM_ATTR esp_display_present_tracker_vsync_isr(
+    esp_display_present_frame_tracker_t *tracker);
+
 uint64_t esp_display_present_tracker_get_completed_present_frame(
     const esp_display_present_frame_tracker_t *tracker);
 
 uint64_t esp_display_present_tracker_get_last_submitted_frame(
     const esp_display_present_frame_tracker_t *tracker);
+
+/** Snapshot all fence domains under one lock; the facade supplies the
+ * endpoint-specific completion evidence. */
+esp_err_t esp_display_present_tracker_get_frame_status(
+    const esp_display_present_frame_tracker_t *tracker,
+    esp_display_presenter_frame_status_t *out_status,
+    uint32_t *out_vsync_sequence,
+    uint32_t *out_present_vsync);
 
 bool esp_display_present_tracker_is_faulted(
     const esp_display_present_frame_tracker_t *tracker);

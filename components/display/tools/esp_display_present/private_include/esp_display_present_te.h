@@ -30,6 +30,7 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
                                              bool prefer_refresh_end,
                                              esp_display_present_te_sync_context_t **out_ctx);
 
+/** Destroy from task context after the frame producer has stopped. */
 void esp_display_present_te_sync_destroy(esp_display_present_te_sync_context_t *ctx);
 
 void esp_display_present_te_sync_begin_frame(esp_display_present_te_sync_context_t *ctx, size_t transfer_bytes);

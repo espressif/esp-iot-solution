@@ -71,6 +71,37 @@ Presentation mode should normally remain `ESP_DISPLAY_PRESENT_MODE_AUTO`.
 Accurate panel class, framebuffer, TE, rotation, and byte-order information in
 the target configuration lets the component select the correct path.
 
+## Frame completion
+
+1. Use `esp_display_presenter_commit_frame_with_receipt()` in place of
+   `commit_frame()`. On success, keep the receipt's frame ID and generation.
+2. Poll `esp_display_presenter_get_frame_status()` from task context. Check
+   `fault_reason` and require the status and receipt generations to match;
+   rotation invalidates the old binding.
+3. Wait until the required watermark reaches `receipt.frame_id`:
+
+| Status field | Meaning |
+|---|---|
+| `completed_transfer_frame` | Frame transfers completed. |
+| `completed_present_frame` | Buffer ownership fence completed; submissions may coalesce. |
+| `confirmed_present_frame` | Tracked frame received correlated hardware refresh confirmation. |
+
+Pass `track_display=true` to request the last case. RGB/MIPI confirmation waits
+for the switch fence and two later hardware VSYNCs, holding all subsequent
+frames on this presenter until confirmation or cancellation. Continuous
+tracking reduces throughput. GRAM and MIPI drivers without hardware VSYNC
+(including P4 rev < v3) provide transfer feedback and reject display tracking.
+Driver confirmation and optical verification are separate.
+
+Cancel a pending confirmation with `esp_display_presenter_cancel_frame_tracking()`
+and the receipt's ID and generation. This only ends the wait; hardware retains
+its buffer ownership. If tracking setup fails before commit, the active frame
+stays open: retry with `track_display=false`, or call
+`esp_display_presenter_cancel_frame()` before beginning another frame.
+
+See [Tracked display confirmation](STATE_MACHINE.md#tracked-display-confirmation)
+for callback and lifecycle details.
+
 ## Panel initialization
 
 Before creating the panel, set its explicit type, mode, rotation and TE
@@ -156,6 +187,11 @@ finished. If `draw_bitmap()` takes approximately the full wire-transfer time,
 the transaction queue is too shallow (or the driver is synchronous), and the
 render/transfer pipeline collapses to serial execution. Increasing compose
 buffers cannot fix that condition; correct the bus/driver configuration first.
+
+ESP-IDF 6.2+ uses an optional one-shot timer to wake at TE phase boundaries;
+each wake still checks the TE timestamp and transfer window. Older IDF versions
+and timer failures retain the edge/tick fallback. See
+[TE phase wakeups](STATE_MACHINE.md#te-phase-wakeups) for timer lifetime details.
 
 Before Display Off or panel teardown, stop frame production and call
 `esp_display_presenter_quiesce()`. Keep the panel IO and its completion ISR

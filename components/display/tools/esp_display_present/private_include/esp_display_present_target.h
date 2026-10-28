@@ -34,6 +34,7 @@ typedef struct {
     uint16_t height;
     bool panel_gram;
     bool swap_bytes;
+    bool has_scanout_vsync;
 } esp_display_present_hw_info_t;
 
 /** Resolved frame-buffer present profile and borrowed panel FBs. */
@@ -66,6 +67,7 @@ typedef struct esp_display_present_target esp_display_present_target_t;
 typedef struct {
     bool (*on_transfer_done)(void *user_ctx);
     bool (*on_frame_done)(void *user_ctx);
+    bool (*on_vsync)(void *user_ctx);
 } esp_display_present_target_callbacks_t;
 
 /** Resolve panel policy and framebuffer ownership into one present target. */
@@ -87,6 +89,10 @@ esp_err_t esp_display_present_target_set_callbacks(
 
 /** Unregister hardware callbacks and drain callbacks already in progress. */
 esp_err_t esp_display_present_target_clear_callbacks(
+    esp_display_present_target_t *target);
+
+/** Enable the scanout clock once, from the serialized frame producer. */
+esp_err_t esp_display_present_target_enable_scanout_clock(
     esp_display_present_target_t *target);
 
 const esp_display_present_target_info_t *esp_display_present_target_get_info(

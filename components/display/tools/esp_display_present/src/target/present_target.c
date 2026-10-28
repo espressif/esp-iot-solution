@@ -10,9 +10,7 @@
 #include "esp_check.h"
 #include "esp_display_present_target.h"
 #include "esp_heap_caps.h"
-#ifdef ESP_PLATFORM
-#include "esp_idf_version.h"
-#endif
+#include "esp_ipc.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
@@ -25,6 +23,12 @@
 #if SOC_MIPI_DSI_SUPPORTED || __has_include("esp_lcd_mipi_dsi.h")
 #include "esp_lcd_mipi_dsi.h"
 #define ESP_DISPLAY_PRESENT_HAS_DPI 1
+#if ESP_DISPLAY_PRESENT_DPI_VSYNC
+#include "hal/mipi_dsi_brg_ll.h"
+#if MIPI_DSI_BRG_LL_EVENT_VSYNC
+#define ESP_DISPLAY_PRESENT_HAS_DPI_VSYNC 1
+#endif
+#endif
 #endif
 
 #if SOC_LCDCAM_RGB_LCD_SUPPORTED || __has_include("esp_lcd_panel_rgb.h")
@@ -42,6 +46,7 @@ struct esp_display_present_target {
     volatile uint32_t active_isr_count;
     bool accepting_callbacks;
     bool callbacks_registered;
+    bool scanout_clock_enabled;
 };
 
 static const char *present_mode_preset_name(esp_display_present_mode_t mode)
@@ -163,6 +168,24 @@ target_dpi_frame_done(esp_lcd_panel_handle_t panel,
     (void)event;
     return esp_display_present_target_notify_frame_done_from_isr(user_ctx);
 }
+
+#ifdef ESP_DISPLAY_PRESENT_HAS_DPI_VSYNC
+static bool IRAM_ATTR target_dpi_vsync(
+    esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *event,
+    void *user_ctx)
+{
+    (void)panel;
+    (void)event;
+    esp_display_present_target_t *target = user_ctx;
+    if (!target_isr_enter(target)) {
+        return false;
+    }
+    bool request = target->callbacks.on_vsync != NULL &&
+                   target->callbacks.on_vsync(target->callback_user_ctx);
+    target_isr_leave(target);
+    return request;
+}
+#endif
 #endif
 
 #ifdef ESP_DISPLAY_PRESENT_HAS_RGB
@@ -173,6 +196,22 @@ static bool IRAM_ATTR target_rgb_color_done(
     (void)panel;
     (void)event;
     return esp_display_present_target_notify_transfer_done_from_isr(user_ctx);
+}
+
+static bool IRAM_ATTR target_rgb_vsync(
+    esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *event,
+    void *user_ctx)
+{
+    (void)panel;
+    (void)event;
+    esp_display_present_target_t *target = user_ctx;
+    if (!target_isr_enter(target)) {
+        return false;
+    }
+    bool request = target->callbacks.on_vsync != NULL &&
+                   target->callbacks.on_vsync(target->callback_user_ctx);
+    target_isr_leave(target);
+    return request;
 }
 
 static bool IRAM_ATTR target_rgb_frame_done(
@@ -203,7 +242,10 @@ target_register_hardware_callbacks(esp_display_present_target_t *target)
     {
         esp_lcd_dpi_panel_event_callbacks_t callbacks = {
             .on_color_trans_done = target_dpi_color_done,
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 1, 0)
+#ifdef ESP_DISPLAY_PRESENT_HAS_DPI_VSYNC
+            .on_vsync = target->scanout_clock_enabled ? target_dpi_vsync : NULL,
+#endif
+#if ESP_DISPLAY_PRESENT_DPI_FRAME_COMPLETE
             .on_frame_buf_complete = target_dpi_frame_done,
 #else
             .on_refresh_done = target_dpi_frame_done,
@@ -221,6 +263,7 @@ target_register_hardware_callbacks(esp_display_present_target_t *target)
         esp_lcd_rgb_panel_event_callbacks_t callbacks = {
             .on_color_trans_done = target_rgb_color_done,
             .on_frame_buf_complete = target_rgb_frame_done,
+            .on_vsync = target->scanout_clock_enabled ? target_rgb_vsync : NULL,
         };
         return esp_lcd_rgb_panel_register_event_callbacks(target->info.hw.panel,
                                                           &callbacks, target);
@@ -288,6 +331,14 @@ esp_err_t esp_display_present_target_create(
         present_target_resolve_info(config, pixel_format, width, height, &info);
     ESP_RETURN_ON_ERROR(ret, TAG, "invalid target config");
 
+    info.hw.has_scanout_vsync = false;
+#ifdef ESP_DISPLAY_PRESENT_HAS_RGB
+    info.hw.has_scanout_vsync |= info.hw.panel_interface == ESP_DISPLAY_PRESENT_PANEL_IF_RGB;
+#endif
+#ifdef ESP_DISPLAY_PRESENT_HAS_DPI_VSYNC
+    info.hw.has_scanout_vsync |= info.hw.panel_interface == ESP_DISPLAY_PRESENT_PANEL_IF_MIPI_DSI;
+#endif
+
     esp_display_present_target_t *target = heap_caps_calloc(
                                                1, sizeof(*target), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     ESP_RETURN_ON_FALSE(target, ESP_ERR_NO_MEM, TAG, "no target memory");
@@ -342,6 +393,34 @@ esp_err_t esp_display_present_target_set_callbacks(
     return ESP_OK;
 }
 
+esp_err_t esp_display_present_target_enable_scanout_clock(
+    esp_display_present_target_t *target)
+{
+    if (target == NULL || !target->callbacks_registered) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!target->info.hw.has_scanout_vsync) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (target->scanout_clock_enabled) {
+        return ESP_OK;
+    }
+    /* Facade pins the target; existing callbacks and their context stay unchanged. */
+    target->scanout_clock_enabled = true;
+    esp_err_t ret = target_register_hardware_callbacks(target);
+    if (ret != ESP_OK) {
+        target->scanout_clock_enabled = false;
+    }
+    return ret;
+}
+
+#if CONFIG_ESP_IPC_ENABLE
+static void target_callback_barrier(void *arg)
+{
+    (void)arg;
+}
+#endif
+
 esp_err_t esp_display_present_target_clear_callbacks(
     esp_display_present_target_t *target)
 {
@@ -358,10 +437,23 @@ esp_err_t esp_display_present_target_clear_callbacks(
     if (ret != ESP_OK) {
         return ret;
     }
+#if CONFIG_ESP_IPC_ENABLE
+    /* Include ISRs that already loaded user_ctx but have not entered the
+     * target callback yet, so active_isr_count alone cannot see them. */
+    for (int core = 0; core < portNUM_PROCESSORS; ++core) {
+        if (core != xPortGetCoreID()) {
+            ret = esp_ipc_call_blocking(core, target_callback_barrier, NULL);
+            if (ret != ESP_OK) {
+                return ret;
+            }
+        }
+    }
+#endif
     while (target->active_isr_count != 0) {
         taskYIELD();
     }
     target->callbacks_registered = false;
+    target->scanout_clock_enabled = false;
     memset(&target->callbacks, 0, sizeof(target->callbacks));
     target->callback_user_ctx = NULL;
     return ESP_OK;

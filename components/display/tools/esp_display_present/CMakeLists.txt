@@ -65,3 +65,17 @@ if(_has_async_fbcpy)
         "${IDF_PATH}/components/esp_lcd/priv_include")
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_ASYNC_FBCPY_AVAILABLE=1)
 endif()
+
+# Maintenance releases backport DPI callbacks independently of the IDF minor.
+idf_component_get_property(_lcd_dir esp_lcd COMPONENT_DIR)
+if(EXISTS "${_lcd_dir}/dsi/include/esp_lcd_mipi_dsi.h")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+        "${_lcd_dir}/dsi/include/esp_lcd_mipi_dsi.h")
+    file(READ "${_lcd_dir}/dsi/include/esp_lcd_mipi_dsi.h" _dpi_header)
+    if(_dpi_header MATCHES "[ \t]on_frame_buf_complete[ \t]*;")
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_DISPLAY_PRESENT_DPI_FRAME_COMPLETE=1)
+    endif()
+    if(_dpi_header MATCHES "[ \t]on_vsync[ \t]*;")
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_DISPLAY_PRESENT_DPI_VSYNC=1)
+    endif()
+endif()

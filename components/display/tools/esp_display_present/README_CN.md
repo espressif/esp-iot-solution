@@ -68,6 +68,32 @@ dependencies:
 呈现模式通常应保持为 `ESP_DISPLAY_PRESENT_MODE_AUTO`。在目标配置中准确提供
 面板类型、帧缓冲区、TE、旋转和字节序信息，组件即可选择正确路径。
 
+## 帧完成确认
+
+1. 使用 `esp_display_presenter_commit_frame_with_receipt()` 替代
+   `commit_frame()`；提交成功后保存帧 ID 和绑定代次。
+2. 在任务上下文轮询 `esp_display_presenter_get_frame_status()`。检查
+   `fault_reason`，并确认状态与回执的 `generation` 相同；旋转会使旧绑定失效。
+3. 等待所需完成序号达到 `receipt.frame_id`：
+
+| 状态字段 | 含义 |
+|---|---|
+| `completed_transfer_frame` | 帧传输完成。 |
+| `completed_present_frame` | 缓冲区所有权栅栏完成；驱动可能合并中间提交。 |
+| `confirmed_present_frame` | 已跟踪的目标帧获得关联硬件刷新确认。 |
+
+需要最后一种确认时，设置 `track_display=true`。RGB/MIPI 等待切换栅栏和随后
+两次硬件 VSYNC；确认完成或取消前，同一 Presenter 的所有后续帧都会等待。
+持续跟踪会降低吞吐量。GRAM 和没有硬件 VSYNC 的 MIPI 驱动（包括 P4 rev < v3）
+提供传输反馈，并拒绝显示跟踪。驱动确认与光学验收分别进行。
+
+用回执的帧 ID 和绑定代次调用 `esp_display_presenter_cancel_frame_tracking()`，
+可以撤销确认等待；硬件仍持有其缓冲区。跟踪初始化失败时，活动帧保持打开：
+可用 `track_display=false` 重试，或调用 `esp_display_presenter_cancel_frame()`
+取消后再开始下一帧。
+
+回调和生命周期细节见[显示确认状态机](STATE_MACHINE.md#tracked-display-confirmation)。
+
 ## 面板初始化
 
 创建面板前，明确配置面板类型、模式、旋转及 TE，再查询所需的最少面板帧缓冲数量：
@@ -139,6 +165,10 @@ DMA 切换缓冲区时报告完成。等待期间第三个帧缓冲区仍可继�
 接近总线传完整帧所需的时间，说明事务队列过浅或驱动本身是同步实现，此时
 渲染与传输会退化为串行执行。增加 Compose 缓冲区数量无法解决该问题，应先
 修正总线或驱动配置。
+
+ESP-IDF 6.2+ 可用一次性定时器在 TE 相位边界唤醒；每次唤醒仍检查 TE 时间戳和
+传输窗口。较早 IDF 版本或定时器失败时保留边沿/tick 回退路径。
+定时器生命周期见 [TE 相位唤醒](STATE_MACHINE.md#te-phase-wakeups)。
 
 执行 Display Off 或销毁面板前，应先停止帧生产并调用
 `esp_display_presenter_quiesce()`。在 quiesce 成功之前必须保持面板 IO 和完成

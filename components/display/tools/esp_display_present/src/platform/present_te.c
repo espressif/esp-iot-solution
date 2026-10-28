@@ -10,11 +10,20 @@
 #include "esp_check.h"
 #include "esp_display_present_te.h"
 #include "esp_intr_alloc.h"
+#include "esp_ipc.h"
+#include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+
+/* esp_timer_stop_blocking() preserves callback argument lifetime at teardown. */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 2, 0)
+#define PRESENT_TE_PHASE_TIMER 1
+#else
+#define PRESENT_TE_PHASE_TIMER 0
+#endif
 
 typedef enum {
     TE_STRATEGY_UNKNOWN = 0,
@@ -40,6 +49,9 @@ typedef struct {
 struct esp_display_present_te_sync_context {
     esp_display_present_te_sync_config_t cfg;
     SemaphoreHandle_t te_vsync_sem;
+#if PRESENT_TE_PHASE_TIMER
+    esp_timer_handle_t phase_timer;
+#endif
     portMUX_TYPE lock;
     int64_t te_period_us;
     int64_t tx_start_time_us;
@@ -337,6 +349,33 @@ static gpio_int_type_t detect_blanking_start_edge(
     return start_edge;
 }
 
+#if PRESENT_TE_PHASE_TIMER
+/* Wake only; a phase timer cannot supply a TE timestamp. */
+static void te_phase_wakeup(void *arg)
+{
+    esp_display_present_te_sync_context_t *ctx = arg;
+    (void)xSemaphoreGive(ctx->te_vsync_sem);
+}
+
+static bool te_phase_timer_destroy(esp_display_present_te_sync_context_t *ctx)
+{
+    if (ctx->phase_timer == NULL) {
+        return true;
+    }
+    esp_err_t ret = esp_timer_stop_blocking(ctx->phase_timer, portMAX_DELAY);
+    if (ret == ESP_OK) {
+        ret = esp_timer_delete(ctx->phase_timer);
+    }
+    if (ret != ESP_OK) {
+        /* Keep the callback argument and semaphore alive on failed teardown. */
+        ESP_LOGE(TAG, "Cannot release TE phase timer: %s", esp_err_to_name(ret));
+        return false;
+    }
+    ctx->phase_timer = NULL;
+    return true;
+}
+#endif
+
 bool esp_display_present_te_sync_is_enabled(const esp_display_present_te_sync_config_t *cfg)
 {
     return cfg && cfg->gpio_num >= 0;
@@ -366,6 +405,20 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
 
     ctx->te_vsync_sem = xSemaphoreCreateCounting(1, 0);
     ESP_GOTO_ON_FALSE(ctx->te_vsync_sem, ESP_ERR_NO_MEM, fail, TAG, "failed to create TE semaphore");
+
+#if PRESENT_TE_PHASE_TIMER
+    const esp_timer_create_args_t phase_args = {
+        .callback = te_phase_wakeup,
+        .arg = ctx,
+        .dispatch_method = ESP_TIMER_TASK,
+        .name = "present_te_phase",
+    };
+    /* Keep the edge/tick fallback if the optional timer cannot be created. */
+    esp_err_t phase_ret = esp_timer_create(&phase_args, &ctx->phase_timer);
+    if (phase_ret != ESP_OK) {
+        ESP_LOGW(TAG, "TE phase timer unavailable: %s", esp_err_to_name(phase_ret));
+    }
+#endif
 
     const gpio_config_t gpio_cfg = {
         /* Capture both levels for timing diagnostics.  The ISR only releases
@@ -398,7 +451,13 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
 fail:
     if (ctx->isr_registered) {
         gpio_isr_handler_remove(ctx->cfg.gpio_num);
+        ctx->isr_registered = false;
     }
+#if PRESENT_TE_PHASE_TIMER
+    if (!te_phase_timer_destroy(ctx)) {
+        return ret;
+    }
+#endif
     if (ctx->te_vsync_sem) {
         vSemaphoreDelete(ctx->te_vsync_sem);
     }
@@ -407,14 +466,49 @@ fail:
     return ret;
 }
 
+#if CONFIG_ESP_IPC_ENABLE
+static void te_gpio_barrier(void *arg)
+{
+    (void)arg;
+}
+#endif
+
+static bool te_gpio_detach(esp_display_present_te_sync_context_t *ctx)
+{
+    if (!ctx->isr_registered) {
+        return true;
+    }
+    esp_err_t ret = gpio_isr_handler_remove(ctx->cfg.gpio_num);
+#if CONFIG_ESP_IPC_ENABLE
+    /* Removal stops new invocations. A task on each other core runs only
+     * after an already-entered GPIO ISR has returned. */
+    for (int core = 0; ret == ESP_OK && core < portNUM_PROCESSORS; ++core) {
+        if (core != xPortGetCoreID()) {
+            ret = esp_ipc_call_blocking(core, te_gpio_barrier, NULL);
+        }
+    }
+#endif
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Cannot detach TE GPIO: %s", esp_err_to_name(ret));
+        return false;
+    }
+    ctx->isr_registered = false;
+    return true;
+}
+
 void esp_display_present_te_sync_destroy(esp_display_present_te_sync_context_t *ctx)
 {
     if (!ctx) {
         return;
     }
-    if (ctx->isr_registered) {
-        gpio_isr_handler_remove(ctx->cfg.gpio_num);
+    if (!te_gpio_detach(ctx)) {
+        return;
     }
+#if PRESENT_TE_PHASE_TIMER
+    if (!te_phase_timer_destroy(ctx)) {
+        return;
+    }
+#endif
     if (ctx->te_vsync_sem) {
         vSemaphoreDelete(ctx->te_vsync_sem);
     }
@@ -535,7 +629,27 @@ esp_err_t esp_display_present_te_sync_wait_for_vsync(esp_display_present_te_sync
                 phase_wakeup = true;
             }
         }
-        if (xSemaphoreTake(ctx->te_vsync_sem, wait_ticks) != pdTRUE) {
+#if PRESENT_TE_PHASE_TIMER
+        if (phase_wakeup && ctx->phase_timer != NULL) {
+            /* Late callbacks only wake the producer; the admission check still applies.
+             * Wait for callback completion at teardown, not on every frame. */
+            (void)esp_timer_stop(ctx->phase_timer);
+            const int64_t remaining_us = next_phase_us - esp_timer_get_time();
+            if (remaining_us <= 0) {
+                continue;
+            }
+            if (esp_timer_start_once(ctx->phase_timer, (uint64_t)remaining_us) == ESP_OK) {
+                wait_ticks = timeout_ticks;
+            }
+        }
+#endif
+        const BaseType_t woke = xSemaphoreTake(ctx->te_vsync_sem, wait_ticks);
+#if PRESENT_TE_PHASE_TIMER
+        if (ctx->phase_timer != NULL) {
+            (void)esp_timer_stop(ctx->phase_timer);
+        }
+#endif
+        if (woke != pdTRUE) {
             /* An optional current-period phase wakeup is not a missing TE
              * edge. Re-check the original admission predicate; an early
              * tick or an expired window never authorizes a transfer. */
