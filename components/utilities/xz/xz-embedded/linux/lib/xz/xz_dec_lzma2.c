@@ -17,6 +17,69 @@
 #define RC_INIT_BYTES 5
 
 /*
+ * ESP32-P4 caches internal SRAM in L1. ROM flash helpers disable L2 and
+ * drop dirty dictionary lines, so later matches copy stale bytes. Byte
+ * loads and stores on the non-cacheable alias are wrong. Word accesses
+ * work, so the multi-call dictionary lives there and every byte is a
+ * 32-bit read-modify-write.
+ *
+ * XZ_SINGLE points dict->buf at the caller's output buffer. That buffer
+ * is not 4-byte aligned and its length is not a multiple of 4, so a
+ * word access at the last byte reads and writes outside it. Keep
+ * single-call mode on ordinary byte access.
+ */
+#if defined(BOOTLOADER_BUILD) && defined(CONFIG_IDF_TARGET_ESP32P4)
+#define XZ_DICT_WORD 1
+#define XZ_DICT_UC_OFF 0x40000000u
+#else
+#define XZ_DICT_WORD 0
+#endif
+
+static inline uint8_t xz_dload(const uint8_t *buf, size_t pos, enum xz_mode mode)
+{
+#if XZ_DICT_WORD
+	if (DEC_IS_MULTI(mode)) {
+		const uint32_t *word = (const uint32_t *)((uintptr_t)(buf + pos) & ~(uintptr_t)3u);
+
+		return (uint8_t)(*word >> (((uintptr_t)(buf + pos) & 3u) * 8u));
+	}
+#else
+	(void)mode;
+#endif
+	return buf[pos];
+}
+
+static inline void xz_dstore(uint8_t *buf, size_t pos, uint8_t val, enum xz_mode mode)
+{
+#if XZ_DICT_WORD
+	if (DEC_IS_MULTI(mode)) {
+		uint32_t *word = (uint32_t *)((uintptr_t)(buf + pos) & ~(uintptr_t)3u);
+		uint32_t shift = ((uintptr_t)(buf + pos) & 3u) * 8u;
+		uint32_t bits = *word;
+
+		bits = (bits & ~(0xffu << shift)) | ((uint32_t)val << shift);
+		*word = bits;
+		return;
+	}
+#else
+	(void)mode;
+#endif
+	buf[pos] = val;
+}
+
+static inline uint8_t *xz_dict_map(void *buf)
+{
+#if XZ_DICT_WORD
+	/* Keep NULL as NULL so create/reset still see XZ_MEM_ERROR. */
+	if (buf == NULL)
+		return NULL;
+	return (uint8_t *)((uintptr_t)buf + XZ_DICT_UC_OFF);
+#else
+	return buf;
+#endif
+}
+
+/*
  * Minimum number of usable input buffer to safely decode one LZMA symbol.
  * The worst case is that we decode 22 bits using probabilities and 26
  * direct bits. This may decode at maximum of 20 bytes of input. However,
@@ -324,7 +387,7 @@ static inline uint32_t dict_get(const struct dictionary *dict, uint32_t dist)
 	if (dist >= dict->pos)
 		offset += dict->end;
 
-	return dict->full > 0 ? dict->buf[offset] : 0;
+	return dict->full > 0 ? xz_dload(dict->buf, offset, dict->mode) : 0;
 }
 
 /*
@@ -332,7 +395,8 @@ static inline uint32_t dict_get(const struct dictionary *dict, uint32_t dist)
  */
 static inline void dict_put(struct dictionary *dict, uint8_t byte)
 {
-	dict->buf[dict->pos++] = byte;
+	xz_dstore(dict->buf, dict->pos, byte, dict->mode);
+	dict->pos++;
 
 	if (dict->full < dict->pos)
 		dict->full = dict->pos;
@@ -359,7 +423,9 @@ static bool dict_repeat(struct dictionary *dict, uint32_t *len, uint32_t dist)
 		back += dict->end;
 
 	do {
-		dict->buf[dict->pos++] = dict->buf[back++];
+		xz_dstore(dict->buf, dict->pos, xz_dload(dict->buf, back, dict->mode), dict->mode);
+		dict->pos++;
+		back++;
 		if (back == dict->end)
 			back = 0;
 	} while (--left > 0);
@@ -394,7 +460,8 @@ static void dict_uncompressed(struct dictionary *dict, struct xz_buf *b,
 		 * overlap and cause undefined behavior with memcpy().
 		 * With valid inputs memcpy() would be fine here.
 		 */
-		memmove(dict->buf + dict->pos, b->in + b->in_pos, copy_size);
+		for (size_t i = 0; i < copy_size; i++)
+			xz_dstore(dict->buf, dict->pos + i, b->in[b->in_pos + i], dict->mode);
 		dict->pos += copy_size;
 
 		if (dict->full < dict->pos)
@@ -438,8 +505,13 @@ static uint32_t dict_flush(struct dictionary *dict, struct xz_buf *b)
 		 * has been allocated by us in this file; it's not
 		 * provided by the caller like in single-call mode.
 		 */
+#if XZ_DICT_WORD
+		for (size_t i = 0; i < copy_size; i++)
+			b->out[b->out_pos + i] = xz_dload(dict->buf, dict->start + i, dict->mode);
+#else
 		memcpy(b->out + b->out_pos, dict->buf + dict->start,
 				copy_size);
+#endif
 	}
 
 	dict->start = dict->pos;
@@ -1133,7 +1205,7 @@ XZ_EXTERN struct xz_dec_lzma2 *xz_dec_lzma2_create(enum xz_mode mode,
 	s->dict.size_max = dict_max;
 
 	if (DEC_IS_PREALLOC(mode)) {
-		s->dict.buf = vmalloc(dict_max);
+		s->dict.buf = xz_dict_map(vmalloc(dict_max));
 		if (s->dict.buf == NULL) {
 			kfree(s);
 			return NULL;
@@ -1165,7 +1237,7 @@ XZ_EXTERN enum xz_ret xz_dec_lzma2_reset(struct xz_dec_lzma2 *s, uint8_t props)
 			if (s->dict.allocated < s->dict.size) {
 				s->dict.allocated = s->dict.size;
 				vfree(s->dict.buf);
-				s->dict.buf = vmalloc(s->dict.size);
+				s->dict.buf = xz_dict_map(vmalloc(s->dict.size));
 				if (s->dict.buf == NULL) {
 					s->dict.allocated = 0;
 					return XZ_MEM_ERROR;
@@ -1186,6 +1258,9 @@ XZ_EXTERN enum xz_ret xz_dec_lzma2_reset(struct xz_dec_lzma2 *s, uint8_t props)
 
 XZ_EXTERN void xz_dec_lzma2_end(struct xz_dec_lzma2 *s)
 {
+	if (s == NULL)
+		return;
+
 	if (DEC_IS_MULTI(s->dict.mode))
 		vfree(s->dict.buf);
 
