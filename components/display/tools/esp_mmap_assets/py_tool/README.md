@@ -46,7 +46,7 @@ python assets_gen.py \
 | `--support-sjpg` | Enable sliced JPEG |
 | `--support-qoi` | Enable QOI format |
 | `--support-sqoi` | Enable sliced QOI |
-| `--support-pjpg` | Enable progressive JPEG |
+| `--support-pjpg` | Convert PNG to PJPG (JPEG with alpha) |
 | `--split-height N` | Slice height (pixels) |
 
 ### Other Common Options

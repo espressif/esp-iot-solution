@@ -18,15 +18,17 @@ The example showcases:
 
 ## Supported Image Formats
 
-| Format | Description | Chip Support | Memory Usage | Decode Speed |
-|--------|-------------|--------------|--------------|--------------|
-| **JPG** | Standard JPEG | ESP32-S3, ESP32-S31, ESP32-P4 | Medium | Fast |
-| **PNG** | Standard PNG | ESP32-S3, ESP32-S31, ESP32-P4 | High | Medium |
-| **QOI** | Quite OK Image | ESP32-S3, ESP32-S31, ESP32-P4 | Low | Very Fast |
-| **SPNG** | Split PNG (16-line strips) | All | Very Low | Medium |
-| **SQOI** | Split QOI (16-line strips) | All | Very Low | Very Fast |
-| **SJPG** | Split JPEG (16-line strips) | All | Very Low | Fast |
-| **PJPG** | PNG-JPEG | ESP32-P4, ESP32-S31 | Low | Very Fast |
+This example enables all formats on ESP32-P4, ESP32-S3, and ESP32-S31. ESP32-C3 enables only SPNG, SQOI, and SJPG to limit RAM usage. For component support and requirements, see the [decoder documentation](../../../../components/display/tools/esp_lv_decoder/README.md#jpeg--pjpg-notes).
+
+| Format | Description | Decoded Image Memory |
+|--------|-------------|----------------------|
+| **JPG** | Standard JPEG | Full image |
+| **PNG** | Standard PNG | Full image |
+| **QOI** | Quite OK Image | Full image |
+| **SPNG** | Split PNG | One strip |
+| **SQOI** | Split QOI | One strip |
+| **SJPG** | Split JPEG | One strip |
+| **PJPG** | JPEG color and alpha streams | Full image |
 
 ### Format Details
 
@@ -38,24 +40,19 @@ The example showcases:
 **Split Formats (SPNG/SQOI/SJPG):**
 - Image divided into horizontal strips (16 pixels height)
 - Only one strip in RAM at a time
-- ~40x less RAM usage compared to full decode
 - Ideal for memory-constrained applications
 - Slight performance trade-off
 
-**Hardware-Accelerated (PJPG):**
-- Hardware JPEG decoding
-- Much faster than software decoding
-- Lower CPU usage
+**PJPG (RGB JPEG + Alpha JPEG):**
+- Uses hardware JPEG when available and enabled; otherwise uses `esp_new_jpeg` on supported targets
+- Full decoded image in RAM; color and alpha are lossy
+- Small images or complex alpha may remain PNG
 
 ## How to Use the Example
 
 ### Hardware Required
 
-* A development board with:
-  - **ESP32-P4**: All formats supported
-  - **ESP32-S3**: All except PJPG
-  - **ESP32-S31**: All formats supported
-  - **ESP32-C3**: Only SPNG, SQOI, and SJPG (limited RAM)
+* An ESP32-P4, ESP32-S3, ESP32-S31, or ESP32-C3 development board
 * A LCD panel with supported interface (MIPI DSI / RGB / QSPI / SPI)
 * (Optional) Touch panel or rotary encoder for interaction
 * A USB cable for power supply and programming
@@ -170,19 +167,13 @@ I (xxx) decode_demo: Init touch
 I (xxx) decode_demo: SPNG ready (8 files)
 I (xxx) decode_demo: SQOI ready (8 files)
 I (xxx) decode_demo: SJPG ready (8 files)
-I (xxx) decode_demo: PJPG ready (8 files)  // ESP32-P4 / ESP32-S31 only
+I (xxx) decode_demo: PJPG ready (8 files)
 ```
 
 **Interaction:**
 - **Touch**: Tap "Next Format" button to switch formats
 - **Encoder**: Rotate encoder (accumulate 3 clicks) then press button to switch
 - Format cycles through available options based on chip
-
-**Chip-Specific Behavior:**
-- **ESP32-P4**: All formats available (JPG → PNG → QOI → SPNG → SQOI → SJPG → PJPG)
-- **ESP32-S3**: 6 formats (JPG → PNG → QOI → SPNG → SQOI → SJPG)
-- **ESP32-S31**: All formats available (JPG → PNG → QOI → SPNG → SQOI → SJPG → PJPG)
-- **ESP32-C3**: 3 formats only (SPNG → SQOI → SJPG)
 
 ## Code Structure
 
@@ -229,7 +220,7 @@ Partition Table (partitions.csv):
 │ spng      (100KB)  - Split PNG       │ ← 8 SPNG (converted)
 │ sqoi      (100KB)  - Split QOI       │ ← 8 SQOI (converted)
 │ sjpg      (100KB)  - Split JPEG      │ ← 8 SJPG (converted)
-│ pjpg      (100KB)  - PJPEG           │ ← 8 PJPG (converted, ESP32-P4 / ESP32-S31)
+│ pjpg      (100KB)  - PJPG/PNG        │ ← 8 images
 └──────────────────────────────────────┘
 ```
 
@@ -298,7 +289,8 @@ LVGL image widget loads from virtual path.
 - Some formats may be unavailable on your chip
 
 **PJPG not available:**
-- Only supported on ESP32-P4 and ESP32-S31
+- Check that `ESP_LV_ENABLE_PJPG` has not been disabled
+- This example omits PJPG on ESP32-C3 to limit full-image memory usage
 
 **Memory allocation failures:**
 - Enable PSRAM for large displays
@@ -312,17 +304,8 @@ LVGL image widget loads from virtual path.
 
 ## Choosing the Right Format
 
-**For ESP32-P4 / ESP32-S31:**
-- Use **PJPG** for best performance (hardware accelerated)
-- Use **SJPG** if PJPG not available
-
-**For ESP32-S3:**
-- Use **SJPG** for good balance (low RAM, fast)
-- Use **JPG** if you have PSRAM and need speed
-
-**For ESP32-C3:**
-- Use **SQOI** or **SJPG** to save memory resources
-- Keep images small
+- Use **JPG** for opaque images and **PNG/QOI** for lossless transparency.
+- Use **PJPG** when lossy color and alpha compression are acceptable; hardware JPEG accelerates decoding where available.
+- Use **SPNG/SQOI/SJPG** when full-image memory is limited.
 
 For any technical queries, please open an [issue](https://github.com/espressif/esp-iot-solution/issues) on GitHub. We will get back to you soon.
-

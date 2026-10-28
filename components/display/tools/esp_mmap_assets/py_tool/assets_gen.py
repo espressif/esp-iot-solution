@@ -239,7 +239,7 @@ Examples:
     format_group.add_argument('--support-sqoi', action='store_true',
                              help='Enable split QOI support')
     format_group.add_argument('--support-pjpg', action='store_true',
-                             help='Enable progressive JPEG support')
+                             help='Convert PNG to PJPG (JPEG with alpha)')
     format_group.add_argument('--split-height', type=int,
                              help='Split height for image processing')
 

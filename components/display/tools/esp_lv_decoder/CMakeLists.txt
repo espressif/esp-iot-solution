@@ -8,40 +8,47 @@ idf_component_register(
     PRIV_REQUIRES ${PRIV_REQUIRES_LIST}
 )
 
-# Get LVGL version
 idf_build_get_property(build_components BUILD_COMPONENTS)
 if(lvgl IN_LIST build_components)
-    set(lvgl_name lvgl) # Local component
-    set(lvgl_ver $ENV{LVGL_VERSION}) # Get the version from env variable (set from LVGL v9.2)
+    set(lvgl_name lvgl)
 else()
-    set(lvgl_name lvgl__lvgl) # Managed component
-    idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION) # Get the version from esp-idf build system
+    set(lvgl_name lvgl__lvgl)
 endif()
 
-if("${lvgl_ver}" STREQUAL "")
-    message("Could not determine LVGL version, assuming v9.x")
+idf_component_get_property(lvgl_dir ${lvgl_name} COMPONENT_DIR)
+set(lvgl_major "")
+foreach(header IN ITEMS include/lvgl/lv_version.h lv_version.h lvgl.h)
+    if(EXISTS "${lvgl_dir}/${header}")
+        file(STRINGS "${lvgl_dir}/${header}" version_define
+             REGEX "^[ \t]*#[ \t]*define[ \t]+LVGL_VERSION_MAJOR[ \t]+[0-9]+")
+        if(version_define)
+            string(REGEX MATCH "[0-9]+" lvgl_major "${version_define}")
+            break()
+        endif()
+    endif()
+endforeach()
+if(NOT lvgl_major)
+    message(FATAL_ERROR "Cannot determine the LVGL major version from ${lvgl_dir}")
 endif()
 
-# Select folder by LVGL version
-set(ADD_LIBS "")
-message(STATUS "LVGL version: ${lvgl_ver}")
-if(lvgl_ver VERSION_LESS "9.0.0")
-    message(VERBOSE "Compiling decoder for LVGL8")
+set(ADD_LIBS idf::esp_mm)
+if(lvgl_major EQUAL 8)
     set(DECODER_FOLDER "lvgl8")
-    list(APPEND ADD_LIBS idf::esp_mm)
-    else()
-    message(VERBOSE "Compiling decoder for LVGL9")
+elseif(lvgl_major EQUAL 9)
     set(DECODER_FOLDER "lvgl9")
-    list(APPEND ADD_LIBS idf::esp_mm)
+else()
+    message(FATAL_ERROR "Unsupported LVGL major version: ${lvgl_major}")
 endif()
+message(STATUS "ESP LV Decoder: LVGL ${lvgl_major}")
 
 set(DECODER_PARH "src/${DECODER_FOLDER}")
 
 if("espressif__esp_new_jpeg" IN_LIST build_components)
     list(APPEND ADD_LIBS idf::espressif__esp_new_jpeg)
-endif()
-if("esp_new_jpeg" IN_LIST build_components)
+elseif("esp_new_jpeg" IN_LIST build_components)
     list(APPEND ADD_LIBS idf::esp_new_jpeg)
+else()
+    message(FATAL_ERROR "esp_lv_decoder requires esp_new_jpeg. Enable Component Manager or add esp_new_jpeg locally.")
 endif()
 
 if("espressif__libpng" IN_LIST build_components)
@@ -65,9 +72,11 @@ endif()
 # Here we create the real lvgl_docoder_lib
 add_library(lvgl_docoder_lib STATIC
     ${DECODER_PARH}/esp_lv_decoder.c
+    src/esp_lv_decoder_pjpg.c
     ${ADD_SRCS}
     )
 target_include_directories(lvgl_docoder_lib PUBLIC "include")
+target_include_directories(lvgl_docoder_lib PRIVATE "src")
 target_link_libraries(lvgl_docoder_lib PUBLIC
     idf::${lvgl_name}
     )

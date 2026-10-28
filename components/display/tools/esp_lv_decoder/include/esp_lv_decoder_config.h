@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,11 +15,8 @@
 #endif
 
 #ifndef ESP_LV_ENABLE_PJPG
-#if ESP_LV_ENABLE_HW_JPEG
+/* PJPG uses the software JPEG decoder when no hardware decoder is enabled. */
 #define ESP_LV_ENABLE_PJPG 1
-#else
-#define ESP_LV_ENABLE_PJPG 0
-#endif
 #endif
 
 /* Output ARGB8888 for transparent PJPG on RGB888 displays so alpha blending

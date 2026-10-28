@@ -123,7 +123,7 @@ During asset packaging, the generator copies and converts source assets in an in
 
 #### Supported Image Formats
 
-- **`MMAP_SUPPORT_PJPG`**: Enables support for **PJPG** format. Converts PNG to JPG format and uses JPG decoder for PNG files.
+- **`MMAP_SUPPORT_PJPG`**: Converts PNG to PJPG (JPEG color and alpha streams).
 - **`MMAP_SUPPORT_SJPG`**: Enables support for **SJPG** format.
 - **`MMAP_SUPPORT_SPNG`**: Enables support for **SPNG** format.
 - **`MMAP_SUPPORT_QOI`**: Enables support for **QOI** format.

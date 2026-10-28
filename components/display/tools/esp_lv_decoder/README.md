@@ -20,18 +20,24 @@ Allow the use of images in LVGL. Besides that it also allows the use of a custom
 
 ## Add to project
 
+Requires ESP-IDF >= 5.3 and LVGL >= 8.3, < 10.
+
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+Add the component with:
 ```
     idf.py add-dependency esp_lv_decoder
 ```
 
 ## Usage
-The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_mmap_assets) component is required. It automatically packages and converts images to your desired format during compilation.
+For build-time image conversion and packaging, also add [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_mmap_assets):
+
+```sh
+idf.py add-dependency esp_mmap_assets
+```
 
 ### Converting JPG to SJPG
 #### CMake
-```c
+```cmake
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -41,20 +47,13 @@ The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_
         MMAP_SPLIT_HEIGHT 16)
 ```
 #### Output log
-```c
-    [5/21] Move and Pack assets...
-    --support_format: ['.jpg']
-    --support_spng: False
-    --support_sjpg: True
-    --support_qoi: False
-    --support_raw: False
-    --split_height: 16
-    Completed navi_52.jpg -> navi_52.sjpg
+```text
+Completed navi_52.jpg -> navi_52.sjpg
 ```
 
 ### Converting PNG to SPNG
 #### CMake
-```c
+```cmake
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -64,20 +63,13 @@ The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_
         MMAP_SPLIT_HEIGHT 16)
 ```
 #### Output log
-```c
-    [9/20] Move and Pack assets...
-    --support_format: ['.png']
-    --support_spng: True
-    --support_sjpg: False
-    --support_qoi: False
-    --support_raw: False
-    --split_height: 16
-    Completed navi_52.png -> navi_52.spng
+```text
+Completed navi_52.png -> navi_52.spng
 ```
 
 ### Converting PNG、JPG to QOI
 #### CMake
-```c
+```cmake
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -86,20 +78,14 @@ The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_
         MMAP_SUPPORT_QOI)
 ```
 #### Output log
-```c
-    [12/20] Move and Pack assets...
-    --support_format: ['.jpg', '.png']
-    --support_spng: False
-    --support_sjpg: False
-    --support_qoi: True
-    --support_raw: False
-    Completed navi_52.png -> navi_52.qoi
-    Completed navi_53.jpg -> navi_53.qoi
+```text
+Completed navi_52.png -> navi_52.qoi
+Completed navi_53.jpg -> navi_53.qoi
 ```
 
 ### Converting PNG、JPG to SQOI
 #### CMake
-```c
+```cmake
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -110,21 +96,14 @@ The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_
         MMAP_SPLIT_HEIGHT 16)
 ```
 #### Output log
-```c
-    --support_format: ['.jpg', '.png']
-    --support_spng: False
-    --support_sjpg: False
-    --support_qoi: True
-    --support_raw: False
-    --support_sqoi: True
-    --split_height: 16
-    Completed navi_52.png -> navi_52.sqoi
-    Completed navi_53.jpg -> navi_53.sqoi
+```text
+Completed navi_52.png -> navi_52.sqoi
+Completed navi_53.jpg -> navi_53.sqoi
 ```
 
 ### Converting PNG to PJPG
 #### CMake
-```c
+```cmake
     spiffs_create_partition_assets(
         my_spiffs_partition
         my_folder
@@ -132,47 +111,32 @@ The [esp_mmap_assets](https://components.espressif.com/components/espressif/esp_
         MMAP_FILE_SUPPORT_FORMAT ".png"
         MMAP_SUPPORT_PJPG)
 ```
-#### Output log
-```c
-    [x/xx] Move and Pack assets...
-    --support_format: ['.png']
-    --support_spng: False
-    --support_sjpg: False
-    --support_qoi: False
-    --support_pjpg: True
-    --support_raw: False
-    Completed example.png -> example.pjpg
-```
+
+PJPG stores color and alpha as lossy JPEG streams. Converted dimensions are padded to multiples of 16. Images with either side below 128 pixels or complex alpha may remain PNG.
 
 ### Initialization
 ```c
     esp_lv_decoder_handle_t decoder_handle = NULL;
-    esp_lv_decoder_init(&decoder_handle); //Initialize this after lvgl starts
+    esp_lv_decoder_init(&decoder_handle); // After LVGL initialization
 ```
 
-Notes:
-- PJPG is produced by packing two baseline JPEG streams (RGB and Alpha) behind a small custom header. The tool automatically invokes an internal converter (`png_processor.py`).
-- A guard may skip PJPG for very small images to avoid overhead (default threshold is 128x128). You will see a log like: "Skip PJPG for small image ...".
+When using `esp_lvgl_adapter` with `CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER=y`, registration is automatic. Display images through a mounted LVGL filesystem or an in-memory image descriptor.
 
-### Hardware JPEG / PJPG: Usage Notes and Limitations
+### JPEG / PJPG Notes
 
 - General
-  - Hardware acceleration is used only when available and enabled. If unavailable, software decoding is used transparently.
-  - File and in-memory (C array) sources are both supported.
+  - When hardware JPEG is unavailable or disabled, software decoding uses `esp_new_jpeg` on targets supported by both components.
+  - Only baseline (non-progressive) JPEG is supported.
 
 - Standard JPEG (JPG/JPEG)
   - Hardware path is taken only when both width and height are multiples of 16 and at least 64 pixels. Otherwise, software decoding is used.
   - Output color format follows the default display: RGB565 or RGB888.
-  - For best compatibility, use baseline (non‑progressive) JPEG. Progressive JPEG may not be supported by the hardware decoder and can fall back to software or fail depending on ESP-IDF version.
 
 - PJPG (PNG with Alpha -> PJPG)
-  - Output color format is `LV_COLOR_FORMAT_RGB565A8` (packed RGB565 + 8‑bit Alpha plane).
-  - For best performance, use images with width and height aligned to 16 pixels. If not aligned, the decoder internally decodes into an aligned buffer and copies/crops back, which adds extra RAM usage and time.
-  - The Alpha plane is decoded as an 8‑bit grayscale JPEG stream.
+  - Enabled by default; define `ESP_LV_ENABLE_PJPG=0` to disable.
+  - Define `ESP_LV_ENABLE_HW_JPEG=0` to force software decoding. PJPG hardware errors are returned without a software retry.
+  - Default output: RGB565A8. LVGL v8 requires `LV_COLOR_DEPTH=16`; LVGL v9 also supports the ARGB8888 output option.
+  - RGB565A8 needs approximately `width * height * 3` bytes for the decoded image, plus working buffers. Large images may require PSRAM.
 
 - Split formats (SJPG/SPNG/SQOI)
-  - These split containers are decoded slice‑by‑slice for low RAM usage, so LVGL zoom/rotate are not supported. PJPG is not a split format; LVGL can post‑process the fully decoded buffer as usual (subject to LVGL performance/memory constraints).
-
-- Memory and alignment details
-  - Decoder output buffers are allocated with 128‑byte alignment to cooperate with caches and, when present, the hardware JPEG engine. Unaligned image sizes may require temporary aligned buffers during hardware decoding.
-
+  - Decoded in slices to reduce RAM usage; zoom and rotation are unsupported. PJPG uses a full decoded image.

@@ -1,4 +1,4 @@
-version: "0.4.3"
+version: "0.5.0"
 targets:
   - esp32
   - esp32s2
@@ -11,7 +11,7 @@ targets:
   - esp32c6
   - esp32c61
   - esp32h4
-description: Decoding images in LVGL for multiple formats (PNG, SPNG, JPG, SJPG, QOI, SQOI) using optimized libraries for fast and efficient rendering.
+description: Decoding images in LVGL for multiple formats (PNG, SPNG, JPG, SJPG, PJPG, QOI, SQOI) using optimized libraries for fast and efficient rendering.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_decoder
 issues: https://github.com/espressif/esp-iot-solution/issues
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -25,7 +25,7 @@ dependencies:
   espressif/qoi:
     version: "^0.20260529.0"
   lvgl/lvgl:
-    version: ">=8,<10"
+    version: ">=8.3,<10"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
   originator: 'Organization: Espressif Systems (Shanghai) CO LTD'
