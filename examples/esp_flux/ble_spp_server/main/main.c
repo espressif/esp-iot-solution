@@ -142,15 +142,15 @@ static void gatt_data_received_cb(gatt_session_t *session, uint8_t stream_id, co
     free((void *)data);
 }
 
-static void gatt_progress_cb(gatt_session_t *session, uint32_t transferred, uint32_t total)
+static void gatt_progress_cb(gatt_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     // Prevent division by zero
     if (total == 0) {
-        ESP_LOGW(TAG, "Session conn_handle %d progress callback: total is 0, transferred=%" PRIu32, session->conn_handle, transferred);
+        ESP_LOGW(TAG, "Session conn_handle %d stream %d progress callback: total is 0, transferred=%" PRIu32, session->conn_handle, stream_id, transferred);
         return;
     }
     uint8_t progress = (transferred * 100) / total;
-    ESP_LOGI(TAG, "Session conn_handle %d progress: %u%% (%" PRIu32 "/%" PRIu32 " bytes)", session->conn_handle, progress, transferred, total);
+    ESP_LOGI(TAG, "Session conn_handle %d stream %d progress: %u%% (%" PRIu32 "/%" PRIu32 " bytes)", session->conn_handle, stream_id, progress, transferred, total);
 }
 
 static void spp_tune_connection(uint16_t conn_handle)

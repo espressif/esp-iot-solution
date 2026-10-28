@@ -99,8 +99,9 @@ typedef struct {
      *  the only reference — it is safe to hold or forward the pointer across tasks. */
     void (*data_received_cb)(flux_session_t *session, uint8_t stream_id, const uint8_t *data, uint32_t size);
 
-    /** Called periodically during send/receive to report progress */
-    void (*progress_cb)(flux_session_t *session, uint32_t transferred, uint32_t total);
+    /** Called periodically during send/receive to report progress.
+     *  @p stream_id selects the in-flight transfer. @p transferred and @p total are byte counts for that stream. */
+    void (*progress_cb)(flux_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total);
 
     /** Called on error (timeout, max retries exceeded, etc.) */
     void (*error_cb)(flux_session_t *session, esp_err_t error);

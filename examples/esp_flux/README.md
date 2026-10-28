@@ -206,8 +206,8 @@ Key functions:
 
 For detailed API documentation, please refer to:
 - [esp_ble_conn_mgr.h](../../components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h) - Connection management
-- [flux_transport.h](../../components/esp_flux/include/flux_transport.h) - Transport-agnostic protocol engine
-- [gatt_session.h](../../components/esp_flux/include/gatt_session.h) - BLE GATT session (reliable transfer)
+- [esp_flux_transport.h](../../components/esp_flux/include/esp_flux_transport.h) - Transport-agnostic protocol engine
+- [flux_gatt_session.h](../../components/esp_flux/include/flux_gatt_session.h) - BLE GATT session (reliable transfer)
 
 ## See Also
 

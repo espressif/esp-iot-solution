@@ -173,7 +173,7 @@ static void gatt_data_received_cb(gatt_session_t *session, uint8_t stream_id, co
     free((void *)data);
 }
 
-static void gatt_progress_cb(gatt_session_t *session, uint32_t transferred, uint32_t total)
+static void gatt_progress_cb(gatt_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     // Prevent division by zero
     if (total == 0) {
