@@ -26,6 +26,15 @@
 #error "Unsupported ELF target architecture"
 #endif
 
+/* Every table or entry the validator touches is fetched through this reader,
+ * so the same structural checks cover both a whole in-memory image and a
+ * streamed source without duplicating the logic. */
+typedef struct {
+    int (*read)(void *ctx, size_t off, void *buf, size_t len);
+    void *ctx;
+    size_t size;               /*!< total image length in bytes */
+} elf_reader_t;
+
 /* Check ranges using subtraction, not untrusted offset + length. */
 static bool elf_file_range(size_t size, size_t offset, size_t length)
 {
@@ -44,18 +53,23 @@ static bool elf_string_in_range(const elf32_shdr_t *str, uint32_t index)
     return index < str->size;
 }
 
-static elf32_shdr_t elf_section(const uint8_t *pbuf, const elf32_hdr_t *ehdr, size_t index)
+static int elf_reader_read(const elf_reader_t *r, size_t off, void *buf, size_t len)
 {
-    elf32_shdr_t shdr;
-    memcpy(&shdr, pbuf + ehdr->shoff + index * sizeof(shdr), sizeof(shdr));
-    return shdr;
+    if (!elf_file_range(r->size, off, len)) {
+        return -EINVAL;
+    }
+
+    return r->read(r->ctx, off, buf, len);
 }
 
-static elf32_phdr_t elf_segment(const uint8_t *pbuf, const elf32_hdr_t *ehdr, size_t index)
+static int elf_section(const elf_reader_t *r, const elf32_hdr_t *ehdr, size_t index, elf32_shdr_t *shdr)
 {
-    elf32_phdr_t phdr;
-    memcpy(&phdr, pbuf + ehdr->phoff + index * sizeof(phdr), sizeof(phdr));
-    return phdr;
+    return elf_reader_read(r, ehdr->shoff + index * sizeof(*shdr), shdr, sizeof(*shdr));
+}
+
+static int elf_segment(const elf_reader_t *r, const elf32_hdr_t *ehdr, size_t index, elf32_phdr_t *phdr)
+{
+    return elf_reader_read(r, ehdr->phoff + index * sizeof(*phdr), phdr, sizeof(*phdr));
 }
 
 static bool elf_address_range(uint32_t addr, uint32_t length,
@@ -65,26 +79,24 @@ static bool elf_address_range(uint32_t addr, uint32_t length,
 }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-static bool elf_loaded_section(const uint8_t *pbuf, const elf32_shdr_t *shdr,
-                               const elf32_shdr_t *shstr)
+static bool elf_loaded_section(const char *names, const elf32_shdr_t *shdr)
 {
-    const char *name = (const char *)pbuf + shstr->offset + shdr->name;
     bool reverse;
-    if (esp_elf_lifecycle_section_kind(shdr, name, &reverse) >= 0) {
+    if (esp_elf_lifecycle_section_kind(shdr, names, &reverse) >= 0) {
         return true;
     }
 
     if (shdr->type == SHT_PROGBITS && (shdr->flags & SHF_ALLOC)) {
-        return ((shdr->flags & SHF_EXECINSTR) && strcmp(name, ELF_TEXT) == 0) ||
-               ((shdr->flags & SHF_WRITE) && strcmp(name, ELF_DATA) == 0) ||
-               strcmp(name, ELF_RODATA) == 0 ||
-               strcmp(name, ELF_GOT_LOC) == 0 ||
-               strcmp(name, ELF_DATA_REL_RO) == 0;
+        return ((shdr->flags & SHF_EXECINSTR) && strcmp(names, ELF_TEXT) == 0) ||
+               ((shdr->flags & SHF_WRITE) && strcmp(names, ELF_DATA) == 0) ||
+               strcmp(names, ELF_RODATA) == 0 ||
+               strcmp(names, ELF_GOT_LOC) == 0 ||
+               strcmp(names, ELF_DATA_REL_RO) == 0;
     }
 
     return shdr->type == SHT_NOBITS &&
            (shdr->flags & (SHF_ALLOC | SHF_WRITE)) == (SHF_ALLOC | SHF_WRITE) &&
-           strcmp(name, ELF_BSS) == 0;
+           strcmp(names, ELF_BSS) == 0;
 }
 #endif
 
@@ -156,15 +168,19 @@ static bool elf_relocation_target(const elf_loaded_range_t *ranges, size_t count
 
 /* Exported functions must resolve to loaded executable code, not ELF-controlled
  * addresses outside the loader allocation. */
-static bool elf_exported_function(const uint8_t *pbuf, const elf32_hdr_t *ehdr,
-                                  const elf32_shdr_t *shstr, const elf32_sym_t *sym,
+static bool elf_exported_function(const elf_reader_t *r, const elf32_hdr_t *ehdr,
+                                  const elf32_shdr_t *shstr, const char *names,
+                                  const elf32_sym_t *sym,
                                   const elf_loaded_range_t *ranges, size_t range_count)
 {
     if (sym->shndx == SHN_UNDEF || sym->shndx >= ehdr->shnum) {
         return false;
     }
 
-    elf32_shdr_t section = elf_section(pbuf, ehdr, sym->shndx);
+    elf32_shdr_t section;
+    if (elf_section(r, ehdr, sym->shndx, &section)) {
+        return false;
+    }
     if (section.type != SHT_PROGBITS ||
             (section.flags & (SHF_EXECINSTR | SHF_ALLOC)) != (SHF_EXECINSTR | SHF_ALLOC) ||
             !elf_address_range(sym->value, sym->size ? sym->size : 1,
@@ -175,10 +191,13 @@ static bool elf_exported_function(const uint8_t *pbuf, const elf32_hdr_t *ehdr,
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     (void)ranges;
     (void)range_count;
+    /* names points into the staged section-name table; bound the section's
+     * own name index against the table header before the strcmp. */
     return elf_string_in_range(shstr, section.name) &&
-           strcmp((const char *)pbuf + shstr->offset + section.name, ELF_TEXT) == 0;
+           strcmp(names + section.name, ELF_TEXT) == 0;
 #else
     (void)shstr;
+    (void)names;
     const elf_loaded_range_t *segment = elf_find_loaded_segment(ranges, range_count, sym->value);
     return segment && (segment->flags & ELF_PF_EXEC) &&
            elf_address_range(sym->value, sym->size ? sym->size : 1,
@@ -186,16 +205,14 @@ static bool elf_exported_function(const uint8_t *pbuf, const elf32_hdr_t *ehdr,
 #endif
 }
 
-int esp_elf_validate(const uint8_t *pbuf, size_t size)
+static int elf_validate_impl(const elf_reader_t *r)
 {
     elf32_hdr_t ehdr;
+    size_t size = r->size;
 
-    if (!pbuf || !elf_file_range(size, 0, sizeof(ehdr)) ||
-            ((uintptr_t)pbuf & (ELF_WORD_SIZE - 1)) != 0) {
+    if (elf_reader_read(r, 0, &ehdr, sizeof(ehdr))) {
         return -EINVAL;
     }
-
-    memcpy(&ehdr, pbuf, sizeof(ehdr));
 
     if (ehdr.ident[0] != 0x7f || ehdr.ident[1] != 'E' ||
             ehdr.ident[2] != 'L' || ehdr.ident[3] != 'F' ||
@@ -213,10 +230,26 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
         return -EINVAL;
     }
 
-    elf32_shdr_t shstr = elf_section(pbuf, &ehdr, ehdr.shstrndx);
+    elf32_shdr_t shstr;
+    if (elf_section(r, &ehdr, ehdr.shstrndx, &shstr)) {
+        return -EINVAL;
+    }
+    char terminator;
     if (shstr.type != SHT_STRTAB || !shstr.size ||
             !elf_file_range(size, shstr.offset, shstr.size) ||
-            pbuf[(size_t)shstr.offset + shstr.size - 1] != '\0') {
+            elf_reader_read(r, shstr.offset + shstr.size - 1, &terminator, 1) ||
+            terminator != '\0') {
+        return -EINVAL;
+    }
+
+    /* Stage the section-name table once: every name comparison below reads
+     * through it, and a streamed source must not pay a read per strcmp. */
+    char *names = malloc(shstr.size);
+    if (!names) {
+        return -ENOMEM;
+    }
+    if (elf_reader_read(r, shstr.offset, names, shstr.size)) {
+        free(names);
         return -EINVAL;
     }
 
@@ -228,7 +261,11 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     no_entry_shared_object = ehdr.type == ELF_ET_DYN && ehdr.entry == 0;
 #endif
     for (size_t i = 0; i < ehdr.phnum; ++i) {
-        elf32_phdr_t phdr = elf_segment(pbuf, &ehdr, i);
+        elf32_phdr_t phdr;
+        if (elf_segment(r, &ehdr, i, &phdr)) {
+            free(names);
+            return -EINVAL;
+        }
         if (phdr.type != PT_LOAD) {
             continue;
         }
@@ -237,6 +274,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
         if (phdr.filesz > phdr.memsz ||
                 !elf_file_range(size, phdr.offset, phdr.filesz) ||
                 (uint64_t)phdr.vaddr + phdr.memsz > UINT32_MAX) {
+            free(names);
             return -EINVAL;
         }
         /* The entry must contain actual executable file bytes, not BSS. */
@@ -248,11 +286,11 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
 
 #if !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (!has_load_segment || (!executable_entry && !no_entry_shared_object)) {
+        free(names);
         return -EINVAL;
     }
 #else
     (void)has_load_segment;
-    (void)executable_entry;
     executable_entry = false;
 #endif
 
@@ -261,9 +299,14 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
      * Linked string tables may appear after the symbol table in the ELF.
      */
     for (size_t i = 0; i < ehdr.shnum; ++i) {
-        elf32_shdr_t sec = elf_section(pbuf, &ehdr, i);
+        elf32_shdr_t sec;
+        if (elf_section(r, &ehdr, i, &sec)) {
+            free(names);
+            return -EINVAL;
+        }
         if ((sec.type != SHT_NOBITS && !elf_file_range(size, sec.offset, sec.size)) ||
                 ((sec.flags & SHF_ALLOC) && (uint64_t)sec.addr + sec.size > UINT32_MAX)) {
+            free(names);
             return -EINVAL;
         }
     }
@@ -283,24 +326,28 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     };
 #endif
     for (size_t i = 0; i < ehdr.shnum; ++i) {
-        elf32_shdr_t sec = elf_section(pbuf, &ehdr, i);
-        if (!elf_string_in_range(&shstr, sec.name)) {
+        elf32_shdr_t sec;
+        if (elf_section(r, &ehdr, i, &sec)) {
+            free(names);
             return -EINVAL;
         }
-        const char *name = (const char *)pbuf + shstr.offset + sec.name;
+        if (!elf_string_in_range(&shstr, sec.name)) {
+            goto invalid;
+        }
+        const char *name = names + sec.name;
         /* Reject callback-array names with incompatible types instead of
          * silently skipping their startup/shutdown code. */
         if ((strcmp(name, ".preinit_array") == 0 && sec.type != SHT_PREINIT_ARRAY) ||
                 (strcmp(name, ".init_array") == 0 && sec.type != SHT_INIT_ARRAY) ||
                 (strcmp(name, ".fini_array") == 0 && sec.type != SHT_FINI_ARRAY)) {
-            return -EINVAL;
+            goto invalid;
         }
         bool reverse;
         int lifecycle_kind = esp_elf_lifecycle_section_kind(&sec, name, &reverse);
         if (lifecycle_kind >= 0) {
             uint32_t bit = 1U << (lifecycle_kind - ELF_SEC_PREINIT);
             if (seen_lifecycle & bit) {
-                return -EINVAL; /* competing .init_array and .ctors, etc. */
+                goto invalid; /* competing .init_array and .ctors, etc. */
             }
             seen_lifecycle |= bit;
             /* Every entry is a 32-bit function pointer; reject partial,
@@ -310,12 +357,16 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
                     (sec.offset & (ELF_WORD_SIZE - 1)) ||
                     (sec.addr & (ELF_WORD_SIZE - 1)) ||
                     (sec.addralign && (sec.addralign & (sec.addralign - 1)))) {
-                return -EINVAL;
+                goto invalid;
             }
 #if !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
             bool file_backed = false;
             for (size_t j = 0; j < ehdr.phnum; j++) {
-                elf32_phdr_t seg = elf_segment(pbuf, &ehdr, j);
+                elf32_phdr_t seg;
+                if (elf_segment(r, &ehdr, j, &seg)) {
+                    free(names);
+                    return -EINVAL;
+                }
                 if (seg.type == PT_LOAD &&
                         elf_address_range(sec.addr, sec.size, seg.vaddr, seg.filesz) &&
                         sec.offset >= seg.offset &&
@@ -325,35 +376,34 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
                 }
             }
             if (!file_backed) {
-                return -EINVAL;
+                goto invalid;
             }
 #endif
         } else if ((sec.type == SHT_PREINIT_ARRAY || sec.type == SHT_INIT_ARRAY ||
                     sec.type == SHT_FINI_ARRAY) && sec.size) {
-            return -EINVAL;  /* callback arrays cannot be non-allocated */
+            goto invalid;  /* callback arrays cannot be non-allocated */
         }
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
         if (strcmp(name, ELF_GOT_LOC) == 0 &&
                 (sec.type != SHT_PROGBITS || !(sec.flags & SHF_ALLOC) ||
                  (sec.flags & SHF_EXECINSTR))) {
-            return -EINVAL;
+            goto invalid;
         }
 #endif
 
 #ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
         /* The dynamic loader looks up this section by name: require its type. */
-        if (strcmp((const char *)pbuf + shstr.offset + sec.name, ELF_DYNSYM) == 0) {
+        if (strcmp(name, ELF_DYNSYM) == 0) {
             if (sec.type != SHT_SYNSYM || seen_dynsym) {
-                return -EINVAL;
+                goto invalid;
             }
             seen_dynsym = true;
         }
 #endif
 
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
-        if (elf_loaded_section(pbuf, &sec, &shstr)) {
-            const char *name = (const char *)pbuf + shstr.offset + sec.name;
+        if (elf_loaded_section(name, &sec)) {
             if (strcmp(name, ELF_TEXT) == 0) {
                 text_vaddr = sec.addr;
                 text_size = sec.size;
@@ -371,7 +421,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
                 }
             }
             if (slot < 0 || (seen_loaded_sections & (1U << slot))) {
-                return -EINVAL; /* duplicate or unrecognized mapped section */
+                goto invalid; /* duplicate or unrecognized mapped section */
             }
             seen_loaded_sections |= 1U << slot;
             loaded_ranges[loaded_count].addr = sec.addr;
@@ -380,9 +430,9 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
         }
         if (sec.type == SHT_PROGBITS &&
                 (sec.flags & (SHF_ALLOC | SHF_EXECINSTR)) == (SHF_ALLOC | SHF_EXECINSTR) &&
-                strcmp((const char *)pbuf + shstr.offset + sec.name, ELF_TEXT) == 0) {
+                strcmp(name, ELF_TEXT) == 0) {
             if (sec.size > UINT32_MAX - 3) {
-                return -EINVAL; /* .text allocation rounds up to a 4-byte boundary */
+                goto invalid; /* .text allocation rounds up to a 4-byte boundary */
             }
             if (elf_address_range(ehdr.entry, 1, sec.addr, sec.size)) {
                 executable_entry = true;
@@ -395,26 +445,31 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
                     (sec.type == SHT_SYNSYM && sec.size / sizeof(elf32_sym_t) > UINT16_MAX) ||
                     (sec.entsize && sec.entsize != sizeof(elf32_sym_t)) ||
                     sec.link >= ehdr.shnum) {
-                return -EINVAL;
+                goto invalid;
             }
 
-            elf32_shdr_t strtab = elf_section(pbuf, &ehdr, sec.link);
+            elf32_shdr_t strtab;
+            if (elf_section(r, &ehdr, sec.link, &strtab)) {
+                goto invalid;
+            }
+            char str_term;
             if (strtab.type != SHT_STRTAB || !strtab.size ||
                     !elf_file_range(size, strtab.offset, strtab.size) ||
-                    pbuf[(size_t)strtab.offset + strtab.size - 1] != '\0') {
-                return -EINVAL;
+                    elf_reader_read(r, strtab.offset + strtab.size - 1, &str_term, 1) ||
+                    str_term != '\0') {
+                goto invalid;
             }
             for (size_t j = 0; j < sec.size / sizeof(elf32_sym_t); ++j) {
                 elf32_sym_t sym;
-                memcpy(&sym, pbuf + sec.offset + j * sizeof(sym), sizeof(sym));
-                if (!elf_string_in_range(&strtab, sym.name)) {
-                    return -EINVAL;
+                if (elf_reader_read(r, sec.offset + j * sizeof(sym), &sym, sizeof(sym)) ||
+                        !elf_string_in_range(&strtab, sym.name)) {
+                    goto invalid;
                 }
 #if CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
                 if (sec.type == SHT_SYNSYM && ELF_ST_BIND(sym.info) == STB_GLOBAL &&
                         ELF_ST_TYPE(sym.info) == STT_FUNC && sym.shndx != SHN_UNDEF &&
-                        !elf_exported_function(pbuf, &ehdr, &shstr, &sym, NULL, 0)) {
-                    return -EINVAL;
+                        !elf_exported_function(r, &ehdr, &shstr, names, &sym, NULL, 0)) {
+                    goto invalid;
                 }
 #endif
             }
@@ -427,7 +482,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     if (got_loc_size && (!text_size ||
                          (uint64_t)got_loc_vaddr < (uint64_t)text_vaddr + text_size ||
                          ((got_loc_vaddr - text_vaddr) & (ELF_WORD_SIZE - 1)))) {
-        return -EINVAL;
+        goto invalid;
     }
     /* All section-mode relocations and lifecycle callbacks use one address
      * mapper: overlapping alloc sections would make the mapping ambiguous. */
@@ -438,12 +493,12 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
                     (uint64_t)loaded_ranges[j].addr + loaded_ranges[j].size &&
                     (uint64_t)loaded_ranges[j].addr <
                     (uint64_t)loaded_ranges[i].addr + loaded_ranges[i].size) {
-                return -EINVAL;
+                goto invalid;
             }
         }
     }
     if (!executable_entry && !no_entry_shared_object) {
-        return -EINVAL;
+        goto invalid;
     }
 #endif
 
@@ -455,12 +510,17 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     if (ehdr.phnum > sizeof(inline_ranges) / sizeof(inline_ranges[0])) {
         loaded_ranges = malloc((size_t)ehdr.phnum * sizeof(*loaded_ranges));
         if (!loaded_ranges) {
+            free(names);
             return -ENOMEM;
         }
     }
 
     for (size_t i = 0; i < ehdr.phnum; ++i) {
-        elf32_phdr_t phdr = elf_segment(pbuf, &ehdr, i);
+        elf32_phdr_t phdr;
+        if (elf_segment(r, &ehdr, i, &phdr)) {
+            free(names);
+            return -EINVAL;
+        }
         if (phdr.type == PT_LOAD) {
             loaded_ranges[loaded_count].addr = phdr.vaddr;
             loaded_ranges[loaded_count].size = phdr.memsz;
@@ -478,6 +538,7 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
             if (loaded_ranges != inline_ranges) {
                 free(loaded_ranges);
             }
+            free(names);
             return -EINVAL;
         }
     }
@@ -489,16 +550,23 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
      * against the full program-header table. This also bounds adversarial ELF
      * validation time when both tables contain tens of thousands of entries. */
     for (size_t i = 0; i < ehdr.shnum; ++i) {
-        elf32_shdr_t sec = elf_section(pbuf, &ehdr, i);
+        elf32_shdr_t sec;
+        if (elf_section(r, &ehdr, i, &sec)) {
+            free(names);
+            return -EINVAL;
+        }
         if (sec.type != SHT_SYNSYM) {
             continue;
         }
         for (size_t j = 0; j < sec.size / sizeof(elf32_sym_t); ++j) {
             elf32_sym_t sym;
-            memcpy(&sym, pbuf + sec.offset + j * sizeof(sym), sizeof(sym));
+            if (elf_reader_read(r, sec.offset + j * sizeof(sym), &sym, sizeof(sym))) {
+                result = -EINVAL;
+                goto cleanup_loaded_ranges;
+            }
             if (ELF_ST_BIND(sym.info) == STB_GLOBAL &&
                     ELF_ST_TYPE(sym.info) == STT_FUNC && sym.shndx != SHN_UNDEF &&
-                    !elf_exported_function(pbuf, &ehdr, &shstr, &sym,
+                    !elf_exported_function(r, &ehdr, &shstr, names, &sym,
                                            loaded_ranges, loaded_count)) {
                 result = -EINVAL;
                 goto cleanup_loaded_ranges;
@@ -507,7 +575,11 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
     }
 #endif
     for (size_t i = 0; i < ehdr.shnum; ++i) {
-        elf32_shdr_t rela_sec = elf_section(pbuf, &ehdr, i);
+        elf32_shdr_t rela_sec;
+        if (elf_section(r, &ehdr, i, &rela_sec)) {
+            free(names);
+            return -EINVAL;
+        }
         if (rela_sec.type != SHT_RELA) {
             continue;
         }
@@ -519,7 +591,11 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
             result = -EINVAL;
             break;
         }
-        elf32_shdr_t symtab = elf_section(pbuf, &ehdr, rela_sec.link);
+        elf32_shdr_t symtab;
+        if (elf_section(r, &ehdr, rela_sec.link, &symtab)) {
+            free(names);
+            return -EINVAL;
+        }
         if (symtab.type != SHT_SYMTAB && symtab.type != SHT_SYNSYM) {
             result = -EINVAL;
             break;
@@ -528,8 +604,8 @@ int esp_elf_validate(const uint8_t *pbuf, size_t size)
         size_t sym_count = symtab.size / sizeof(elf32_sym_t);
         for (size_t j = 0; j < rela_sec.size / sizeof(elf32_rela_t); ++j) {
             elf32_rela_t rela;
-            memcpy(&rela, pbuf + rela_sec.offset + j * sizeof(rela), sizeof(rela));
-            if (ELF_R_SYM(rela.info) >= sym_count ||
+            if (elf_reader_read(r, rela_sec.offset + j * sizeof(rela), &rela, sizeof(rela)) ||
+                    ELF_R_SYM(rela.info) >= sym_count ||
                     !elf_relocation_target(loaded_ranges, loaded_count, rela.offset)) {
                 result = -EINVAL;
                 break;
@@ -546,5 +622,62 @@ cleanup_loaded_ranges:
         free(loaded_ranges);
     }
 #endif
+    free(names);
     return result;
+
+invalid:
+    free(names);
+    return -EINVAL;
+}
+
+/* Whole-buffer reader: bounds are checked by elf_reader_read() before the
+ * underlying read() is called. */
+typedef struct {
+    const uint8_t *buffer;
+} elf_buffer_source_t;
+
+static int elf_buffer_read(void *ctx, size_t off, void *buf, size_t len)
+{
+    const elf_buffer_source_t *mem = (const elf_buffer_source_t *)ctx;
+
+    memcpy(buf, mem->buffer + off, len);
+
+    return 0;
+}
+
+int esp_elf_validate(const uint8_t *pbuf, size_t size)
+{
+    if (!pbuf || ((uintptr_t)pbuf & (ELF_WORD_SIZE - 1)) != 0) {
+        return -EINVAL;
+    }
+
+    elf_buffer_source_t source = { .buffer = pbuf };
+    elf_reader_t reader = {
+        .read = elf_buffer_read,
+        .ctx = &source,
+        .size = size,
+    };
+
+    return elf_validate_impl(&reader);
+}
+
+static int elf_source_read_trampoline(void *ctx, size_t off, void *buf, size_t len)
+{
+    const elf_source_t *src = (const elf_source_t *)ctx;
+    return src->read(src->ctx, off, buf, len);
+}
+
+int esp_elf_validate_source(const elf_source_t *src)
+{
+    if (!src || !src->read || !src->size) {
+        return -EINVAL;
+    }
+
+    elf_reader_t reader = {
+        .read = elf_source_read_trampoline,
+        .ctx = (void *)src,
+        .size = src->size(src->ctx),
+    };
+
+    return elf_validate_impl(&reader);
 }

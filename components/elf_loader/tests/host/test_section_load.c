@@ -25,11 +25,34 @@ static void *checked_memset(void *dest, int value, size_t size);
 #ifdef memset
 #undef memset
 #endif
+
+static int test_mem_source_read2(void *ctx, size_t offset, void *buf, size_t len)
+{
+    const uint8_t *pbuf = *(const uint8_t **)ctx;
+    memcpy(buf, pbuf + offset, len);
+    return 0;
+}
+
 #define memcpy checked_memcpy
 #define memset checked_memset
 #include "../../src/esp_elf.c"
 #undef memcpy
 #undef memset
+
+static int call_load_section(esp_elf_t *elf, const uint8_t *pbuf)
+{
+    const uint8_t *ptr = pbuf;
+    elf_source_t src = {
+        .size = NULL,
+        .read = test_mem_source_read2,
+        .close = NULL,
+        .ctx = &ptr,
+    };
+    const elf32_hdr_t *ehdr = (const elf32_hdr_t *)pbuf;
+    const elf32_shdr_t *shdr = (const elf32_shdr_t *)(pbuf + ehdr->shoff);
+    const char *shstrab = (const char *)pbuf + shdr[ehdr->shstrndx].offset;
+    return esp_elf_load_section(elf, &src, ehdr, shdr, shstrab);
+}
 
 static void assert_not_executable_destination(void *dest)
 {
@@ -117,7 +140,7 @@ int main(void)
 
     /* An ET_EXEC at virtual address zero is not an entry-less shared object. */
     esp_elf_t executable = {0};
-    assert(esp_elf_load_section(&executable, (const uint8_t *)&image) == 0);
+assert(call_load_section(&executable, (const uint8_t *)&image) == 0);
     assert(executable.ptext != NULL);
     uintptr_t expected_runtime_base = (uintptr_t)executable.ptext;
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
@@ -136,7 +159,7 @@ int main(void)
     /* ET_DYN with entry zero is special only if dynamic loading is configured. */
     image.ehdr.type = ELF_ET_DYN;
     esp_elf_t shared = {0};
-    assert(esp_elf_load_section(&shared, (const uint8_t *)&image) == 0);
+    assert(call_load_section(&shared, (const uint8_t *)&image) == 0);
 #ifdef CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
     assert(shared.entry == NULL);
     assert(esp_elf_request(&shared, 0, 0, NULL) < 0);
@@ -152,7 +175,7 @@ int main(void)
     /* A nonzero ET_DYN entry remains executable in either configuration. */
     image.ehdr.entry = 2;
     esp_elf_t dynamic_with_entry = {0};
-    assert(esp_elf_load_section(&dynamic_with_entry, (const uint8_t *)&image) == 0);
+    assert(call_load_section(&dynamic_with_entry, (const uint8_t *)&image) == 0);
     uint32_t entry = (uint32_t)(uintptr_t)dynamic_with_entry.ptext + 2;
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
     entry += 0x1000;
@@ -208,7 +231,7 @@ int main(void)
     got_image.got_loc[2] = 0x55667788;
 
     esp_elf_t got_elf = {0};
-    assert(esp_elf_load_section(&got_elf, (const uint8_t *)&got_image) == 0);
+    assert(call_load_section(&got_elf, (const uint8_t *)&got_image) == 0);
     assert(got_elf.text_alloc_size == 0x4c);
     assert(got_elf.sec[ELF_SEC_TEXT].size == sizeof(got_image.text));
     assert(got_elf.sec[ELF_SEC_GOT_LOC].addr == (uintptr_t)got_elf.ptext + 0x40);
@@ -232,7 +255,7 @@ int main(void)
     got_image.shdr[1].size = 3;
     got_image.shdr[3].size = 7;
     esp_elf_t partial = {0};
-    assert(esp_elf_load_section(&partial, (const uint8_t *)&got_image) == 0);
+    assert(call_load_section(&partial, (const uint8_t *)&got_image) == 0);
     assert(partial.text_alloc_size == 0x48);
     assert(memcmp(partial.ptext, got_image.text, 3) == 0);
     assert(partial.ptext[3] == 0);
@@ -246,11 +269,11 @@ int main(void)
      * PC-relative offset must be rejected, not allocate an invalid span. */
     got_image.shdr[3].addr = 0x1008;
     esp_elf_t overlapping = {0};
-    assert(esp_elf_load_section(&overlapping, (const uint8_t *)&got_image) == -EINVAL);
+    assert(call_load_section(&overlapping, (const uint8_t *)&got_image) == -EINVAL);
     assert(overlapping.ptext == NULL);
     got_image.shdr[3].addr = 0x1042;
     esp_elf_t unaligned = {0};
-    assert(esp_elf_load_section(&unaligned, (const uint8_t *)&got_image) == -EINVAL);
+    assert(call_load_section(&unaligned, (const uint8_t *)&got_image) == -EINVAL);
     assert(unaligned.ptext == NULL);
 
     return 0;
