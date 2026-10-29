@@ -1,0 +1,66 @@
+name: Build and Release USB Camera Firmware
+
+on:
+  push:
+    tags:
+      - 'usb-camera-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. usb-camera-v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example:
+          - examples/usb/host/usb_camera_lcd_display
+          - examples/usb/host/usb_hub_dual_camera
+          - examples/usb/host/usb_camera_mic_spk
+        target: [esp32s3]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3
+          target: ${{ matrix.target }}
+          path: ${{ matrix.example }}
+          command: idf.py build && cd build && esptool.py --chip ${{ matrix.target }} merge_bin -o merged.bin @flash_args
+
+      - name: Prepare artifacts
+        id: prep
+        run: |
+          name=$(basename "${{ matrix.example }}")-${{ matrix.target }}
+          mkdir -p out
+          cp "${{ matrix.example }}/build/merged.bin" "out/${name}.bin"
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.prep.outputs.name }}
+          path: out/*.bin
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: USB Camera ${{ github.event.inputs.tag || github.ref_name }}
+          generate_release_notes: true
+          files: out/*.bin
