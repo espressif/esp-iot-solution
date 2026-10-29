@@ -1,5 +1,38 @@
 # ChangeLog
 
+## v3.1.1 - 2026-10-21
+
+### Bug Fixes:
+
+* Validate notification header and standard CDC payload lengths before invoking callbacks, while preserving other notification formats.
+* Include the setup packet in control transfer buffer bounds checks.
+* Copy only received control IN data and zero-pad short responses to prevent stale data from being returned.
+* Avoid NULL buffer accesses for control requests without a data stage.
+
+## v3.1.0 - 2026-06-11
+
+### Features:
+
+* Support ESP32-S31.
+
+### Bug Fixes:
+
+* Allow CDC notification interfaces without interrupt endpoints.
+
+## v3.0.0 - 2025-10-15
+
+### Features:
+
+* Add `usbh_cdc_port_open()` and `usbh_cdc_port_close()` to open and close the CDC port on a device.
+* Add API `usbh_cdc_get_dev_handle`, `usbh_cdc_port_get_intf_desc`
+* Support force disable notification transfer to save channel of host controller.
+
+### Break Changes:
+
+* The `usbh_cdc_device_config_t` structure is modified to adapt to the new API.
+* Modify API `usbh_cdc_register_new_dev_cb()` and `usbh_cdc_unregister_new_dev_cb()` to `usbh_cdc_register_dev_event_cb` and `usbh_cdc_unregister_dev_event_cb`.
+* Remove API `usbh_cdc_get_state` `usbh_cdc_create`
+
 ## v2.0.1 - 2025-06-17
 
 ### Bug Fixes:

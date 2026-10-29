@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=4.0"
+  aht20:
+    version: "*"
+    override_path: "../../"

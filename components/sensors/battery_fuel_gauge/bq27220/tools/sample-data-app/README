@@ -1,0 +1,42 @@
+# Sample data for BQ27220 fuel gauge
+
+This APP read data from the BQ27220 fuel gauge and print it on the console with CSV format. than you can collect the data and use it for [GPCCEDV](https://www.ti.com.cn/tool/cn/GPCCEDV) tool.
+
+The default end discharge voltage is set to 3.3V, it can be changed by menuconfig.
+
+## Log Output
+
+```
+I (305) main_task: Started on CPU0
+I (308) main_task: Calling app_main()
+I (311) bq27220_sample: Hello BQ27220 Battery Fuel Gauge!
+I (316) bq27220_sample: Discharge enable IO: 4
+I (321) bq27220_sample: I2C master SCL IO: 1
+I (325) bq27220_sample: I2C master SDA IO: 2
+I (329) i2c_bus: i2c0 bus inited
+I (331) i2c_bus: I2C Bus V2 Config Succeed, Version: 1.1.0
+I (370) bq27220: Firmware Version 2002
+I (386) bq27220: Hardware Version 0004
+I (452) bq27220: Design Capacity: 650, EMF: 3670, T0: 4547, DOD20: 3969
+I (452) bq27220: Skip battery profile update
+I (453) bq27220_sample: End discharge voltage: 3300
+
+-------- Start record --------
+ElapsedTime,     Voltage,        Current,        Temperature
+0,       4078,   -33,    27.8
+2,       4077,   -32,    27.7
+4,       4077,   -32,    27.7
+6,       4077,   -32,    27.8
+8,       4077,   -32,    27.7
+10,      4077,   -32,    27.7
+12,      4077,   -32,    27.7
+14,      4077,   -32,    27.8
+16,      4076,   -32,    27.7
+18,      4077,   -32,    27.8
+20,      4076,   -32,    27.7
+22,      4076,   -32,    27.8
+24,      4076,   -32,    27.8
+26,      4076,   -32,    27.7
+
+......
+```

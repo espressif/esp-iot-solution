@@ -1,0 +1,14 @@
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+
+# Partition table
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_4mb_optimised.csv"
+
+# ESP Weaver - Local Control
+# 0 = SEC0 (no security), 1 = SEC1 (with PoP, auto-generated and persisted in NVS)
+CONFIG_ESP_WEAVER_LOCAL_CTRL_SECURITY_VERSION=1
+
+# WiFi Configuration
+# REQUIRED: Change to your WiFi credentials before building
+CONFIG_EXAMPLE_WIFI_SSID="my_ssid"
+CONFIG_EXAMPLE_WIFI_PASSWORD="my_password"

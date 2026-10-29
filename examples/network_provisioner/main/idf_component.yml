@@ -1,0 +1,8 @@
+## IDF Component Manager
+dependencies:
+  idf:
+    version: ">=5.1"
+  # In-tree: override_path; registry consumers resolve via version.
+  espressif/network_provisioner:
+    version: "^2.0.0"
+    override_path: "../../../components/network_provisioner"

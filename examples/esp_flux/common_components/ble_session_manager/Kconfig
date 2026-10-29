@@ -1,0 +1,12 @@
+menu "BLE Session Manager Configuration"
+
+config BLE_MANAGER_MAX_CONNECTIONS
+    int "Maximum BLE connections"
+    range 1 BT_NIMBLE_MAX_CONNECTIONS if BT_NIMBLE_ENABLED
+    range 1 BT_NIMBLE_MAX_CONNECTIONS
+    default 2 if IDF_TARGET_ESP32C2
+    default 3
+    help
+        Maximum number of simultaneous BLE connections.
+
+endmenu

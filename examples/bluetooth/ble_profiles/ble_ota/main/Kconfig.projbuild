@@ -1,0 +1,7 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_OTA_RAW_DEVICE_NAME
+        string "Device name"
+        default "ESP-C919"
+        help
+            BLE advertising device name used by ble_conn_mgr.
+endmenu

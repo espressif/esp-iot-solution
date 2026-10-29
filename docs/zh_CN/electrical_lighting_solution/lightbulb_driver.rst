@@ -29,7 +29,6 @@ PWM 方案使用案例
 
     lightbulb_config_t config = {
         //1. 选择 PWM 输出并进行参数配置
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
 
         //2. 功能选择，根据你的需要启用/禁用
@@ -62,7 +61,7 @@ PWM 方案使用案例
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_pwm_device(&config);
 
 I2C 调光方案
 ^^^^^^^^^^^^
@@ -86,7 +85,6 @@ I2C 调光使用案例
 
     lightbulb_config_t config = {
         //1. 选择需要的芯片并进行参数配置，每款芯片配置的参数存在不同，请仔细参阅芯片手册
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.freq_khz = 300,
         .driver_conf.bp57x8d.enable_iic_queue = true,
         .driver_conf.bp57x8d.iic_clk = 4,
@@ -123,7 +121,7 @@ I2C 调光使用案例
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_bp57x8d_device(&config);
 
 单线调光方案
 ^^^^^^^^^^^^
@@ -144,7 +142,6 @@ WS2812 使用案例
 
     lightbulb_config_t config = {
         //1. 选择 WS2812 输出并进行参数配置
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 10,
         .driver_conf.ws2812.ctrl_io = 4,
 
@@ -170,7 +167,7 @@ WS2812 使用案例
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_ws2812_device(&config);
 
 渐变原理
 ---------

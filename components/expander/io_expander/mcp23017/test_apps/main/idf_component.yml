@@ -1,4 +1,5 @@
 dependencies:
+    idf: ">=5.2"
     mcp23017:
       version: "*"
       override_path: "../../../mcp23017"

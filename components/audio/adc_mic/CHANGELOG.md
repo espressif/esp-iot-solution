@@ -1,5 +1,27 @@
 # ChangeLog
 
+## v0.2.3 - 2026-03-26
+
+### Fixes:
+
+* Suppressed the `'format' is deprecated` warning on some IDF versions.
+
+## v0.2.2 - 2026-03-16
+
+### Fixes:
+
+* Fixed ADC mic sample parsing from ADC DMA output.
+
+## v0.2.1 - 2025-08-08
+
+### Fixes:
+
+* Fixed a crash when calling `esp_codec_dev_open` and `esp_codec_dev_close` across tasks.
+
+### Note:
+
+* This version creates an internal task, whose priority and task size can be adjusted via `menuconfig`. Correspondingly, the memory overhead will increase by the configured amount.
+
 ## v0.2.0 - 2024-05-22
 
 ### Enhancements:

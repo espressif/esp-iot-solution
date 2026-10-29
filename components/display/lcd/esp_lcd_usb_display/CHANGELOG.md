@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.1.0 - 2026-5-25
+
+### Enhancements:
+
+* Support ESP32S31 and update `usb_device_uvc` to `v1.3.*` 
+
 ## v1.0.0 - 2024-08-12
 
 ### Enhancements:

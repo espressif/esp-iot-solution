@@ -1,0 +1,114 @@
+{
+  "backend": "tflite-micro",
+  "dtype": "int8",
+  "checkpoint_source": "last",
+  "num_features": 3,
+  "input_shape": [
+    3,
+    150
+  ],
+  "predict_input_layout": "LC",
+  "input_tensor": {
+    "shape": [
+      1,
+      150,
+      3
+    ],
+    "dtype": "int8",
+    "scale": 0.08342714607715607,
+    "zero_point": 7
+  },
+  "output_tensor": {
+    "shape": [
+      1,
+      5
+    ],
+    "dtype": "int8",
+    "scale": 0.00390625,
+    "zero_point": -128
+  },
+  "num_classes": 5,
+  "class_names": [
+    "O",
+    "S",
+    "V",
+    "Z",
+    "background"
+  ],
+  "model_file": [
+    "model.cpp",
+    "model.h"
+  ],
+  "predict_api_file": [
+    "predict.cpp",
+    "predict.h"
+  ],
+  "gesture_model_api_file": [
+    "gesture_model.cpp",
+    "gesture_model.h"
+  ],
+  "model": {
+    "layers": [
+      {
+        "type": "Conv1d",
+        "in_channels": 3,
+        "out_channels": 16,
+        "kernel_size": 7,
+        "padding": 3
+      },
+      {
+        "type": "BatchNorm1d",
+        "num_features": 16
+      },
+      {
+        "type": "ReLU"
+      },
+      {
+        "type": "MaxPool1d",
+        "kernel_size": 2
+      },
+      {
+        "type": "Conv1d",
+        "in_channels": 16,
+        "out_channels": 32,
+        "kernel_size": 5,
+        "padding": 2
+      },
+      {
+        "type": "BatchNorm1d",
+        "num_features": 32
+      },
+      {
+        "type": "ReLU"
+      },
+      {
+        "type": "MaxPool1d",
+        "kernel_size": 2
+      },
+      {
+        "type": "AvgPool1d",
+        "kernel_size": 5
+      },
+      {
+        "type": "Flatten"
+      },
+      {
+        "type": "Linear",
+        "in_features": 224,
+        "out_features": 32
+      },
+      {
+        "type": "ReLU"
+      },
+      {
+        "type": "Linear",
+        "in_features": 32,
+        "out_features": 5
+      },
+      {
+        "type": "Softmax",
+        "dim": -1
+      }
+    ]
+  }
+}

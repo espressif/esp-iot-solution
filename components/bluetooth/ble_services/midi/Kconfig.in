@@ -1,0 +1,8 @@
+# Bluetooth Low Energy MIDI Service
+
+config BLE_MIDI
+    bool "Bluetooth Low Energy MIDI Service"
+    depends on BT_ENABLED && BT_NIMBLE_ENABLED
+    default y if BLE_MIDI_PROFILE
+    help
+      Enable Bluetooth Low Energy MIDI Service (MIDI over BLE) in GATT server.

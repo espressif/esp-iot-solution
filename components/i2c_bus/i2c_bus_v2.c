@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -88,6 +88,7 @@ static esp_err_t i2c_driver_deinit(i2c_port_t port);
 static esp_err_t i2c_bus_write_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, const uint8_t *data);
 static esp_err_t i2c_bus_read_reg8(i2c_bus_device_handle_t dev_handle, uint8_t mem_address, size_t data_len, uint8_t *data);
 inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf);
+static inline void i2c_bus_set_default_clk_source(i2c_master_bus_config_t *bus_config, i2c_port_t port);
 /**************************************** Public Functions (Application level)*********************************************/
 
 i2c_bus_handle_t i2c_bus_create(i2c_port_t port, const i2c_config_t *conf)
@@ -534,8 +535,8 @@ static esp_err_t i2c_driver_reinit(i2c_port_t port, const i2c_config_t *conf)
 #endif
     {
         // Convert i2c_config_t information to i2c_master_bus_config_t and i2c_device_config_t
-        s_i2c_bus[port].bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
         s_i2c_bus[port].bus_config.i2c_port = port;
+        i2c_bus_set_default_clk_source(&s_i2c_bus[port].bus_config, port);
         s_i2c_bus[port].bus_config.scl_io_num = conf->scl_io_num;
         s_i2c_bus[port].bus_config.sda_io_num = conf->sda_io_num;
         s_i2c_bus[port].bus_config.glitch_ignore_cnt = 7;                                                   /*!< Set the burr cycle of the host bus */
@@ -605,4 +606,17 @@ inline static bool i2c_config_compare(i2c_port_t port, const i2c_config_t *conf)
         }
     }
     return false;
+}
+
+static inline void i2c_bus_set_default_clk_source(i2c_master_bus_config_t *bus_config, i2c_port_t port)
+{
+#if SOC_LP_I2C_NUM > 0
+    if ((port >= LP_I2C_NUM_0) && (port < I2C_NUM_MAX)) {
+        bus_config->lp_source_clk = LP_I2C_SCLK_DEFAULT;
+        return;
+    }
+#else
+    (void)port;
+#endif
+    bus_config->clk_source = I2C_CLK_SRC_DEFAULT;
 }

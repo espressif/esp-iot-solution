@@ -1,0 +1,5 @@
+# The ESP32-P4 test runner uses USB-Serial/JTAG (/dev/ttyACM0) for Unity input.
+# UART0 primary with USB-Serial/JTAG secondary only mirrors output, so Unity
+# cannot receive the menu selection and pytest times out writing to the port.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_SECONDARY_NONE=y

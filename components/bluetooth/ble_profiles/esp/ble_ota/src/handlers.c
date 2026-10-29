@@ -24,8 +24,7 @@ static const char *TAG = "ota_handlers";
 static esp_err_t
 ota_send_file(uint8_t *file, size_t length)
 {
-    esp_ble_ota_write(file, length);
-    return ESP_OK;
+    return esp_ble_ota_write(file, length);
 }
 
 static esp_err_t

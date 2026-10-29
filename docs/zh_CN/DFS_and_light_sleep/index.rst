@@ -1,13 +1,1 @@
-:orphan:
-
-DFS and Light Sleep
-*************************
-
-:link_to_translation:`en:[English]`
-
-.. toctree::
-    :maxdepth: 1
-
-    DFS test manual <DFS_test_manual>
-    light_sleep_performance <light_sleep_performance>
-
+.. include:: ../../en/DFS_and_light_sleep/index.rst

@@ -1,20 +1,15 @@
 dependencies:
-  idf: ">=4.4.1"
+  idf: ">=5.0"
   cmake_utilities: "0.*"
-  led_indicator:
-    version: "~0.3.0"
-  json_parser:
-    version: "1.0.3"
+
   iot_usbh_modem:
-    version: "^1.1.0"
+    version: "*"
     override_path: "../../../../../components/usb/iot_usbh_modem"
-  espressif/esp_wifi_remote:
-    version: "^0.9.0"
-    rules:
-      - if: "target in [esp32p4]"
-  espressif/esp32_s3_usb_otg:
-    version: "^1.5.1"
-    rules:
-      - if: "target in [esp32s3]"
-  lvgl/lvgl: #temp to workaround bsp issue
-    version: "9.2.0"
+
+  web_wifi:
+    version: "*"
+    override_path: ../../../../common_components/web_wifi
+
+  network_test:
+    version: "*"
+    override_path: ../../../../common_components/network_test

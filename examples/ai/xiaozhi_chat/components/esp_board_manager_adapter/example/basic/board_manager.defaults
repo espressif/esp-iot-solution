@@ -1,0 +1,6 @@
+# --- Board-specific configuration (managed by esp_board_manager) ---
+# Board: esp32_s3_korvo2_v3
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_BOARD_ESP32_S3_KORVO2_V3=y
+CONFIG_BOARD_NAME="esp32_s3_korvo2_v3"
+# --- End of board-specific configuration ---

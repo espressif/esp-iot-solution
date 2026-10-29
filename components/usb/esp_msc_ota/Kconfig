@@ -1,12 +1,6 @@
 menu "MSC OTA Config"
 
-    config BASE_PATH
-        string
-        default "/usb"
-        help
-            Base VFS path to be used to access file storage
-
     config MSC_PRINT_DESC
         bool "Print descriptor info"
-        default y
+        default n
 endmenu

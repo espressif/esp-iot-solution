@@ -1,0 +1,5 @@
+dependencies:
+  idf:
+    version: "==5.5"
+  espressif/esp_weaver:
+    override_path: "../../../esp_weaver"

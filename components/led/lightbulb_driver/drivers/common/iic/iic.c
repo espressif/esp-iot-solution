@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -41,6 +41,7 @@ static const char *TAG = "iic";
 typedef struct {
     QueueHandle_t cmd_queue_handle;
     TaskHandle_t send_task_handle;
+    SemaphoreHandle_t io_mutex;
 #if ENABLE_NEW_IIC_DRIVER
     i2c_master_bus_handle_t bus_handle;
     i2c_master_dev_handle_t i2c_dev_handle;
@@ -96,7 +97,10 @@ static void send_task(void *arg)
     i2c_send_data_t data;
     while (true) {
         if (xQueueReceive(s_obj->cmd_queue_handle, &data, portMAX_DELAY) == pdPASS) {
-            _write(data.addr, data.data, data.real_data_size);
+            if (xSemaphoreTake(s_obj->io_mutex, portMAX_DELAY) == pdTRUE) {
+                _write(data.addr, data.data, data.real_data_size);
+                xSemaphoreGive(s_obj->io_mutex);
+            }
         }
     }
     vTaskDelete(NULL);
@@ -104,22 +108,32 @@ static void send_task(void *arg)
 
 static void clean_up(void)
 {
-    if (s_obj->cmd_queue_handle) {
-        vQueueDelete(s_obj->cmd_queue_handle);
-        s_obj->cmd_queue_handle = NULL;
+    if (!s_obj) {
+        return;
     }
 
     if (s_obj->send_task_handle) {
         vTaskDelete(s_obj->send_task_handle);
         s_obj->send_task_handle = NULL;
     }
+
+    if (s_obj->cmd_queue_handle) {
+        vQueueDelete(s_obj->cmd_queue_handle);
+        s_obj->cmd_queue_handle = NULL;
+    }
 }
 
 esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio_num_t scl_io_num, uint32_t clk_freq_hz)
 {
     esp_err_t err = ESP_FAIL;
+
+    DRIVER_CHECK(s_obj == NULL, "I2C driver already initialized, only one I2C device instance is allowed", return ESP_ERR_INVALID_STATE);
+
     s_obj = calloc(1, sizeof(iic_config_t));
     DRIVER_CHECK(s_obj, "alloc fail", return ESP_ERR_NO_MEM);
+
+    s_obj->io_mutex = xSemaphoreCreateMutex();
+    DRIVER_CHECK(s_obj->io_mutex, "mutex create fail", goto EXIT);
 
 #if ENABLE_NEW_IIC_DRIVER
     i2c_master_bus_config_t i2c_bus_config = {
@@ -165,16 +179,23 @@ esp_err_t iic_driver_init(i2c_port_t i2c_master_num, gpio_num_t sda_io_num, gpio
 EXIT:
 
 #if ENABLE_NEW_IIC_DRIVER
-    if (s_obj->bus_handle) {
-        free(s_obj->bus_handle);
-    }
     if (s_obj->i2c_dev_handle) {
-        free(s_obj->i2c_dev_handle);
+        i2c_master_bus_rm_device(s_obj->i2c_dev_handle);
+        s_obj->i2c_dev_handle = NULL;
+    }
+    if (s_obj->bus_handle) {
+        i2c_del_master_bus(s_obj->bus_handle);
+        s_obj->bus_handle = NULL;
     }
 #endif
 
     if (s_obj) {
+        if (s_obj->io_mutex) {
+            vSemaphoreDelete(s_obj->io_mutex);
+            s_obj->io_mutex = NULL;
+        }
         free(s_obj);
+        s_obj = NULL;
     }
 
     return err;
@@ -182,6 +203,8 @@ EXIT:
 
 esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
 {
+    DRIVER_CHECK(s_obj, "I2C driver not initialized", return ESP_ERR_INVALID_STATE);
+
     esp_err_t err = s_obj->last_err;
     if (s_obj->cmd_queue_handle && s_obj->send_task_handle) {
         if (uxQueueSpacesAvailable(s_obj->cmd_queue_handle) == 0) {
@@ -205,11 +228,20 @@ esp_err_t iic_driver_write(uint8_t addr, uint8_t *data_wr, size_t size)
         return err;
     }
 
-    return _write(addr, data_wr, size);
+    DRIVER_CHECK(s_obj->io_mutex, "I2C mutex not initialized", return ESP_ERR_INVALID_STATE);
+
+    if (xSemaphoreTake(s_obj->io_mutex, portMAX_DELAY) != pdTRUE) {
+        return ESP_ERR_TIMEOUT;
+    }
+
+    err = _write(addr, data_wr, size);
+    xSemaphoreGive(s_obj->io_mutex);
+    return err;
 }
 
 esp_err_t iic_driver_send_task_create(void)
 {
+    DRIVER_CHECK(s_obj, "I2C driver not initialized", return ESP_ERR_INVALID_STATE);
     DRIVER_CHECK(!s_obj->cmd_queue_handle || !s_obj->send_task_handle, "already initialized", return ESP_ERR_INVALID_STATE);
 
     s_obj->cmd_queue_handle = xQueueCreate(IIC_QUEUE_SIZE, sizeof(i2c_send_data_t));
@@ -227,12 +259,35 @@ EXIT:
 
 esp_err_t iic_driver_task_destroy(void)
 {
+    if (!s_obj) {
+        return ESP_OK;
+    }
+
+    if (s_obj->cmd_queue_handle) {
+        int wait_ms = 0;
+        while (uxQueueMessagesWaiting(s_obj->cmd_queue_handle) > 0 && wait_ms < 1000) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+            wait_ms += 10;
+        }
+    }
+
+    if (s_obj->io_mutex) {
+        if (xSemaphoreTake(s_obj->io_mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            clean_up();
+            xSemaphoreGive(s_obj->io_mutex);
+            return ESP_OK;
+        }
+        ESP_LOGW(TAG, "timed out waiting for pending I2C transaction before task destroy");
+    }
+
     clean_up();
     return ESP_OK;
 }
 
 esp_err_t iic_driver_deinit(void)
 {
+    DRIVER_CHECK(s_obj, "not initialized", return ESP_ERR_INVALID_STATE);
+
 #if ENABLE_NEW_IIC_DRIVER
     i2c_master_bus_rm_device(s_obj->i2c_dev_handle);
     i2c_del_master_bus(s_obj->bus_handle);
@@ -240,6 +295,13 @@ esp_err_t iic_driver_deinit(void)
     i2c_driver_delete(s_obj->i2c_master_num);
 #endif
 
-    clean_up();
+    if (s_obj->io_mutex) {
+        vSemaphoreDelete(s_obj->io_mutex);
+        s_obj->io_mutex = NULL;
+    }
+
+    free(s_obj);
+    s_obj = NULL;
+
     return ESP_OK;
 }

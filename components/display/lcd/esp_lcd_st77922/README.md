@@ -15,7 +15,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency "espressif/esp_lcd_st77922"
 ```
@@ -140,6 +140,23 @@ void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * ar
 }
 ```
 
+### MADCTL MV axis swap
+
+`esp_lcd_panel_swap_xy()` returns `ESP_ERR_NOT_SUPPORTED` by default. The ST77922 specification describes the `MADCTL.MV` bit inconsistently, and its behavior is not guaranteed across modules or initialization sequences.
+
+For a SPI/QSPI module that has been validated to exchange its address axes with `MADCTL.MV`, opt in explicitly through the vendor configuration:
+
+```c
+const st77922_vendor_config_t vendor_config = {
+    .flags = {
+        .use_qspi_interface = 1,
+        .supports_madctl_mv = 1,
+    },
+};
+```
+
+Only enable this flag after confirming the panel's visual orientation with the exact initialization sequence. It is ignored by the RGB and MIPI-DSI implementations; software rotation remains the portable fallback.
+
 ### RGB Interface
 
 ```c
@@ -242,16 +259,20 @@ void lvgl_port_rounder_callback(struct _lv_disp_drv_t * disp_drv, lv_area_t * ar
     ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
 
     ESP_LOGI(TAG, "Initialize MIPI DSI bus");
-    esp_lcd_dsi_bus_config_t bus_config = ST77922_PANEL_BUS_DSI_1CH_CONFIG();
+    esp_lcd_dsi_bus_config_t bus_config = ST77922_MIPI_PANEL_BUS_DSI_1CH_CONFIG();
     ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
 
     ESP_LOGI(TAG, "Install panel IO");
-    esp_lcd_dbi_io_config_t dbi_config = ST77922_PANEL_IO_DBI_CONFIG();
+    esp_lcd_dbi_io_config_t dbi_config = ST77922_MIPI_PANEL_IO_DBI_CONFIG();
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
 
     ESP_LOGI(TAG, "Install LCD driver of st77922");
     esp_lcd_panel_handle_t panel_handle = NULL;
-    esp_lcd_dpi_panel_config_t dpi_config = ST77922_480_360_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+    esp_lcd_dpi_panel_config_t dpi_config = ST77922_MIPI_480_480_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = ST77922_MIPI_480_480_PANEL_60HZ_DPI_CONFIG_CF(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#endif
     const st77922_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,      // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st77922_lcd_init_cmd_t),

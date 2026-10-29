@@ -203,7 +203,7 @@ typedef struct {
 typedef struct {
     sensor_type_t type;                                                                    /*!< sensor type  */
     sensor_driver_handle_t (*create)(bus_handle_t, const char *sensor_name, uint8_t addr); /*!< create a sensor  */
-    esp_err_t (*delete)(sensor_driver_handle_t *);                                         /*!< delete a sensor  */
+    esp_err_t (*remove)(sensor_driver_handle_t *);                                         /*!< delete a sensor  */
     esp_err_t (*acquire)(sensor_driver_handle_t, sensor_data_group_t *);                   /*!< acquire a group of sensor data  */
     esp_err_t (*control)(sensor_driver_handle_t, sensor_command_t cmd, void *args);        /*!< modify the sensor configuration  */
 } iot_sensor_impl_t;

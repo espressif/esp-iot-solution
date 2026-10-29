@@ -1,21 +1,37 @@
 <template>
   <v-card class="mb-3">
-    <v-img :src="cameraImageSrc" :aspect-ratio="props.resolution.width / props.resolution.height" cover :id="`cam-${props.camId}-v-img`" crossorigin="anonymous">
-      <template #placeholder>
-        <div class="d-flex align-center justify-center fill-height">
-          <v-progress-circular color="grey-lighten-4" indeterminate />
-        </div>
-      </template>
-      <template #error>
-        <div class="d-flex align-center justify-center fill-height">
-          <div style="height: 100px;" class="d-flex flex-column">
-            <div class="my-auto" style="font-size: larger; font-weight: bold;">
-              {{ errMsg || "Camera is inactive" }}
-            </div>
+    <div
+      class="camera-stream-shell"
+      :style="{ aspectRatio: `${props.resolution.width} / ${props.resolution.height}` }"
+    >
+      <img
+        v-if="cameraImageSrc"
+        :id="`cam-${props.camId}-img`"
+        :src="cameraImageSrc"
+        class="camera-stream-image"
+        alt="Camera stream"
+        @load="onImageLoad"
+        @error="onImageError"
+      >
+
+      <div
+        v-if="cameraStatus === 'pending'"
+        class="camera-stream-overlay d-flex align-center justify-center fill-height"
+      >
+        <v-progress-circular color="grey-lighten-4" indeterminate />
+      </div>
+
+      <div
+        v-else-if="cameraStatus === 'err'"
+        class="camera-stream-overlay d-flex align-center justify-center fill-height"
+      >
+        <div style="height: 100px;" class="d-flex flex-column">
+          <div class="my-auto" style="font-size: larger; font-weight: bold;">
+            {{ errMsg || "Camera is inactive" }}
           </div>
         </div>
-      </template>
-    </v-img>
+      </div>
+    </div>
     <div class="d-flex justify-space-between align-center my-2 mx-3">
       <div>
         <div style="font-weight: bold; font-size: larger;">
@@ -47,7 +63,6 @@ const mainStore = useMainStore()
 const props = defineProps<{
   camId: number | string,
   resolution: Resolution,
-  src: URL | null,
 }>()
 
 const cameraStatus = ref<'pending' | 'normal' | 'err'>('pending')
@@ -56,20 +71,52 @@ const errMsg = ref<string | null>(null)
 const capturedImage = ref<URL | string | null>(null)
 const canvas = ref<HTMLCanvasElement | null>(null)
 
-const quit = () => {
+let imageLoadTimeoutId: ReturnType<typeof setTimeout> | null = null
+let quitting = false
+
+const clearImageLoadTimeout = () => {
+  if (imageLoadTimeoutId) {
+    clearTimeout(imageLoadTimeoutId)
+    imageLoadTimeoutId = null
+  }
+}
+
+const setPendingTimeout = () => {
+  clearImageLoadTimeout()
+  imageLoadTimeoutId = setTimeout(() => {
+    if (cameraStatus.value === 'pending') {
+      errMsg.value = 'Stream started but no frame was rendered'
+      cameraStatus.value = 'err'
+    }
+  }, 12000)
+}
+
+const quit = async () => {
+  if (quitting) return
+  quitting = true
+  clearImageLoadTimeout()
   cameraImageSrc.value = '/api/404'
+  const deactivateEndpoint = new URL('/api/deactivate', location.href)
+  try {
+    await fetch(deactivateEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id: props.camId })
+    })
+  } catch (err) {
+    console.log(err)
+  }
 
   setTimeout(() => {
-    if (props.src) mainStore.webBase.releasePort(props.src.port || (props.src.protocol === 'https:' ? 443 : 80))
     mainStore.clientCameraActivedList = mainStore.clientCameraActivedList.filter(item => String(item.id) !== String(props.camId))
   }, 100)
 }
 
 const captureFrame = () => {
   if (!cameraImageSrc.value || !canvas.value) return
-  const camElement = document.getElementById(`cam-${props.camId}-v-img`)
-  if (!camElement) return
-  const camImageElement = camElement.querySelector('img');
+  const camImageElement = document.getElementById(`cam-${props.camId}-img`) as HTMLImageElement | null
   if (!camImageElement) return
   const ctx = canvas.value.getContext("2d")
   if (!ctx) return
@@ -88,48 +135,80 @@ const captureFrame = () => {
   document.body.removeChild(link)
 };
 
+const onImageLoad = () => {
+  clearImageLoadTimeout()
+  cameraStatus.value = 'normal'
+  errMsg.value = null
+}
+
+const onImageError = () => {
+  clearImageLoadTimeout()
+  cameraStatus.value = 'err'
+  errMsg.value = 'Failed to render MJPEG stream'
+}
 
 onBeforeMount(async () => {
-  if (!props.src) {
-    console.log("props.src is null")
-    return
-  }
-  const activeEndPoint = new URL(props.src)
-  activeEndPoint.pathname = '/api/active'
-  activeEndPoint.search = ''
+  const activeEndPoint = new URL('/api/active', location.href)
   fetch(activeEndPoint, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
       id: props.camId,
       resolution: {
         format: props.resolution.format ?? undefined,
-        width: props.resolution.height,
-        height: props.resolution.width,
+        width: props.resolution.width,
+        height: props.resolution.height,
         index: props.resolution.index,
       }
     })
   })
     .then(response => {
       if (response.ok) {
-        if (!props.src) {
-          throw new Error("props.src is null")
-        }
-        cameraStatus.value = 'normal'
-        const cameraImageSrcUrl = new URL(props.src)
-        cameraImageSrcUrl.pathname = `/api/stream/${props.camId}`
+        cameraStatus.value = 'pending'
+        errMsg.value = null
+        const cameraImageSrcUrl = new URL(`/api/stream/${props.camId}`, location.href)
+        cameraImageSrcUrl.searchParams.set('ts', String(Date.now()))
         cameraImageSrc.value = cameraImageSrcUrl.href
+        setPendingTimeout()
       } else {
         cameraStatus.value = 'err'
+        errMsg.value = `Failed to activate camera (${response.status})`
       }
     })
     .catch((err) => {
       console.log(err)
       cameraStatus.value = 'err'
+      errMsg.value = 'Failed to activate camera'
     })
 })
 
 onBeforeUnmount(() => {
-  quit()
+  clearImageLoadTimeout()
+  void quit()
 })
 
 </script>
+
+<style scoped>
+.camera-stream-shell {
+  position: relative;
+  overflow: hidden;
+  background: rgb(18, 18, 18);
+}
+
+.camera-stream-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-stream-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+}
+</style>

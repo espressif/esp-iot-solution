@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,33 +11,31 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "at581x_reg.h"
 
 const static char *TAG = "AT581X";
 
 typedef struct {
-    i2c_port_t  i2c_port;
-    uint8_t     i2c_addr;
+    i2c_bus_device_handle_t bus_device_inst;
     at581x_i2c_config_t config;
 } at581x_dev_t;
 
 static inline esp_err_t at581x_write_reg(at581x_dev_handle_t dev, uint8_t reg_addr, uint8_t data)
 {
     ESP_RETURN_ON_FALSE(dev, ESP_ERR_INVALID_ARG, TAG, "dev handle can't be NULL");
-
-    at581x_dev_t *sens = (at581x_dev_t *) dev;
-    const uint8_t write_buf[2] = {reg_addr, data};
-    return i2c_master_write_to_device(sens->i2c_port, (sens->i2c_addr) >> 1, write_buf, sizeof(write_buf), pdMS_TO_TICKS(1000));
+    at581x_dev_t *sens = (at581x_dev_t *)dev;
+    return i2c_bus_write_byte(sens->bus_device_inst, reg_addr, data);
 }
 
 static inline esp_err_t at581x_read_reg(at581x_dev_handle_t dev, uint8_t reg_addr, uint8_t *reg_value)
 {
     ESP_RETURN_ON_FALSE(dev, ESP_ERR_INVALID_ARG, TAG, "dev handle can't be NULL");
     ESP_RETURN_ON_FALSE(reg_value, ESP_ERR_INVALID_ARG, TAG, "reg_value pointer can't be NULL");
-
-    at581x_dev_t *sens = (at581x_dev_t *) dev;
-    return i2c_master_write_read_device(sens->i2c_port, (sens->i2c_addr) >> 1, &reg_addr, 1, reg_value, 1, pdMS_TO_TICKS(1000));
+    at581x_dev_t *sens = (at581x_dev_t *)dev;
+    return i2c_bus_read_byte(sens->bus_device_inst, reg_addr, reg_value);
 }
 
 esp_err_t at581x_soft_reset(at581x_dev_handle_t handle)
@@ -216,8 +214,13 @@ esp_err_t at581x_new_sensor(const at581x_i2c_config_t *i2c_conf, at581x_dev_hand
     at581x_dev_t *handle = calloc(1, sizeof(at581x_dev_t));
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_NO_MEM, TAG, "memory allocation for device handler failed");
 
-    handle->i2c_port = i2c_conf->i2c_port;
-    handle->i2c_addr = i2c_conf->i2c_addr;
+    // Create I2C device
+    handle->bus_device_inst = i2c_bus_device_create(i2c_conf->bus_inst, i2c_conf->i2c_addr, 0);
+    if (handle->bus_device_inst == NULL) {
+        ESP_LOGE(TAG, "Failed to create I2C device");
+        free(handle);
+        return ESP_FAIL;
+    }
 
     /* Save config */
     memcpy(&handle->config, i2c_conf, sizeof(at581x_i2c_config_t));
@@ -272,8 +275,13 @@ esp_err_t at581x_del_sensor(at581x_dev_handle_t handle)
 {
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "invalid device handle pointer");
 
+    at581x_dev_t *sens = (at581x_dev_t *)handle;
     at581x_register_interrupt_callback(handle, NULL);
-    free(handle);
 
+    if (sens->bus_device_inst) {
+        i2c_bus_device_delete(&sens->bus_device_inst);
+    }
+
+    free(handle);
     return ESP_OK;
 }

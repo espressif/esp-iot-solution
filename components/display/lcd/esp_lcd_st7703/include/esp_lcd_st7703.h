@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,6 +12,7 @@
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_mipi_dsi.h"
+#include "esp_idf_version.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -71,7 +72,7 @@ esp_err_t esp_lcd_new_panel_st7703(const esp_lcd_panel_io_handle_t io, const esp
     {                                                    \
         .bus_id = 0,                                     \
         .num_data_lanes = 2,                             \
-        .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,     \
+        .phy_clk_src = 0,                                \
         .lane_bit_rate_mbps = 900,                       \
     }
 
@@ -86,6 +87,7 @@ esp_err_t esp_lcd_new_panel_st7703(const esp_lcd_panel_io_handle_t io, const esp
         .lcd_param_bits = 8,          \
     }
 
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 /**
  * @brief MIPI DPI configuration structure
  *
@@ -113,6 +115,35 @@ esp_err_t esp_lcd_new_panel_st7703(const esp_lcd_panel_io_handle_t io, const esp
             .vsync_front_porch = 16,                     \
         },                                               \
         .flags.use_dma2d = true,                         \
+    }
+#endif
+
+/**
+ * @brief MIPI DPI configuration structure
+ *
+ * @note  refresh_rate = (dpi_clock_freq_mhz * 1000000) / (h_res + hsync_pulse_width + hsync_back_porch + hsync_front_porch)
+ *                                                      / (v_res + vsync_pulse_width + vsync_back_porch + vsync_front_porch)
+ *
+ * @param[in] color_format Input color format of the panel
+ *
+ */
+#define ST7703_720_1280_PANEL_60HZ_DPI_CONFIG_CF(color_format) \
+    {                                                    \
+        .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,     \
+        .dpi_clock_freq_mhz = 58,                        \
+        .virtual_channel = 0,                            \
+        .in_color_format = color_format,                 \
+        .num_fbs = 1,                                    \
+        .video_timing = {                                \
+            .h_size = 720,                               \
+            .v_size = 1280,                              \
+            .hsync_back_porch = 40,                      \
+            .hsync_pulse_width = 4,                      \
+            .hsync_front_porch = 40,                     \
+            .vsync_back_porch = 12,                      \
+            .vsync_pulse_width = 4,                      \
+            .vsync_front_porch = 16,                     \
+        },                                               \
     }
 
 #ifdef __cplusplus

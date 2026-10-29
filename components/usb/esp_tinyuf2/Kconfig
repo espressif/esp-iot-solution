@@ -2,8 +2,7 @@ menu "TinyUF2 Config"
     # We not support disable now
     config ENABLE_UF2_FLASHING
         bool
-        default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4
-        select TINYUSB_SOURCE_CODE_ONLY
+        default y if IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3 || IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31
         help
             Enable UF2, only support ESP SoC with USB-OTG
     config ENABLE_UF2_USB_CONSOLE
@@ -39,6 +38,7 @@ menu "TinyUF2 Config"
         default "ESP32S2-UF2" if IDF_TARGET_ESP32S2
         default "ESP32S3-UF2" if IDF_TARGET_ESP32S3
         default "ESP32P4-UF2" if IDF_TARGET_ESP32P4
+        default "ESP32S31UF2" if IDF_TARGET_ESP32S31
     config TUSB_MANUFACTURER
         string "USB Device Manufacture"
         depends on ENABLE_UF2_FLASHING
@@ -81,13 +81,13 @@ menu "TinyUF2 Config"
 
     choice TINYUSB_RHPORT
         prompt "TinyUSB Root Port"
-        default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4
+        default TINYUSB_RHPORT_HS if IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31
         default TINYUSB_RHPORT_FS
         help
             Allows set the USB PHY Controller for TinyUSB: HS (USB OTG2.0 PHY for HighSpeed)
 
         config TINYUSB_RHPORT_HS
-            depends on IDF_TARGET_ESP32P4
+            depends on IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32S31
             bool "High Speed"
 
         config TINYUSB_RHPORT_FS

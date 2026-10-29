@@ -58,3 +58,80 @@ TEST_CASE("adc_mic_test memory leak", "[adc_mic][memory_leak]")
     esp_codec_dev_delete(dev);
     audio_codec_delete_data_if(adc_if);
 }
+
+typedef struct {
+    esp_codec_dev_handle_t dev;
+    esp_codec_dev_sample_info_t fs;
+    TaskHandle_t partner;
+    int loops;
+} cross_task_ctx_t;
+
+static void task_open_then_wait(void *arg)
+{
+    cross_task_ctx_t *ctx = (cross_task_ctx_t *)arg;
+
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    for (int i = 0; i < ctx->loops; ++i) {
+        TEST_ASSERT_EQUAL(0, esp_codec_dev_open(ctx->dev, &ctx->fs));
+        xTaskNotifyGive(ctx->partner);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    }
+    vTaskDelete(NULL);
+}
+
+static void task_wait_then_close(void *arg)
+{
+    cross_task_ctx_t *ctx = (cross_task_ctx_t *)arg;
+
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    for (int i = 0; i < ctx->loops; ++i) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        TEST_ASSERT_EQUAL(0, esp_codec_dev_close(ctx->dev));
+        xTaskNotifyGive(ctx->partner);
+    }
+    vTaskDelete(NULL);
+}
+
+TEST_CASE("adc_mic_cross_task_enable_disable", "[adc_mic][cross_task]")
+{
+    audio_codec_adc_cfg_t cfg = DEFAULT_AUDIO_CODEC_ADC_MONO_CFG(ADC_CHANNEL_0, 16000);
+    const audio_codec_data_if_t *adc_if = audio_codec_new_adc_data(&cfg);
+
+    esp_codec_dev_cfg_t codec_dev_cfg = {
+        .dev_type = ESP_CODEC_DEV_TYPE_IN,
+        .data_if = adc_if,
+    };
+    esp_codec_dev_handle_t dev = esp_codec_dev_new(&codec_dev_cfg);
+    TEST_ASSERT(dev);
+
+    esp_codec_dev_sample_info_t fs = {
+        .sample_rate = 16000,
+        .channel = 1,
+        .bits_per_sample = 16,
+    };
+
+    cross_task_ctx_t a = {
+        .dev = dev,
+        .fs = fs,
+        .partner = NULL,
+        .loops = 10,
+    };
+    cross_task_ctx_t b = a;
+
+    TaskHandle_t taskA = NULL;
+    TaskHandle_t taskB = NULL;
+    xTaskCreate(task_open_then_wait, "t_open", 3072, &a, 3, &taskA);
+    xTaskCreate(task_wait_then_close, "t_close", 3072, &b, 3, &taskB);
+    a.partner = taskB;
+    b.partner = taskA;
+
+    xTaskNotifyGive(taskA);
+    xTaskNotifyGive(taskB);
+
+    while (eTaskGetState(taskA) != eDeleted || eTaskGetState(taskB) != eDeleted) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    esp_codec_dev_delete(dev);
+    audio_codec_delete_data_if(adc_if);
+}

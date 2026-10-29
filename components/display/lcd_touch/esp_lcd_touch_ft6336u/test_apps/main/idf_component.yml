@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=5.4"
+  esp_lcd_touch_ft6336u:
+    version: "*"
+    override_path: "../../../esp_lcd_touch_ft6336u"

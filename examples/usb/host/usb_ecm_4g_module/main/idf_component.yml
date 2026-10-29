@@ -1,4 +1,4 @@
-version: 0.0.1
+version: 0.1.0
 dependencies:
   iot_usbh_ecm:
     version: "*"
@@ -6,7 +6,21 @@ dependencies:
   espressif/iot_eth:
     version: "*"
     override_path: ../../../../../components/iot_eth
-  espressif/esp_wifi_remote:
-    version: "^0.9.0"
-    rules:
-      - if: "target in [esp32p4]"
+  modem_at:
+    version: "*"
+    override_path: ../../../../../components/modem_at
+
+  web_wifi:
+    version: "*"
+    override_path: ../../../../common_components/web_wifi
+
+  network_test:
+    version: "*"
+    override_path: ../../../../common_components/network_test
+
+  cmd_system:
+    path: ${IDF_PATH}/examples/system/console/advanced/components/cmd_system
+  espressif/iperf-cmd:
+    version: "~0.1.1"
+  esp-qa/ping-cmd:
+    version: "~1.0.0"

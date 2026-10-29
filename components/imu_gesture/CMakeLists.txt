@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "src/imu_gesture.c"
+        "src/imu_gesture_inference.c"
+        "src/imu_gesture_knob.c"
+        "src/imu_gesture_space_switch.c"
+    INCLUDE_DIRS
+        "include"
+    PRIV_INCLUDE_DIRS
+        "private_include"
+)

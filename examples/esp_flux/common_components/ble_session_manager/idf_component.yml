@@ -1,0 +1,12 @@
+version: "0.0.1"
+description: BLE Session Manager
+url: https://github.com/espressif/ble-solutions/tree/master/components/ble_session_manager
+repository: https://github.com/espressif/ble-solutions.git
+documentation: https://docs.espressif.com/projects/ble-solutions/en/latest/ble_session_manager.html
+issues: https://github.com/espressif/ble-solutions/issues
+examples:
+  - path: ../../ble_spp_server
+  - path: ../../ble_spp_client
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "*"

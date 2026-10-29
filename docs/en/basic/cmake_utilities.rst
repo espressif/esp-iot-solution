@@ -17,9 +17,6 @@ Supported Features:
 How to Use
 ----------
 
-Use
----
-
 1. Add dependency of this component in your component or project’s ``idf_component.yml``.
 
    .. code:: yaml
@@ -44,4 +41,3 @@ Detailed Reference
 1. `relinker <https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/relinker.md>`__
 2. `gen_compressed_ota <https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gen_compressed_ota.md>`__
 3. `GCC Optimization <https://github.com/espressif/esp-iot-solution/blob/master/tools/cmake_utilities/docs/gcc.md>`__
-

@@ -5,12 +5,10 @@
 
 This example is based on the [esp_video](https://github.com/espressif/esp-video-components/tree/master/esp_video) component and demonstrates how to display images from the camera on an LCD screen.
 
-## How to use the example
-
 ## ESP-IDF Required
 
-- This example supports ESP-IDF release/v5.4 and later branches. By default, it runs on ESP-IDF release/v5.4.
-- Please follow the [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) to set up the development environment. **We highly recommend** you [Build Your First Project](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html#build-your-first-project) to get familiar with ESP-IDF and make sure the environment is set up correctly.
+- This example requires ESP-IDF v5.5.6 or later with the native DPI framebuffer-completion callback; no upper version limit is imposed.
+- Please follow the [ESP-IDF Programming Guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/get-started/index.html) to set up the development environment. **We highly recommend** you [Build Your First Project](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/get-started/index.html#build-your-first-project) to get familiar with ESP-IDF and make sure the environment is set up correctly.
 
 ### Prerequisites
 
@@ -35,26 +33,38 @@ This example is based on the [esp_video](https://github.com/espressif/esp-video-
 
 ### Configure the Project
 
-Run `idf.py menuconfig` and navigate to the `Example Configuration` menu, where you can configure the relevant pins and example-related options.
+Run `idf.py menuconfig` and navigate to the `Example Configuration` menu, where you can configure the SCCB pins, LCD color format, capture buffer count, and buffer allocation mode. The example defaults to SCCB SCL GPIO8 and SDA GPIO7.
 
-In the `Espressif Camera Sensors` Configurations, the camera sensor can be selected.
+Under `Component config → Hardware Settings → Chip revision`, select the chip revision that matches your board.
 
-```
+In `Espressif Camera Sensors Configurations`, enable the SC2336 RAW8 1024x600 mode and select it as the default MIPI output format. Enabling a supported format alone does not select it as the default.
+
+```text
 Component config  --->
     Espressif Camera Sensors Configurations  --->
         [*] SC2336  ---->
-            Default format select for MIPI (RAW8 1280x720 30fps, MIPI 2lane 24M input)  --->
-                (X) RAW8 1280x720 30fps, MIPI 2lane 24M input
+            Choose supported formats for MIPI CSI interface  --->
+                [*] MIPI 2-lane, 24M input, 1024x600  30fps, RAW8
+            Select default output format for MIPI CSI interface  --->
+                (X) MIPI 2-lane, 24M input, 1024x600  30fps, RAW8
 ```
+
+The ISP converts the sensor's RAW8 output to the capture format selected for the LCD: little-endian RGB565 (`V4L2_PIX_FMT_RGB565`, default) or RGB888 (`V4L2_PIX_FMT_RGB24`). Matching-size USERPTR capture uses three shared LCD buffers with no frame copy: two are available for capture and one is held for scanout. The initial scanout buffer is withheld from CSI, and each later buffer is requeued only after LCD retirement.
+
+For other sizes, USERPTR uses separate capture buffers sized by `VIDIOC_QUERYBUF`. Enable `Use Memory Mapping for Buffer Allocation` for driver-allocated `V4L2_MEMORY_MMAP` buffers. These copy paths use the configured capture buffer count and two LCD buffers; PPA center-crops larger frames and places smaller frames at the top-left without scaling.
 
 ### Build and Flash
 
+CMake verifies the pinned `esp_video` 2.5.0 release and applies one [CSI API patch](patches/esp_video/) for IDF 5.5.6 and newer driver APIs. ESP-IDF is used without local patches. Subsequent configurations reuse the build-directory cache. Download, checksum, or patch failures stop configuration.
+
+Downloads honor `IDF_COMPONENT_LOCAL_STORAGE_URL` first, then `IDF_COMPONENT_STORAGE_URL` (semicolon-separated storage roots, including `file://` mirrors). Without an explicit storage URL, public storage is used. A fresh offline build needs a local mirror or a cached archive in the build directory.
+
 Build the project and flash it to the board, then run monitor tool to view serial output (replace `PORT` with your board's serial port name):
 
-```c
+```sh
 idf.py -p PORT flash monitor
 ```
 
-To exit the serial monitor, type ``Ctrl-]``.
+To exit the serial monitor, type ``Ctrl-]``. When switching ESP-IDF versions, use separate build directories and sdkconfig files, or run `idf.py fullclean` before rebuilding.
 
-See the [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/latest/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.
+See the [ESP-IDF Getting Started Guide](https://docs.espressif.com/projects/esp-idf/en/stable/esp32p4/get-started/index.html) for full steps to configure and use ESP-IDF to build projects.

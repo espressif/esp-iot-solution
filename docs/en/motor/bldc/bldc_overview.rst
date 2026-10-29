@@ -11,7 +11,6 @@ This guide includes the following content:
     - `Drive Method`_: Drive hardware methods
     - `Control Method`_: Various ways to control bldc motor
 
-
 Overview of Bldc Motor
 -----------------------
 
@@ -78,7 +77,6 @@ Important Parameters:
 .. math::
     RS = RL / 2
 
-
 Drive Method
 -------------
 
@@ -99,7 +97,6 @@ Through the inverter circuit shown in the figure, the rotor magnet can rotate in
     :widths: 10 10 10 10 10
     :header-rows: 1
     :align: center
-    :class: smaller-font
 
     * - **Upper Arm Conduction**
       - **Lower Arm Conduction**
@@ -136,7 +133,6 @@ Through the inverter circuit shown in the figure, the rotor magnet can rotate in
       - Floating
       - DC+
       - DC-
-
 
 To make the motor's rotational speed controllable, the control signal applied to the upper arm can be set as a PWM signal, and by adjusting the PWM duty cycle, the rotational speed can be controlled.
 

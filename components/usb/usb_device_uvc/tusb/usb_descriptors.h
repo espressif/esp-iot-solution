@@ -35,6 +35,12 @@
 #define UVC_ENTITY_CAP_INPUT_TERMINAL  0x01
 #define UVC_ENTITY_CAP_OUTPUT_TERMINAL 0x02
 
+/* Endpoint address */
+#define EPNUM_CAM1_VIDEO_IN    0x81
+#if CONFIG_UVC_SUPPORT_TWO_CAM
+#define EPNUM_CAM2_VIDEO_IN    0x82
+#endif
+
 enum {
 #if (CFG_TUD_VIDEO)
     ITF_NUM_VIDEO_CONTROL,

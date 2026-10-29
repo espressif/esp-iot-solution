@@ -106,7 +106,7 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 初始化接口设备
 ------------------------------
 
-初始化接口设备需要先初始化总线，再创建接口设备。下面基于 ESP-IDF release/v5.1 中的 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ 示例，具体介绍如何初始化 SPI 接口设备。
+初始化接口设备需要先初始化总线，再创建接口设备。下面基于 ESP-IDF release/v6.0 中的 `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/release/v6.0/examples/peripherals/lcd/spi_lcd_touch>`_ 示例，具体介绍如何初始化 SPI 接口设备。
 
 初始化总线
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -135,7 +135,7 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 下面是部分配置参数的说明：
 
   - 若 LCD 驱动 IC 配置为 :ref:`Interface-I 接口模式 <spi_interface_I/II_模式>`，软件仅需设置 ``mosi_io_num`` 为其数据线 IO，而设置 ``miso_io_num`` 为 -1。
-  - `SPI 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/driver/spi/gpspi/spi_master.c#L775>`_ 在传输数据前会对输入数据量的大小进行判断，若单次传输的字节数超过 ``max_transfer_sz`` 则会报错。但是， **SPI 单次 DMA 传输允许的最大字节数** 不仅取决于 ``max_transfer_sz``，而且受限于 ESP-IDF 中的 `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/hal/esp32s3/include/hal/spi_ll.h#L43>`_ （不同系列 ESP 的值不同），即满足 ``最大字节数 <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))`` 。由于 `esp_lcd 驱动 <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/esp_lcd/src/esp_lcd_panel_io_spi.c#L358>`_ 会提前判断输入的数据量是否超过限制，如果超过则进行 **分包处理** 后才控制 SPI 进行多次传输， **因此 max_transfer_sz 通常设为全屏大小即可** 。
+  - `SPI 驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_driver_spi/src/gpspi/spi_master.c>`_ 在传输数据前会对输入数据量的大小进行判断，若单次传输的字节数超过 ``max_transfer_sz`` 则会报错。但是， **SPI 单次 DMA 传输允许的最大字节数** 不仅取决于 ``max_transfer_sz``，而且受限于 ESP-IDF 中的 `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_hal_gpspi/esp32s3/include/hal/spi_ll.h>`_ （不同系列 ESP 的值不同），即满足 ``最大字节数 <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))`` 。由于 `esp_lcd 驱动 <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/spi/esp_lcd_panel_io_spi.c>`_ 会提前判断输入的数据量是否超过限制，如果超过则进行 **分包处理** 后才控制 SPI 进行多次传输， **因此 max_transfer_sz 通常设为全屏大小即可** 。
 
 创建接口设备
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -179,9 +179,9 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 
 基于初始化好的 SPI 总线可以创建相应的接口设备，每个接口设备对应一个 SPI master 设备。
 
-**注意：关于 SPI 接口配置参数更加详细的说明**，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_。
+**注意：关于 SPI 接口配置参数更加详细的说明**，请参考 `ESP-IDF 编程指南 <https://docs.espressif.com/projects/esp-idf/zh_CN/latest/esp32p4/api-reference/peripherals/lcd/spi_lcd.html>`_。
 
-通过创建接口设备可以获取数据类型为 ``esp_lcd_panel_io_handle_t`` 的句柄，然后能够使用以下 `接口通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ 给 LCD 的驱动 IC 发送 **命令** 和 **图像数据**：
+通过创建接口设备可以获取数据类型为 ``esp_lcd_panel_io_handle_t`` 的句柄，然后能够使用以下 `接口通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_io.h>`_ 给 LCD 的驱动 IC 发送 **命令** 和 **图像数据**：
 
   #. ``esp_lcd_panel_io_tx_param()``：用于发送单个 LCD 的命令及配套参数，其内部通过函数 ``spi_device_polling_transmit()`` 实现数据传输，使用该函数会等待数据传输完毕后才会返回。
   #. ``esp_lcd_panel_io_tx_color()``：用于发送单次 LCD 刷屏命令和图像数据。在函数内部，它通过函数 ``spi_device_polling_transmit()`` 发送命令和一些少量的参数，然后通过函数 ``spi_device_queue_trans()`` 来分包发送大量的图像数据，每个包的大小由 **SPI 单次 DMA 传输允许的最大字节数** 来限制。这个函数将图像缓存地址等相关数据压入队列，队列的深度由 ``trans_queue_depth`` 参数指定。一旦数据成功压入队列，函数就会立刻返回。因此，如果计划在后续操作中修改相同的图像缓存，则需要注册一个回调函数来判断上一次的传输是否已经完成。如果不这样做，可能会在未完成的传输上进行修改，这会导致由于数据混乱而显示出现错误。
@@ -194,10 +194,10 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 移植 SPI LCD 驱动组件的基本原理包含以下三点：
 
   #. 基于数据类型为 ``esp_lcd_panel_io_handle_t`` 的接口设备句柄发送指定格式的命令及参数。
-  #. 实现并创建一个 LCD 设备，然后通过注册回调函数的方式实现结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能。
-  #. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。
+  #. 实现并创建一个 LCD 设备，然后通过注册回调函数的方式实现结构体 `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ 中的各项功能。
+  #. 实现一个函数用于提供数据类型为 ``esp_lcd_panel_handle_t`` 的 LCD 设备句柄，使得应用程序能够利用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来操作 LCD 设备。
 
-下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
+下面是 ``esp_lcd_panel_handle_t`` 各项功能的实现说明以及和 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 的对应关系：
 
 .. list-table::
     :widths: 10 20 70
@@ -290,7 +290,7 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
+首先通过移植好的驱动组件创建 LCD 设备并获取数据类型为 ``esp_lcd_panel_handle_t`` 的句柄，然后使用 `LCD 通用 APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ 来初始化 LCD 设备。
 
 下面是一些关于使用函数 ``esp_lcd_panel_draw_bitmap()`` 刷新 SPI LCD 图像的说明：
 
@@ -301,4 +301,4 @@ SPI LCD 驱动流程可大致分为三个部分：初始化接口设备、移植
 相关文档
 ---------------------
 
-- `ST7789 数据手册 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/datasheets/2.4_320x240/ST7789V_SPEC_V1.0.pdf>`_
+- `ST7789 数据手册 <https://dl.espressif.com/dl/schematics/ST7789V_SPEC_V1.0.pdf>`_

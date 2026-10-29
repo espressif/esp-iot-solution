@@ -2,7 +2,7 @@ version: "0.1.0"
 description: Board Support Package for ESP32-S3-KBD-KIT
 
 targets:
-    - esp32s3
+  - esp32s3
 
 dependencies:
   idf: ">=5.0"
@@ -12,6 +12,6 @@ dependencies:
     override_path: ../../../../components/keyboard_button
 
   led_strip:
-    version: "^2.5.3"
+    version: "^3.0.3"
 
-  lijunru-hub/keyboard_rgb_matrix: "^0.1.2"
+  lijunru-hub/keyboard_rgb_matrix: "^0.2.0"

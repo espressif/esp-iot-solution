@@ -1,0 +1,11 @@
+version: "0.1.0"
+description: ESP Flux
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/esp_flux
+repository: https://github.com/espressif/esp-iot-solution.git
+# documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/esp_flux.html
+issues: https://github.com/espressif/esp-iot-solution/issues
+dependencies:
+  idf: ">=5.0"
+  cmake_utilities: "*"
+examples:
+  - path: ../../examples/esp_flux/

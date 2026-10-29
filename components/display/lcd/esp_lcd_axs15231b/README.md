@@ -6,12 +6,12 @@ Implementation of the AXS15231B LCD & Touch controller with esp_lcd component.
 
 | LCD controller | Communication interface | Component name | Link to datasheet |
 | :------------: | :---------------------: | :------------: | :---------------: |
-| AXS15231B      | I80/SPI/QSPI                     | esp_lcd_axs15231b     | [Specification](https://dl.espressif.com/AE/esp_iot_solution/AXS15231B_Datasheet_V0.5_20230306.pdf) |
+| AXS15231B      | I80/SPI/QSPI/MIPI-DSI            | esp_lcd_axs15231b     | [Specification](https://dl.espressif.com/AE/esp_iot_solution/AXS15231B_Datasheet_V0.5_20230306.pdf) |
 
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency esp_lcd_axs15231b==1.0.0
 ```
@@ -128,8 +128,8 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install panel IO");
     esp_lcd_panel_io_handle_t io_handle = NULL;
-    const esp_lcd_panel_io_spi_config_t io_config = ILI9341_PANEL_IO_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, EXAMPLE_PIN_NUM_LCD_DC,
-                                                                                example_callback, &example_callback_ctx);
+    const esp_lcd_panel_io_i80_config_t io_config = AXS15231B_PANEL_IO_I80_CONFIG(EXAMPLE_PIN_NUM_LCD_CS, EXAMPLE_PIN_NUM_LCD_DC,
+                                                                                   example_callback, &example_callback_ctx);
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i80(i80_bus, &io_config, &io_handle));
 
 /**
@@ -162,10 +162,57 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_disp_on_off(panel_handle, true);
 ```
 
+### MIPI-DSI Interface
+
+```c
+    ESP_LOGI(TAG, "MIPI DSI PHY Powered on");
+    esp_ldo_channel_config_t ldo_mipi_phy_config = {
+        .chan_id = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_CHAN,
+        .voltage_mv = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV,
+    };
+    ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
+
+    ESP_LOGI(TAG, "Initialize MIPI DSI bus");
+    esp_lcd_dsi_bus_config_t bus_config = AXS15231B_PANEL_BUS_DSI_1CH_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
+
+    ESP_LOGI(TAG, "Install panel IO");
+    esp_lcd_dbi_io_config_t dbi_config = AXS15231B_PANEL_IO_DBI_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
+
+    ESP_LOGI(TAG, "Install AXS15231B panel driver");
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
+    esp_lcd_dpi_panel_config_t dpi_config = AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB888);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = AXS15231B_240_960_PANEL_60HZ_DPI_CONFIG_CF(LCD_COLOR_PIXEL_FORMAT_RGB888);
+#endif
+    axs15231b_vendor_config_t vendor_config = {
+        .flags = {
+            .use_mipi_interface = 1,
+        },
+        .mipi_config = {
+            .dsi_bus = mipi_dsi_bus,
+            .dpi_config = &dpi_config,
+        },
+    };
+    const esp_lcd_panel_dev_config_t panel_config = {
+        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = 24,
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_axs15231b(mipi_dbi_io, &panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
+```
+
 ## Initialization of the touch component.
 
 ```
-    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG();
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_AXS15231B_CONFIG_EX(400000);
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus_handle, &io_config, &io_handle));
 
     esp_lcd_touch_config_t tp_cfg = {
         .x_max = CONFIG_LCD_HRES,
@@ -184,7 +231,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     };
 
     esp_lcd_touch_handle_t tp;
-    esp_lcd_touch_new_i2c_axs15231b(io_config, &tp_cfg, &tp);
+    esp_lcd_touch_new_i2c_axs15231b(io_handle, &tp_cfg, &tp);
 ```
 
 Read data from the touch controller and store it in RAM memory. It should be called regularly in poll.
@@ -201,6 +248,12 @@ Get one X and Y coordinates with strength of touch.
     uint16_t touch_strength[1];
     uint8_t touch_cnt = 0;
 
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 1);
+    esp_lcd_touch_point_data_t points[1] = {0};
+    esp_lcd_touch_get_data(tp, points, &touch_cnt, 1);
+    if (touch_cnt > 0) {
+        touch_x[0] = points[0].x;
+        touch_y[0] = points[0].y;
+        touch_strength[0] = points[0].strength;
+    }
 ```
 There is an example in ESP-IDF with this LCD controller. Please follow this [link](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch).

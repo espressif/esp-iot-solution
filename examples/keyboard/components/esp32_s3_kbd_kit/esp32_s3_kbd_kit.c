@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_idf_version.h"
 #include "keyboard_button.h"
 #include "bsp/keyboard.h"
 #include "bsp/lightmap.h"
@@ -63,7 +64,7 @@ esp_err_t bsp_ws2812_init(led_strip_handle_t *led_strip)
     led_strip_config_t strip_config = {
         .strip_gpio_num = LIGHTMAP_GPIO, // The GPIO that connected to the LED strip's data line
         .max_leds = LIGHTMAP_NUM, // The number of LEDs in the strip,
-        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // Pixel format of your LED strip
+        .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, // Color component order
         .led_model = LED_MODEL_WS2812, // LED strip model
         .flags.invert_out = false, // whether to invert the output signal (useful when your hardware has a level inverter)
     };

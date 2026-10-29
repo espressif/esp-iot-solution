@@ -1,121 +1,91 @@
-# Touch Button Sensor Example
+# Touch Button Example
 
-**Note:** This example is for developers testing only. It is not intended for production use.
+This example uses `touch_button_sensor` to configure one to four touch channels,
+report debounced press/release events, and periodically print the public touch
+amplitude. A single WS2812 on the configured data GPIO provides immediate
+feedback: ESP32-S31 touch IO12 (touch-channel ID 6) is red, IO13
+(touch-channel ID 7) is blue, and touching both produces magenta.
 
-This example demonstrates how to use the touch_button_sensor component to implement touch button functionality on ESP32 devices.
+Every 10 seconds, `STATS` reports uptime, total press/release counts, free/minimum
+heap, and per-channel cumulative counts, presses since the previous report,
+current state, current hold time, and longest hold time. Counts reset on reboot.
 
-touch_button_sensor is an pure software FSM based touch sensor driver aims to provide an more flexible and configurable touch sensor solution. And it has more strong noise immunity.
-
-## Overview
-
-The touch button sensor component provides a high-level abstraction for implementing capacitive touch buttons. It handles:
-
-- Button state detection (active/inactive)
-- Debounce filtering
-- Multiple frequency scanning for noise immunity
-- Event-based notifications
-- Configurable sensitivity and thresholds
-
-## Hardware Required
-
-* An ESP development board with touch sensor capability
-* Touch pads or electrodes connected to touch-enabled GPIO pins
-* A USB cable for power supply and programming
-
-## How to Use Example
-
-### Hardware Connection
-
-Connect touch pads/electrodes to the touch-enabled GPIO pins on your ESP board. Check your board's documentation for which pins support touch sensing.
-
-### Configuration
-
-The example can be configured through menuconfig:
-
-```
-idf.py menuconfig
-```
-
-Under "Touch Button Sensor Configuration" you can adjust numerous parameters:
-
-- `TOUCH_BUTTON_SENSOR_DEBUG`: Enable debug mode for detailed logging
-- `TOUCH_BUTTON_SENSOR_CALIBRATION_TIMES`: Number of readings for initial calibration
-- `TOUCH_BUTTON_SENSOR_DEBOUNCE_INACTIVE`: Debounce count for inactive state detection
-- `TOUCH_BUTTON_SENSOR_POLLING_INTERVAL`: Interval between polling touch readings (ESP32 only)
-- `TOUCH_BUTTON_SENSOR_SMOOTH_COEF_X1000`: Smoothing coefficient for readings stability
-- `TOUCH_BUTTON_SENSOR_BASELINE_COEF_X1000`: Baseline adaptation coefficient for drift compensation
-- `TOUCH_BUTTON_SENSOR_MAX_P_X1000`: Maximum positive change ratio threshold
-- `TOUCH_BUTTON_SENSOR_MIN_N_X1000`: Minimum negative change ratio threshold
-- `TOUCH_BUTTON_SENSOR_NEGATIVE_LOGIC`: Enable negative logic for touch detection
-- `TOUCH_BUTTON_SENSOR_NOISE_P_SNR`: Signal-to-noise ratio for positive noise filtering
-- `TOUCH_BUTTON_SENSOR_NOISE_N_SNR`: Signal-to-noise ratio for negative noise filtering
-- `TOUCH_BUTTON_SENSOR_RESET_COVER`: Reset count threshold for cover detection
-- `TOUCH_BUTTON_SENSOR_RESET_CALIBRATION`: Reset count for calibration error recovery
-- `TOUCH_BUTTON_SENSOR_RAW_BUF_SIZE`: Size of raw data buffer for processing
-- `TOUCH_BUTTON_SENSOR_SCALE_FACTOR`: Scale factor for threshold calculations
-
-### Build and Flash
-
-Build the project and flash it to the board:
+## Build and Run
 
 ```bash
-idf.py build
-idf.py -p PORT flash
+cd examples/touch/touch_button_sensor
+idf.py set-target esp32p4
+idf.py menuconfig
+idf.py build flash monitor
 ```
 
-Replace PORT with your serial port name.
+ESP32-S31 is available with ESP-IDF 6.1 in the current preview environment:
 
-### Example Output
-
-The example will output touch sensor readings to the serial monitor:
-
-```
-I (320) TOUCH_SENSOR: IoT Touch Button Driver Version: 0.2.0
-I (330) TOUCH_SENSOR: Starting touch sensor...
-I (340) TOUCH_SENSOR: Touch channel detected: Active
-...
+```bash
+idf.py --preview set-target esp32s31
+idf.py build flash monitor --port /dev/ttyACM0
 ```
 
-## Implementation Details
+The default ESP32-S31 wiring is touch IO12 and IO13, WS2812 data on GPIO15, and
+an absolute threshold of 500. On ESP32-S31, IO12 maps to touch-channel ID 6 and
+IO13 maps to touch-channel ID 7; configure the channel IDs, not the GPIO
+numbers. Since lowlevel startup alignment targets about 5000, this threshold is
+equivalent to 10% of that reference. Use `Touch Button Example` in menuconfig
+to select the channel count (1–4), channel IDs, shared threshold, WS2812 GPIO,
+scan period, and sample-configuration count. Only the selected number of
+channel entries is compiled into the example.
 
-The example demonstrates:
+The threshold is an absolute touch-amplitude value. Tune it using the periodic
+`amplitude` output: it should remain comfortably above idle variation and
+below the value produced by a normal touch. On hardware, lowlevel `start()`
+automatically aligns the first configured channel to approximately 5000 before
+sampling; keep that electrode untouched and the board stable while startup
+setup runs. A sample-configuration count of 0 uses the lowlevel component's
+target-specific default.
 
-1. Touch button sensor initialization
-2. Configuring touch sensor thresholds and filters
-3. Setting up callback handlers for touch events
-4. Creating a dedicated task for processing touch events
-5. Processing touch state changes in the background
+The FSM's automatic limiter is 1.5 times the threshold for one frequency and
+3 times the threshold for multiple frequencies, not 2 times. ESP32-S31 uses
+three sample configurations by default, so the 500 threshold gives an
+effective limiter of 1500 normalized counts.
 
-Key configuration parameters:
+ESP-IDF 5.5 and 6.0 cover ESP32-S2, ESP32-S3, ESP32-P4, and Linux. ESP-IDF
+6.1 adds ESP32-H4 and ESP32-S31.
 
-- `CONFIG_TOUCH_BUTTON_SENSOR_SMOOTH_COEF_X1000`: Smoothing coefficient for readings (x1000)
-- `CONFIG_TOUCH_BUTTON_SENSOR_BASELINE_COEF_X1000`: Baseline adaptation coefficient (x1000)
-- `CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000`: Maximum positive threshold (x1000), to avoid false positives
-- `CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000`: Minimum negative threshold (x1000), to avoid false negatives
-- `CONFIG_TOUCH_BUTTON_SENSOR_NOISE_P_SNR`: Signal-to-noise ratio for positive noise
-- `CONFIG_TOUCH_BUTTON_SENSOR_NOISE_N_SNR`: Signal-to-noise ratio for negative noise
-- `CONFIG_TOUCH_BUTTON_SENSOR_CALIBRATION_TIMES`: Initial calibration readings count
+### Sampling frequency configuration
 
-## Troubleshooting
+In `idf.py menuconfig`, use **Touch Button Example > Sample configuration count**
+(`0` uses the target default; S2/S3 support one configuration). For V3 targets,
+choose the built-in Low/High profile under **Component config > Touch sensor
+lowlevel**. Alternatively, enable **Touch Button Example > Customize V3 frequency
+tuning** to override each frequency's capacitance, resistance and driver settings.
+The high-frequency preset requires the RTC fast XTAL clock on supported targets.
 
-- If touch detection is unreliable, try adjusting the threshold values
-- For noisy environments, increase the SNR values and debounce count
-- Ensure proper grounding of the touch sensor system
-- Keep touch traces short and isolated from noise sources
-- If experiencing calibration issues, adjust the calibration times or reset parameters
+The touch-button example intentionally does not print lowlevel register,
+frequency-estimate, raw-frame or FSM snapshot data. Use the repository
+lowlevel or FSM example when those lower-layer diagnostics are required; the
+published button API exposes only the amplitude, state and event behavior used
+here.
 
-## Tuning Tools
+The touch-button example does not emit a frequency estimate or raw input
+diagnostic. Use the repository lowlevel or FSM example for those lower-layer
+measurements.
 
-* Enable the `Enable touch button sensor debug mode` option in menuconfig
-* Install the tptool for threshold tuning, run `pip install tptool` in the terminal
-* Run `python -m tptool` to start the tuning tool
+### Live visualization
 
+The example-owned live plot reads only the public button records printed by
+this application: amplitude samples and stable press/release callbacks. It
+does not read FSM private snapshots, raw samples, baselines, or scan timing.
+Those diagnostics belong to the repository FSM example; use
+examples/fsm/tools/live_fsm_capture.py after flashing the FSM diagnostic
+firmware when internal signal processing must be inspected.
 
+Install the host-side dependencies and run it against a monitor log or directly
+against the serial port:
 
-## Additional Notes
+    python3 -m pip install matplotlib pyserial
+    python3 tools/live_touch_button_capture.py --port /dev/ttyACM0 --channels 6 7 \
+        --record touch_button_sensor.log
+    python3 tools/live_touch_button_capture.py --file touch_button_sensor.log --png touch_button_sensor.png
 
-- The touch sensor is capable of detecting both brief taps and continuous touches
-- Multiple touch channels can be used simultaneously
-- Sleep mode is Not supported for low power applications
-- The dedicated task handling ensures responsive touch detection without blocking the main application
-
+The default serial speed is 115200 baud. Close idf.py monitor before opening
+the port from the plotter.

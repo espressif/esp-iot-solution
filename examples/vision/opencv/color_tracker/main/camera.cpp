@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -197,13 +197,14 @@ void Camera::video_init()
                 .init_sccb = true,
                 .i2c_config = {
                     .port      = CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_PORT,
-                    .scl_pin   = CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_SCL_PIN,
-                    .sda_pin   = CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_SDA_PIN,
+                    .scl_pin   = (gpio_num_t)CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_SCL_PIN,
+                    .sda_pin   = (gpio_num_t)CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_SDA_PIN,
                 },
                 .freq      = CONFIG_EXAMPLE_MIPI_CSI_SCCB_I2C_FREQ,
             },
-            .reset_pin = CONFIG_EXAMPLE_MIPI_CSI_CAM_SENSOR_RESET_PIN,
-            .pwdn_pin  = CONFIG_EXAMPLE_MIPI_CSI_CAM_SENSOR_PWDN_PIN,
+            .reset_pin = (gpio_num_t)CONFIG_EXAMPLE_MIPI_CSI_CAM_SENSOR_RESET_PIN,
+            .pwdn_pin  = (gpio_num_t)CONFIG_EXAMPLE_MIPI_CSI_CAM_SENSOR_PWDN_PIN,
+            .dont_init_ldo = false,
         },
     };
     esp_video_init_config_t cam_config{};
@@ -284,6 +285,7 @@ void Camera::cam_fb_return()
     xSemaphoreTake(m_mutex, portMAX_DELAY);
     if (ioctl(m_fd, VIDIOC_QBUF, &buf) != 0) {
         ESP_LOGE(TAG, "Failed to queue video frame");
+        xSemaphoreGive(m_mutex);
         return;
     }
     m_v4l2_buf_queue.pop();

@@ -119,10 +119,10 @@ typedef enum {
 /**
  * @brief           This function is called to process write event on characteristics
  *
- * @return          void
+ * @return          ESP_OK on success, or an error (e.g. decrypt / protocol failure under CONFIG_PRE_ENC_OTA).
  *
  */
-void esp_ble_ota_write(uint8_t *file, size_t length);
+esp_err_t esp_ble_ota_write(uint8_t *file, size_t length);
 
 /**
  * @brief           This function is used to set total file size and each block size

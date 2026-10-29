@@ -1,0 +1,3 @@
+# Unit matrix: minimum toollist size budget
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_TOOLLIST_MAX_SIZE=1024

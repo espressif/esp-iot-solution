@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -429,4 +429,9 @@ static const esp_ble_conn_svc_t svc = {
 esp_err_t esp_ble_dis_init(void)
 {
     return esp_ble_conn_add_svc(&svc);
+}
+
+esp_err_t esp_ble_dis_deinit(void)
+{
+    return esp_ble_conn_remove_svc(&svc);
 }

@@ -1,0 +1,6 @@
+version: "0.1.0"
+dependencies:
+  idf: ">=5.0"
+  sensor_hub:
+    version: "*"
+    override_path: "../../../sensor_hub"

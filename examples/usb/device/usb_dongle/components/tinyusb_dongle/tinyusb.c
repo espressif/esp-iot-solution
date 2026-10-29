@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,7 +10,6 @@
 #include "esp_err.h"
 #include "esp_private/periph_ctrl.h"
 #include "esp_private/usb_phy.h"
-#include "soc/usb_pins.h"
 #include "tinyusb.h"
 #include "descriptors_control.h"
 #include "tusb.h"
@@ -18,6 +17,27 @@
 
 const static char *TAG = "TinyUSB";
 static usb_phy_handle_t phy_hdl;
+
+void tud_mount_cb(void)
+{
+    ESP_EARLY_LOGI(TAG, "USB mounted");
+}
+
+void tud_umount_cb(void)
+{
+    ESP_EARLY_LOGI(TAG, "USB unmounted");
+}
+
+void tud_suspend_cb(bool remote_wakeup_en)
+{
+    (void)remote_wakeup_en;
+    ESP_EARLY_LOGI(TAG, "USB suspended");
+}
+
+void tud_resume_cb(void)
+{
+    ESP_EARLY_LOGI(TAG, "USB resumed");
+}
 
 esp_err_t tinyusb_driver_install(const tinyusb_config_t *config)
 {
@@ -27,18 +47,28 @@ esp_err_t tinyusb_driver_install(const tinyusb_config_t *config)
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .target = USB_PHY_TARGET_INT,
+        .otg_speed = USB_PHY_SPEED_FULL,
     };
+#if CONFIG_TINYUSB_RHPORT_HS
+    phy_conf.otg_speed = USB_PHY_SPEED_HIGH;
+#endif
 
-    // External PHY IOs config
-    usb_phy_ext_io_conf_t ext_io_conf = {
-        .vp_io_num = USBPHY_VP_NUM,
-        .vm_io_num = USBPHY_VM_NUM,
-        .rcv_io_num = USBPHY_RCV_NUM,
-        .oen_io_num = USBPHY_OEN_NUM,
-        .vpo_io_num = USBPHY_VPO_NUM,
-        .vmo_io_num = USBPHY_VMO_NUM,
-    };
+    usb_phy_ext_io_conf_t ext_io_conf;
     if (config->external_phy) {
+        ESP_RETURN_ON_FALSE(config->external_phy_io, ESP_ERR_INVALID_ARG, TAG,
+                            "External PHY IO config can't be NULL");
+        const tinyusb_ext_phy_io_config_t *io = config->external_phy_io;
+        ext_io_conf = (usb_phy_ext_io_conf_t) {
+            .vp_io_num = io->vp_io_num,
+            .vm_io_num = io->vm_io_num,
+            .rcv_io_num = io->rcv_io_num,
+            .suspend_n_io_num = io->suspend_n_io_num,
+            .oen_io_num = io->oen_io_num,
+            .vpo_io_num = io->vpo_io_num,
+            .vmo_io_num = io->vmo_io_num,
+            .fs_edge_sel_io_num = io->fs_edge_sel_io_num,
+        };
         phy_conf.target = USB_PHY_TARGET_EXT;
         phy_conf.ext_io_conf = &ext_io_conf;
     } else {

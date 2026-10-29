@@ -45,7 +45,14 @@ static void usb_phy_init(void)
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
+#if CONFIG_TINYUSB_RHPORT_HS
+        .otg_speed = USB_PHY_SPEED_HIGH,
+#endif
     };
+#if CONFIG_SELF_POWERED_DEVICE
+    const usb_phy_otg_io_conf_t otg_io_conf = USB_PHY_SELF_POWERED_DEVICE(CONFIG_VBUS_MONITOR_IO);
+    phy_conf.otg_io_conf = &otg_io_conf;
+#endif
     usb_new_phy(&phy_conf, &s_phy_hdl);
 }
 
@@ -68,7 +75,7 @@ static void _button_press_down_cb(void *arg, void *data)
 
 static void _button_press_up_cb(void *arg, void *data)
 {
-    ESP_LOGI(TAG, "BTN: BUTTON_PRESS_UP[%"PRIu32"]", iot_button_get_ticks_time((button_handle_t)arg));
+    ESP_LOGI(TAG, "BTN: BUTTON_PRESS_UP[%"PRIu32"]", iot_button_get_pressed_time((button_handle_t)arg));
     surface_dial_report(DIAL_RELEASE);
 }
 
@@ -86,19 +93,19 @@ static void _knob_left_cb(void *arg, void *data)
 
 static void _button_init(void)
 {
-    button_config_t cfg = {
-        .type = BUTTON_TYPE_GPIO,
+    button_config_t btn_cfg = {
         .long_press_time = 1000,
         .short_press_time = 200,
-        .gpio_button_config = {
-            .gpio_num  = GPIO_BUTTON,
-            .active_level = 0,
-        },
     };
-    s_btn = iot_button_create(&cfg);
 
-    iot_button_register_cb(s_btn, BUTTON_PRESS_DOWN, _button_press_down_cb, NULL);
-    iot_button_register_cb(s_btn, BUTTON_PRESS_UP, _button_press_up_cb, NULL);
+    button_gpio_config_t btn_gpio_cfg = {
+        .gpio_num = GPIO_BUTTON,
+        .active_level = 0,
+    };
+
+    ESP_ERROR_CHECK(iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &s_btn));
+    iot_button_register_cb(s_btn, BUTTON_PRESS_DOWN, NULL,  _button_press_down_cb, NULL);
+    iot_button_register_cb(s_btn, BUTTON_PRESS_UP, NULL, _button_press_up_cb, NULL);
 }
 
 static void _knob_init(void)
@@ -126,7 +133,11 @@ void app_main(void)
     _button_init();
     _knob_init();
 
-    tusb_init();
+    bool usb_init = tusb_init();
+    if (!usb_init) {
+        ESP_LOGE(TAG, "USB Device Stack Init Fail");
+        return;
+    }
 
     size_t timeout_tick = pdMS_TO_TICKS(10);
     while (1) {

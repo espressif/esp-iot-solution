@@ -11,13 +11,14 @@
 #include "driver/spi_master.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "esp_ldo_regulator.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_ek79007.h"
-#include "lvgl_port_v9.h"
+#include "esp_lv_adapter.h"
 #include "lv_demos.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +27,7 @@
 #define EXAMPLE_LCD_H_RES                       (1024)
 #define EXAMPLE_LCD_V_RES                       (600)
 #define EXAMPLE_LCD_BIT_PER_PIXEL               (16)
-#define EXAMPLE_LCD_COLOR_SPACE                 (ESP_LCD_COLOR_SPACE_RGB)
+#define EXAMPLE_LCD_COLOR_SPACE                 (LCD_RGB_ELEMENT_ORDER_RGB)
 #define EXAMPLE_LCD_IO_RST                      (GPIO_NUM_27)             // -1 if not used
 #define EXAMPLE_PIN_NUM_BK_LIGHT                (-1)                      // -1 if not used
 #define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL           (1)
@@ -49,11 +50,6 @@
 #endif
 
 static const char *TAG = "example";
-
-IRAM_ATTR static bool mipi_dsi_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *edata, void *user_ctx)
-{
-    return lvgl_port_notify_lcd_vsync();
-}
 
 static esp_err_t example_enable_dsi_phy_power(void)
 {
@@ -90,7 +86,7 @@ void app_main()
     esp_lcd_dsi_bus_config_t bus_config = {
         .bus_id = 0,
         .num_data_lanes = EXAMPLE_LCD_MIPI_DSI_LANE_NUM,
-        .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
+        .phy_clk_src = 0,
         .lane_bit_rate_mbps = EXAMPLE_LCD_MIPI_DSI_LANE_BITRATE_MBPS,
     };
     ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
@@ -106,12 +102,24 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &io));
 
     ESP_LOGI(TAG, "Install EK79007 LCD control panel");
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#if EXAMPLE_LCD_BIT_PER_PIXEL == 24
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(LCD_COLOR_FMT_RGB888);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(LCD_COLOR_FMT_RGB565);
+#endif
+#else
 #if EXAMPLE_LCD_BIT_PER_PIXEL == 24
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB888);
 #else
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(LCD_COLOR_PIXEL_FORMAT_RGB565);
 #endif
-    dpi_config.num_fbs = LVGL_PORT_LCD_BUFFER_NUMS;
+#endif
+
+    // Calculate required frame buffer count based on rotation
+    esp_lv_adapter_rotation_t rotation = CONFIG_EXAMPLE_LCD_ROTATION;
+    dpi_config.num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
+                             ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI, rotation);
 
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {
@@ -131,17 +139,9 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_panel_reset(disp_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(disp_panel));
 
-    esp_lcd_dpi_panel_event_callbacks_t cbs = {
-#if LVGL_PORT_AVOID_TEAR_MODE
-        .on_refresh_done = mipi_dsi_lcd_on_vsync_event,
-#else
-        .on_color_trans_done = mipi_dsi_lcd_on_vsync_event,
-#endif
-    };
-    esp_lcd_dpi_panel_register_event_callbacks(disp_panel, &cbs, NULL);
-
-    esp_lcd_touch_handle_t tp_handle = NULL;
 #if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+    esp_lcd_touch_handle_t tp_handle = NULL;
+
     ESP_LOGI(TAG, "Initialize I2C bus");
     const i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -172,16 +172,47 @@ void app_main()
         },
         .flags = {
             .swap_xy = 0,
-            .mirror_x = 1,
-            .mirror_y = 1,
+            .mirror_x = 0,
+            .mirror_y = 0,
         },
     };
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
 #endif // CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
 
-    lvgl_port_interface_t interface = (dpi_config.flags.use_dma2d) ? LVGL_PORT_INTERFACE_MIPI_DSI_DMA : LVGL_PORT_INTERFACE_MIPI_DSI_NO_DMA;
+    // Initialize LVGL adapter
+    ESP_LOGI(TAG, "Initialize LVGL adapter");
+    esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+    ESP_ERROR_CHECK(esp_lv_adapter_init(&adapter_config));
 
-    ESP_ERROR_CHECK(lvgl_port_init(disp_panel, tp_handle, interface));
+    // Register display to LVGL adapter
+    ESP_LOGI(TAG, "Register display to LVGL adapter");
+    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_MIPI_DEFAULT_CONFIG(
+                                                         disp_panel,
+                                                         io,
+                                                         EXAMPLE_LCD_H_RES,
+                                                         EXAMPLE_LCD_V_RES,
+                                                         rotation
+                                                     );
+    lv_display_t *disp = esp_lv_adapter_register_display(&display_config);
+    if (disp == NULL) {
+        ESP_LOGE(TAG, "Failed to register display");
+        return;
+    }
+
+    // Register touch input device (if available)
+#if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+    ESP_LOGI(TAG, "Register touch input to LVGL adapter");
+    esp_lv_adapter_touch_config_t touch_config = ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(disp, tp_handle);
+    lv_indev_t *touch = esp_lv_adapter_register_touch(&touch_config);
+    if (touch == NULL) {
+        ESP_LOGE(TAG, "Failed to register touch");
+        return;
+    }
+#endif
+
+    // Start LVGL adapter task
+    ESP_LOGI(TAG, "Start LVGL adapter");
+    ESP_ERROR_CHECK(esp_lv_adapter_start());
 
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
     ESP_LOGI(TAG, "Turn on LCD backlight");
@@ -190,13 +221,13 @@ void app_main()
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe
-    if (lvgl_port_lock(-1)) {
+    if (esp_lv_adapter_lock(-1) == ESP_OK) {
         // lv_demo_stress();
-        // lv_demo_benchmark();
-        lv_demo_music();
+        lv_demo_benchmark();
+        // lv_demo_music();
         // lv_demo_widgets();
 
         // Release the mutex
-        lvgl_port_unlock();
+        esp_lv_adapter_unlock();
     }
 }

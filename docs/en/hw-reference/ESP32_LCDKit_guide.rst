@@ -15,7 +15,7 @@ display. The board is mainly used for HMI-related development and
 evaluation.Development board reserved screen interface type: SPI serial
 interface, 8-bit parallel interface, 16-bit parallel interface.
 
-You may find HMI-related examples running with ESP32-LCDKit in :doc:`HMI Solution <../hmi_solution/index>`
+You may find LCD and GUI-related examples running with ESP32-LCDKit in :doc:`Display <../display/index>`
 
 .. figure:: ../../_static/hw-reference/lcdkit/esp32_lcdkit.jpg
    :align: center

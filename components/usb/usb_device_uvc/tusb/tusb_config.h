@@ -36,9 +36,15 @@ extern "C" {
 //--------------------------------------------------------------------+
 
 #ifdef CONFIG_TINYUSB_RHPORT_HS
+#if CONFIG_IDF_TARGET_ESP32P4
 #   define CFG_TUSB_RHPORT1_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
 #else
+#   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#endif
+#   define CONFIG_USB_HS            1
+#else
 #   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED
+#   define CONFIG_USB_HS            0
 #endif
 
 //--------------------------------------------------------------------
@@ -59,7 +65,7 @@ extern "C" {
 #endif
 
 // Espressif IDF requires "freertos/" prefix in include path
-#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3, OPT_MCU_ESP32P4)
+#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3, OPT_MCU_ESP32P4, OPT_MCU_ESP32S31, OPT_MCU_ESP32H4)
 #define CFG_TUSB_OS_INC_PATH    freertos/
 #endif
 

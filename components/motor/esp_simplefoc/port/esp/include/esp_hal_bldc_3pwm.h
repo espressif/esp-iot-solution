@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,8 +12,9 @@
 #include "time_utils.h"
 #include "defaults.h"
 #include "drivers/hardware_api.h"
+#include "soc/soc_caps.h"
 #include "driver/ledc.h"
-#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+#if SOC_MCPWM_SUPPORTED
 #include "driver/mcpwm_prelude.h"
 #endif
 
@@ -54,7 +55,7 @@ public:
      */
     int init() override;
 
-#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+#if SOC_MCPWM_SUPPORTED
     /**
      * @brief Motor hardware init function, using MCPWM.
      *
@@ -131,10 +132,11 @@ public:
     void halPwmWrite();
 
 private:
+    void preparePinsAndVoltage();
     DriverMode driverMode;
     std::vector<int> ledc_channels;
     uint32_t mcpwm_period;
-#ifdef CONFIG_SOC_MCPWM_SUPPORTED
+#if SOC_MCPWM_SUPPORTED
     int mcpwm_group;
     mcpwm_gen_handle_t generator[3] = {};
     mcpwm_cmpr_handle_t comparator[3];

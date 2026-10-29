@@ -1,5 +1,47 @@
 # ChangeLog
 
+## v0.6.0 - 2026-10-28
+
+- Add ESP32-P4 support for chip revision >= 3 on IDF v5.5.5 and newer. P4 does not use `linker.lf` (that region overlaps `iram_loader_seg`). IDF 5.5.x copies `bootloader.rev3.ld` into the build directory and injects the same `.iram_loader.text` rules. `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` is a configure error.
+- On targets where IRAM and DRAM share an address range, keep the bootloader XZ bump allocator below `bootloader_iram_seg_start` so the dictionary cannot overwrite `.iram_loader.text`.
+- When flash encryption is disabled, read the compressed image and RMW destination through the ROM SPI path instead of the shared cache-mapped MMU window, avoiding stale reads during decompress-on-P4.
+- Keep decoder state and I/O buffers on the cacheable bootloader heap. On ESP32-P4 the LZMA dictionary itself is remapped to the non-cacheable alias.
+- On ESP32-P4, write back the L1 data cache before bootloader flash reads and writes. ROM flash helpers disable L2, and a dirty L1 line written back into a disabled L2 is lost.
+- On ESP32-P4 only, align the bump heap to the 64-byte L1 line and take the LZMA dictionary from the top of that heap (with a gap below loader IRAM). Other chips keep an upward bump so a top-down dictionary cannot overwrite the DRAM alias of `iram_loader_seg`.
+- Depend on `xz` `>=1.1.2,<2.0.0`. The ESP32-P4 bootloader dictionary fix is in that release.
+- Add ESP32-S31 support on IDF v6.1 and newer. S31 uses the IDF 6.x `.iram_loader.text` injection and the unified DIRAM heap ceiling. It does not use the ESP32-P4 non-cacheable dictionary path. On IDF 6.1, S31 is a preview target (`idf.py --preview set-target esp32s31`); CI builds it with an explicit `-t esp32s31` job because `-t all` omits preview targets.
+
+## v0.5.0 - 2026-10-23
+
+### Fix:
+
+- On IDF v6.0 and newer, inject plus/XZ archive rules into `.iram_loader.text` of the generated bootloader linker script (`bootloader.ld` on 6.0/6.0.1, `bootloader.rev3.ld` for ESP32-P4 rev >= 3, `bootloader.sections.ld` from 6.0.2) so the decompressor is placed in `iram_loader_seg` regardless of `-T` order. Other chips on IDF versions before v6.0 still use `linker.lf`.
+
+## v0.4.2 - 2026-08-24
+
+### Fix:
+
+- Replace deprecated `esp_flash_encryption_enabled()` with `esp_efuse_is_flash_encryption_enabled()` on IDF v6.0.1 and newer. IDF v6.0.0 still provides only `esp_flash_encryption_enabled()`.
+
+## v0.4.1 - 2026-06-10
+
+### Fix:
+
+- Support the new CMake build system (cmakev2) by removing the unsupported BUILD_COMPONENTS build property usage.
+- Add esp_hal_wdt dependency for IDF v6.0 and newer, where the watchdog HAL was moved out of the hal component.
+
+## v0.4.0 - 2025-09-08
+
+### Improve:
+
+- Add ESP32-C61 and ESP32-S3 support.
+
+## v0.3.9 - 2025-06-17
+
+### Improve:
+
+- Add ESP32-C5 support.
+
 ## v0.3.8 - 2025-04-02
 
 ### Fix:

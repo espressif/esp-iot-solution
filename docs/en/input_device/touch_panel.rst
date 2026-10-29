@@ -2,107 +2,267 @@ Touch Panel
 ================
 :link_to_translation:`zh_CN:[中文]`
 
-Touch panels are now standard components in display applications. ESP-IoT-Solution provides drivers for common types of touch panels and currently supports the following controllers:
+Touch panels are now standard components in display applications. ESP-IoT-Solution provides drivers for common types of touch panel controllers based on the `esp_lcd_touch <https://github.com/espressif/esp-bsp/tree/master/components/lcd_touch/esp_lcd_touch>`_ component from ESP-BSP.
 
-+-----------------------+------------------------+
-| Resistive Touch Panel | Capacitive Touch Panel |
-+=======================+========================+
-|        XPT2046        |         FT5216         |
-+-----------------------+------------------------+
-|         NS2016        |         FT5436         |
-+-----------------------+------------------------+
-|                       |         FT6336         |
-+-----------------------+------------------------+
-|                       |         FT5316         |
-+-----------------------+------------------------+
-
-The capacitive touch panel controllers listed above can usually be driven by ``FT5x06``.
-
-Similar to the screen driver, some common functions are encapsulated in the :cpp:type:`touch_panel_driver_t` structure, in order to port them to different GUI libraries easily. After initializing the touch panel, users can conduct operations by calling functions inside the structure, without paying attention to specific touch panel models.
-
-Touch Panel Calibration
+Supported Touch Controllers
 -----------------------------
 
-In actual applications, resistive touch panels must be calibrated before use, while capacitive touch panels are usually calibrated by controllers and do not require extra calibration steps. A calibration algorithm is integrated in the resistive touch panel driver. During the process, three points are used to calibrate, in which one point is used for verification. If the verified error exceeds a certain threshold value, it means the calibration has failed and a new round of calibration is started automatically until it succeeds.
+The following touch panel controllers are currently supported in ESP-IoT-Solution:
 
-The calibration process will be started by calling :c:func:`calibration_run`. After finished, the parameters are stored in NVS for next initialization to avoid repetitive work.
++-----------------------+------------------------+---------------------------+
+| Touch Controller      | Communication Interface| Component Name            |
++=======================+========================+===========================+
+| ILI2118               | I2C                    | esp_lcd_touch_ili2118     |
++-----------------------+------------------------+---------------------------+
+| SPD2010               | I2C                    | esp_lcd_touch_spd2010     |
++-----------------------+------------------------+---------------------------+
+| ST7123                | I2C                    | esp_lcd_touch_st7123      |
++-----------------------+------------------------+---------------------------+
 
-Press Touch Panel
--------------------------
+For additional touch controllers, please refer to the `esp_lcd_touch drivers <https://components.espressif.com/components?q=esp_lcd_touch>`_ available on the ESP Component Registry.
 
-Generally, there is an interrupt pin inside the touch panel controller (both resistive and capacitive) to signal touch events. However, this is not used in the touch panel driver, because IOs should be saved for other peripherals in screen applications as much as possible; on the other hand the information in this signal is not as accurate as data in registers.
+Common touch controllers supported by ESP-IDF and ESP-BSP include:
 
-For resistive touch panels, when the pressure in the Z direction exceeds the configured threshold, it is considered as pressed; for capacitive touch panels, the detection of over one touch point will be considered as pressed.
+- **GT911** / **GT1151** - Capacitive touch controllers
+- **FT5x06** series (FT5216, FT5316, FT5436, FT6336) - Capacitive touch controllers  
+- **CST816S** - Capacitive touch controller
+- **TT21100** - Capacitive touch controller
 
-Touch Panel Rotation
---------------------------
+Architecture
+-------------
 
-A touch panel has eight directions, like the screen, defined in :cpp:type:`touch_panel_dir_t`. The rotation of a touch panel is achieved by software, which usually sets the direction of a touch panel and a screen as the same. But this should not be fixed, for example, when using a capacitive touch panel, the inherent direction of the touch panel may not fit with the original display direction of the screen. Simply setting these two directions as the same may not show the desired contents. Therefore, please adjust the directions according to the actual situation.
+The ``esp_lcd_touch`` component provides a unified abstraction layer for different touch panel controllers. This architecture allows:
 
-On top of that, the configuration of its resolution is also important since the converted display after a touch panel being rotated relies on the resolution of its width and height. An incorrect configuration of the resolution may give you a distorted display.
+- **Unified API**: Same interface for all touch controllers
+- **Easy Integration**: Seamless integration with LVGL and other GUI libraries
+- **Hardware Abstraction**: Switch between touch controllers without changing application code
+- **I2C Communication**: Efficient I2C-based communication with touch controllers
 
-.. note:: 
-    If you are using a resistive touch panel, the touch position can become inaccurate after it being rotated, since the resistance value in each direction may not be distributed uniformly. It is recommended to not rotate a resistive touch panel after it being calibrated.
+Touch Panel Features
+----------------------
+
+**Capacitive Touch Panels:**
+
+- Multi-touch support (depends on controller)
+- No calibration required (calibrated by controller)
+- High accuracy and responsiveness
+- Gesture support (swipe, zoom, rotate - controller dependent)
+
+**Configuration Options:**
+
+- Coordinate mirroring (X/Y axis)
+- Coordinate swapping (swap X and Y)
+- Interrupt pin support
+- Reset pin support
 
 Application Example
--------------------------
+----------------------
 
-Initialize a Touch Panel
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Basic Touch Panel Initialization
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Here's a basic example of initializing a touch panel with I2C communication:
 
 .. code:: c
 
-    touch_panel_driver_t touch; // a touch panel driver
+    #include "esp_lcd_touch.h"
+    #include "esp_lcd_touch_gt911.h"  // Example with GT911
+    #include "driver/i2c_master.h"
 
-    i2c_config_t i2c_conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = 35,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = 36,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 100000,
+    // Initialize I2C bus
+    i2c_master_bus_config_t i2c_bus_conf = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .sda_io_num = GPIO_NUM_8,
+        .scl_io_num = GPIO_NUM_18,
+        .i2c_port = I2C_NUM_0,
+        .flags.enable_internal_pullup = true,
     };
-    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
+    i2c_master_bus_handle_t i2c_bus;
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_conf, &i2c_bus));
 
-    touch_panel_config_t touch_cfg = {
-        .interface_i2c = {
-            .i2c_bus = i2c_bus,
-            .clk_freq = 100000,
-            .i2c_addr = 0x38,
+    // Initialize touch IO (I2C)
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus, &io_config, &io_handle));
+
+    // Configure touch panel
+    esp_lcd_touch_config_t tp_cfg = {
+        .x_max = 800,          // Screen width
+        .y_max = 480,          // Screen height
+        .rst_gpio_num = GPIO_NUM_NC,  // Reset pin (or GPIO_NUM_NC)
+        .int_gpio_num = GPIO_NUM_3,   // Interrupt pin (or GPIO_NUM_NC)
+        .levels = {
+            .reset = 0,
+            .interrupt = 0,
         },
-        .interface_type = TOUCH_PANEL_IFACE_I2C,
-        .pin_num_int = -1,
-        .direction = TOUCH_DIR_LRTB,
-        .width = 800,
-        .height = 480,
+        .flags = {
+            .swap_xy = 0,
+            .mirror_x = 0,
+            .mirror_y = 0,
+        },
     };
 
-    /* Initialize touch panel controller FT5x06 */
-    touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_FT5X06, &touch);
-    touch.init(&touch_cfg);
+    // Initialize touch controller
+    esp_lcd_touch_handle_t touch_handle = NULL;
+    ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(io_handle, &tp_cfg, &touch_handle));
 
-    /* start to run calibration */
-    touch.calibration_run(&lcd, false);
+Reading Touch Data
+^^^^^^^^^^^^^^^^^^^
 
-.. note::
-
-    - When using a capacitive touch panel, the call to the calibration function will return ``ESP_OK`` directly.
-    - By default, only FT5x06 touch panel driver is enabled, please go to ``menuconfig -> Component config -> Touch Screen Driver -> Choose Touch Screen Driver`` to do configurations if you need to enable other drivers.
-
-To Know If a Touch Panel is Pressed and Its Corresponding Position 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+To read touch coordinates:
 
 .. code:: c
 
-    touch_panel_points_t points;
-    touch.read_point_data(&points);
-    int32_t x = points.curx[0];
-    int32_t y = points.cury[0];
-    if(TOUCH_EVT_PRESS == points.event) {
-        ESP_LOGI(TAG, "Pressed, Touch point at (%d, %d)", x, y);
+    // Read touch data (call this periodically)
+    esp_lcd_touch_read_data(touch_handle);
+
+    // Get touch coordinates
+    uint16_t touch_x[1];
+    uint16_t touch_y[1];
+    uint16_t touch_strength[1];
+    uint8_t touch_cnt = 0;
+
+    bool pressed = esp_lcd_touch_get_coordinates(touch_handle, 
+                                                   touch_x, 
+                                                   touch_y, 
+                                                   touch_strength, 
+                                                   &touch_cnt, 
+                                                   1);
+
+    if (pressed && touch_cnt > 0) {
+        printf("Touch at: X=%d, Y=%d, Strength=%d\n", 
+               touch_x[0], touch_y[0], touch_strength[0]);
     }
 
-API Reference
------------------
+Integration with LVGL
+^^^^^^^^^^^^^^^^^^^^^^^
 
-.. include-build-file:: inc/touch_panel.inc
+The ESP LVGL Adapter component provides easy integration with LVGL:
+
+.. code:: c
+
+    #include "esp_lv_adapter.h"
+
+    // After creating touch_handle as shown above
+
+    esp_lv_adapter_touch_config_t touch_cfg = 
+        ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(disp, touch_handle);
+    
+    lv_indev_t *indev = esp_lv_adapter_register_touch(&touch_cfg);
+
+Using ESP-IoT-Solution Touch Drivers
+---------------------------------------
+
+Adding Components to Your Project
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Method 1: Using Component Manager**
+
+Add the touch driver to your project using the IDF Component Manager:
+
+.. code:: bash
+
+    # For SPD2010
+    idf.py add-dependency "espressif/esp_lcd_touch_spd2010"
+
+    # For ILI2118  
+    idf.py add-dependency "espressif/esp_lcd_touch_ili2118"
+
+    # For ST7123
+    idf.py add-dependency "espressif/esp_lcd_touch_st7123"
+
+**Method 2: Using idf_component.yml**
+
+Create or edit ``idf_component.yml`` in your main component:
+
+.. code:: yaml
+
+    dependencies:
+      espressif/esp_lcd_touch_spd2010: "*"
+
+Example with SPD2010
+^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: c
+
+    #include "esp_lcd_touch_spd2010.h"
+
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_SPD2010_CONFIG();
+    
+    esp_lcd_touch_config_t tp_cfg = {
+        .x_max = 320,
+        .y_max = 320,
+        .rst_gpio_num = GPIO_NUM_NC,
+        .int_gpio_num = GPIO_NUM_NC,
+        .levels = {
+            .reset = 0,
+            .interrupt = 0,
+        },
+        .flags = {
+            .swap_xy = 0,
+            .mirror_x = 0,
+            .mirror_y = 0,
+        },
+    };
+
+    esp_lcd_touch_handle_t tp;
+    ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_spd2010(io_handle, &tp_cfg, &tp));
+
+Touch Rotation and Mirroring
+------------------------------
+
+Touch coordinates can be adjusted to match your LCD orientation:
+
+**Swap XY Coordinates:**
+
+Useful when the touch panel is rotated 90° or 270° relative to the LCD.
+
+.. code:: c
+
+    tp_cfg.flags.swap_xy = 1;  // Swap X and Y coordinates
+
+**Mirror Coordinates:**
+
+Flip the coordinates along X or Y axis:
+
+.. code:: c
+
+    tp_cfg.flags.mirror_x = 1;  // Mirror X axis
+    tp_cfg.flags.mirror_y = 1;  // Mirror Y axis
+
+**Setting Resolution:**
+
+Always set ``x_max`` and ``y_max`` to match your actual LCD resolution:
+
+.. code:: c
+
+    tp_cfg.x_max = 800;  // LCD width
+    tp_cfg.y_max = 480;  // LCD height
+
+Related Examples
+------------------
+
+- `LVGL Common Demo <https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_common_demo>`_ - Shows touch integration with LVGL
+- `LVGL Dummy Draw <https://github.com/espressif/esp-iot-solution/tree/master/examples/display/gui/lvgl_dummy_draw>`_ - Advanced LVGL example with touch
+- `RGB LCD with Touch <https://github.com/espressif/esp-idf/tree/master/examples/peripherals/lcd/spi_lcd_touch>`_ - ESP-IDF official example
+
+Component Links
+----------------
+
+**ESP-IoT-Solution Touch Drivers:**
+
+- `esp_lcd_touch_ili2118 <https://components.espressif.com/components/espressif/esp_lcd_touch_ili2118>`_
+- `esp_lcd_touch_spd2010 <https://components.espressif.com/components/espressif/esp_lcd_touch_spd2010>`_
+- `esp_lcd_touch_st7123 <https://components.espressif.com/components/espressif/esp_lcd_touch_st7123>`_
+
+**More Touch Drivers on Component Registry:**
+
+Search for `esp_lcd_touch on Component Registry <https://components.espressif.com/components?q=esp_lcd_touch>`_ to find additional touch panel drivers.
+
+API Reference
+--------------
+
+For detailed API documentation, please refer to:
+
+- `esp_lcd_touch API Documentation <https://github.com/espressif/esp-bsp/blob/master/components/lcd_touch/esp_lcd_touch/README.md>`_
+- Component-specific README files in ``components/display/lcd_touch/``

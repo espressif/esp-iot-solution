@@ -39,6 +39,26 @@ static TaskHandle_t _task_handle = NULL;
 static esp_pm_lock_handle_t pm_locks_cpu_max = NULL;
 #endif
 
+static uint8_t tinyusb_rhport(void)
+{
+    return TUD_OPT_RHPORT;
+}
+
+#ifdef CONFIG_TINYUSB_RHPORT_HS
+#define TINYUF2_USB_OTG_PHY_TARGET      USB_PHY_TARGET_UTMI
+#define TINYUF2_USB_OTG_PHY_SPEED       USB_PHY_SPEED_HIGH
+#else
+#define TINYUF2_USB_OTG_PHY_TARGET      USB_PHY_TARGET_INT
+#define TINYUF2_USB_OTG_PHY_SPEED       USB_PHY_SPEED_FULL
+#endif
+
+#if defined(SOC_USB_FSLS_PHY_NUM) && defined(SOC_USB_UTMI_PHY_NUM) && \
+    (SOC_USB_FSLS_PHY_NUM == 0) && (SOC_USB_UTMI_PHY_NUM > 0)
+#define TINYUF2_USB_SERIAL_JTAG_PHY_TARGET  USB_PHY_TARGET_UTMI
+#else
+#define TINYUF2_USB_SERIAL_JTAG_PHY_TARGET  USB_PHY_TARGET_INT
+#endif
+
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
@@ -86,16 +106,16 @@ static void _usb_otg_phy_init(bool enable)
 {
     static usb_phy_handle_t phy_hdl = NULL;
     usb_phy_config_t phy_conf = {
-        .target = USB_PHY_TARGET_INT,
+        .target = TINYUF2_USB_OTG_PHY_TARGET,
         .otg_mode = USB_OTG_MODE_DEVICE,
-        .otg_speed = USB_PHY_SPEED_FULL
+        .otg_speed = TINYUF2_USB_OTG_PHY_SPEED
     };
     if (phy_hdl) {
         usb_del_phy(phy_hdl);
         phy_hdl = NULL;
     }
     if (enable) {
-#if SOC_USB_SERIAL_JTAG_SUPPORTED
+#if SOC_USB_SERIAL_JTAG_SUPPORTED && defined(USB_SERIAL_JTAG_CONF0_REG)
         // due to the default usb function is usb-serial-jtag
         // quick switch may cause the host not re-enumerate the device
         // pull down DP to make host treat it as disconnect event
@@ -113,6 +133,7 @@ static void _usb_otg_phy_init(bool enable)
         // Configure USB JTAG PHY
 #if SOC_USB_SERIAL_JTAG_SUPPORTED
         phy_conf.controller = USB_PHY_CTRL_SERIAL_JTAG;
+        phy_conf.target = TINYUF2_USB_SERIAL_JTAG_PHY_TARGET;
         phy_conf.otg_mode = USB_PHY_MODE_DEFAULT;
         phy_conf.otg_speed = USB_PHY_SPEED_UNDEFINED;
         usb_new_phy(&phy_conf, &phy_hdl);
@@ -170,14 +191,6 @@ static esp_err_t tinyusb_init()
     return ESP_OK;
 }
 
-// bool tusb_teardown(void); function is not implemented in tinyusb,
-// here we just deinit hardware, the memory not released
-__attribute__((weak)) bool tusb_teardown(void)
-{
-    ESP_LOGW(TAG, "tusb_teardown not implemented in tinyusb, memory not released");
-    return true;
-}
-
 static esp_err_t tinyusb_deinit()
 {
     //prepare to exit the task
@@ -193,7 +206,9 @@ static esp_err_t tinyusb_deinit()
         vTaskDelete(_task_handle);
     }
     _task_handle = NULL;
-    tusb_teardown();
+    if (!tusb_deinit(tinyusb_rhport())) {
+        ESP_LOGW(TAG, "USB Device Stack Deinit Fail");
+    }
     _usb_otg_phy_init(false);
 #ifdef CONFIG_PM_ENABLE
     esp_pm_lock_release(pm_locks_cpu_max);

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -11,6 +11,7 @@
 #include "tinyusb.h"
 #include "sdmmc_cmd.h"
 #include "esp_idf_version.h"
+#include "esp_heap_caps.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
 #include "bsp/esp-bsp.h"
 #endif
@@ -28,8 +29,15 @@ static const char *TAG = "usb_msc_wireless";
 #elif defined(CONFIG_SDCARD_INTFC_SDIO) && defined(SOC_SDMMC_HOST_SUPPORTED)
 #define SDCARD_SDIO_CLK_PIN      CONFIG_SDCARD_SDIO_CLK_PIN
 #define SDCARD_SDIO_CMD_PIN      CONFIG_SDCARD_SDIO_CMD_PIN
-#define SDCARD_SDIO_DO_PIN       CONFIG_SDCARD_SDIO_DO_PIN
+#define SDCARD_SDIO_D0_PIN       CONFIG_SDCARD_SDIO_D0_PIN
+#if CONFIG_SDCARD_SDIO_DATA_WIDTH_4
+#define SDCARD_SDIO_DATA_WIDTH   4
+#define SDCARD_SDIO_D1_PIN       CONFIG_SDCARD_SDIO_D1_PIN
+#define SDCARD_SDIO_D2_PIN       CONFIG_SDCARD_SDIO_D2_PIN
+#define SDCARD_SDIO_D3_PIN       CONFIG_SDCARD_SDIO_D3_PIN
+#else
 #define SDCARD_SDIO_DATA_WIDTH   1
+#endif
 #include "driver/sdmmc_host.h"
 #else
 #error "Not supported interface"
@@ -52,9 +60,11 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     wl_handle_t wl_handle_1 = WL_INVALID_HANDLE;
     ESP_LOGI(TAG, "using internal flash");
     const esp_vfs_fat_mount_config_t mount_config = {
+#ifdef CONFIG_FORMAT_IF_MOUNT_FAILED
         .format_if_mount_failed = true,
-        .max_files = 9,
-        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE
+        .allocation_unit_size = CONFIG_WL_SECTOR_SIZE,
+#endif
+        .max_files = CONFIG_FATFS_MAX_FILES
     };
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
     ret = esp_vfs_fat_spiflash_mount_rw_wl(base_path, "storage", &mount_config, &wl_handle_1);
@@ -71,9 +81,11 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
     sdmmc_card_t *card;
     ESP_LOGI(TAG, "using external sdcard");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+#ifdef CONFIG_FORMAT_IF_MOUNT_FAILED
         .format_if_mount_failed = true,
-        .max_files = 5,
-        .allocation_unit_size = CONFIG_DISK_BLOCK_SIZE
+        .allocation_unit_size = CONFIG_DISK_BLOCK_SIZE,
+#endif
+        .max_files = CONFIG_FATFS_MAX_FILES
     };
 
 #ifdef CONFIG_SDCARD_INTFC_SPI
@@ -102,15 +114,20 @@ static esp_err_t init_fat(sdmmc_card_t **card_handle, const char *base_path)
 #elif defined(CONFIG_SDCARD_INTFC_SDIO) && defined(SOC_SDMMC_HOST_SUPPORTED)
     ESP_LOGI(TAG, "Using SDIO Interface");
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.max_freq_khz = SDMMC_FREQ_HIGHSPEED;
 
     // This initializes the slot without card detect (CD) and write protect (WP) signals.
     // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
     slot_config.clk = SDCARD_SDIO_CLK_PIN;
     slot_config.cmd = SDCARD_SDIO_CMD_PIN;
-    slot_config.d0 = SDCARD_SDIO_DO_PIN;
-    // To use 1-line SD mode, change this to 1:
+    slot_config.d0 = SDCARD_SDIO_D0_PIN;
     slot_config.width = SDCARD_SDIO_DATA_WIDTH;
+#if CONFIG_SDCARD_SDIO_DATA_WIDTH_4
+    slot_config.d1 = SDCARD_SDIO_D1_PIN;
+    slot_config.d2 = SDCARD_SDIO_D2_PIN;
+    slot_config.d3 = SDCARD_SDIO_D3_PIN;
+#endif
     // Enable internal pullup on enabled pins. The internal pullup
     // are insufficient however, please make sure 10k external pullup are
     // connected on the bus. This is for debug / example purpose only.
@@ -169,10 +186,39 @@ void app_main(void)
 
     ESP_LOGI(TAG, "USB MSC initialization");
 
-    const tinyusb_config_t tusb_cfg = {0};
+    tinyusb_config_t tusb_cfg = {0};
+
+#if CONFIG_SELF_POWERED_DEVICE
+    tusb_cfg.self_powered = true;
+    tusb_cfg.vbus_monitor_io = CONFIG_VBUS_MONITOR_IO;
+
+    static const uint8_t descriptor_fs_cfg[] = {
+        // Configuration number, interface count, string index, total length, attribute, power in mA
+        TUD_CONFIG_DESCRIPTOR(1, 1, 0, (TUD_CONFIG_DESC_LEN + CFG_TUD_MSC * TUD_MSC_DESC_LEN), TUSB_DESC_CONFIG_ATT_SELF_POWERED, 100),
+        TUD_MSC_DESCRIPTOR(0, 4, 0x01, 0x81, 64),
+    };
+    tusb_cfg.configuration_descriptor = descriptor_fs_cfg;
+#endif
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB MSC initialization DONE");
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+
+    /* Print memory status information at startup */
+    size_t internal_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+    size_t internal_largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    ESP_LOGI(TAG, "Memory status:");
+    ESP_LOGI(TAG, "  Internal RAM: free %u bytes (%.1f KB), largest block: %u bytes (%.1f KB)",
+             internal_free, internal_free / 1024.0,
+             internal_largest, internal_largest / 1024.0);
+
+#if CONFIG_SPIRAM
+    size_t psram_free = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+    size_t psram_largest = heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM);
+    ESP_LOGI(TAG, "  PSRAM: free %u bytes (%.1f KB), largest block: %u bytes (%.1f KB)",
+             psram_free, psram_free / 1024.0,
+             psram_largest, psram_largest / 1024.0);
+#endif
 }
 
 static uint8_t s_pdrv = 0;

@@ -22,6 +22,8 @@
 #include "esp32s2/rom/rtc.h"
 #elif CONFIG_IDF_TARGET_ESP32P4
 #include "esp32p4/rom/rtc.h"
+#elif CONFIG_IDF_TARGET_ESP32S31
+#include "esp32s31/rom/rtc.h"
 #endif
 
 static const char *TAG = "bootloader_hooks";

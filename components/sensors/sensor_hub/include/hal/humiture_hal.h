@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,69 +22,78 @@ typedef struct {
     /**
      * @brief Initialize the humiture sensor
      *
+     * @param[out] sensor_ctx Pointer to receive the driver's per-instance context
      * @param handle The bus handle
      * @param addr The I2C address of the sensor
      * @return esp_err_t Result of initialization
      */
-    esp_err_t (*init)(bus_handle_t handle, uint8_t addr);
+    esp_err_t (*init)(void **sensor_ctx, bus_handle_t handle, uint8_t addr);
 
     /**
      * @brief Deinitialize the humiture sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of deinitialization
      */
-    esp_err_t (*deinit)(void);
+    esp_err_t (*deinit)(void *sensor_ctx);
 
     /**
      * @brief Test the humiture sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the test
      */
-    esp_err_t (*test)(void);
+    esp_err_t (*test)(void *sensor_ctx);
 
     /**
      * @brief Acquire humidity data from the sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] humidity Pointer to store the humidity data
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_humidity)(float *humidity);
+    esp_err_t (*acquire_humidity)(void *sensor_ctx, float *humidity);
 
     /**
      * @brief Acquire temperature data from the sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] temperature Pointer to store the temperature data
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_temperature)(float *temperature);
+    esp_err_t (*acquire_temperature)(void *sensor_ctx, float *temperature);
 
     /**
      * @brief Put the humiture sensor to sleep
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the sleep operation
      */
-    esp_err_t (*sleep)(void);
+    esp_err_t (*sleep)(void *sensor_ctx);
 
     /**
      * @brief Wake up the humiture sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the wake-up operation
      */
-    esp_err_t (*wakeup)(void);
+    esp_err_t (*wakeup)(void *sensor_ctx);
 
     /**
      * @brief Set sensor work mode
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting work mode
      */
-    esp_err_t (*set_mode)(sensor_mode_t work_mode);
+    esp_err_t (*set_mode)(void *sensor_ctx, sensor_mode_t work_mode);
 
     /**
      * @brief Set sensor measurement range
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting measurement range
      */
-    esp_err_t (*set_range)(sensor_range_t range);
+    esp_err_t (*set_range)(void *sensor_ctx, sensor_range_t range);
 } humiture_impl_t;
 
 #ifdef __cplusplus
@@ -192,7 +201,6 @@ esp_err_t humiture_acquire(sensor_humiture_handle_t sensor, sensor_data_group_t 
 esp_err_t humiture_control(sensor_humiture_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 

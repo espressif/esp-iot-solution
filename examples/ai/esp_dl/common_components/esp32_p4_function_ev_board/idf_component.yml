@@ -1,0 +1,15 @@
+version: "0.1.0"
+description: Minimal camera/LCD/touch BSP for ESP32-P4 Function EV Board
+targets:
+  - esp32p4
+dependencies:
+  idf: ">=5.4"
+  lvgl/lvgl: ">=8,<10"
+  espressif/esp_lcd_ek79007: ">=2.0.1,<3.0.0"
+  espressif/esp_lcd_ili9881c: ">=1.0.3,<2.0.0"
+  espressif/esp_lcd_touch_gt911: "^1"
+  esp_lvgl_adapter:
+    override_path: "../../../../../components/display/tools/esp_lvgl_adapter"
+  espressif/esp_video:
+    version: "2.2.0"
+    public: true

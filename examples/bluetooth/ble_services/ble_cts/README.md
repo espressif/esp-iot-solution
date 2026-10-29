@@ -11,7 +11,7 @@ The device information service exposes manufacturer and/or vendor information ab
 
 It uses Bluetooth controller based on BLE connection management.
 
-This example aims at understanding BLE Body Composition service and BLE connection management APIs.
+This example aims at understanding BLE Current Time Service and BLE connection management APIs.
 
 To test this demo, any BLE scanner app can be used.
 

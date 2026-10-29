@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS "esp_lv_fs.c"
     INCLUDE_DIRS "include"
+    REQUIRES esp_mmap_assets
 )
 
 include(package_manager)

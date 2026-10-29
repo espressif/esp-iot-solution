@@ -2,7 +2,33 @@ OpenAI
 =============
 :link_to_translation:`en:[English]`
 
-`openai` 组件是 `OpenAI-ESP32 <https://github.com/me-no-dev/OpenAI-ESP32>`_ Arduino 库的移植版本，它简化了在 `ESP-IDF` 上调用 OpenAI API 的过程。该库广泛支持大部分 OpenAI API 的功能，但不包括 `files` 和 `fine-tunes`。更多详情，请参考 `OpenAI <https://platform.openai.com/docs/api-reference>`_ 的 API 参考文档。
+`openai` 组件是 `OpenAI-ESP32 <https://github.com/me-no-dev/OpenAI-ESP32>`_ Arduino 库的移植版本，它简化了在 `ESP-IDF` 上调用 OpenAI API 的过程。
+
+该库支持以下 OpenAI API 能力：
+
+- [ ] `Responses <https://platform.openai.com/docs/api-reference/responses>`_ [1]_
+- [x] `Chat Completions <https://platform.openai.com/docs/api-reference/chat>`_: 支持 text, image 与 audio 输入，输出支持 text。[2]_ 暂不支持流式输出。
+- [x] `Audio <https://platform.openai.com/docs/api-reference/audio>`_: Speech & Transcription，其中 Speech 支持流式输出。
+- [x] `Images <https://platform.openai.com/docs/api-reference/images>`_: Create image & Edits & Variations
+- [x] `Embeddings <https://platform.openai.com/docs/api-reference/embeddings>`_
+- [ ] `Evals <https://platform.openai.com/docs/api-reference/evals>`_
+- [ ] `Fine-tuning <https://platform.openai.com/docs/api-reference/fine-tuning>`_
+- [ ] `Batch <https://platform.openai.com/docs/api-reference/batch>`_
+- [ ] `Files <https://platform.openai.com/docs/api-reference/files>`_
+- [x] `Moderations <https://platform.openai.com/docs/api-reference/moderations>`_
+
+.. note::
+   Realtime 能力可以使用以下库实现：
+   
+   - **WebSocket 方案**:
+     - https://github.com/openai/openai-realtime-embedded
+   - **WebRTC 方案**:
+     - https://github.com/espressif/esp-webrtc-solution/tree/main/solutions/openai_demo
+
+.. [1] 目前，请使用 Chat Completions API 代替。
+.. [2] 多模态输入需要使用 ``multiModalMessage``。
+
+更多详情，请参考 `OpenAI <https://platform.openai.com/docs/api-reference>`_ 的 API 参考文档。
 
 FAQ
 ------

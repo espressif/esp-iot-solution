@@ -28,7 +28,7 @@ if [ ! -f "$FLASH_ARGS_FILE" ]; then
     exit 1
 fi
 
-sed -i 's|bootloader/bootloader\.bin|bootloader/bootloader_merge.bin|' "$FLASH_ARGS_FILE"
+sed -i -E 's|^0x[0-9a-fA-F]+[[:space:]]+bootloader/bootloader(_merge)?\.bin$|0x0 bootloader/bootloader_merge.bin|' "$FLASH_ARGS_FILE"
 sed -i '/bootloader_uf2\.bin/d' "$FLASH_ARGS_FILE"
 
 echo "flash_args has been updated successfully."

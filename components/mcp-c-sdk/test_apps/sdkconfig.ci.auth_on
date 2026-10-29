@@ -1,0 +1,3 @@
+# Unit matrix: compile with HTTP auth enabled
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_HTTP_AUTH_ENABLE=y

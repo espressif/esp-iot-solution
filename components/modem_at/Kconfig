@@ -1,0 +1,18 @@
+menu "Modem AT Command"
+
+    menu "Timeout Config"
+        config MODEM_COMMAND_TIMEOUT_DEFAULT
+            int "Timeout (ms) for common AT command"
+            default 2000
+        config MODEM_COMMAND_TIMEOUT_MODE_CHANGE
+            int "Timeout (ms) for changing working mode"
+            default 10000
+    endmenu
+
+    config MODEM_AT_DEBUG_HEXDUMP
+        bool "Enable AT command debug"
+        default n
+        help
+            Enable AT command hexdump for interaction with modem
+
+endmenu

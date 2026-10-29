@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AirMouse Calibration</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <main class="page runtime-page">
+        <header class="topbar">
+            <div class="hero">
+                <h1>AirMouse Calibration</h1>
+                <p id="runtimeSubtitle">
+                    Preparing the startup calibration flow. Keep this page open while the sensors finish calibration.
+                </p>
+            </div>
+            <div id="runtimeStatus" class="status-pill loading">Preparing</div>
+        </header>
+
+        <section class="runtime-dashboard">
+            <section class="card runtime-hero-card">
+                <div class="card-header">
+                    <h2 id="runtimeTitle">Calibration Standby</h2>
+                    <p id="runtimeMessage">
+                        Waiting for the firmware to publish the next calibration step.
+                    </p>
+                </div>
+                <div class="runtime-countdown-shell">
+                    <div id="runtimeCountdown" class="runtime-countdown idle">--</div>
+                    <div id="runtimeCountdownLabel" class="runtime-countdown-label">
+                        Countdown will appear here when the gyroscope calibration is ready.
+                    </div>
+                </div>
+            </section>
+
+            <section class="card runtime-detail-card">
+                <div class="card-header">
+                    <h2>Live State</h2>
+                    <p>Realtime feedback for the current startup calibration stage.</p>
+                </div>
+                <div class="runtime-detail-grid">
+                    <div class="runtime-detail-item">
+                        <span>Mode</span>
+                        <strong id="runtimeMode">startup</strong>
+                    </div>
+                    <div class="runtime-detail-item">
+                        <span>Severity</span>
+                        <strong id="runtimeLevel">info</strong>
+                    </div>
+                    <div class="runtime-detail-item">
+                        <span>Calibration Step</span>
+                        <strong id="runtimeKind">none</strong>
+                    </div>
+                    <div class="runtime-detail-item">
+                        <span>Auto Start</span>
+                        <strong id="runtimeAutoStart">pending</strong>
+                    </div>
+                </div>
+                <div id="runtimeNotice" class="runtime-notice" hidden aria-live="polite"></div>
+            </section>
+
+            <section class="card runtime-guide-card">
+                <div class="card-header">
+                    <h2>What To Do</h2>
+                    <p>The page will automatically advance calibration. No extra button press is required.</p>
+                </div>
+                <ul class="runtime-guide-list">
+                    <li>For gyroscope calibration, place the device on a stable surface before the countdown reaches zero.</li>
+                    <li>For magnetometer calibration, slowly rotate the device through different orientations until the page reports completion.</li>
+                    <li>Keep this page open. AirMouse will continue to BLE startup automatically after calibration finishes.</li>
+                </ul>
+            </section>
+        </section>
+    </main>
+
+    <script src="/runtime.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+## IDF Component Manager Manifest File
+dependencies:
+  ## Required IDF version
+  idf:
+    version: "==5.5"
+  espressif/esp_weaver:
+    override_path: "../../../../components/esp_weaver"
+  espressif/button: "^4.1.4"
+  espressif/led_indicator: "^2.0.0"
+  protocol_examples_common:
+    path: ${IDF_PATH}/examples/common_components/protocol_examples_common

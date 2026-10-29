@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -293,53 +293,47 @@ esp_err_t hdc2010_default_init(hdc2010_handle_t sensor)
 
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
 
-static hdc2010_handle_t hdc2010 = NULL;
-static bool is_init = false;
-
-esp_err_t humiture_hdc2010_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+esp_err_t humiture_hdc2010_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
-    if (is_init || !i2c_bus) {
+    if (!sensor_ctx || !i2c_bus) {
         return ESP_FAIL;
     }
 
-    hdc2010 = hdc2010_create(i2c_bus, addr);
+    hdc2010_handle_t hdc2010 = hdc2010_create(i2c_bus, addr);
 
     if (!hdc2010) {
         return ESP_FAIL;
     }
 
-    is_init = true;
+    *sensor_ctx = hdc2010;
     return ESP_OK;
 }
 
-esp_err_t humiture_hdc2010_deinit(void)
+esp_err_t humiture_hdc2010_deinit(void *sensor_ctx)
 {
-    if (!is_init) {
+    hdc2010_handle_t hdc2010 = (hdc2010_handle_t)sensor_ctx;
+
+    if (!hdc2010) {
         return ESP_FAIL;
     }
 
-    esp_err_t ret = hdc2010_delete(&hdc2010);
-
-    if (ret != ESP_OK) {
-        return ESP_FAIL;
-    }
-
-    is_init = false;
-    return ESP_OK;
+    return hdc2010_delete(&hdc2010);
 }
 
-esp_err_t humiture_hdc2010_test(void)
+esp_err_t humiture_hdc2010_test(void *sensor_ctx)
 {
-    if (!is_init) {
+    if (!sensor_ctx) {
         return ESP_FAIL;
     }
 
     return ESP_OK;
 }
 
-esp_err_t humiture_hdc2010_acquire_humidity(float *h)
+esp_err_t humiture_hdc2010_acquire_humidity(void *sensor_ctx, float *h)
 {
-    if (!is_init) {
+    hdc2010_handle_t hdc2010 = (hdc2010_handle_t)sensor_ctx;
+
+    if (!hdc2010) {
         return ESP_FAIL;
     }
 
@@ -347,9 +341,11 @@ esp_err_t humiture_hdc2010_acquire_humidity(float *h)
     return ESP_OK;
 }
 
-esp_err_t humiture_hdc2010_acquire_temperature(float *t)
+esp_err_t humiture_hdc2010_acquire_temperature(void *sensor_ctx, float *t)
 {
-    if (!is_init) {
+    hdc2010_handle_t hdc2010 = (hdc2010_handle_t)sensor_ctx;
+
+    if (!hdc2010) {
         return ESP_FAIL;
     }
 

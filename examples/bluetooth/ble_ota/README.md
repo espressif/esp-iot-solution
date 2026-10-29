@@ -145,10 +145,17 @@ pip install -r tools/requirements.txt
 
 To create a patch file, use the [python tool](./tools/esp_delta_ota_patch_gen.py)
 ```
-python esp_delta_ota_patch_gen.py --chip <target> --base_binary <base_binary> --new_binary <new_binary> --patch_file_name <patch_file_name>
+python esp_delta_ota_patch_gen.py create_patch --chip <target> --base_binary <base_binary> --new_binary <new_binary> --patch_file_name <patch_file_name>
 ```
 
 This will generate the patch file for the new binary which needs to be hosted on the OTA update server.
 
 > **_NOTE:_** Make sure that the firmware present in the device is used as `base_binary` while creating the patch file. For this purpose, user should keep backup
 of the firmware running in the device as it is required for creating the patch file.
+
+### Verifying Patch
+
+To verify that the patch file is correctly created from the provided base binary and new binary, use the following command:
+```
+python esp_delta_ota_patch_gen.py verify_patch --chip <target> --base_binary <base_binary> --new_binary <new_binary> --patch_file_name <patch_file_name>
+```

@@ -1,0 +1,22 @@
+menu "Example Configuration"
+    config EXAMPLE_LOCAL_NAME
+        string "Local GAP device name"
+        default "BLE_MIDI_Central"
+        help
+            Name used for this central device (GAP).
+
+    config EXAMPLE_PEER_NAME
+        string "Peer name to match (optional)"
+        default ""
+        help
+            If non-empty, connect when this complete/short name appears in advertising.
+            Set to "BLE_MIDI" to match the default ble_midi_peripheral device name.
+            If empty (default), only the BLE-MIDI Service UUID in advertising is used.
+
+    config EXAMPLE_BLE_SUB_ADV
+        string "Unused (central role)"
+        default ""
+        help
+            Reserved for future use.
+
+endmenu

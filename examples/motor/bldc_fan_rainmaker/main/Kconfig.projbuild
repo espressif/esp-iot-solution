@@ -64,3 +64,28 @@ menu "ESP RainMaker App Wi-Fi Provisioning"
             Provisioning Name Prefix.
 
 endmenu
+
+menu "Example Configuration"
+
+    config FAN_RAINMAKER_LONG_PRESS_RESET_SECONDS
+        int "Long press reset timeout (seconds)"
+        default 5
+        range 3 15
+        help
+            Set the duration in seconds for long press to reset RainMaker configuration.
+
+    config FAN_RAINMAKER_RESET_SECONDS
+        int "RainMaker reset timeout (seconds)"
+        default 3
+        range 2 10
+        help
+            Set the timeout in seconds for RainMaker reset operation.
+
+    config FAN_RAINMAKER_REBOOT_SECONDS
+        int "RainMaker reboot timeout (seconds)"
+        default 3
+        range 2 10
+        help
+            Set the timeout in seconds for RainMaker reboot operation.
+
+endmenu

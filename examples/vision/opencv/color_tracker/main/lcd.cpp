@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_idf_version.h"
 #include "esp_lcd_ek79007.h"
 #include "lcd.hpp"
 
@@ -43,7 +44,12 @@ esp_err_t lcd_init(esp_lcd_panel_handle_t *panel_handle)
     lcd_ldo_power_on();
 
     ESP_LOGI(TAG, "Install LCD driver");
-    esp_lcd_dsi_bus_config_t bus_config = EK79007_PANEL_BUS_DSI_2CH_CONFIG();
+    esp_lcd_dsi_bus_config_t bus_config = {
+        .bus_id = 0,
+        .num_data_lanes = 2,
+        .phy_clk_src = MIPI_DSI_PHY_PLLREF_CLK_SRC_DEFAULT,
+        .lane_bit_rate_mbps = 900,
+    };
     ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
 
     ESP_LOGI(TAG, "Install panel IO");
@@ -67,7 +73,9 @@ esp_err_t lcd_init(esp_lcd_panel_handle_t *panel_handle)
         .vsync_back_porch = 23,
         .vsync_front_porch = 12,
     };
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     dpi_config.flags.use_dma2d = true;
+#endif
 
     ek79007_vendor_config_t vendor_config = {};
     vendor_config.mipi_config.dpi_config = &dpi_config;
@@ -85,6 +93,9 @@ esp_err_t lcd_init(esp_lcd_panel_handle_t *panel_handle)
     };
 
     ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(mipi_dbi_io, &panel_config, &display_handle));
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    ESP_ERROR_CHECK(esp_lcd_dpi_panel_enable_dma2d(display_handle));
+#endif
     ESP_ERROR_CHECK(esp_lcd_panel_reset(display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(display_handle));
 

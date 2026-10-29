@@ -7,12 +7,21 @@
 
 #include "esp_platform.h"
 #include "BLDCMotor.h"
+#include "StepperMotor.h"
+#include "HybridStepperMotor.h"
+#include "soc/soc_caps.h"
 #include "esp_hal_bldc_3pwm.h"
+#if SOC_MCPWM_SUPPORTED
 #include "esp_hal_bldc_6pwm.h"
+#endif
 #include "communication/SimpleFOCDebug.h"
 #include "communication/Commander.h"
+#include "communication/StepDirListener.h"
+#include "drivers/StepperDriver2PWM.h"
+#include "drivers/StepperDriver4PWM.h"
 #include "sensors/GenericSensor.h"
 #include "current_sense/GenericCurrentSense.h"
+#include "current_sense/InlineCurrentSense.h"
 #include "current_sense/LowsideCurrentSense.h"
 #include "../../angle_sensor/as5600.h"
 #include "../../angle_sensor/mt6701.h"

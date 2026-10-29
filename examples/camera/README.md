@@ -3,6 +3,8 @@
 This directory contains a range of example [esp32-camera](https://github.com/espressif/esp32-camera) projects.   
 See the [README.md](../../README.md) file in the upper level directory for more information about examples.
 
+**Note:** The ESP32 and ESP32-S2 chips can only be used with the esp32-camera component. The ESP32-S3 and ESP32-P4 chips are recommended to use the [esp-video](https://github.com/espressif/esp-video-components/tree/master/esp_video) component.
+
 ## Camera driver workflow
 ![](../../docs/_static/camera-workflow.png)
 
@@ -78,7 +80,7 @@ The APIs included in the [esp32-camera](https://github.com/espressif/esp32-camer
 Convert image buffer to RGB565 buffer.
 
 ### Header File
-- [esp32-camera/conversions/include/esp_jpg_decode.h](https://github.com/espressif/esp32-camera/blob/master/conversions/include/esp_jpg_decode.h)
+- [esp32-camera/conversions/include/esp_jpg_decode.h](https://github.com/espressif/esp32-camera/blob/v2.0.0/conversions/include/esp_jpg_decode.h)
 #### Functions
 - `esp_err_t esp_jpg_decode(size_t len, jpg_scale_t scale, jpg_reader_cb reader, jpg_writer_cb writer, void * arg)`  
 JPEG scaling function.

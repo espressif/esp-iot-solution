@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -194,15 +194,12 @@ uint16_t veml6075_get_raw_ir(veml6075_handle_t sensor)
 
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
 
-static veml6075_handle_t veml6075 = NULL;
-static bool is_init = false;
-
-esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+esp_err_t light_sensor_veml6075_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
-    if (is_init || !i2c_bus) {
+    if (!sensor_ctx || !i2c_bus) {
         return ESP_FAIL;
     }
-    veml6075 = veml6075_create(i2c_bus, addr);
+    veml6075_handle_t veml6075 = veml6075_create(i2c_bus, addr);
     if (!veml6075) {
         return ESP_FAIL;
     }
@@ -214,36 +211,37 @@ esp_err_t light_sensor_veml6075_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
     veml6075_info.switch_en = VEML6075_SWITCH_EN;
     esp_err_t ret = veml6075_set_mode(veml6075, &veml6075_info);
     if (ret != ESP_OK) {
+        veml6075_delete(&veml6075);
         return ESP_FAIL;
     }
-    is_init = true;
+    *sensor_ctx = veml6075;
     return ESP_OK;
 }
 
-esp_err_t light_sensor_veml6075_deinit(void)
+esp_err_t light_sensor_veml6075_deinit(void *sensor_ctx)
 {
-    if (!is_init) {
+    veml6075_handle_t veml6075 = (veml6075_handle_t)sensor_ctx;
+
+    if (!veml6075) {
         return ESP_FAIL;
     }
-    esp_err_t ret = veml6075_delete(&veml6075);
-    if (ret != ESP_OK) {
+
+    return veml6075_delete(&veml6075);
+}
+
+esp_err_t light_sensor_veml6075_test(void *sensor_ctx)
+{
+    if (!sensor_ctx) {
         return ESP_FAIL;
     }
-    is_init = false;
     return ESP_OK;
 }
 
-esp_err_t light_sensor_veml6075_test(void)
+esp_err_t light_sensor_veml6075_acquire_uv(void *sensor_ctx, float *uv, float *uva, float *uvb)
 {
-    if (!is_init) {
-        return ESP_FAIL;
-    }
-    return ESP_OK;
-}
+    veml6075_handle_t veml6075 = (veml6075_handle_t)sensor_ctx;
 
-esp_err_t light_sensor_veml6075_acquire_uv(float *uv, float *uva, float *uvb)
-{
-    if (!is_init) {
+    if (!veml6075) {
         return ESP_FAIL;
     }
     *uva = veml6075_get_uva(veml6075);
@@ -252,12 +250,12 @@ esp_err_t light_sensor_veml6075_acquire_uv(float *uv, float *uva, float *uvb)
     return ESP_OK;
 }
 
-static esp_err_t light_sensor_veml6075_null_acquire_light_function(float* l)
+static esp_err_t light_sensor_veml6075_null_acquire_light_function(void *sensor_ctx, float* l)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }
 
-static esp_err_t light_sensor_veml6075_null_acquire_rgbw_function(float* r, float* g, float* b, float* w)
+static esp_err_t light_sensor_veml6075_null_acquire_rgbw_function(void *sensor_ctx, float* r, float* g, float* b, float* w)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }

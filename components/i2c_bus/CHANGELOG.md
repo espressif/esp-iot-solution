@@ -1,5 +1,36 @@
 # ChangeLog
 
+## v1.5.2 - 2026-06-08
+
+### Bug Fix:
+
+- Fix a compilation error when using software I2C with IDF v6.
+
+## v1.5.1 - 2026-3-18
+
+### Bug Fix:
+
+- Fix the default clock source selection in `i2c_bus_v2` for LP I2C ports to use `LP_I2C_SCLK_DEFAULT`.
+
+## v1.4.3 - 2025-9-26
+
+### Bug Fix:
+
+- Synchronize the version information for cmake_utilities
+
+## v1.4.2 - 2025-8-26
+
+### Bug Fix:
+
+- Remove the dependency of `I2C_BUS_BACKWARD_CONFIG` on the IDF version, and add CMake messages for I2C driver information.
+
+## V1.4.1 - 2025-8-14
+
+### Bug Fix:
+
+- Soft i2c supports removing the restriction on ``NULL_I2C_MEM_ADDR``, allowing users to refer to all eligible register addresses.
+- Modify the `ESP_IDF_VERSION` naming in Kconfig to avoid conflicts with other components.
+
 ## v1.4.0 - 2025-3-13
 
 ### Enhancements:

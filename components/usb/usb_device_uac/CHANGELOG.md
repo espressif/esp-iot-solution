@@ -1,5 +1,31 @@
 # ChangeLog
 
+## v1.3.2 (2026-8-18)
+
+* Fix chronic mic-stream dropouts: size the EP-IN FIFO to satisfy TinyUSB's flow-control constraints and prefill it to the setpoint at stream start.
+
+## v1.3.1 (2026-5-25)
+
+* Fix TinyUSB RHPort high-speed configuration for ESP32-S31: use RHPORT0 instead of RHPORT1 (RHPORT1 is only for ESP32-P4).
+
+## v1.3.0 (2026-5-15)
+
+* Add configurable bit resolution: 16-bit, 24-in-24 (packed), 24-in-32, and 32-bit.
+* Support ESP32-S31 and ESP32-H4
+
+## v1.2.3 (2026-3-5)
+
+* Fix Windows multi-channel UAC enumeration (Code 10) by changing EP size padding in `tusb_config_uac.h` from fixed `+4` to frame-aligned `+FRAME_SZ`.
+
+
+## v1.2.2 (2025-9-23)
+
+* Remove usb component dependency for idf 6.0 and higher
+
+## v1.2.1 (2025-8-4)
+
+* Fix build issue and audio path for MIC-only configuration.
+
 ## v1.2.0 (2025-3-31)
 
 * Supports integration into other TinyUSB projects.

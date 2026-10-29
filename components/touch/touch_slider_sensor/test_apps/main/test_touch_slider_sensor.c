@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,11 +18,11 @@
 
 #if CONFIG_IDF_TARGET_ESP32P4
 static uint32_t channel_list[] = {3, 2, 1, 0};
-static float threshold[] = {0.001f, 0.002f, 0.002f, 0.001f};
+static uint32_t thresholds[] = {10, 15, 15, 10};
 static int pad_num = 4;
 #else
 static uint32_t channel_list[] = {2, 4, 6, 12, 10, 8};
-static float threshold[] = {0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f};
+static uint32_t thresholds[] = {25, 25, 25, 25, 25, 25};
 static int pad_num = 6;
 #endif
 
@@ -37,7 +37,7 @@ static void touch_slider_event_callback(touch_slider_handle_t handle, touch_slid
     } else if (event == TOUCH_SLIDER_EVENT_LEFT_SWIPE) {
         printf("Left swipe (speed)\n");
     } else if (event == TOUCH_SLIDER_EVENT_RELEASE) {
-        printf("Slide %ld\n", data);
+        printf("Slide %" PRId32 "\n", data);
         if (data > 1000) {
             printf("Right swipe (displacement)\n");
         } else if (data < -1000) {
@@ -53,14 +53,17 @@ TEST_CASE("touch slider sensor create/delete test", "[touch_slider][create]")
     touch_slider_config_t config = {
         .channel_num = pad_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
         .position_range = 10000,
-        .channel_gold_value = NULL,
-        .debounce_times = 3,
+        .debounce_active = 3,
+        .debounce_inactive = 3,
+        .calculate_window = 0,  // Test default value (should auto-select based on channel_num)
         .skip_lowlevel_init = false
     };
 
-    // Test successful creation
+    // Test successful creation with default calculate_window
     TEST_ASSERT_EQUAL(ESP_OK, touch_slider_sensor_create(&config, &s_touch_slider, touch_slider_event_callback, NULL));
     TEST_ASSERT_NOT_NULL(s_touch_slider);
 
@@ -74,11 +77,14 @@ TEST_CASE("touch slider sensor position test", "[touch_slider][events]")
     touch_slider_config_t config = {
         .channel_num = pad_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
         .filter_reset_times = 50,
         .position_range = 10000,
-        .channel_gold_value = NULL,
-        .debounce_times = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
+        .calculate_window = 0,  // Test default value
         .skip_lowlevel_init = false
     };
 
@@ -106,14 +112,17 @@ TEST_CASE("touch slider sensor event handling test", "[touch_slider][events]")
     touch_slider_config_t config = {
         .channel_num = pad_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
         .filter_reset_times = 5, // Reduced reset times
         .position_range = 10000,
         .swipe_alpha = 0.9,
         .swipe_threshold = 50,
         .swipe_hysterisis = 40,
-        .channel_gold_value = NULL,
-        .debounce_times = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
+        .calculate_window = 3,  // Explicitly set to 3 for testing
         .skip_lowlevel_init = false
     };
 

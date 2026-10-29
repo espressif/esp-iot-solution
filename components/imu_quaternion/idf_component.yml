@@ -1,0 +1,4 @@
+version: "0.1.0"
+description: IMU quaternion orientation solver component for airmouse integration
+dependencies:
+  idf: ">=5.0"

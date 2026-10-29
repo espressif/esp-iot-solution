@@ -1,5 +1,51 @@
 # ChangeLog
 
+## 1.4.1 - 2026-7-28
+
+### Enhancements:
+* FOC:
+    * Update ``espressif/arduino-foc`` dependency to v2.4.0 (SimpleFOC v2.4.0).
+    * Include ``HybridStepperMotor``, ``InlineCurrentSense`` and ``StepDirListener`` in the ``esp_simplefoc.h`` umbrella header.
+
+### Bug Fix:
+* FOC:
+    * Add missing ``StepperDriver2PWM``/``StepperDriver4PWM`` ``setPhaseState`` implementations.
+    * Fix ``_driverSyncLowSide`` return type to match the SimpleFOC hardware API (``void*``).
+
+## 1.4.0 - 2026-7-6
+
+### Enhancements:
+* FOC:
+    * Remove the component target whitelist.
+    * Guard MCPWM-only 6PWM and lowside current sense paths with SoC capability checks.
+
+## 1.3.0 - 2026-5-17
+
+### Enhancements:
+* FOC:
+    * Refactor 3PWM hardware resource allocation to use SoC capability macros and improve automatic driver selection.
+    * Add ESP-IDF hardware support for ``InlineCurrentSense`` based on ADC oneshot and calibration drivers.
+    * Add ESP-IDF hardware support for ``LowsideCurrentSense`` on MCPWM-based ``BLDCDriver3PWM`` and ``BLDCDriver6PWM``.
+    * Add ESP platform support for ``StepperDriver2PWM`` and ``StepperDriver4PWM``.
+    * Add compatibility support for ESP-IDF release/v6.0.
+    * Update ``test_apps`` to support newer ESP-IDF test app directory layouts.
+
+### Bug Fix:
+* FOC:
+    * Fix repeated LEDC initialization warnings by improving 3PWM LEDC resource cleanup.
+
+## v1.2.3 - 2026-1-23
+
+### Bug Fix:
+* FOC:
+    *  Fix ``Sensor::init()`` not being called after MT6701 spi sensor initialization.
+
+## v1.2.2 - 2026-1-22
+
+### Bug Fix:
+* FOC:
+    *  Fix ``Sensor::init()`` not being called after hardware sensor initialization.
+
 ## v1.2.1 - 2025-4-15
 
 ### Bug Fix:
@@ -65,5 +111,3 @@
     * Add ESP-IDF driver for Arduino-FOC.
     * Fix mcpwm driver for esp-simplefoc.
     * Compatible with SimpleFOC Studio host computer.
-
-

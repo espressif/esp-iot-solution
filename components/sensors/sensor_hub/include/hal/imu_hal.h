@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,73 +23,82 @@ typedef struct {
     /**
      * @brief Initialize the IMU sensor
      *
+     * @param[out] sensor_ctx Pointer to receive the driver's per-instance context
      * @param handle The bus handle
      * @param addr The I2C address of the sensor
      * @return esp_err_t Result of initialization
      */
-    esp_err_t (*init)(bus_handle_t, uint8_t addr);
+    esp_err_t (*init)(void **sensor_ctx, bus_handle_t handle, uint8_t addr);
 
     /**
      * @brief Deinitialize the IMU sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of deinitialization
      */
-    esp_err_t (*deinit)(void);
+    esp_err_t (*deinit)(void *sensor_ctx);
 
     /**
      * @brief Test the IMU sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the test
      */
-    esp_err_t (*test)(void);
+    esp_err_t (*test)(void *sensor_ctx);
 
     /**
      * @brief Acquire accelerometer data
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] acce_x Pointer to store the X-axis accelerometer data
      * @param[out] acce_y Pointer to store the Y-axis accelerometer data
      * @param[out] acce_z Pointer to store the Z-axis accelerometer data
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_acce)(float *acce_x, float *acce_y, float *acce_z);
+    esp_err_t (*acquire_acce)(void *sensor_ctx, float *acce_x, float *acce_y, float *acce_z);
 
     /**
      * @brief Acquire gyroscope data
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] gyro_x Pointer to store the X-axis gyroscope data
      * @param[out] gyro_y Pointer to store the Y-axis gyroscope data
      * @param[out] gyro_z Pointer to store the Z-axis gyroscope data
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_gyro)(float *gyro_x, float *gyro_y, float *gyro_z);
+    esp_err_t (*acquire_gyro)(void *sensor_ctx, float *gyro_x, float *gyro_y, float *gyro_z);
 
     /**
      * @brief Put the IMU sensor to sleep
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the sleep operation
      */
-    esp_err_t (*sleep)(void);
+    esp_err_t (*sleep)(void *sensor_ctx);
 
     /**
      * @brief Wake up the IMU sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the wake-up operation
      */
-    esp_err_t (*wakeup)(void);
+    esp_err_t (*wakeup)(void *sensor_ctx);
 
     /**
      * @brief Set sensor work mode
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting work mode
      */
-    esp_err_t (*set_mode)(sensor_mode_t work_mode);
+    esp_err_t (*set_mode)(void *sensor_ctx, sensor_mode_t work_mode);
 
     /**
      * @brief Set sensor measurement range
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting measurement range
      */
-    esp_err_t (*set_range)(sensor_range_t range);
+    esp_err_t (*set_range)(void *sensor_ctx, sensor_range_t range);
 } imu_impl_t;
 
 #ifdef __cplusplus
@@ -197,7 +206,6 @@ esp_err_t imu_acquire(sensor_imu_handle_t sensor, sensor_data_group_t *data_grou
 esp_err_t imu_control(sensor_imu_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,6 +8,7 @@
 #include "bldc_zero_cross_comparer.h"
 #include "bldc_common.h"
 #include "bldc_snls_lib.h"
+#include "hal/gpio_ll.h"
 
 static const char *TAG = "bldc_zero_cross";
 
@@ -19,11 +20,11 @@ typedef struct {
     uint16_t queue_filter_state[PHASE_MAX];      /*!< State after three-phase filtering */
 } bldc_zero_cross_comparer_t;
 
-static void alignment_comparer_get_value(bldc_zero_cross_comparer_t *zero_cross)
+static void IRAM_ATTR alignment_comparer_get_value(bldc_zero_cross_comparer_t *zero_cross)
 {
     for (int i = 0; i < PHASE_MAX; i++) {
         zero_cross->alignment_queue_value[i] = zero_cross->alignment_queue_value[i] << 1;
-        zero_cross->alignment_queue_value[i] |= gpio_get_level(zero_cross->alignment_pin[i]);
+        zero_cross->alignment_queue_value[i] |= gpio_ll_get_level(&GPIO, zero_cross->alignment_pin[i]);
     }
 }
 
@@ -48,7 +49,7 @@ static uint8_t bldc_umef_edge(uint8_t val)
     return 2;
 }
 
-bool read_comparer_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data)
+bool IRAM_ATTR read_comparer_on_full(mcpwm_timer_handle_t timer, const mcpwm_timer_event_data_t *edata, void *user_data)
 {
     bldc_zero_cross_comparer_t *zero_cross = (bldc_zero_cross_comparer_t *)user_data;
     alignment_comparer_get_value(zero_cross);

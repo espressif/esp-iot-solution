@@ -1,0 +1,15 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_ADV_NAME
+        string "Advertisement name"
+        default "BLE_MIDI"
+        help
+            The device name inside advertisement. Keep it reasonably short
+            (typically under 20-30 characters) to fit within BLE advertisement constraints.
+
+    config EXAMPLE_BLE_SUB_ADV
+        string "Subsequent advertisement data"
+        default ""
+        help
+            Additional data to include in subsequent BLE advertisements (e.g., manufacturer-specific data).
+
+endmenu

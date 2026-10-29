@@ -1,0 +1,3 @@
+# Unit matrix: force 2024 protocol fallback header
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_HTTP_DEFAULT_PROTOCOL_VERSION="2024-11-05"

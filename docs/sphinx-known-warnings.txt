@@ -1,13 +1,17 @@
+esp_otp.inc:line: WARNING: Duplicate C++ declaration, also defined at bluetooth/ble_otp:line.
+Declaration is '.. cpp:member:: esp_ble_otp_olcp_rsp_t response'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
 Declaration is '.. cpp:member:: lightbulb_color_mapping_data_t * table'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: struct lightbulb_config_t::@43::@47 precise'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@79::@83 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t red'.
+Declaration is '.. cpp:member:: struct lightbulb_config_t::@80::@84 precise'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t green'.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t red'.
 lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
-Declaration is '.. cpp:member:: lightbulb_iic_out_pin_t blue'.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t green'.
+lightbulb.inc:line: WARNING: Duplicate C++ declaration, also defined at electrical_lighting_solution/lightbulb_driver:line.
+Declaration is '.. cpp:member:: lightbulb_chip_out_pin_t blue'.
 ir_learn.inc:line: WARNING: Error when parsing function declaration.
 If the function has no return type:
   Invalid C++ declaration: Expected end of definition or ;. [error at 34]
@@ -52,3 +56,4 @@ If the function has a return type:
         SLIST_ENTRY (ir_learn_list_t) next
         ----------------------------^
 
+        

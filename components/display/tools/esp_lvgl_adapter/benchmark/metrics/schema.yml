@@ -1,0 +1,84 @@
+$schema: "https://json-schema.org/draft/2020-12/schema"
+type: object
+description: "Metrics data with AE LVGL Framerate Test"
+patternProperties:
+  ".*":
+    type: object
+    description: "Metric data for a specific test"
+    properties:
+      esp_idf_version:
+        type: string
+        description: "ESP-IDF Version in IDF_VER format"
+        unit: ""
+      target:
+        type: string
+        pattern: "^esp32[a-z0-9]*$"
+        description: "test target, e.g. esp32s3"
+        unit: ""
+      test_time:
+        type: integer
+        description: "Timestamp (s)"
+        unit: "s"
+      pixel_format:
+        type: string
+        description: "Pixel format"
+        unit: ""
+      data_count:
+        type: integer
+        description: "Data Count"
+        unit: "count"
+    patternProperties:
+      "^[0-9]+x[0-9]+$":
+        anyOf:
+          - type: "null"
+          - type: object
+            properties:
+              avg:
+                type: integer
+                unit: "fps"
+              min:
+                type: integer
+                unit: "fps"
+              p10:
+                type: integer
+                unit: "fps"
+              p25:
+                type: integer
+                unit: "fps"
+              p50:
+                type: integer
+                unit: "fps"
+              p75:
+                type: integer
+                unit: "fps"
+              p90:
+                type: integer
+                unit: "fps"
+              max:
+                type: integer
+                unit: "fps"
+              samples:
+                type: integer
+                unit: "samples"
+              filtered:
+                type: integer
+                unit: "samples"
+            required:
+              - avg
+              - min
+              - p10
+              - p25
+              - p50
+              - p75
+              - p90
+              - max
+              - samples
+              - filtered
+    required:
+      - esp_idf_version
+      - target
+      - test_time
+      - pixel_format
+      - data_count
+    additionalProperties: false
+additionalProperties: false

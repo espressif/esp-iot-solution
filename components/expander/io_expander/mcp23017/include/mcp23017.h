@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,18 +7,12 @@
 #ifndef _MCP23017_H_
 #define _MCP23017_H_
 
-#include "i2c_bus.h"
+#include <stdbool.h>
+#include "esp_io_expander_mcp23017.h"
 
-#define MCP23017_I2C_ADDRESS_DEFAULT   (0x20)           /*!< 0100A2A1A0+R/W */
+#define MCP23017_I2C_ADDRESS_DEFAULT   ESP_IO_EXPANDER_I2C_MCP23017_ADDRESS_000 /*!< 0100A2A1A0+R/W */
 
-#define WRITE_BIT                       I2C_MASTER_WRITE/*!< I2C master write */
-#define READ_BIT                        I2C_MASTER_READ /*!< I2C master read */
-#define ACK_CHECK_EN                    0x1             /*!< I2C master will check ack from slave*/
-#define ACK_CHECK_DIS                   0x0             /*!< I2C master will not check ack from slave */
-#define ACK_VAL                         0x0             /*!< I2C ack value */
-#define NACK_VAL                        0x1             /*!< I2C nack value */
-
-typedef void* mcp23017_handle_t;                        /*!< handle of mcp23017 */
+typedef esp_io_expander_handle_t mcp23017_handle_t;              /*!< handle of mcp23017 */
 
 typedef enum {
     MCP23017_GPIOA = 0x00, /*!< GPIO Port A */
@@ -54,13 +48,13 @@ extern "C"
 /**
  * @brief Create a MCP23017 device
  *
- * @param bus device handle of i2c_bus
+ * @param bus device handle of i2c master bus
  * @param dev_addr device address
  *
  * @return
  *     - mcp23017_handle_t return mcp23017 device handle, NULL is failed.
  */
-mcp23017_handle_t mcp23017_create(i2c_bus_handle_t bus, uint8_t dev_addr);
+mcp23017_handle_t mcp23017_create(i2c_master_bus_handle_t bus, uint8_t dev_addr);
 
 /**
  * @brief Delete the MCP23017 device

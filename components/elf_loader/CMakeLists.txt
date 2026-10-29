@@ -2,6 +2,7 @@
 if(CONFIG_ELF_LOADER)
     set(srcs  "src/esp_elf_symbol.c"
               "src/esp_elf.c"
+              "src/esp_elf_validate.c"
               "src/esp_elf_adapter.c")
 
     if(CONFIG_ELF_LOADER_CUSTOMER_SYMBOLS)
@@ -19,19 +20,28 @@ if(CONFIG_ELF_LOADER)
         list(APPEND srcs "src/arch/esp_elf_riscv.c")
     endif()
 
-    set(include_dirs  "include")
+    if(CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT)
+        list(APPEND srcs "src/dlso/dlfcn.c"
+                         "src/dlso/dlmod.c")
+    endif()
+
+    set(include_dirs "include")
     set(ldfragments "linker.lf")
 endif()
 
-if(CONFIG_IDF_TARGET_ESP32P4)
-    set(priv_req spi_flash esp_mm)
-else()
-    set(priv_req spi_flash)
+set(priv_req spi_flash)
+
+if(IDF_TARGET STREQUAL "esp32p4")
+    list(APPEND priv_req esp_mm)
+elseif(IDF_TARGET STREQUAL "esp32s3")
+    if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2")
+        list(APPEND priv_req esp_mm)
+    endif()
 endif()
 
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS ${include_dirs}
-                       PRIV_REQUIRES spi_flash ${priv_req}
+                       PRIV_REQUIRES ${priv_req}
                        LDFRAGMENTS ${ldfragments})
 
 include(package_manager)

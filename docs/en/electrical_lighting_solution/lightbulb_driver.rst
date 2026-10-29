@@ -32,7 +32,6 @@ Use the PWM scheme to light up a 3-channel RGB bulb with PWM frequency set to 40
 
     lightbulb_config_t config = {
         // 1. Select PWM output and configure parameters
-        .type = DRIVER_ESP_PWM,
         .driver_conf.pwm.freq_hz = 4000,
 
         // 2. capability selection: enable/disable according to your needs
@@ -65,7 +64,7 @@ Use the PWM scheme to light up a 3-channel RGB bulb with PWM frequency set to 40
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_pwm_device(&config);
 
 I2C Dimming Scheme
 ^^^^^^^^^^^^^^^^^^^
@@ -91,7 +90,6 @@ Use software color mixing, enable the fade function, and set the power-on color 
 
     lightbulb_config_t config = {
         // 1. Select the required chip and configure parameters. Each chip has different configuration parameters, so please refer carefully to the chip manual.
-        .type = DRIVER_BP57x8D,
         .driver_conf.bp57x8d.freq_khz = 300,
         .driver_conf.bp57x8d.enable_iic_queue = true,
         .driver_conf.bp57x8d.iic_clk = 4,
@@ -128,7 +126,7 @@ Use software color mixing, enable the fade function, and set the power-on color 
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_bp57x8d_device(&config);
 
 Single-wire dimming scheme
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -149,7 +147,6 @@ Use the SPI driver to light up 10 WS2812 LEDs, enable the fade function, and set
 
     lightbulb_config_t config = {
         // 1. Select WS2812 output and configure parameters
-        .type = DRIVER_WS2812,
         .driver_conf.ws2812.led_num = 10,
         .driver_conf.ws2812.ctrl_io = 4,
 
@@ -175,7 +172,7 @@ Use the SPI driver to light up 10 WS2812 LEDs, enable the fade function, and set
         .init_status.saturation = 100,
         .init_status.value = 100,
     };
-    lightbulb_init(&config);
+    lightbulb_new_ws2812_device(&config);
 
 Fade principle
 ---------------

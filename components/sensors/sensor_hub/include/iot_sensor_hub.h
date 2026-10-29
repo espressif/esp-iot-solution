@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -160,21 +160,67 @@ esp_err_t iot_sensor_stop(sensor_handle_t sensor_handle);
 esp_err_t iot_sensor_delete(sensor_handle_t p_sensor_handle);
 
 /**
- * @brief Scan for valid sensors attached on bus
- *
- * @param bus bus handle
- * @param buf Pointer to a buffer to save sensors' information, if NULL no information will be saved.
- * @param num Maximum number of sensor information to save, invalid if buf set to NULL,
- * latter sensors will be discarded if num less-than the total number found on the bus.
- * @return uint8_t total number of valid sensors found on the bus
- */
-
-/**
  * @brief Scan for valid sensors registered in the system
+ *
+ * Both link-time drivers (registered via SENSOR_HUB_DETECT_FN) and drivers
+ * registered at runtime via iot_sensor_register_driver() are reported.
  *
  * @return int number of valid sensors
  */
 int iot_sensor_scan();
+
+/**
+ * @brief Register a sensor driver implementation at runtime.
+ *
+ * This is the runtime counterpart of the link-time SENSOR_HUB_DETECT_FN macro.
+ * After registration, the driver can be instantiated by name through
+ * iot_sensor_create() exactly like a link-time driver. Runtime-registered
+ * drivers take precedence over link-time drivers sharing the same name.
+ *
+ * @note The framework does not copy @p sensor_name nor @p impl; the caller must
+ *       keep both valid until the driver is unregistered and all sensor
+ *       instances created from it are deleted.
+ * @note Registration should be done before iot_sensor_create() is called for
+ *       that name, mirroring the link-time flow.
+ *
+ * @param sensor_name unique name of the driver, used for lookup in iot_sensor_create
+ * @param sensor_type sensor type declared in sensor_type_t
+ * @param impl driver implementation table (humiture_impl_t/imu_impl_t/light_impl_t *)
+ *             matching the sensor_type
+ * @return esp_err_t
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG invalid name/impl/type
+ *     - ESP_ERR_INVALID_STATE a driver with the same name is already registered
+ *     - ESP_ERR_NO_MEM out of memory
+ */
+esp_err_t iot_sensor_register_driver(const char *sensor_name, sensor_type_t sensor_type, void *impl);
+
+/**
+ * @brief Unregister a runtime-registered sensor driver.
+ *
+ * Only drivers added with iot_sensor_register_driver() can be removed; link-time
+ * drivers are unaffected. Existing sensor instances created from the driver are
+ * not deleted and remain valid.
+ *
+ * @param sensor_name name passed to iot_sensor_register_driver
+ * @return esp_err_t
+ *     - ESP_OK Success
+ *     - ESP_ERR_INVALID_ARG name is NULL
+ *     - ESP_ERR_NOT_FOUND no runtime driver with that name
+ */
+esp_err_t iot_sensor_unregister_driver(const char *sensor_name);
+
+/**
+ * @brief Resolve a driver implementation table by name.
+ *
+ * Looks up the runtime registry first, then the link-time SENSOR_HUB_DETECT_FN
+ * section. Primarily intended for internal use by the sensor HAL layer.
+ *
+ * @param sensor_name name to look up
+ * @param[out] sensor_type optional, receives the driver's sensor type if found
+ * @return void* the driver implementation table, or NULL if not found
+ */
+void *iot_sensor_find_driver(const char *sensor_name, sensor_type_t *sensor_type);
 
 /**
  * @brief Register a event handler to a sensor's event with sensor_handle.
@@ -237,7 +283,6 @@ esp_err_t iot_sensor_handler_register_with_type(sensor_type_t sensor_type, int32
 esp_err_t iot_sensor_handler_unregister_with_type(sensor_type_t sensor_type, int32_t event_id, sensor_event_handler_instance_t context);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 #endif

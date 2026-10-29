@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -176,15 +176,12 @@ float veml6040_get_cct(veml6040_handle_t sensor, float offset)
 
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
 
-static veml6040_handle_t veml6040 = NULL;
-static bool is_init = false;
-
-esp_err_t light_sensor_veml6040_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+esp_err_t light_sensor_veml6040_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
-    if (is_init || !i2c_bus) {
+    if (!sensor_ctx || !i2c_bus) {
         return ESP_FAIL;
     }
-    veml6040 = veml6040_create(i2c_bus, addr);
+    veml6040_handle_t veml6040 = veml6040_create(i2c_bus, addr);
     if (!veml6040) {
         return ESP_FAIL;
     }
@@ -196,37 +193,37 @@ esp_err_t light_sensor_veml6040_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
     veml6040_info.switch_en = VEML6040_SWITCH_EN;
     esp_err_t ret = veml6040_set_mode(veml6040, &veml6040_info);
     if (ret != ESP_OK) {
+        veml6040_delete(&veml6040);
         return ESP_FAIL;
     }
-    is_init = true;
+    *sensor_ctx = veml6040;
     return ESP_OK;
 }
 
-esp_err_t light_sensor_veml6040_deinit(void)
+esp_err_t light_sensor_veml6040_deinit(void *sensor_ctx)
 {
-    if (!is_init) {
-        return ESP_FAIL;
-    }
-    esp_err_t ret = veml6040_delete(&veml6040);
+    veml6040_handle_t veml6040 = (veml6040_handle_t)sensor_ctx;
 
-    if (ret != ESP_OK) {
+    if (!veml6040) {
         return ESP_FAIL;
     }
-    is_init = false;
+
+    return veml6040_delete(&veml6040);
+}
+
+esp_err_t light_sensor_veml6040_test(void *sensor_ctx)
+{
+    if (!sensor_ctx) {
+        return ESP_FAIL;
+    }
     return ESP_OK;
 }
 
-esp_err_t light_sensor_veml6040_test(void)
+esp_err_t light_sensor_veml6040_acquire_rgbw(void *sensor_ctx, float *r, float *g, float *b, float *w)
 {
-    if (!is_init) {
-        return ESP_FAIL;
-    }
-    return ESP_OK;
-}
+    veml6040_handle_t veml6040 = (veml6040_handle_t)sensor_ctx;
 
-esp_err_t light_sensor_veml6040_acquire_rgbw(float *r, float *g, float *b, float *w)
-{
-    if (!is_init) {
+    if (!veml6040) {
         return ESP_FAIL;
     }
     /*TODO:should more carefully*/
@@ -237,12 +234,12 @@ esp_err_t light_sensor_veml6040_acquire_rgbw(float *r, float *g, float *b, float
     return ESP_OK;
 }
 
-static esp_err_t light_sensor_veml6040_null_acquire_light_function(float* l)
+static esp_err_t light_sensor_veml6040_null_acquire_light_function(void *sensor_ctx, float* l)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }
 
-static esp_err_t light_sensor_veml6040_null_acquire_uv_function(float* uv, float* uva, float* uvb)
+static esp_err_t light_sensor_veml6040_null_acquire_uv_function(void *sensor_ctx, float* uv, float* uva, float* uvb)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }

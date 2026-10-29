@@ -14,9 +14,9 @@ power.
   * GPIO21 is assigned as the data signal of i2c master port
   * GPIO13 is assigned as the clock signal of i2c master port
 * Connection:
-    * connect sda of sensor with GPIO21
-    * connect scl of sensor with GPIO13
-    * no need to add external pull-up resistors, driver will enable internal pull-up resistors.
+  * connect sda of sensor with GPIO21
+  * connect scl of sensor with GPIO13
+  * no need to add external pull-up resistors, driver will enable internal pull-up resistors.
 
 ## Example of INA236 usage
 
@@ -49,3 +49,7 @@ float current = 0;
 ina236_get_voltage(ina236, &vloatge);
 ina236_get_current(ina236, &current);
 ```
+
+## Attention
+
+> The current component(power_monitor) will be migrated to the power_measure component after version 0.1.2 and will no longer be maintained thereafter.

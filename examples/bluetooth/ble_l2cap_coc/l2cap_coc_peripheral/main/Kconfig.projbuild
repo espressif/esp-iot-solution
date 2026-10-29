@@ -1,0 +1,25 @@
+menu "Example Configuration"
+    config EXAMPLE_BLE_ADV_NAME
+      string "Advertisement name"
+      default "BLE_L2CAP_COC_PERIPH"
+      help
+        The device name inside advertisement (max 29 characters).
+
+    config EXAMPLE_BLE_SUB_ADV
+      string "Subsequent advertisement data"
+      default "SUB_ADV"
+      help
+        The data inside subsequent advertisements (max 29 characters).
+
+    config EXAMPLE_L2CAP_COC_PSM
+        hex "L2CAP CoC PSM (Protocol/Service Multiplexer)"
+        range 0x0001 0x00FF
+        default 0x00EF
+        help
+            Protocol/Service Multiplexer value for L2CAP Connection-Oriented Channel.
+            Valid range: 0x0001-0x00FF (1-255)
+            - 0x0001-0x007F: Fixed Bluetooth SIG-defined services
+            - 0x0080-0x00FF: Dynamic custom services
+            Both central and peripheral must use the same PSM value to establish a connection.
+
+endmenu

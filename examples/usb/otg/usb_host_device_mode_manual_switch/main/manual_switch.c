@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -32,11 +32,14 @@ static void usb_otg_mode_switch_cb(void *arg, void *data)
 {
     if (s_usb_otg_mode == OTG_HOST) {
         ESP_LOGI(TAG, "Switch to USB Device Mode\n");
-        host_msc_deinit();
+        if (host_msc_deinit() != ESP_OK) {
+            ESP_LOGW(TAG, "Switch to USB Device Mode failed");
+            return;
+        }
         device_cdc_init();
         s_usb_otg_mode = OTG_DEVICE;
     } else {
-        ESP_LOGI(TAG, "Switch to USB Device Mode\n");
+        ESP_LOGI(TAG, "Switch to USB Host Mode\n");
         device_cdc_deinit();
         host_msc_init();
         s_usb_otg_mode = OTG_HOST;

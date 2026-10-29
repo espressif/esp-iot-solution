@@ -62,7 +62,7 @@ esp_err_t esp_lcd_new_panel_nv3022b(const esp_lcd_panel_io_handle_t io, const es
     }
 
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
-    switch (panel_dev_config->color_space) {
+    switch (panel_dev_config->rgb_ele_order) {
     case ESP_LCD_COLOR_SPACE_RGB:
         nv3022b->madctl_val = 0;
         break;
@@ -73,7 +73,7 @@ esp_err_t esp_lcd_new_panel_nv3022b(const esp_lcd_panel_io_handle_t io, const es
         ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported color space");
         break;
     }
-#else
+#elif ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     switch (panel_dev_config->rgb_endian) {
     case LCD_RGB_ENDIAN_RGB:
         nv3022b->madctl_val = 0;
@@ -83,6 +83,18 @@ esp_err_t esp_lcd_new_panel_nv3022b(const esp_lcd_panel_io_handle_t io, const es
         break;
     default:
         ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported rgb endian");
+        break;
+    }
+#else
+    switch (panel_dev_config->rgb_ele_order) {
+    case LCD_RGB_ELEMENT_ORDER_RGB:
+        nv3022b->madctl_val = 0;
+        break;
+    case LCD_RGB_ELEMENT_ORDER_BGR:
+        nv3022b->madctl_val |= LCD_CMD_BGR_BIT;
+        break;
+    default:
+        ESP_GOTO_ON_FALSE(false, ESP_ERR_NOT_SUPPORTED, err, TAG, "unsupported rgb element order");
         break;
     }
 #endif
@@ -292,7 +304,7 @@ static esp_err_t panel_nv3022b_draw_bitmap(esp_lcd_panel_t *panel, int x_start, 
     }, 4);
     // transfer frame buffer
     size_t len = (x_end - x_start) * (y_end - y_start) * nv3022b->fb_bits_per_pixel / 8;
-    esp_lcd_panel_io_tx_color(io, LCD_CMD_RAMWR, color_data, len);
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_io_tx_color(io, LCD_CMD_RAMWR, color_data, len), TAG, "send color data failed");
 
     return ESP_OK;
 }

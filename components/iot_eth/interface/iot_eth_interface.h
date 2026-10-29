@@ -100,9 +100,7 @@ struct iot_eth_driver_s {
 typedef enum {
     IOT_ETH_STAGE_LL_INIT,      /*!< Low level init done */
     IOT_ETH_STAGE_LL_DEINIT,    /*!< Low level deinit done */
-    IOT_ETH_STAGE_GET_MAC,      /*!< Get MAC address stage */
     IOT_ETH_STAGE_LINK,         /*!< Link status changed */
-    IOT_ETH_STATE_PAUSE,        /*!< Pause state */
 } iot_eth_stage_t;
 
 /**
@@ -110,6 +108,7 @@ typedef enum {
  */
 struct iot_eth_mediator_s {
     esp_err_t (*stack_input)(iot_eth_mediator_t *mediator, uint8_t *data, size_t len);  /*!< Input function for stack */
+    esp_err_t (*stack_input_info)(iot_eth_mediator_t *mediator, uint8_t *data, size_t len, void *info);  /*!< Input function for stack with extra frame info */
     esp_err_t (*on_stage_changed)(iot_eth_mediator_t *mediator, iot_eth_stage_t stage, void *arg);  /*!< Stage change callback */
 };
 

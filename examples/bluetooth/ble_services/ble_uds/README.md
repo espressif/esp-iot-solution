@@ -11,7 +11,7 @@ The device information service exposes manufacturer and/or vendor information ab
 
 It uses Bluetooth controller based on BLE connection management.
 
-This example aims at understanding BLE Body Composition service and BLE connection management APIs.
+This example aims at understanding BLE user data service and BLE connection management APIs.
 
 To test this demo, any BLE scanner app can be used.
 
@@ -58,9 +58,9 @@ idf.py -p PORT flash monitor
 
 See the [Getting Started Guide](https://idf.espressif.com/) for full steps to configure and use ESP-IDF to build projects.
 
-## Example Output1
+## Example Output
 
-There is this console output when bleprph is connected and characteristic is read:
+There is this console output when the device is connected and characteristic is read:
 
 ```
 I (330) BLE_INIT: BT controller compile version [9359a4d]

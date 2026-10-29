@@ -1,7 +1,7 @@
 <template>
   <v-container max-width="600">
     <CameraCard v-for="item of mainStore.clientCameraActivedList" :key="item.id" :cam-id="item.id"
-      :resolution="item.resolution" :src="item.src || null" />
+      :resolution="item.resolution" />
 
     <v-card v-if="mainStore.cameraNumberLimit > mainStore.clientCameraActivedList.length">
       <template #title>
@@ -50,13 +50,9 @@ const formInputRes = ref<Resolution | null>(null)
 const addCamera = async () => {
   if (!formInputCamera.value || !formInputRes.value) return
 
-  const cameraBaseUrl = mainStore.webBase.getAvailableUrl("/", false)
-  if (!cameraBaseUrl) return
-
   mainStore.clientCameraActivedList.push({
     id: formInputCamera.value.id,
-    resolution: formInputRes.value,
-    src: cameraBaseUrl
+    resolution: formInputRes.value
   })
 
   mainStore.clientCameraOptions = mainStore.clientCameraOptions.filter(item => String(item.id) !== String(formInputCamera?.value?.id))

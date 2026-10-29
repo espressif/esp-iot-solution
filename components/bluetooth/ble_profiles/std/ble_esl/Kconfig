@@ -1,0 +1,78 @@
+menu "BLE Profile: Electronic Shelf Label"
+
+    config BLE_ESL_PROFILE
+        bool "Enable Electronic Shelf Label Profile for Tag"
+        default n
+        select BLE_ESL
+        select BLE_DIS
+        select BT_NIMBLE_ENC_ADV_DATA
+        help
+            Enable ESL Profile Tag role (GATT Server, GAP Peripheral).
+            Instantiates ESL Service and Device Information Service.
+            Selects Encrypted Advertising Data (EAD) for PAwR.
+            Enable BLE_CONN_MGR_SM with Bond + Secure Connections.
+
+    config BLE_ESL_OTS_SUPPORT
+        bool "Enable OTP Object Server for ESL image transfer"
+        depends on BLE_ESL_PROFILE
+        select BLE_OBJECT_TRANSFER_PROFILE
+        select BLE_ESL_DISPLAY_INFO
+        default y
+        help
+            Instantiate OTP Object Server / OTS for image slots.
+            Also selects Display Information (and Image Information).
+
+    config BLE_ESL_MAX_IMAGES
+        int "Maximum number of ESL image slots"
+        depends on BLE_ESL_OTS_SUPPORT
+        range 1 16
+        default 1
+        help
+            Number of image objects exposed via OTS. Max_Image_Index is
+            (this value - 1).
+
+    config BLE_ESL_MAX_IMAGE_SIZE
+        int "Maximum size of each ESL image object (bytes)"
+        depends on BLE_ESL_OTS_SUPPORT
+        range 64 65536
+        default 4096
+        help
+            Allocated size for each image object in the OTP Object Server.
+
+    config BLE_ESL_PROFILE_TIMEOUT_MIN
+        int "ESL Synchronized/Unsynchronized timeout (minutes)"
+        depends on BLE_ESL_PROFILE || BLE_ESL_PROFILE_AP
+        range 1 60
+        default 60
+        help
+            Lifecycle timeout in minutes. Synchronized with no activity goes
+            Unsynchronized; Unsynchronized without Updating goes Unassociated.
+
+    config BLE_ESL_PROFILE_AP
+        bool "Enable Electronic Shelf Label Profile for Access Point"
+        default n
+        select BLE_OBJECT_TRANSFER_PROFILE
+        select BT_NIMBLE_ENC_ADV_DATA
+        help
+            Enable ESL Profile Access Point role (GATT Client, GAP Central).
+            Instantiates OTP Object Client. Selects EAD for PAwR.
+            Enable BLE_CONN_MGR_SM with Bond + Secure Connections.
+            Enable BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP for PAwR.
+
+    config BLE_ESL_PROFILE_AP_MAX_SUBEVENTS
+        int "AP max PAwR subevents"
+        depends on BLE_ESL_PROFILE_AP
+        range 1 64
+        default 16
+        help
+            Maximum number of PAwR subevent command slots.
+
+    config BLE_ESL_PROFILE_AP_MAX_TAGS
+        int "AP max tracked ESL Tags"
+        depends on BLE_ESL_PROFILE_AP
+        range 1 64
+        default 8
+        help
+            Maximum number of remote ESL Tags tracked for lifecycle timeouts.
+
+endmenu

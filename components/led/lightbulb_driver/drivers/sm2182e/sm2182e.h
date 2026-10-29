@@ -70,7 +70,7 @@ typedef enum {
  * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @return esp_err_t
  */
-esp_err_t sm2182e_init(driver_sm2182e_t *config, void(*hook_func)(void *));
+esp_err_t sm2182e_init(driver_sm2182e_t *config, void(*hook_func)(void *, void *), void *user_data);
 
 /**
  * @brief Register the sm2182e channel

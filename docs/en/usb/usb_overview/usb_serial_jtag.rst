@@ -1,10 +1,9 @@
-
 USB-Serial-JTAG Peripheral Introduction
 -----------------------------------------
 
 :link_to_translation:`zh_CN:[中文]`
 
-The ESP32-S3/C3 chips come with a built-in USB-Serial-JTAG peripheral, which includes a USB-to-serial converter and a USB-to-JTAG converter. It supports connection to a PC via a USB cable, enabling functions such as firmware downloading, debugging, and printing system logs. The internal structure of the USB-Serial-JTAG peripheral can be referred to in the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
+ESP32 series chips with integrated USB-Serial-JTAG peripheral (such as ESP32-S3, ESP32-C3, ESP32-P4) feature both USB-to-serial and USB-to-JTAG functionality. This peripheral provides direct USB connectivity to a host PC, supporting firmware download, JTAG-based debugging, and system console output. For detailed information on the USB-Serial-JTAG peripheral architecture, please refer to the `ESP32-C3 Technical Reference Manual - USB Serial/JTAG Controller <https://www.espressif.com/sites/default/files/documentation/esp32-c3_technical_reference_manual_en.pdf>`_\ .
 
 USB-Serial-JTAG  peripheral driver
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -13,6 +12,13 @@ USB-Serial-JTAG  peripheral driver
 * For Linux and MacOS systems, No need to manually install drivers.
 * For Windows 10 and above, drivers will be automatically installed when connected to the internet.
 * For Windows 7/8 systems, manual driver installation is necessary. The driver can be downloaded from: \ `esp32-usb-jtag-2021-07-15 <https://dl.espressif.com/dl/idf-driver/idf-driver-esp32-usb-jtag-2021-07-15.zip>`_\ . Alternatively, users can use the `ESP-IDF Windows Installer <https://dl.espressif.com/dl/esp-idf/>`_\ , selecting the USB-Serial-JTAG driver during installation.
+
+.. Note::
+    If the above driver installation fails, you can use the `Zadig <https://zadig.akeo.ie/>`_ tool to install the driver. When using Zadig, please select drivers as follows:
+
+    * For ``USB JTAG/serial debug unit (Interface 0)``, select ``usbser`` or ``USB Serial (CDC)`` driver
+    * For ``USB JTAG/serial debug unit (Interface 2)``, select ``WinUSB`` driver
+
 
 USB-Serial-JTAG peripheral built-in functionality
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -35,6 +41,9 @@ For Linux as shown in the following figure:
    :alt: device_manager_usb_serial_jtag_cn
 
 
+.. Note::
+    If the devices are not displayed correctly, please refer to the driver installation section above.
+
 Use USB-Serial-JTAG to download firmware
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -43,7 +52,6 @@ Use USB-Serial-JTAG to download firmware
 * If the USB pins corresponding to USB-Serial-JTAG are used for other functions in the application, such as being used as a regular GPIO or other peripheral IO, USB-Serial-JTAG will be unable to establish a connection with the USB host. Therefore, it cannot switch the device to download mode via USB. In such cases, users must manually switch the device to download mode using the Boot control pin and then use esptool for firmware download.
 * To avoid using the USB pins corresponding to USB-Serial-JTAG for other functions in the application, which would prevent automatic entry into download mode via USB, users need to expose the Boot control pin in hardware design.
 * By default, when downloading different chips through the USB interface, the COM number will increment, which may cause inconvenience for mass production. Users can refer to :doc:`Prevent Windows from incrementing COM numbers based on USB device serial number <./usb_device_const_COM>` for a solution.
-
 
 Debugging code using USB-Serial-JTAG
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -68,3 +76,26 @@ If users need to use the USB pins corresponding to USB-Serial-JTAG for other fun
 * Users can also modify the register value ``USB_SERIAL_JTAG.conf0.dp_pullup = 0;`` to disable the USB D+ pull-up resistor.
 
 It is important to note that the pull-up resistor on the USB D+ pin is present at power-up. Before software disables the pull-up resistor, the USB D+ pin has already been pulled high, causing it to be in a high-level state during the initial phase when used as a GPIO. If users need the USB D+ pin to be immediately low after power-up, it is necessary to design the hardware to pull down the USB D+ pin through an external circuit.
+
+If users wish to again use the USB-Serial-JTAG function, please refer to the following code:
+
+.. code:: C
+
+    #include "soc/soc_caps.h"
+    #include "soc/usb_serial_jtag_reg.h"
+    #include "hal/usb_serial_jtag_ll.h"
+
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PAD_PULL_OVERRIDE);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLUP);
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLDOWN);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    #if USB_SERIAL_JTAG_LL_EXT_PHY_SUPPORTED
+        usb_serial_jtag_ll_phy_enable_external(false);  // Use internal PHY
+        usb_serial_jtag_ll_phy_enable_pad(true);        // Enable USB PHY pads
+    #else // USB_SERIAL_JTAG_LL_EXT_PHY_SUPPORTED
+        usb_serial_jtag_ll_phy_set_defaults();          // External PHY not supported. Set default values.
+    #endif // USB_WRAP_LL_EXT_PHY_SUPPORTED
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLDOWN);
+        SET_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_DP_PULLUP);
+        CLEAR_PERI_REG_MASK(USB_SERIAL_JTAG_CONF0_REG, USB_SERIAL_JTAG_PAD_PULL_OVERRIDE);
+

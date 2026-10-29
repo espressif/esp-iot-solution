@@ -1,4 +1,4 @@
-version: "0.2.0"
+version: "0.3.0"
 description: I2C driver for LIS2DH12 imu sensor
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/sensors/imu/lis2dh12
 repository: https://github.com/espressif/esp-iot-solution.git
@@ -12,4 +12,4 @@ dependencies:
     public: true
     override_path: "../../../sensors/sensor_hub"
   idf: '>=4.4'
-  cmake_utilities: "0.*"
+  cmake_utilities: "*"

@@ -3,6 +3,9 @@ USB Stream Component
 
 :link_to_translation:`zh_CN:[中文]`
 
+.. warning::
+   This component is no longer maintained. Please use `usb_host_uvc <https://components.espressif.com/components/espressif/usb_host_uvc>`_ and `usb_host_uac <https://components.espressif.com/components/espressif/usb_host_uac>`_ instead.
+
 ``usb_stream`` is an USB ``UVC`` + ``UAC`` host driver for ESP32-S2/ESP32-S3, which supports read/write/control multimedia streaming from usb device. For example, at most one UVC + one Microphone + one Speaker streaming can be supported at the same time.
 
 Features:
@@ -76,15 +79,8 @@ USB Stream Config Reference
 4. The host will matches the descriptors of the connected devices according to the user parameters. If the device fails to meet the configuration requirements, the driver prompt warning message
 5. If the device meets user configuration requirements, the Host will continue to receive the IN stream (UVC and UAC mic), and will call the user’s callbacks when new frames ready.
 
-   1. The camera callback will be triggered after a new MJPEG image ready.
-      The callback can block during processing, because which works in
-      an independent task context.
-   2. The mic callback will be triggered after :cpp:func:`mic_min_bytes` bytes
-      data received. But the callback here must not block in any way,
-      otherwise it will affect the reception of the next frame. If the
-      block operations for mic is necessary, you can use the polling
-      mode instead of the callback mode through
-      :cpp:func:`uac_mic_streaming_read` api.
+   1. The camera callback will be triggered after a new MJPEG image ready. The callback can block during processing, because which works in an independent task context.
+   2. The mic callback will be triggered after :cpp:func:`mic_min_bytes` bytes data received. But the callback here must not block in any way, otherwise it will affect the reception of the next frame. If the block operations for mic is necessary, you can use the polling mode instead of the callback mode through :cpp:func:`uac_mic_streaming_read` api.
 
 6. User can send speaker OUT stream using :cpp:func:`uac_spk_streaming_write` through a ringbuffer, the Host will fetch the data when USB is free to send.
 7. Use the :cpp:func:`usb_streaming_control` to control the stream suspend/resume, uac volume/mute control can also be support if the USB device has such feature unit;
@@ -96,8 +92,7 @@ Bug report
 ESP32-S2 ECO0 Chip SPI screen jitter when work with usb camera
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-1. In earlier versions of the ESP32-S2 chip, USB transfers can cause SPI
-   data contamination (esp32s2>=ECO1 and esp32s3 do not have this bug)
+1. In earlier versions of the ESP32-S2 chip, USB transfers can cause SPI data contamination (esp32s2>=ECO1 and esp32s3 do not have this bug)
 2. Software workaround
 
 -  ``spi_ll.h`` add below function

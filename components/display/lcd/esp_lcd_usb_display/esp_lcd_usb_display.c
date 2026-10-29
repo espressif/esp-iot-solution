@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -18,7 +18,9 @@
 #include "esp_lcd_panel_interface.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_psram.h"
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
 #include "esp_dma_utils.h"
+#endif
 #include "usb_device_uvc.h"
 #include "esp_lcd_usb_display.h"
 
@@ -189,12 +191,17 @@ static esp_err_t alloc_buffer_memory(usb_display_t *usb_display, usb_display_ven
         ESP_LOGD(TAG, "RGB frame buffer size tx_buffer_size: %d", tx_buffer_size);
     }
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    usb_display->fb_uvc = heap_caps_calloc(1, fb_uvc_jpeg_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+    ESP_GOTO_ON_FALSE(usb_display->fb_uvc, ESP_ERR_NO_MEM, err, TAG, "no mem for UVC frame buffer");
+#else
     size_t fb_size = 0;
     esp_dma_mem_info_t dma_mem_info = {
         .extra_heap_caps = MALLOC_CAP_SPIRAM,
     };
     ESP_RETURN_ON_ERROR(esp_dma_capable_calloc(1, fb_uvc_jpeg_size, &dma_mem_info, &usb_display->fb_uvc, &fb_size), TAG, "no mem for UVC frame buffer");
     ESP_LOGD(TAG, "UVC frame buffer size: %d", fb_size);
+#endif
 
     usb_display->fb_uvc_jpeg.buf = jpeg_alloc_encoder_mem(usb_display->h_res * usb_display->v_res, &rx_mem_cfg, &rx_buffer_size);
     ESP_GOTO_ON_FALSE(usb_display->fb_uvc_jpeg.buf, ESP_ERR_NO_MEM, err, TAG, "no mem for JPEG frame buffer");

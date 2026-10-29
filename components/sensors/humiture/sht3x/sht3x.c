@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -220,16 +220,13 @@ esp_err_t sht3x_heater(sht3x_handle_t sensor, sht3x_cmd_measure_t sht3x_heater_c
 
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
 
-static sht3x_handle_t sht3x = NULL;
-static bool is_init = false;
-
-esp_err_t humiture_sht3x_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+esp_err_t humiture_sht3x_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
-    if (is_init || !i2c_bus) {
+    if (!sensor_ctx || !i2c_bus) {
         return ESP_FAIL;
     }
 
-    sht3x = sht3x_create(i2c_bus, addr);
+    sht3x_handle_t sht3x = sht3x_create(i2c_bus, addr);
 
     if (!sht3x) {
         return ESP_FAIL;
@@ -238,41 +235,39 @@ esp_err_t humiture_sht3x_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
     esp_err_t ret = sht3x_set_measure_mode(sht3x, SHT3x_PER_4_MEDIUM); /**medium accuracy/repeatability with 250ms period (1000ms/4)**/
 
     if (ret != ESP_OK) {
+        sht3x_delete(&sht3x);
         return ESP_FAIL;
     }
 
-    is_init = true;
+    *sensor_ctx = sht3x;
     return ESP_OK;
 }
 
-esp_err_t humiture_sht3x_deinit(void)
+esp_err_t humiture_sht3x_deinit(void *sensor_ctx)
 {
-    if (!is_init) {
+    sht3x_handle_t sht3x = (sht3x_handle_t)sensor_ctx;
+
+    if (!sht3x) {
         return ESP_FAIL;
     }
 
-    esp_err_t ret = sht3x_delete(&sht3x);
-
-    if (ret != ESP_OK) {
-        return ESP_FAIL;
-    }
-
-    is_init = false;
-    return ESP_OK;
+    return sht3x_delete(&sht3x);
 }
 
-esp_err_t humiture_sht3x_test(void)
+esp_err_t humiture_sht3x_test(void *sensor_ctx)
 {
-    if (!is_init) {
+    if (!sensor_ctx) {
         return ESP_FAIL;
     }
 
     return ESP_OK;
 }
 
-esp_err_t humiture_sht3x_acquire_humidity(float *h)
+esp_err_t humiture_sht3x_acquire_humidity(void *sensor_ctx, float *h)
 {
-    if (!is_init) {
+    sht3x_handle_t sht3x = (sht3x_handle_t)sensor_ctx;
+
+    if (!sht3x) {
         return ESP_FAIL;
     }
 
@@ -288,9 +283,11 @@ esp_err_t humiture_sht3x_acquire_humidity(float *h)
     return ESP_FAIL;
 }
 
-esp_err_t humiture_sht3x_acquire_temperature(float *t)
+esp_err_t humiture_sht3x_acquire_temperature(void *sensor_ctx, float *t)
 {
-    if (!is_init) {
+    sht3x_handle_t sht3x = (sht3x_handle_t)sensor_ctx;
+
+    if (!sht3x) {
         return ESP_FAIL;
     }
 

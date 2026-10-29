@@ -3,7 +3,7 @@ USB Device UAC
 
 :link_to_translation:`zh_CN:[中文]`
 
-`esp_device_uac` is a USB Audio Class driver library based on TinyUSB. It supports simulating an ESP chip as an audio device, with customizable audio sampling rates, microphone channels, and speaker channels.
+``esp_device_uac`` is a USB Audio Class driver library based on TinyUSB. It supports simulating an ESP chip as an audio device, with customizable audio sampling rates, microphone channels, and speaker channels.
 
 Features:
 
@@ -16,7 +16,7 @@ USB Device UAC User Guide
 
 - Development Board
 
-    1. Any ESP32-S2/ESP32-S3 development board with a USB interface can be used.
+    1. Any ESP32-S2/ESP32-S3/ESP32-P4 development board with a USB interface can be used.
 
 - USB MIC Callback Function
 

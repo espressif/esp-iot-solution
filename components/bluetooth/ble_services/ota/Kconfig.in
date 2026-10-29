@@ -1,0 +1,8 @@
+# ESP BLE OTA GATT service (0x8018) for esp_ble_conn_mgr
+
+menuconfig BLE_OTA_SVC
+    bool "ESP BLE OTA GATT service (0x8018, conn_mgr)"
+
+if BLE_OTA_SVC
+
+endif # BLE_OTA_SVC

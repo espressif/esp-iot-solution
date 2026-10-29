@@ -3,10 +3,18 @@ set(srcs "src/hal_driver.c"
         "src/lighting.c"
         )
 
-set(priv_req nvs_flash driver esp_timer)
+set(priv_req nvs_flash esp_timer)
+set(public_req)
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2.6")
-list(APPEND priv_req "esp_driver_i2c")
+    list(APPEND priv_req "esp_driver_i2c")
+endif()
+
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
+    list(APPEND public_req "esp_driver_gpio")
+    list(APPEND priv_req "esp_driver_gptimer" "esp_driver_ledc" "esp_driver_spi")
+else()
+    list(APPEND priv_req "driver")
 endif()
 
 set(incs "include" "drivers/common/utils/")
@@ -63,10 +71,16 @@ if(CONFIG_ENABLE_WS2812_DRIVER)
     list(APPEND incs "drivers/ws2812")
 endif()
 
+if(CONFIG_ENABLE_SM16825E_DRIVER)
+    list(APPEND srcs "drivers/sm16825e/sm16825e.c")
+    list(APPEND incs "drivers/sm16825e")
+endif()
+
 idf_component_register(SRCS ${srcs}
                         INCLUDE_DIRS ${incs}
                         PRIV_INCLUDE_DIRS "src/priv_include"
                         PRIV_REQUIRES ${priv_req}
+                        REQUIRES ${public_req}
                         )
 
 include(package_manager)

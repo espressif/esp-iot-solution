@@ -35,6 +35,33 @@ target_link_libraries(${COMPONENT_LIB} INTERFACE "-u virtual_imu_init")
 
 The `test_apps` of `sensor_hub` provide examples of virtual sensor registration, which you can refer to when registering your own sensor.
 
+## Registering a driver at runtime
+
+Besides the link-time `SENSOR_HUB_DETECT_FN` mechanism, a driver implementation can be supplied at runtime. This is useful when the driver is not known at link time, or when it is selected/configured dynamically. The implementation table is identical to the one used by `SENSOR_HUB_DETECT_FN`; you simply hand it to `sensor_hub` yourself:
+
+```c
+static humiture_impl_t my_humiture_impl = {
+    .init = my_humiture_init,            /* esp_err_t (*)(void **ctx, bus_handle_t, uint8_t) */
+    .deinit = my_humiture_deinit,        /* esp_err_t (*)(void *ctx) */
+    .test = my_humiture_test,
+    .acquire_humidity = my_humiture_acquire_humidity,
+    .acquire_temperature = my_humiture_acquire_temperature,
+};
+
+/* register, then create by name exactly like a link-time driver */
+iot_sensor_register_driver("my_humiture", HUMITURE_ID, &my_humiture_impl);
+iot_sensor_create("my_humiture", &config, &sensor_handle);
+...
+iot_sensor_delete(sensor_handle);
+iot_sensor_unregister_driver("my_humiture");
+```
+
+Notes:
+
+- Each callback receives a per-instance context (`void *sensor_ctx`) produced by `init`, so one implementation can back multiple sensor instances at different addresses.
+- `sensor_hub` does not copy the name or the implementation table; keep both valid until the driver is unregistered and all instances created from it are deleted.
+- Runtime-registered drivers take precedence over link-time drivers that share the same name, and both are reported by `iot_sensor_scan()`.
+
 ## Add component to your project
 
 Please use the component manager command `add-dependency` to add the `sensor_hub` to your project's dependency, during the `CMake` step the component will be downloaded automatically

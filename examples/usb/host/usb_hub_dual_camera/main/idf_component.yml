@@ -15,9 +15,14 @@ dependencies:
   #   # All dependencies of `main` are public by default.
   #   public: true
   espressif/usb_host_uvc:
-    version: "^2.2.0"
+    version: "^2.5.1"
 
   espressif/esp_wifi_remote:
-    version: ^0.5.4
+    version: 1.5.3
+    rules:
+      - if: "${IDF_TARGET} == esp32p4"
+
+  espressif/esp_hosted:
+    version: 2.12.8
     rules:
       - if: "${IDF_TARGET} == esp32p4"

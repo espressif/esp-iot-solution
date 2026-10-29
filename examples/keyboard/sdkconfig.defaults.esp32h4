@@ -1,0 +1,33 @@
+# ESP32-H4: BLE HID keyboard via NimBLE host (switch to Bluedroid in menuconfig if needed)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+CONFIG_BT_BLE_42_FEATURES_SUPPORTED=y
+# NimBLE host HID GATT (IDF stack option; app code uses CONFIG_BT_NIMBLE_ENABLED only)
+CONFIG_BT_NIMBLE_HID_SERVICE=y
+# Keyboard HID descriptor: 3 keyboard reports + 6 lighting feature reports
+CONFIG_BT_NIMBLE_SVC_HID_MAX_RPTS=12
+# ble_svc_hid_params on stack (~3.7KB with 12 reports); default 4096 overflows
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
+# nimble_hid_start_gatts in esp_ble_hidd_dev_init runs on main; ble_svc_hid_add copies params by value
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_BT_NIMBLE_NVS_PERSIST=y
+
+# Low-power baseline aligned with ESP-IDF power_save (esp32h4)
+CONFIG_BT_CTRL_SLEEP_ENABLE=y
+CONFIG_BT_LE_LP_CLK_SRC_DEFAULT=y
+CONFIG_PM_DFS_INIT_AUTO=y
+CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=y
+CONFIG_ESP_SLEEP_POWER_DOWN_FLASH=y
+CONFIG_ESP_SLEEP_CACHE_SAFE_ASSERTION=y
+CONFIG_RTC_CLK_SRC_EXT_CRYS=y
+
+# Run FreeRTOS on Core 0 only
+CONFIG_FREERTOS_UNICORE=y
+# CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1 is not set
+
+# PM CPU frequency range for BLE HID (hid_transport.c)
+CONFIG_ESP_MAX_CPU_FREQ_MHZ=96
+CONFIG_ESP_MIN_CPU_FREQ_MHZ=32
+
+# Battery ADC calibration is not enabled on ESP32-H4 yet.
+CONFIG_KEYBOARD_BATTERY_ADC_ENABLE=n

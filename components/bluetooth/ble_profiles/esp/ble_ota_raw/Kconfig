@@ -1,0 +1,4 @@
+menuconfig BLE_OTA_RAW_PROFILE
+    bool "BLE OTA Raw Profile"
+    select BLE_OTA_SVC
+    select BLE_DIS

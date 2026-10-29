@@ -1,0 +1,200 @@
+GUI Optimization Solutions
+========================================
+
+:link_to_translation:`zh_CN:[中文]`
+
+.. _ESP GSP:
+
+ESP-GSP
+-------
+
+ESP-GSP is an independent embedded UI framework. Its compiler turns scene
+descriptions and assets into a bundle; the C API connects controls, images,
+animations and application state. It supports ESP-IDF display integration and
+both device and PC simulation workflows.
+
+Component Link: https://components.espressif.com/components/espressif/esp-gsp
+
+Related Example:
+
+- :example:`display/gui/gsp_showcase`
+
+.. _ESP LVGL Adapter:
+
+ESP LVGL Adapter
+----------------
+
+ESP LVGL Adapter is a unified LVGL integration layer for ESP-IDF projects, compatible with LVGL v8 and v9, and provides core capabilities such as display registration, tearing control, thread-safe LVGL access, and input-device integration. It supports RGB, MIPI DSI, SPI, QSPI, I2C, I80, and monochrome displays, supports multi-display management, and offers multiple tear-avoid modes plus TE synchronization so developers can balance smoothness, memory usage, and display stability according to interface type, rotation, and frame-buffer count. On supported chips, it can also work with PPA/DMA2D acceleration, immediate refresh, area rounding, FPS statistics, and Dummy Draw to further improve rendering performance and debug efficiency.
+
+In addition, ESP LVGL Adapter supports touch, button, and knob input adaptation, provides independent multi-touch control, task/ISR wake notifications, and both manual sleep and Auto Sleep mechanisms that work with Tickless Light Sleep, enabling low-power operation while preserving UI state. With Kconfig options enabled as needed, the component can also integrate a filesystem bridge, image decoding, and FreeType font rendering, and includes adaptations and optimizations for FreeType stack usage, flash footprint, and DMA alignment constraints under flash-encryption scenarios, delivering a more complete and robust out-of-the-box LVGL experience on ESP platforms.
+
+Component Link: https://components.espressif.com/components/espressif/esp_lvgl_adapter
+
+Related Example:
+
+- :example:`display/gui/lvgl_common_demo`
+- :example:`display/gui/lvgl_dummy_draw`
+- :example:`display/gui/lvgl_decode_image`
+- :example:`display/gui/lvgl_freetype_font`
+- :example:`display/gui/lvgl_multi_screen`
+- :example:`display/gui/lvgl_mono_demo`
+
+.. _ESP Display Present:
+
+ESP Display Present
+-------------------
+
+``esp_display_present`` sends renderer pixels to an ``esp_lcd`` panel. The
+application owns the panel and the presenter. LVGL 9, GSP, or a custom GUI
+take exclusive producer turns.
+
+``esp_lv_present`` only installs the LVGL 9 flush path on an existing presenter.
+
+Component Links:
+
+- https://components.espressif.com/components/espressif/esp_display_present
+- https://components.espressif.com/components/espressif/esp_lv_present
+
+Related Example:
+
+- :example:`display/gui/lvgl_present_benchmark`
+
+.. _ESP LVGL EAF Player:
+
+ESP LVGL EAF Player
+-------------------
+
+esp_lv_eaf_player is a lightweight and efficient EAF animation player designed specifically for LVGL v8/v9. It enables seamless integration of compressed animation sequences into LVGL projects. The EAF format supports multiple compression methods including RLE, Huffman coding, and JPEG compression, providing high-quality animations with minimal memory footprint.
+
+Features:
+
+- Multiple compression support: RLE, Huffman, JPEG
+- Optimized for embedded: Minimal memory footprint and efficient decoding
+- LVGL integration: Seamless integration with LVGL widget system
+- Animation control: Play, pause, restart, and loop control
+
+Applicable Scenarios:
+
+- Users using LVGL v8/v9 who need to play high-quality animations
+- Efficient animation playback on resource-constrained platforms
+
+EAF File Conversion: Use the online conversion tool to convert GIF or other animation formats to EAF format: https://esp32-gif.espressif.com/
+
+Component Link: https://components.espressif.com/components/espressif/esp_lv_eaf_player
+
+Related Example:
+
+- :example:`display/gui/lvgl_eaf_player`
+
+.. _Thorvg component:
+
+Thorvg Component
+----------------
+
+Supports Lottie animation and TVG vector graphics parsing and rendering, noglic version supported
+
+Component Link: https://components.espressif.com/components/espressif/thorvg
+
+Related Example:
+
+- Lottie: https://components.espressif.com/components/espressif/thorvg/versions/0.13.8/examples/thorvg-example
+
+.. _tinyGL 3D graphics library:
+
+tinyGL 3D Graphics Library
+--------------------------
+
+- tinyGL is a lightweight 3D graphics library that supports a subset of OpenGL ES 1.1, suitable for ESP32-P4 platform.
+
+Applicable Scenarios:
+
+- Need to implement 3D graphics rendering.
+
+Component Link: https://github.com/espressif2022/TinyGL
+
+.. _SDL3 development library:
+
+SDL3 Development Library
+------------------------
+
+SDL is a cross-platform development library designed to provide low-level access to audio, keyboard, mouse, joystick, and graphics hardware via OpenGL/Direct3D/Metal/Vulkan. It is used by video playback software, emulators, and many popular games including Valve's award-winning games and Humble Bundle games.
+
+Applicable Scenarios:
+
+- Users with emulator development, game porting, and cross-platform application development requirements.
+
+Component Link: https://components.espressif.com/components/georgik/sdl/versions/3.1.2~9
+
+Related Example: https://github.com/georgik/esp32-sdl3-test/tree/main
+
+.. _esp_lv_lottie_player:
+
+esp_lv_lottie_player
+--------------------
+
+esp_lv_lottie_player is a lightweight and efficient Lottie animation player designed specifically for LVGL v8/v9. It can seamlessly integrate vector-based animations into LVGL projects. By leveraging ThorVG as the rendering engine, this module ensures high performance and flexibility for modern embedded GUI applications.
+
+Applicable Scenarios:
+
+- Users using LVGL v8/v9 who need to play Lottie animations
+
+Component Link: https://components.espressif.com/components/espressif/esp_lv_lottie_player
+
+Related Example:
+
+- :example:`display/gui/lvgl_lottie_player`
+
+.. _esp_emote_gfx:
+
+esp_emote_gfx
+-------------
+
+esp_emote_gfx is a lightweight animation rendering library for resource-constrained platforms, supporting conversion of GIF to custom EAF animation format for playback, with advantages of fast decoding, small memory footprint, and flexible display, suitable for efficient dynamic graphics playback needs in HMI scenarios.
+
+Features:
+
+- Supports text scrolling effects
+- Supports simultaneous playback of multiple animations with independent frame rate control
+- Adapts to multiple screen sizes
+
+Applicable Scenarios:
+
+- Guide animations, boot animations, emoticons and text rendering on various screens
+
+- Dynamic UI component display on resource-constrained platforms (ESP32-C2/C3, etc.)
+
+Component Link: https://components.espressif.com/components/espressif2022/esp_emote_gfx/
+
+.. _esp_emote_expression:
+
+esp_emote_expression
+--------------------
+
+esp_emote_expression is an expression and interface description system built on esp_emote_gfx, providing complete resource parsing, loading and lifecycle management capabilities, and supporting third-party custom widget extensions. It can be used as a foundational UI framework for AI interactive devices.
+
+The system covers common UI scenarios for AI conversations, including:
+
+- Expression and animation display
+- Text rendering (system prompts, user messages, etc.)
+- Status icons (speaking, listening, etc.)
+- QR code display
+- Popups and notification components
+
+Applicable Scenarios:
+
+- Foundational UI framework for AI interactive devices
+- Embedded devices requiring complete UI resource management and widget extensions
+
+Integrated Repositories:
+
+- xiaozhi: https://github.com/78/xiaozhi-esp32
+
+- rainmaker agent: https://github.com/espressif/esp-agents-firmware
+
+Quick Start:
+
+- gfx-gen-tool: https://gfx-gen-tool.pages.dev/
+
+- Local preset assets: https://components.espressif.com/components/espressif2022/esp_emote_assets
+
+Component Link: https://components.espressif.com/components/espressif2022/esp_emote_expression

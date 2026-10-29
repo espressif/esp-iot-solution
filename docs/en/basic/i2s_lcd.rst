@@ -1,2 +1,9 @@
+I2S LCD Driver
+=================
 
-.. include:: ../../zh_CN/basic/i2s_lcd.rst
+:link_to_translation:`zh_CN:[中文]`
+
+API Reference
+----------------------
+
+.. include-build-file:: inc/i2s_lcd_driver.inc

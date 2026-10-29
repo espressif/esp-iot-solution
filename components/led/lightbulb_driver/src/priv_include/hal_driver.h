@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -51,17 +51,54 @@ typedef enum {
     QUERY_DRIVER_NAME,
 } hal_feature_query_list_t;
 
-esp_err_t hal_output_init(hal_config_t *config, lightbulb_gamma_config_t *gamma, void *priv_data);
-esp_err_t hal_output_deinit(void);
-esp_err_t hal_regist_channel(int channel, gpio_num_t gpio_num);
-esp_err_t hal_get_driver_feature(hal_feature_query_list_t type, void *out_data);
-esp_err_t hal_get_curve_table_value(uint16_t input, uint16_t *output);
-esp_err_t hal_set_channel(int channel, uint16_t value, uint16_t fade_ms);
-esp_err_t hal_set_channel_group(uint16_t value[], uint8_t channel_mask, uint16_t fade_ms);
-esp_err_t hal_start_channel_action(int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag);
-esp_err_t hal_start_channel_group_action(uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag);
-esp_err_t hal_stop_channel_action(uint8_t channel_mask);
-esp_err_t hal_sleep_control(bool enable_sleep);
+typedef struct hal_context_s *hal_context_t;
+
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+hal_context_t pwm_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_SM2182E_DRIVER
+hal_context_t sm2182e_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_SM2135EH_DRIVER
+hal_context_t sm2135eh_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_SM2x35EGH_DRIVER
+hal_context_t sm2x35egh_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_BP57x8D_DRIVER
+hal_context_t bp57x8d_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_BP1658CJ_DRIVER
+hal_context_t bp1658cj_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_KP18058_DRIVER
+hal_context_t kp18058_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_WS2812_DRIVER
+hal_context_t ws2812_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+#ifdef CONFIG_ENABLE_SM16825E_DRIVER
+hal_context_t sm16825e_hal_output_init(void *driver_config, lightbulb_gamma_config_t *gamma);
+#endif
+
+esp_err_t hal_output_deinit(hal_context_t hal_ctx);
+esp_err_t hal_regist_channel(hal_context_t hal_ctx, int channel, gpio_num_t gpio_num);
+esp_err_t hal_get_driver_feature(hal_context_t hal_ctx, hal_feature_query_list_t type, void *out_data);
+esp_err_t hal_get_curve_table_value(hal_context_t hal_ctx, uint16_t input, uint16_t *output);
+esp_err_t hal_set_channel(hal_context_t hal_ctx, int channel, uint16_t value, uint16_t fade_ms);
+esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t channel_mask, uint16_t fade_ms);
+esp_err_t hal_start_channel_action(hal_context_t hal_ctx, int channel, uint16_t value_min, uint16_t value_max, uint16_t period_ms, bool fade_flag);
+esp_err_t hal_start_channel_group_action(hal_context_t hal_ctx, uint16_t value_min[], uint16_t value_max[], uint8_t channel_mask, uint16_t period_ms, bool fade_flag);
+esp_err_t hal_stop_channel_action(hal_context_t hal_ctx, uint8_t channel_mask);
+esp_err_t hal_sleep_control(hal_context_t hal_ctx, bool enable_sleep);
 esp_err_t hal_gamma_table_create(uint16_t *output_gamma_table, uint16_t table_size, float gamma_curve_coefficient, int32_t grayscale_level);
 
 /**

@@ -1,0 +1,14 @@
+dependencies:
+  idf:
+    version: ">=6.0"
+  lvgl/lvgl:
+    version: ">=9,<10"
+    public: true
+  espressif/esp_display_present:
+    version: "*"
+    override_path: "../../../esp_display_present"
+    public: true
+  espressif/esp_lv_present:
+    version: "*"
+    override_path: "../.."
+    public: true

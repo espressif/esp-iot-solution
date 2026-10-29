@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -23,82 +23,92 @@ typedef struct {
     /**
      * @brief Initialize the light sensor
      *
+     * @param[out] sensor_ctx Pointer to receive the driver's per-instance context
      * @param handle The bus handle
      * @param addr The I2C address of the sensor
      * @return esp_err_t Result of initialization
      */
-    esp_err_t (*init)(bus_handle_t handle, uint8_t addr);
+    esp_err_t (*init)(void **sensor_ctx, bus_handle_t handle, uint8_t addr);
 
     /**
      * @brief Deinitialize the light sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of deinitialization
      */
-    esp_err_t (*deinit)(void);
+    esp_err_t (*deinit)(void *sensor_ctx);
 
     /**
      * @brief Test the light sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the test
      */
-    esp_err_t (*test)(void);
+    esp_err_t (*test)(void *sensor_ctx);
 
     /**
      * @brief Acquire ambient light data
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] l Pointer to store the ambient light intensity
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_light)(float *l);
+    esp_err_t (*acquire_light)(void *sensor_ctx, float *l);
 
     /**
      * @brief Acquire RGBW (Red, Green, Blue, White) light data
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] r Pointer to store the red light intensity
      * @param[out] g Pointer to store the green light intensity
      * @param[out] b Pointer to store the blue light intensity
      * @param[out] w Pointer to store the white light intensity
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_rgbw)(float *r, float *g, float *b, float *w);
+    esp_err_t (*acquire_rgbw)(void *sensor_ctx, float *r, float *g, float *b, float *w);
 
     /**
      * @brief Acquire UV (Ultraviolet) light data
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @param[out] uv Pointer to store the total UV intensity
      * @param[out] uva Pointer to store the UVA light intensity
      * @param[out] uvb Pointer to store the UVB light intensity
      * @return esp_err_t Result of acquiring data
      */
-    esp_err_t (*acquire_uv)(float *uv, float *uva, float *uvb);
+    esp_err_t (*acquire_uv)(void *sensor_ctx, float *uv, float *uva, float *uvb);
 
     /**
      * @brief Put the light sensor to sleep
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the sleep operation
      */
-    esp_err_t (*sleep)(void);
+    esp_err_t (*sleep)(void *sensor_ctx);
 
     /**
      * @brief Wake up the light sensor
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of the wake-up operation
      */
-    esp_err_t (*wakeup)(void);
+    esp_err_t (*wakeup)(void *sensor_ctx);
 
     /**
      * @brief Set sensor work mode
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting work mode
      */
-    esp_err_t (*set_mode)(sensor_mode_t work_mode);
+    esp_err_t (*set_mode)(void *sensor_ctx, sensor_mode_t work_mode);
 
     /**
      * @brief Set sensor measurement range
      *
+     * @param sensor_ctx The per-instance context returned by init
      * @return esp_err_t Result of setting measurement range
      */
-    esp_err_t (*set_range)(sensor_range_t range);
+    esp_err_t (*set_range)(void *sensor_ctx, sensor_range_t range);
 } light_impl_t;
 
 #ifdef __cplusplus
@@ -220,7 +230,6 @@ esp_err_t light_sensor_acquire(sensor_light_handle_t sensor, sensor_data_group_t
 esp_err_t light_sensor_control(sensor_light_handle_t sensor, sensor_command_t cmd, void *args);
 
 #ifdef __cplusplus
-extern "C"
 }
 #endif
 

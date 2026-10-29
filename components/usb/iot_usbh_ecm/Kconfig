@@ -1,9 +1,23 @@
 menu "IoT USB Host ECM"
 
-    config ECM_PRINTF_USB_DESCRIPTION
-        bool "Enable printf usb description"
+    config ECM_AUTO_LINK_UP_AFTER_NO_NOTIFICATION
+        bool "Enable auto link up when no notify received"
         default y
         help
-            Enable printf usb description
+            Automatically establish connection when no notification is received
+
+    config ECM_AUTO_LINK_UP_WAIT_TIME_MS
+        int "Auto link up wait time ms"
+        depends on ECM_AUTO_LINK_UP_AFTER_NO_NOTIFICATION
+        default 4000
+        range 2000 60000
+        help
+            Auto link up after not receive notification for a while
+
+    config ECM_DISABLE_CDC_NOTIFICATION
+        bool "Disable CDC notification"
+        default n
+        help
+            Disable CDC notification for save channel of USB host
 
 endmenu

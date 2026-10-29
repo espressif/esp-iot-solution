@@ -10,5 +10,5 @@ Adapted Products
 +--------+----------+---------+--------+-------------------------------------------------------------------------------------------------------------------+-----+
 |  Name  | Function |   Bus   | Vendor |                                                     Datasheet                                                     | HAL |
 +========+==========+=========+========+===================================================================================================================+=====+
-| BME280 | Pressure | I2C/SPI | BOSCH  | `Datesheet <https://www.bosch-sensortec.com/media/boschsensortec/downloads/product_flyer/bst-bme280-fl000.pdf>`__ |     |
+| BME280 | Pressure | I2C/SPI | BOSCH  | `Datasheet <https://www.bosch-sensortec.com/media/boschsensortec/downloads/product_flyer/bst-bme280-fl000.pdf>`__ |     |
 +--------+----------+---------+--------+-------------------------------------------------------------------------------------------------------------------+-----+

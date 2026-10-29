@@ -4,7 +4,7 @@ USB PHY/Transceiver Introduction
 
 :link_to_translation:`zh_CN:[中文]`
 
-The function of the USB Full-speed PHY/Transceiver is to convert the digital signals from the USB controller into USB bus signal levels, providing bus driving capability, and detecting receive errors, among other functions. Chips like ESP32-S2/S3 have a built-in USB Full-speed PHY, allowing users to directly use the USB D+ D- pins specified by the chip for communication with an external USB system. Additionally, ESP32-S2/S3 retains an external PHY extension interface, allowing users to connect an external PHY when needed.
+The function of the USB PHY/Transceiver is to convert the digital signals from the USB controller into USB bus signal levels, providing bus driving capability, and detecting receive errors, among other functions. Chips like ESP32-S2/S3/P4 have a built-in USB Full-speed PHY, allowing users to directly use the USB D+ D- pins specified by the chip for communication with an external USB system. Additionally, ESP32-P4 has a built-in USB High-Speed PHY. ESP32-S2/S3 retains an external PHY extension interface, allowing users to connect an external PHY when needed.
 
 Use the internal PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -38,9 +38,35 @@ The internal USB-PHY corresponds to fixed GPIO pins, as shown in the table below
      - 13
      - 12
 
+For ESP32-P4, it internally integrates two USB Full-speed PHYs and one USB High-speed PHY.
+
+.. image:: ../../../_static/usb/esp32p4_usb.png
+   :target: ../../../_static/usb/esp32p4_usb.png
+   :alt: esp32p4_usb
+
+The internal USB-PHY corresponds to fixed GPIO pins, as shown in the table below:
+
+.. list-table::
+   :header-rows: 1
+
+   * -
+     - D+
+     - D-
+   * - ESP32-P4 FS_PHY1
+     - 25
+     - 24
+   * - ESP32-P4 FS_PHY2
+     - 27
+     - 26
+   * - ESP32-P4 HS_PHY
+     - pin 50
+     - pin 49
+
+The default connection is FS_PHY1 connected to the USB Serial/JTAG controller, and FS_PHY2 connected to OTG_FS. The user can change the connection relationship through EFUSE_USB_PHY_SEL.
+
 .. _external_phy:
 
-Use an external PHY
+Use an external PHY (ESP32-S2/S3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 By adding an external PHY, it is possible to enable the simultaneous operation of both USB-OTG and USB-Serial-JTAG.
@@ -71,7 +97,7 @@ Modify the default configuration of the USB PHY
 Method 1: Switch the USB-PHY connection to USB-OTG by configuring the registers.
 
 
-* The USB Host Driver or TinyUSB stack internally switches the connection of the internal USB-PHY to USB-OTG by configuring USB PHY registers. For more information, please refer to the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/usb/include/esp_private/usb_phy.h>`_.
+* The USB Host Driver or TinyUSB stack internally switches the connection of the internal USB-PHY to USB-OTG by configuring USB PHY registers. For more information, please refer to the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_.
 
 Method 2: Switch the default connection of USB-PHY to USB-OTG by burning the efuse ``usb_phy_sel`` bit to 1.
 

@@ -5,6 +5,7 @@ menu "Bootloader UF2 enter config"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         help
             The GPIO number to use for enter the UF2 bootloader.
 
@@ -19,5 +20,11 @@ menu "Bootloader UF2 enter config"
         default 1
         help
             The GPIO pull time to use for enter the UF2 bootloader.
+
+    config UF2_OTA_RESET_REASON_VALUE
+        hex "OTA Reset Reason Value"
+        default 0xF2
+        help
+            The reset value for uf2 ota reset.
 
 endmenu

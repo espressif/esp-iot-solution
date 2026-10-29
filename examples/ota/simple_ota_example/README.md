@@ -1,8 +1,12 @@
-| Supported Targets | ESP32-C2 | ESP32-C3 |
-| ----------------- | ----- | -------- | 
+| Supported Targets | ESP32-C2 | ESP32-C3 | ESP32-C5 | ESP32-C6 | ESP32-C61 | ESP32 | ESP32-S3 | ESP32-H2 | ESP32-P4 | ESP32-S31 |
+| ----------------- | ----- | -------- | -------- | -------- | -------- | -------- |-------- | -------- | -------- | --------- |
 
 # Simple OTA example
 ## Overview
+
+ESP32-P4 requires ESP-IDF v5.5.5 or newer and chip revision 3 or newer. `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` is not supported.
+
+ESP32-S31 requires ESP-IDF v6.1 or newer. On IDF 6.1 it is a preview target, so select it with `idf.py --preview set-target esp32s31`.
 
 This example demonstrates how to use compressed OTA by the [bootloader support plus](https://components.espressif.com/components/espressif/bootloader_support_plus) component. 
 

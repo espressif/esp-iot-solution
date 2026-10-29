@@ -1,9 +1,12 @@
 # Kconfig file for MMAP
 
 menu "mmap file support format"
-
     config MMAP_FILE_NAME_LENGTH
-        int "Max file name length"
+        int "Max file name length (Deprecated: for legacy fallback only)"
         default 16
         range 1 32
+        help
+            This parameter is DEPRECATED.
+            New version of mmap assets (.bin) store name length in the binary header.
+            This value is ONLY used when a legacy binary (v0) is detected to determine the name stride.
 endmenu

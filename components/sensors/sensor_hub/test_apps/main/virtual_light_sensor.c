@@ -1,36 +1,49 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include <stdlib.h>
 #include "iot_sensor_hub.h"
 #include "esp_err.h"
 #include "esp_random.h"
 
 #ifdef CONFIG_SENSOR_INCLUDED_LIGHT
 
-esp_err_t virtual_light_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+/* per-instance context */
+typedef struct {
+    uint8_t addr;
+} virtual_light_ctx_t;
+
+esp_err_t virtual_light_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
+{
+    virtual_light_ctx_t *ctx = calloc(1, sizeof(virtual_light_ctx_t));
+    if (!ctx) {
+        return ESP_ERR_NO_MEM;
+    }
+    ctx->addr = addr;
+    *sensor_ctx = ctx;
+    return ESP_OK;
+}
+
+esp_err_t virtual_light_deinit(void *sensor_ctx)
+{
+    free(sensor_ctx);
+    return ESP_OK;
+}
+
+esp_err_t virtual_light_test(void *sensor_ctx)
 {
     return ESP_OK;
 }
 
-esp_err_t virtual_light_deinit(void)
-{
-    return ESP_OK;
-}
-
-esp_err_t virtual_light_test(void)
-{
-    return ESP_OK;
-}
-
-esp_err_t virtual_light_acquire_light(float* l)
+esp_err_t virtual_light_acquire_light(void *sensor_ctx, float* l)
 {
     *l = ((float)esp_random() / UINT32_MAX) * 1000.0f;
     return ESP_OK;
 }
 
-esp_err_t virtual_light_acquire_rgbw(float* r, float* g, float* b, float* w)
+esp_err_t virtual_light_acquire_rgbw(void *sensor_ctx, float* r, float* g, float* b, float* w)
 {
     *r = ((float)esp_random() / UINT32_MAX) * 255.0f;
     *g = ((float)esp_random() / UINT32_MAX) * 255.0f;
@@ -39,7 +52,7 @@ esp_err_t virtual_light_acquire_rgbw(float* r, float* g, float* b, float* w)
     return ESP_OK;
 }
 
-esp_err_t virtual_light_acquire_uv(float* uv, float* uva, float* uvb)
+esp_err_t virtual_light_acquire_uv(void *sensor_ctx, float* uv, float* uva, float* uvb)
 {
     *uv = ((float)esp_random() / UINT32_MAX) * 1000.0f;
     *uva = ((float)esp_random() / UINT32_MAX) * 1000.0f;

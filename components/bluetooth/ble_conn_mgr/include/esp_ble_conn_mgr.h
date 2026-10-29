@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,11 +8,252 @@
 
 #include <esp_err.h>
 #include <esp_event.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "sdkconfig.h"
+#if defined(CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN)
+/* CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN is only configurable when BT_NIMBLE_EXT_ADV is enabled. */
+#define ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN CONFIG_BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN
+#else
+/* Legacy advertising payload max length is always 31 bytes; keep this fallback for non-EXT_ADV builds. */
+#define ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN 31
+#endif
+/* Bluetooth Core Spec maximum periodic advertising data payload length. */
+#define ESP_BLE_CONN_PERIODIC_REPORT_DATA_MAX_LEN 247
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif
+
+/**
+ * @brief   BLE address format string for printf-style logging
+ */
+#define BLE_CONN_MGR_ADDR_STR "%02x:%02x:%02x:%02x:%02x:%02x"
+/**
+ * @brief   BLE address formatter arguments for printf-style logging
+ */
+#define BLE_CONN_MGR_ADDR_HEX(addr) ((addr)[5]), ((addr)[4]), ((addr)[3]), ((addr)[2]), ((addr)[1]), ((addr)[0])
+
+/** Common advertising data types */
+#define ESP_BLE_CONN_ADV_TYPE_FLAGS            0x01
+#define ESP_BLE_CONN_ADV_TYPE_NAME_SHORT       0x08
+#define ESP_BLE_CONN_ADV_TYPE_NAME_COMPLETE    0x09
+#define ESP_BLE_CONN_ADV_TYPE_TX_POWER         0x0A
+#define ESP_BLE_CONN_ADV_TYPE_UUID16_INCOMP    0x02
+#define ESP_BLE_CONN_ADV_TYPE_UUID16_COMPLETE  0x03
+#define ESP_BLE_CONN_ADV_TYPE_UUID32_INCOMP    0x04
+#define ESP_BLE_CONN_ADV_TYPE_UUID32_COMPLETE  0x05
+#define ESP_BLE_CONN_ADV_TYPE_UUID128_INCOMP   0x06
+#define ESP_BLE_CONN_ADV_TYPE_UUID128_COMPLETE 0x07
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA16   0x16
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA32   0x20
+#define ESP_BLE_CONN_ADV_TYPE_SERVICE_DATA128  0x21
+#define ESP_BLE_CONN_ADV_TYPE_APPEARANCE       0x19
+#define ESP_BLE_CONN_ADV_TYPE_MANUFACTURER     0xFF
+
+#define ESP_BLE_CONN_ADV_DATA_MAX_LEN          31
+
+/** @brief Invalid connection handle (no connection). Use to check "not connected" or invalid handle. */
+#define BLE_CONN_HANDLE_INVALID                0xFFFF
+/** @brief Maximum valid connection handle. Valid range is 0x0000 – BLE_CONN_HANDLE_MAX (0x0EFF). */
+#define BLE_CONN_HANDLE_MAX                    0x0EFF
+
+/**
+ * @brief   Passkey action types for Security Manager pairing
+ */
+typedef enum {
+    ESP_BLE_CONN_SM_ACT_NONE   = 0,  /*!< No action / unknown / other */
+    ESP_BLE_CONN_SM_ACT_OOB    = 1,  /*!< Legacy LE OOB; call esp_ble_conn_oob_legacy_tk_reply() */
+    ESP_BLE_CONN_SM_ACT_INPUT  = 2,  /*!< User must enter passkey; call esp_ble_conn_passkey_reply() */
+    ESP_BLE_CONN_SM_ACT_DISP   = 3,  /*!< Display passkey to user, application should display the passkey */
+    ESP_BLE_CONN_SM_ACT_NUMCMP = 4,  /*!< Numeric comparison; call esp_ble_conn_numcmp_reply() */
+    ESP_BLE_CONN_SM_ACT_OOB_SC = 5,  /*!< LE Secure Connections OOB; call esp_ble_conn_sc_oob_data_generate() / esp_ble_conn_sc_oob_reply() */
+} esp_ble_conn_sm_action_t;
+
+/** @brief Length of random value r in LE Secure Connections OOB data (bytes, Core Spec). */
+#define ESP_BLE_CONN_SC_OOB_R_LEN   16
+/** @brief Length of confirm value c in LE Secure Connections OOB data (bytes, Core Spec). */
+#define ESP_BLE_CONN_SC_OOB_C_LEN   16
+
+/**
+ * @brief   LE Secure Connections OOB data for a side channel (e.g. NFC)
+ *
+ * Same memory layout as NimBLE struct ble_sm_sc_oob_data.
+ */
+typedef struct {
+    uint8_t r[ESP_BLE_CONN_SC_OOB_R_LEN]; /*!< Random value */
+    uint8_t c[ESP_BLE_CONN_SC_OOB_C_LEN]; /*!< Confirm value */
+} esp_ble_conn_sc_oob_data_t;
+
+/**
+ * @brief   L2CAP CoC channel handle (opaque pointer)
+ *
+ * @note This is an opaque handle managed by the stack. Applications must not
+ *       dereference, cast, or persist it beyond the lifetime of the associated
+ *       connection. Use it only with the L2CAP CoC APIs provided here.
+ */
+typedef void *esp_ble_conn_l2cap_coc_chan_t;
+
+/**
+ * @brief   L2CAP CoC channel information
+ */
+typedef struct {
+    uint16_t scid;            /*!< Source Channel ID */
+    uint16_t dcid;            /*!< Destination Channel ID */
+    uint16_t our_l2cap_mtu;   /*!< Local L2CAP MTU */
+    uint16_t peer_l2cap_mtu;  /*!< Peer L2CAP MTU */
+    uint16_t psm;             /*!< Protocol/Service Multiplexer */
+    uint16_t our_coc_mtu;     /*!< Local CoC MTU */
+    uint16_t peer_coc_mtu;    /*!< Peer CoC MTU */
+} esp_ble_conn_l2cap_coc_chan_info_t;
+
+/**
+ * @brief   L2CAP CoC SDU buffer
+ */
+typedef struct {
+    uint16_t len;  /*!< SDU length in bytes */
+    uint8_t *data; /*!< SDU data buffer */
+} esp_ble_conn_l2cap_coc_sdu_t;
+
+/** @brief Scan result is from legacy advertising (not extended discovery). */
+#define ESP_BLE_CONN_SCAN_EXT_STATUS_LEGACY     0xff
+
+/**
+ * @brief   BLE scan result data
+ */
+typedef struct {
+    uint8_t addr[6];                          /*!< Peer address */
+    uint8_t addr_type;                        /*!< Peer address type */
+    int8_t rssi;                              /*!< RSSI in dBm */
+    uint8_t ext_data_status;                 /*!< Extended: NimBLE BLE_GAP_EXT_ADV_DATA_STATUS_*; ESP_BLE_CONN_SCAN_EXT_STATUS_LEGACY if legacy */
+    uint8_t prim_phy;                         /*!< Extended: primary PHY (BLE_HCI_LE_PHY_*); 0 if legacy */
+    uint8_t sec_phy;                          /*!< Extended: secondary PHY; 0 if legacy */
+    uint8_t sid;                              /*!< Extended: Advertising Set ID; 0 if legacy */
+    uint16_t adv_data_len;                    /*!< Octets valid in adv_data (this fragment; extended adv may span multiple events) */
+    uint8_t adv_data[ESP_BLE_CONN_SCAN_RESULT_ADV_MAX_LEN]; /*!< Advertising data fragment */
+} esp_ble_conn_scan_result_t;
+
+typedef bool (*esp_ble_conn_scan_cb_t)(const esp_ble_conn_scan_result_t *result, void *arg);
+
+/**
+ * @brief   L2CAP CoC event types
+ */
+typedef enum {
+    ESP_BLE_CONN_L2CAP_COC_EVENT_CONNECTED = 0,   /*!< CoC channel connected */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_DISCONNECTED,    /*!< CoC channel disconnected */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_ACCEPT,          /*!< CoC connection accepted */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_DATA_RECEIVED,   /*!< SDU received */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED,    /*!< TX unstalled */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_RECONFIG_COMPLETED, /*!< Local reconfigure completed */
+    ESP_BLE_CONN_L2CAP_COC_EVENT_PEER_RECONFIGURED,  /*!< Peer reconfigured */
+} esp_ble_conn_l2cap_coc_event_type_t;
+
+/**
+ * @brief   L2CAP CoC event payload
+ */
+typedef struct esp_ble_conn_l2cap_coc_event {
+    esp_ble_conn_l2cap_coc_event_type_t type; /*!< Event type */
+    union {
+        struct {
+            int status;                       /*!< Connection status (0 on success) */
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } connect; /*!< Connected event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } disconnect; /*!< Disconnected event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            uint16_t peer_sdu_size;           /*!< Peer SDU size */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } accept; /*!< Accept event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+            esp_ble_conn_l2cap_coc_sdu_t sdu;  /*!< SDU payload. Note: The sdu.data buffer is managed internally
+                                                    and will be freed immediately after the callback returns.
+                                                    The callback must not save the pointer for later use. If
+                                                    asynchronous processing is needed, the callback should copy
+                                                    the data. */
+        } receive; /*!< Receive event data */
+        struct {
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+            int status;                       /*!< TX status */
+        } tx_unstalled; /*!< TX unstalled event data */
+        struct {
+            int status;                       /*!< Reconfigure status */
+            uint16_t conn_handle;             /*!< Connection handle */
+            esp_ble_conn_l2cap_coc_chan_t chan; /*!< CoC channel */
+        } reconfigured; /*!< Reconfigure event data */
+    };
+} esp_ble_conn_l2cap_coc_event_t;
+
+/**
+ * @brief   L2CAP CoC event callback
+ *
+ * @param[in] event  L2CAP CoC event payload
+ * @param[in] arg    User context
+ *
+ * @note For ESP_BLE_CONN_L2CAP_COC_EVENT_DATA_RECEIVED events, the sdu.data buffer
+ *       is managed internally and will be freed immediately after this callback returns.
+ *       The callback must not save the pointer for later use. If asynchronous processing
+ *       is needed, the callback should copy the data before returning.
+ *
+ * @return
+ *  - 0 to indicate the event was handled successfully
+ *  - Non-zero to indicate an application error (stack behavior may vary by event type)
+ */
+typedef int (*esp_ble_conn_l2cap_coc_event_cb_t)(esp_ble_conn_l2cap_coc_event_t *event, void *arg);
+
+/**
+ * @brief   Initialize L2CAP CoC SDU memory pool
+ *
+ * @note This API is thread-safe, but should be called from task context.
+ *       Repeated calls are safe and return ESP_OK.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_TIMEOUT if lock acquisition times out
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_mem_init(void);
+
+/**
+ * @brief   Release L2CAP CoC SDU memory pool
+ *
+ * @note This API is thread-safe, but should be called from task context.
+ *       It must only be called when there are no active L2CAP CoC servers or channels.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_TIMEOUT if lock acquisition times out
+ *  - ESP_ERR_INVALID_STATE if active L2CAP CoC contexts exist
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_mem_release(void);
+
+/**
+ * @brief   Provide receive buffer for L2CAP CoC channel (accept or next SDU)
+ *
+ * @param[in] conn_handle    Connection handle
+ * @param[in] peer_sdu_size  Peer SDU size from accept event
+ * @param[in] chan           L2CAP CoC channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if memory pool not initialized or allocation failed
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_accept(uint16_t conn_handle, uint16_t peer_sdu_size,
+                                        esp_ble_conn_l2cap_coc_chan_t chan);
 
 /**
  * Success code and error codes
@@ -86,6 +327,56 @@ extern "C"
 #define BLE_CONN_GATT_CHR_WRITE             0x0008  /*!< Characteristic write properties */
 #define BLE_CONN_GATT_CHR_NOTIFY            0x0010  /*!< Characteristic notify properties */
 #define BLE_CONN_GATT_CHR_INDICATE          0x0020  /*!< Characteristic indicate properties */
+#define BLE_CONN_GATT_CHR_READ_ENC          0x0200  /*!< Characteristic read requires encryption */
+#define BLE_CONN_GATT_CHR_READ_AUTHEN       0x0400  /*!< Characteristic read requires authentication */
+#define BLE_CONN_GATT_CHR_READ_AUTHOR       0x0800  /*!< Characteristic read requires authorization */
+#define BLE_CONN_GATT_CHR_WRITE_ENC         0x1000  /*!< Characteristic write requires encryption */
+#define BLE_CONN_GATT_CHR_WRITE_AUTHEN      0x2000  /*!< Characteristic write requires authentication */
+#define BLE_CONN_GATT_CHR_WRITE_AUTHOR      0x4000  /*!< Characteristic write requires authorization */
+
+/** Legacy advertising connection mode (conn_mode in esp_ble_conn_adv_params_t). Values match the underlying BLE stack. */
+typedef enum {
+    ESP_BLE_CONN_ADV_CONN_MODE_NON = 0,   /*!< Non-connectable */
+    ESP_BLE_CONN_ADV_CONN_MODE_DIR = 1,   /*!< Connectable directed */
+    ESP_BLE_CONN_ADV_CONN_MODE_UND = 2,   /*!< Connectable undirected */
+} esp_ble_conn_adv_conn_mode_t;
+
+/** Legacy advertising discoverable mode (disc_mode in esp_ble_conn_adv_params_t) */
+typedef enum {
+    ESP_BLE_CONN_ADV_DISC_MODE_NON = 0,   /*!< Non-discoverable */
+    ESP_BLE_CONN_ADV_DISC_MODE_LTD = 1,   /*!< Limited discoverable */
+    ESP_BLE_CONN_ADV_DISC_MODE_GEN = 2,   /*!< General discoverable */
+} esp_ble_conn_adv_disc_mode_t;
+
+/** BLE address type (for own_addr_type, peer_addr_type in adv/scan/event data) */
+typedef enum {
+    ESP_BLE_CONN_ADDR_PUBLIC = 0,         /*!< Public device address */
+    ESP_BLE_CONN_ADDR_RANDOM = 1,        /*!< Random device address */
+} esp_ble_conn_addr_type_t;
+
+/** LE PHY (primary_phy, secondary_phy in adv params; scan_phys bitmask) */
+typedef enum {
+    ESP_BLE_CONN_PHY_1M    = 1,           /*!< 1M PHY */
+    ESP_BLE_CONN_PHY_2M    = 2,           /*!< 2M PHY */
+    ESP_BLE_CONN_PHY_CODED = 3,           /*!< Coded PHY */
+} esp_ble_conn_phy_t;
+
+/** LE PHY preference mask (for set preferred PHY). Values match the underlying stack. */
+#define ESP_BLE_CONN_PHY_MASK_1M    0x01   /*!< Prefer 1M PHY */
+#define ESP_BLE_CONN_PHY_MASK_2M    0x02   /*!< Prefer 2M PHY */
+#define ESP_BLE_CONN_PHY_MASK_CODED 0x04   /*!< Prefer Coded PHY */
+#define ESP_BLE_CONN_PHY_MASK_ALL   0x07   /*!< All PHYs (1M | 2M | Coded) */
+
+/** Coded PHY option (phy_opts when using ESP_BLE_CONN_PHY_MASK_CODED). */
+#define ESP_BLE_CONN_PHY_CODED_OPT_ANY  0   /*!< Coded: any */
+#define ESP_BLE_CONN_PHY_CODED_OPT_S2   1   /*!< Coded: S=2 */
+#define ESP_BLE_CONN_PHY_CODED_OPT_S8   2   /*!< Coded: S=8 */
+
+/** Scan filter policy (filter_policy in scan params) */
+typedef enum {
+    ESP_BLE_CONN_SCAN_FILT_NO_WL  = 0,    /*!< Accept any advertiser */
+    ESP_BLE_CONN_SCAN_FILT_USE_WL = 1,    /*!< Use whitelist only */
+} esp_ble_conn_scan_filt_policy_t;
 
 /**
  * @brief This is type of function that will handle the registered characteristic
@@ -124,12 +415,23 @@ typedef enum {
     ESP_BLE_CONN_EVENT_STOPPED              = 2,    /*!< When BLE connection management stop, the event comes */
     ESP_BLE_CONN_EVENT_CONNECTED            = 3,    /*!< When a new connection was established, the event comes */
     ESP_BLE_CONN_EVENT_DISCONNECTED         = 4,    /*!< When a connection was terminated, the event comes */
-    ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When receive a notification or indication data, the event comes */
-    ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When the ble discover service complete, the event comes */
+    ESP_BLE_CONN_EVENT_DATA_RECEIVE         = 5,    /*!< When notification, indication, or peripheral write data (uuid_fn NULL) is delivered to the application, the event comes */
+    ESP_BLE_CONN_EVENT_DISC_COMPLETE        = 6,    /*!< When peer GATT discovery completes; event_data is disc_complete.conn_handle */
 
-    ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< When the periodic adv report, the event comes */
+    ESP_BLE_CONN_EVENT_PERIODIC_REPORT      = 7,    /*!< Periodic advertising report; see esp_ble_conn_periodic_report_t. */
     ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST   = 8,    /*!< When the periodic sync lost, the event comes */
-    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9     /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_PERIODIC_SYNC        = 9,    /*!< When the periodic sync, the event comes */
+    ESP_BLE_CONN_EVENT_CCCD_UPDATE          = 10,   /*!< When CCCD (Client Characteristic Configuration Descriptor) is written, the event comes */
+    ESP_BLE_CONN_EVENT_MTU                  = 11,   /*!< When GATT MTU is negotiated/updated, the event comes */
+    ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE    = 12,   /*!< When connection parameters are updated, the event comes */
+    ESP_BLE_CONN_EVENT_SCAN_RESULT          = 13,   /*!< When a BLE advertisement is received during scan (central role), the event comes */
+    ESP_BLE_CONN_EVENT_ENC_CHANGE           = 14,   /*!< When link encryption state changes (pairing/encryption complete or failed), the event comes */
+    ESP_BLE_CONN_EVENT_PASSKEY_ACTION       = 15,   /*!< When passkey input/display/confirm is needed during pairing, the event comes */
+    ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED  = 16,   /*!< When the GAP device name is changed locally or via GATT write, the event comes */
+    ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ   = 17,   /*!< PAwR: controller requests subevent data; see esp_ble_conn_pawr_subev_data_req_t */
+    ESP_BLE_CONN_EVENT_PER_SUBEV_RESP       = 18,   /*!< PAwR: response received in a response slot; see esp_ble_conn_pawr_subev_resp_t */
+    ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER    = 19,   /*!< PAST: sync established via transfer; see esp_ble_conn_periodic_transfer_t */
+    ESP_BLE_CONN_EVENT_CONNECT_FAILED        = 20,   /*!< Outgoing connection attempt failed before a handle was assigned */
 } esp_ble_conn_event_t;
 
 /**
@@ -182,7 +484,7 @@ typedef union {
 typedef struct {
     const char *name;                               /*!< Name of the handler */
     uint8_t type;                                   /*!< Type of the UUID */
-    uint8_t flag;                                   /*!< Flag for visiting right */
+    uint16_t flag;                                  /*!< Flag for visiting right */
     esp_ble_conn_uuid_t uuid;                       /*!< Universal UUID, to be used for any-UUID static allocation */
     esp_ble_conn_cb_t  uuid_fn;                     /*!< BLE UUID callback */
 } esp_ble_conn_character_t;
@@ -201,8 +503,9 @@ typedef struct {
  * @brief   This structure maps handler required which are used to configure.
  */
 typedef struct {
-    uint8_t device_name[MAX_BLE_DEVNAME_LEN];       /*!< BLE device name being broadcast */
-    uint8_t broadcast_data[BROADCAST_PARAM_LEN];    /*!< BLE device manufacturer being announce */
+    uint8_t device_name[MAX_BLE_DEVNAME_LEN];      /*!< Local name for peripheral role (name broadcast when advertising) */
+    uint8_t remote_name[MAX_BLE_DEVNAME_LEN];      /*!< Remote name for central role (target device name to connect to when scan_cb is NULL) */
+    uint8_t broadcast_data[BROADCAST_PARAM_LEN];   /*!< BLE device manufacturer being announce */
 
     uint16_t    extended_adv_len;                   /*!< Extended advertising data length */
     uint16_t    periodic_adv_len;                   /*!< Periodic advertising data length */
@@ -213,15 +516,23 @@ typedef struct {
     const char *extended_adv_rsp_data;              /*!< Extended advertising responses data */
 
     uint16_t    include_service_uuid: 1;            /*!< If include service UUID in advertising */
-    uint16_t    adv_uuid16;                         /*!< NOTE: Only Support one 16-bit UUID */
+    esp_ble_conn_uuid_type_t adv_uuid_type;         /*!< UUID type: BLE_CONN_UUID_TYPE_16 or BLE_CONN_UUID_TYPE_128. */
+    union {
+        uint16_t adv_uuid16;                        /*!< 16-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_16) */
+        uint8_t  adv_uuid128[BLE_UUID128_VAL_LEN];  /*!< 128-bit UUID (when adv_uuid_type is BLE_CONN_UUID_TYPE_128) */
+    };                                              /*!< Service UUID for advertising */
 } esp_ble_conn_config_t;
 
 /**
  * @brief   This structure maps handler required by UUID which are used to data.
+ *
+ * @note For ESP_BLE_CONN_EVENT_DATA_RECEIVE, the data field is heap-allocated by ble_conn_mgr.
+ *       The event handler must call free() on data after use when data is non-NULL.
+ *       esp_event_post copies this structure by value only and does not take ownership of data.
  */
 typedef struct {
     uint8_t type;                                   /*!< Type of the UUID */
-    uint16_t write_conn_id;                         /*!< Connection handle ID */
+    uint16_t write_conn_id;                         /*!< Connection handle ID; use BLE_CONN_HANDLE_INVALID to use default link */
     esp_ble_conn_uuid_t uuid;                       /*!< Universal UUID, to be used for any-UUID static allocation */
     uint8_t *data;                                  /*!< Data buffer */
     uint16_t data_len;                              /*!< Data size */
@@ -238,10 +549,19 @@ typedef struct {
     uint8_t adv_phy;                                /*!< Advertising PHY*/
     uint16_t per_adv_ival;                          /*!< Periodic advertising interval */
     uint8_t adv_clk_accuracy;                       /*!< Advertiser clock accuracy */
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+    uint8_t num_subevents;                          /*!< PAwR: number of subevents (0 = classic PA) */
+    uint8_t subevent_interval;                      /*!< PAwR: interval between subevents (N * 1.25 ms) */
+    uint8_t response_slot_delay;                    /*!< PAwR: delay to first response slot (N * 1.25 ms) */
+    uint8_t response_slot_spacing;                  /*!< PAwR: spacing between response slots (N * 0.125 ms) */
+#endif
 } esp_ble_conn_periodic_sync_t;
 
 /**
  * @brief   This structure represents a periodic advertising report received on established sync.
+ *
+ * @note    @c data contains an inline copy of the periodic advertising payload. The buffer lifetime is managed
+ *          by esp_event and no free() is required by the event handler.
  */
 typedef struct {
     uint16_t sync_handle;                           /*!< Periodic sync handle */
@@ -249,7 +569,11 @@ typedef struct {
     int8_t rssi;                                    /*!< Received signal strength indication in dBm (127 if unavailable) */
     uint8_t data_status;                            /*!< Advertising data status*/
     uint8_t data_length;                            /*!< Advertising Data length */
-    const uint8_t *data;                            /*!< Advertising data */
+    uint8_t data[ESP_BLE_CONN_PERIODIC_REPORT_DATA_MAX_LEN]; /*!< Advertising data payload copy */
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+    uint16_t event_counter;                         /*!< PAwR: paEventCounter of the received packet */
+    uint8_t subevent;                               /*!< PAwR: subevent index */
+#endif
 } esp_ble_conn_periodic_report_t;
 
 /**
@@ -259,6 +583,243 @@ typedef struct {
     uint16_t sync_handle;                           /*!< Periodic sync handle */
     int reason;                                     /*!< Reason for sync lost */
 } esp_ble_conn_periodic_sync_lost_t;
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+/**
+ * @brief   PAwR periodic advertising parameters (advertiser / AP).
+ */
+typedef struct {
+    bool include_tx_power;                          /*!< Include TX power in advertising PDU */
+    uint16_t itvl_min;                              /*!< Min interval in 1.25 ms units (0 = stack default) */
+    uint16_t itvl_max;                              /*!< Max interval in 1.25 ms units (0 = stack default) */
+    uint8_t num_subevents;                          /*!< Number of subevents; 0 = classic periodic (no responses) */
+    uint8_t subevent_interval;                      /*!< Interval between subevents (N * 1.25 ms) */
+    uint8_t response_slot_delay;                    /*!< Delay to first response slot (N * 1.25 ms) */
+    uint8_t response_slot_spacing;                  /*!< Spacing between response slots (N * 0.125 ms) */
+    uint8_t num_response_slots;                     /*!< Response slots per subevent; 0 ignores delay/spacing */
+} esp_ble_conn_pawr_params_t;
+
+/**
+ * @brief   One subevent payload for esp_ble_conn_pawr_subev_data_set().
+ */
+typedef struct {
+    uint8_t subevent;                               /*!< Subevent index to set data for */
+    uint8_t response_slot_start;                    /*!< First response slot to listen to */
+    uint8_t response_slot_count;                    /*!< Number of response slots to listen to */
+    const uint8_t *data;                            /*!< Subevent advertising data (may be NULL if data_len is 0) */
+    uint16_t data_len;                              /*!< Data length in bytes */
+} esp_ble_conn_pawr_subev_data_t;
+
+/**
+ * @brief   PAwR subevent data request (ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ).
+ *
+ * Application should call esp_ble_conn_pawr_subev_data_set() to supply payloads.
+ */
+typedef struct {
+    uint8_t adv_handle;                             /*!< Advertising set handle */
+    uint8_t subevent_start;                         /*!< First subevent needing data */
+    uint8_t subevent_data_count;                    /*!< Number of consecutive subevents needing data */
+} esp_ble_conn_pawr_subev_data_req_t;
+
+/**
+ * @brief   PAwR response received in a slot (ESP_BLE_CONN_EVENT_PER_SUBEV_RESP).
+ *
+ * @note    @c data is an inline copy; no free() is required by the event handler.
+ */
+typedef struct {
+    uint8_t subevent;                               /*!< Subevent in which the response was received */
+    uint8_t adv_handle;                             /*!< Advertising set handle */
+    uint8_t tx_status;                              /*!< 0 if subevent indication was transmitted */
+    int8_t tx_power;                                /*!< Response TX power in dBm */
+    int8_t rssi;                                    /*!< Response RSSI in dBm */
+    uint8_t cte_type;                               /*!< CTE type */
+    uint8_t response_slot;                          /*!< Response slot index */
+    uint8_t data_status;                            /*!< Data status */
+    uint8_t data_length;                            /*!< Response data length */
+    uint8_t data[ESP_BLE_CONN_PERIODIC_REPORT_DATA_MAX_LEN]; /*!< Response payload copy */
+} esp_ble_conn_pawr_subev_resp_t;
+
+/**
+ * @brief   Parameters for Tag response slot TX (esp_ble_conn_pawr_response_data_set).
+ */
+typedef struct {
+    uint16_t request_event;                         /*!< Periodic advertising event counter to respond to */
+    uint8_t request_subevent;                       /*!< Request subevent */
+    uint8_t response_subevent;                      /*!< Subevent in which to send the response */
+    uint8_t response_slot;                          /*!< Response slot index */
+} esp_ble_conn_pawr_response_params_t;
+#endif /* CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP */
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+/**
+ * @brief   Parameters for creating a periodic advertising sync.
+ */
+typedef struct {
+    uint16_t skip;                                  /*!< Max periodic events the controller may skip */
+    uint16_t sync_timeout;                          /*!< Sync timeout in 10 ms units */
+    bool reports_disabled;                          /*!< Initially disable periodic reports if true */
+} esp_ble_conn_periodic_sync_params_t;
+#endif
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+/**
+ * @brief   PAST sync established (ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER).
+ */
+typedef struct {
+    uint8_t status;                                 /*!< 0 on success */
+    uint16_t sync_handle;                           /*!< Periodic sync handle (valid on success) */
+    uint16_t conn_handle;                           /*!< ACL connection used for the transfer */
+    uint16_t service_data;                          /*!< Service data from the transfer */
+    uint8_t sid;                                    /*!< Advertising Set ID */
+    uint8_t adv_addr[6];                            /*!< Advertiser address */
+    uint8_t adv_phy;                                /*!< Advertising PHY */
+    uint16_t per_adv_itvl;                          /*!< Periodic advertising interval */
+    uint8_t adv_clk_accuracy;                       /*!< Advertiser clock accuracy */
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+    uint8_t num_subevents;                          /*!< PAwR: number of subevents */
+    uint8_t subevent_interval;                      /*!< PAwR: subevent interval */
+    uint8_t response_slot_delay;                    /*!< PAwR: response slot delay */
+    uint8_t response_slot_spacing;                  /*!< PAwR: response slot spacing */
+#endif
+} esp_ble_conn_periodic_transfer_t;
+#endif /* CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER */
+
+/**
+ * @brief   This structure represents CCCD (Client Characteristic Configuration Descriptor) update event.
+ */
+typedef struct {
+    uint16_t conn_handle;                             /*!< Connection handle */
+    uint16_t char_handle;                             /*!< Characteristic handle */
+    uint8_t uuid_type;                                /*!< UUID type */
+    esp_ble_conn_uuid_t uuid;                         /*!< Characteristic UUID */
+    bool notify_enable;                                /*!< Notification enabled (bit 0) */
+    bool indicate_enable;                             /*!< Indication enabled (bit 1) */
+} esp_ble_conn_cccd_update_t;
+
+/**
+ * @brief   BLE connection parameters.
+ */
+typedef struct {
+    uint16_t itvl_min;            /*!< Connection event interval minimum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t itvl_max;            /*!< Connection event interval maximum. This is in units of 1.25ms. (0x0006 = 7.5ms). Valid range: 0x0006–0x0C80 */
+    uint16_t latency;             /*!< Peripheral latency. This is in units of connection events to skip. Valid range: 0x0000–0x01F3 */
+    uint16_t supervision_timeout; /*!< Supervision timeout. This is in units of 10ms. (e.g. 400 = 4s). Valid range: 0x000A–0x0C80. Must be larger than the connection interval (itvl_max * 1.25ms) */
+    uint16_t min_ce_len;          /*!< Minimum connection event length. Valid range: 0x0000–0x0C80 */
+    uint16_t max_ce_len;          /*!< Maximum connection event length. Valid range: 0x0000–0x0C80 */
+} esp_ble_conn_params_t;
+
+/**
+ * @brief   BLE advertising parameters.
+ *          Aligned with LE Set Extended Advertising Parameters (HCI).
+ *          Interval units: 0.625ms. e.g. 0x100 = 100ms.
+ *          Legacy advertising uses itvl_min, itvl_max, conn_mode, disc_mode;
+ *          extended fields are applied when CONFIG_BLE_CONN_MGR_EXTENDED_ADV is enabled.
+ */
+typedef struct {
+    uint8_t  adv_handle;           /*!< Advertising_Handle: set index (0x00–0xEF); 0 after esp_ble_conn_set_default_adv_params */
+    uint16_t adv_event_properties; /*!< Advertising_Event_Properties: BIT0=connectable, BIT1=scannable, BIT2=directed, BIT3=high_duty_directed, BIT4=legacy_pdu, BIT5=anonymous, BIT6=include_tx_power, BIT7=scan_req_notif */
+    uint16_t itvl_min;            /*!< Primary_Advertising_Interval_Min (0.625ms). Valid 0x0020–0x4000, 0 = default */
+    uint16_t itvl_max;            /*!< Primary_Advertising_Interval_Max (0.625ms). Valid 0x0020–0x4000, 0 = default */
+    uint8_t  conn_mode;           /*!< Legacy: esp_ble_conn_adv_conn_mode_t */
+    uint8_t  disc_mode;           /*!< Legacy: esp_ble_conn_adv_disc_mode_t */
+    uint8_t  channel_map;         /*!< Primary_Advertising_Channel_Map: BIT0=ch37, BIT1=ch38, BIT2=ch39. 0 = default (all) */
+    uint8_t  own_addr_type;       /*!< Own address type: esp_ble_conn_addr_type_t */
+    uint8_t  peer_addr_type;      /*!< Peer address type for directed adv: esp_ble_conn_addr_type_t; 0 = not directed */
+    uint8_t  peer_addr[6];        /*!< Peer_Address for directed advertising */
+    uint8_t  filter_policy;       /*!< Advertising filter: esp_ble_conn_scan_filt_policy_t */
+    int8_t   tx_power;            /*!< Advertising_TX_Power in dBm; 127 = use stack default */
+    uint8_t  primary_phy;         /*!< Primary advertising PHY: esp_ble_conn_phy_t */
+    uint8_t  secondary_adv_max_skip; /*!< Secondary_Advertising_Max_Skip (0 = send every primary) */
+    uint8_t  secondary_phy;       /*!< Secondary advertising PHY: esp_ble_conn_phy_t */
+    uint8_t  sid;                 /*!< Advertising_SID (0–15) */
+    uint8_t  scan_req_notif;      /*!< Scan_Request_Notification_Enable: 0 = disabled, non-zero = enabled */
+    uint8_t  primary_phy_options;   /*!< Primary_Advertising_PHY_Options, 0 = default */
+    uint8_t  secondary_phy_options; /*!< Secondary_Advertising_PHY_Options, 0 = default */
+    uint8_t  ext_adv_cap;         /*!< Deprecated: use adv_event_properties; applied when adv_event_properties is 0 */
+} esp_ble_conn_adv_params_t;
+
+/**
+ * @brief   BLE scan parameters.
+ *          Aligned with LE Set Scan Parameters / Extended Scan (HCI).
+ *          Interval/window units: 0.625ms. e.g. 0x12 = 11.25ms.
+ */
+typedef struct {
+    uint8_t  own_addr_type;       /*!< Own address type: esp_ble_conn_addr_type_t */
+    uint8_t  filter_policy;       /*!< Scanning filter: esp_ble_conn_scan_filt_policy_t */
+    uint16_t itvl;                /*!< Scan_Interval (0.625ms). 0 = use stack default */
+    uint16_t window;              /*!< Scan_Window (0.625ms). 0 = use stack default. Must be <= itvl */
+    bool     passive;             /*!< Scan_Type: true = passive scan (no scan requests), false = active */
+    bool     filter_duplicates;   /*!< true = filter duplicate advertisements */
+    bool     limited;             /*!< true = limited discovery procedure */
+    uint8_t  scan_phys;           /*!< Scanning PHYs: LE 1M (0x01) and/or LE Coded (0x04) per HCI extended scan; bit 0x02 (2M) is not a scanning PHY and is ignored by the stack. */
+} esp_ble_conn_scan_params_t;
+
+/**
+ * @brief   Unified event data for BLE connection manager events.
+ *          Use the union member corresponding to the event type (esp_ble_conn_event_t).
+ */
+typedef struct {
+    union {
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            uint8_t peer_addr[6];                         /*!< Peer address (big-endian) */
+            uint8_t peer_addr_type;                      /*!< Peer address type: esp_ble_conn_addr_type_t */
+        } connected;                                     /*!< ESP_BLE_CONN_EVENT_CONNECTED */
+        struct {
+            int status;                                   /*!< GAP connect failure status */
+            uint8_t peer_addr[6];                         /*!< Pending peer address */
+            uint8_t peer_addr_type;                       /*!< Pending peer address type */
+        } connect_failed;                                /*!< ESP_BLE_CONN_EVENT_CONNECT_FAILED */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle whose GATT discovery finished */
+        } disc_complete;                                  /*!< ESP_BLE_CONN_EVENT_DISC_COMPLETE */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            uint16_t reason;                              /*!< Disconnect reason (stack/HCI error code) */
+            uint8_t peer_addr[6];                         /*!< Peer address (big-endian) */
+            uint8_t peer_addr_type;                       /*!< Peer address type */
+        } disconnected;                                   /*!< ESP_BLE_CONN_EVENT_DISCONNECTED */
+        esp_ble_conn_data_t data_receive;                 /*!< ESP_BLE_CONN_EVENT_DATA_RECEIVE */
+        esp_ble_conn_periodic_report_t periodic_report;   /*!< ESP_BLE_CONN_EVENT_PERIODIC_REPORT */
+        esp_ble_conn_periodic_sync_lost_t periodic_sync_lost; /*!< ESP_BLE_CONN_EVENT_PERIODIC_SYNC_LOST */
+        esp_ble_conn_periodic_sync_t periodic_sync;       /*!< ESP_BLE_CONN_EVENT_PERIODIC_SYNC */
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+        esp_ble_conn_pawr_subev_data_req_t pawr_subev_data_req; /*!< ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ */
+        esp_ble_conn_pawr_subev_resp_t pawr_subev_resp;   /*!< ESP_BLE_CONN_EVENT_PER_SUBEV_RESP */
+#endif
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+        esp_ble_conn_periodic_transfer_t periodic_transfer; /*!< ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER */
+#endif
+        esp_ble_conn_cccd_update_t cccd_update;           /*!< ESP_BLE_CONN_EVENT_CCCD_UPDATE */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            uint16_t channel_id;                          /*!< GATT channel ID (0 for ATT) */
+            uint16_t mtu;                                 /*!< Negotiated MTU value */
+        } mtu_update;                                     /*!< ESP_BLE_CONN_EVENT_MTU */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            int status;                                   /*!< Update status (0 on success, non-zero on failure) */
+            esp_ble_conn_params_t params;                 /*!< Updated connection parameters */
+        } conn_param_update;                               /*!< ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE */
+        esp_ble_conn_scan_result_t scan_result;           /*!< ESP_BLE_CONN_EVENT_SCAN_RESULT */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            int status;                                   /*!< 0 on success, non-zero on failure */
+            bool encrypted;                               /*!< Link is encrypted */
+            bool authenticated;                           /*!< Link is authenticated */
+            uint8_t peer_addr[6];                          /*!< Peer address */
+            uint8_t peer_addr_type;                       /*!< Peer address type */
+        } enc_change;                                     /*!< ESP_BLE_CONN_EVENT_ENC_CHANGE */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            esp_ble_conn_sm_action_t action;               /*!< Passkey action type, see esp_ble_conn_sm_action_t */
+            uint32_t passkey;                             /*!< Passkey (DISP / INPUT / NUMCMP); not used for OOB or OOB_SC */
+        } passkey_action;                                 /*!< ESP_BLE_CONN_EVENT_PASSKEY_ACTION */
+        struct {
+            char name[MAX_BLE_DEVNAME_LEN + 1];           /*!< New GAP device name (NUL-terminated) */
+        } device_name_changed;                            /*!< ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED */
+    };
+} esp_ble_conn_event_data_t;
 
 #define BLE_UUID_CMP(type, src, dst) \
             ((type == BLE_CONN_UUID_TYPE_16) && (src.uuid16 == dst.uuid16)) ||  \
@@ -319,7 +880,10 @@ esp_err_t esp_ble_conn_start(void);
 esp_err_t esp_ble_conn_stop(void);
 
 /**
- * @brief   This api is typically used to update maximum transmission unit value
+ * @brief   Legacy API to set preferred MTU.
+ *
+ * This API is kept for backward compatibility and is a no-op in multi-connection
+ * implementation. Use esp_ble_conn_mtu_update(conn_handle, mtu) instead.
  *
  * @param[in]  mtu The maximum transmission unit value to update
  *
@@ -335,7 +899,8 @@ esp_err_t esp_ble_conn_set_mtu(uint16_t mtu);
  *
  * @return
  *  - ESP_OK on success
- *  - ESP_ERR_INVALID_ARG on wrong connect
+ *  - ESP_ERR_INVALID_ARG if BLE connection manager is not initialized
+ *  - ESP_ERR_TIMEOUT if connect event is not received within wait timeout
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_connect(void);
@@ -345,10 +910,1004 @@ esp_err_t esp_ble_conn_connect(void);
  *
  * @return
  *  - ESP_OK on success
- *  - ESP_ERR_INVALID_ARG on wrong disconnect
+ *  - ESP_ERR_INVALID_ARG if BLE connection manager is not initialized
+ *  - ESP_ERR_NOT_FOUND if no active connection exists
+ *  - ESP_ERR_TIMEOUT if disconnect event is not received within wait timeout
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_disconnect(void);
+
+/**
+ * @brief   Initiate BLE connection to a peer (Central role).
+ *
+ * @param[in] peer_addr      Peer BLE address (6 bytes)
+ * @param[in] peer_addr_type  Peer address type: esp_ble_conn_addr_type_t
+ *
+ * @note Only one outgoing connection attempt is allowed at a time.
+ *       Returns ESP_ERR_INVALID_STATE if a connection attempt is already in progress.
+ *
+ * @return
+ *  - ESP_OK on success (connection initiated; result via ESP_BLE_CONN_EVENT_CONNECTED/CONNECT_FAILED)
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_INVALID_STATE if max connections reached, peer already connected/pending, or another attempt in progress
+ *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
+ *  - ESP_FAIL if connection initiation fails
+ */
+esp_err_t esp_ble_conn_connect_to_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type);
+
+/**
+ * @brief   Connect to a synchronized peer via PAwR AUX_CONNECT_REQ.
+ *
+ * Used after PAST: the Tag is no longer connectable-advertising, so ACL
+ * `esp_ble_conn_connect_to_addr()` cannot find it. The connection request is
+ * sent in the given PAwR subevent of the local periodic advertising train
+ * (`ext_adv_handle`).
+ *
+ * @param[in] peer_addr       Peer BLE address (6 bytes)
+ * @param[in] peer_addr_type  Peer address type: esp_ble_conn_addr_type_t
+ * @param[in] subevent        PAwR subevent index (ESL Group_ID)
+ *
+ * @return
+ *  - ESP_OK on success (connection initiated; result via ESP_BLE_CONN_EVENT_CONNECTED/CONNECT_FAILED)
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_INVALID_STATE if max connections reached, peer already connected/pending, or another attempt in progress
+ *  - ESP_ERR_NOT_SUPPORTED if Central role or PAwR is not enabled
+ *  - ESP_FAIL if connection initiation fails
+ */
+esp_err_t esp_ble_conn_connect_with_synced(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                           uint8_t subevent);
+
+/**
+ * @brief   Cancel an in-progress outgoing GAP connect.
+ *
+ * Blocks until NimBLE reports the attempt failed (or 1 s). The pending entry
+ * is removed only by the CONNECT failure event. On timeout, if
+ * `ble_gap_conn_cancel()` fails, or if no GAP connect is active, pending is
+ * left in place so a late CONNECT success still runs GATT discovery.
+ * Safe to call when no connect is active. Must not be invoked from the NimBLE
+ * host / GAP callback.
+ *
+ * @return
+ *  - ESP_OK if the GAP connect procedure is idle, or NimBLE reported failure
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_TIMEOUT if the controller did not drop the procedure in time
+ *    (pending entry kept)
+ *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
+ *  - ESP_FAIL if `ble_gap_conn_cancel()` fails (pending entry kept)
+ */
+esp_err_t esp_ble_conn_connect_cancel(void);
+
+/**
+ * @brief   Disconnect a BLE connection by handle.
+ *
+ * @param[in] conn_handle Connection handle to terminate (valid range 0x0000–0x0EFF)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if conn_handle is BLE_CONN_HANDLE_INVALID or out of range
+ *  - ESP_ERR_NOT_FOUND if the link is already gone, usually closed by the peer
+ *  - ESP_FAIL if disconnect fails
+ */
+esp_err_t esp_ble_conn_disconnect_by_handle(uint16_t conn_handle);
+
+/**
+ * @brief   Get current (default) connection handle (read-only).
+ *
+ * In multi-connection mode this returns the first/primary connection handle, or BLE_CONN_HANDLE_INVALID if none.
+ *
+ * @param[out] out_conn_handle  Pointer to store the handle. Set to BLE_CONN_HANDLE_INVALID when not connected.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_conn_handle is NULL
+ */
+esp_err_t esp_ble_conn_get_conn_handle(uint16_t *out_conn_handle);
+
+/**
+ * @brief   Get connection handle by peer address.
+ *
+ * Use this in multi-connection scenarios to resolve a peer address to its connection handle (valid range 0x0000–0x0EFF).
+ *
+ * @param[in]  peer_addr       Peer BLE address (6 bytes)
+ * @param[in]  peer_addr_type  Peer address type: esp_ble_conn_addr_type_t
+ * @param[out] out_conn_handle Pointer to store the connection handle for that peer
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if peer_addr or out_conn_handle is NULL
+ *  - ESP_ERR_NOT_FOUND if no connection exists for the given peer address
+ */
+esp_err_t esp_ble_conn_get_conn_handle_by_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                               uint16_t *out_conn_handle);
+
+/**
+ * @brief   Get current negotiated GATT MTU (read-only).
+ *
+ * @param[out] out_mtu  Pointer to store current MTU. Defaults to 23 if unknown.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_mtu is NULL
+ */
+esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu);
+
+/**
+ * @brief   Get negotiated GATT MTU by connection handle.
+ *
+ * @param[in]  conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid)
+ * @param[out] out_mtu     Pointer to store MTU
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NOT_FOUND if connection does not exist
+ */
+esp_err_t esp_ble_conn_get_mtu_by_handle(uint16_t conn_handle, uint16_t *out_mtu);
+
+/**
+ * @brief   Get current peer address (read-only).
+ *
+ * @param[out] out_addr  Pointer to store peer address (6 bytes).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_addr is NULL
+ *  - ESP_ERR_NOT_FOUND if not connected
+ */
+esp_err_t esp_ble_conn_get_peer_addr(uint8_t out_addr[6]);
+
+/**
+ * @brief   Get peer address by connection handle.
+ *
+ * @param[in]  conn_handle        Connection handle
+ * @param[out] out_peer_addr      Pointer to store peer address (6 bytes)
+ * @param[out] out_peer_addr_type Pointer to store peer address type (can be NULL)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_FOUND if connection does not exist
+ */
+esp_err_t esp_ble_conn_get_peer_addr_by_handle(uint16_t conn_handle, uint8_t out_peer_addr[6],
+                                               uint8_t *out_peer_addr_type);
+
+/**
+ * @brief   Find connection handle by peer address.
+ *
+ * @param[in]  peer_addr      Peer address (6 bytes)
+ * @param[in]  peer_addr_type Peer address type
+ * @param[out] out_conn_handle Pointer to store matched connection handle
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_FOUND if no matched connection exists
+ */
+esp_err_t esp_ble_conn_find_conn_handle_by_peer_addr(const uint8_t peer_addr[6], uint8_t peer_addr_type,
+                                                     uint16_t *out_conn_handle);
+
+/**
+ * @brief   Find peer address by connection handle (deprecated).
+ *
+ * @deprecated Use esp_ble_conn_get_peer_addr_by_handle() instead.
+ *
+ * @param[in]  conn_handle        Connection handle
+ * @param[out] out_peer_addr      Output peer address (6 bytes)
+ * @param[out] out_peer_addr_type Output peer address type (can be NULL)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_FOUND if the connection handle does not exist
+ */
+esp_err_t esp_ble_conn_find_peer_addr_by_conn_handle(uint16_t conn_handle, uint8_t out_peer_addr[6],
+                                                     uint8_t *out_peer_addr_type)
+__attribute__((deprecated("use esp_ble_conn_get_peer_addr_by_handle")));
+
+/**
+ * @brief   Get last disconnect reason (read-only).
+ *
+ * @param[out] out_reason  Pointer to store last disconnect reason.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out_reason is NULL
+ *  - ESP_ERR_NOT_FOUND if no disconnect reason is available
+ */
+esp_err_t esp_ble_conn_get_disconnect_reason(uint16_t *out_reason);
+
+/**
+ * @brief   Get disconnect reason by connection handle.
+ *
+ * @param[in]  conn_handle Connection handle
+ * @param[out] out_reason  Pointer to store disconnect reason
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_FOUND if reason is unavailable for the connection
+ */
+esp_err_t esp_ble_conn_get_disconnect_reason_by_handle(uint16_t conn_handle, uint16_t *out_reason);
+
+/**
+ * @brief   Request connection parameter update.
+ *
+ * @param[in] conn_handle  Connection handle (use esp_ble_conn_get_conn_handle to query)
+ * @param[in] params       Desired connection parameters
+ *                         (min_ce_len and max_ce_len are forwarded to NimBLE).
+ *
+ * @return
+ *  - ESP_OK on success (request accepted)
+ *  - ESP_ERR_INVALID_ARG on wrong parameters
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_update_params(uint16_t conn_handle, const esp_ble_conn_params_t *params);
+
+/**
+ * @brief   Get current LE PHY for a connection.
+ *
+ * @param[in]  conn_handle   Connection handle (valid range 0x0000–0x0EFF).
+ * @param[out] out_tx_phy    Pointer to store TX PHY (esp_ble_conn_phy_t: 1=1M, 2=2M, 3=Coded). Can be NULL.
+ * @param[out] out_rx_phy    Pointer to store RX PHY (esp_ble_conn_phy_t). Can be NULL.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if conn_handle is invalid or both out_tx_phy and out_rx_phy are NULL
+ *  - ESP_ERR_NOT_FOUND if connection does not exist
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_get_phy(uint16_t conn_handle, uint8_t *out_tx_phy, uint8_t *out_rx_phy);
+
+/**
+ * @brief   Set preferred LE PHY for a connection.
+ *
+ * The controller may not apply the change if the peer does not support the requested PHY.
+ *
+ * @param[in] conn_handle    Connection handle (valid range 0x0000–0x0EFF).
+ * @param[in] tx_phys_mask   Preferred TX PHY mask: ESP_BLE_CONN_PHY_MASK_1M, _2M, _CODED, or _ALL (or combination).
+ * @param[in] rx_phys_mask   Preferred RX PHY mask (same as tx_phys_mask).
+ * @param[in] phy_opts       Coded PHY option when using CODED: ESP_BLE_CONN_PHY_CODED_OPT_ANY, _S2, or _S8; otherwise 0.
+ *
+ * @return
+ *  - ESP_OK on success (request accepted)
+ *  - ESP_ERR_INVALID_ARG if conn_handle is invalid or out of range
+ *  - ESP_ERR_NOT_FOUND if connection does not exist
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_set_preferred_phy(uint16_t conn_handle, uint8_t tx_phys_mask, uint8_t rx_phys_mask, uint16_t phy_opts);
+
+/**
+ * @brief   Set preferred data length for a connection (LE Data Length Extension).
+ *
+ * Sends LE Set Data Length command to the controller. The controller negotiates with the peer
+ * asynchronously. Per BLE spec: tx_octets 27–251 bytes, tx_time 328–17040 microseconds.
+ *
+ * @param[in] conn_handle  Connection handle (valid range 0x0000–0x0EFF).
+ * @param[in] tx_octets    Preferred TX payload size in bytes (27–251).
+ * @param[in] tx_time      Preferred TX time in microseconds (328–17040).
+ *
+ * @return
+ *  - ESP_OK on success (command accepted)
+ *  - ESP_ERR_INVALID_ARG if conn_handle or parameters are out of range
+ *  - ESP_ERR_NOT_FOUND if connection does not exist
+ *  - ESP_ERR_NOT_SUPPORTED if Data Length Extension is not supported
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_set_data_len(uint16_t conn_handle, uint16_t tx_octets, uint16_t tx_time);
+
+/**
+ * @brief   Configure advertising parameters.
+ *
+ * @note    The parameters are stored and take effect the next time advertising
+ *          starts. Unlike @c esp_ble_conn_adv_data_set(), this does not reapply
+ *          them to an advertising instance that is already active; stop and
+ *          start advertising to change the parameters of a live instance.
+ *
+ * @param[in] params  Advertising parameters (NULL to use defaults)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ */
+esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params);
+
+/**
+ * @brief   Read back the configured advertising parameters.
+ *
+ * @note    This reports intent, not what is on air: the block returned is the
+ *          one that is or would be programmed at the next advertising start.
+ *          Use @c esp_ble_conn_adv_is_active() to find out whether the
+ *          controller is advertising with it.
+ *
+ * @param[out] out_params  Receives the currently configured parameters.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if out_params is NULL
+ */
+esp_err_t esp_ble_conn_adv_params_get(esp_ble_conn_adv_params_t *out_params);
+
+/**
+ * @brief   Rebuild the controller whitelist from the bonded peers in the store.
+ *
+ * Reads the identity addresses of all currently bonded peers and installs them
+ * as the controller whitelist (ble_gap_wl_set), so advertising/scanning with
+ * filter_policy = ESP_BLE_CONN_SCAN_FILT_USE_WL only admits bonded peers.
+ *
+ * Call after a bond is added or removed. RPA peers are resolved via NimBLE's own
+ * resolving list, which it maintains from bonds when CONFIG_BT_NIMBLE_HS_PVCY is
+ * enabled, so this helper manages only the plain whitelist.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_FAIL if reading bonds or setting the whitelist fails
+ */
+esp_err_t esp_ble_conn_whitelist_sync_bonds(void);
+
+/**
+ * @brief   Set local GAP device name.
+ *
+ *          This function updates NimBLE GAP Device Name and the internal local name.
+ *          If advertising is active, advertising data is refreshed automatically.
+ *
+ * @note    To allow a connected peer to rename this device over GATT Device Name (0x2A00),
+ *          enable CONFIG_BT_NIMBLE_SVC_GAP_NAME_WRITE. When name is changed by GATT write,
+ *          BLE_CONN_MGR_EVENTS posts ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED.
+ *
+ * @param[in] name  New local device name.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized or role is not peripheral
+ *  - ESP_ERR_INVALID_ARG if name is NULL, empty, or exceeds MAX_BLE_DEVNAME_LEN
+ *  - ESP_ERR_NO_MEM on allocation failure
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_device_name_set(const char *name);
+
+/**
+ * @brief   Set advertising data (legacy or extended).
+ *
+ * @param[in] data  Raw advertising data (format: length-byte + type + value per AD structure). Can be NULL to clear.
+ * @param[in] len   Data length in bytes. Max: @c ESP_BLE_CONN_ADV_DATA_MAX_LEN (31) for legacy;
+ *                  larger when extended advertising is enabled (platform-dependent).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if len exceeds maximum or data is NULL while len > 0
+ *  - ESP_ERR_NO_MEM on allocation failure
+ */
+esp_err_t esp_ble_conn_adv_data_set(const uint8_t *data, uint16_t len);
+
+/**
+ * @brief   Set scan response data (legacy or extended).
+ *
+ * @param[in] data  Raw scan response data (format: length-byte + type + value per AD structure). Can be NULL to clear.
+ * @param[in] len   Data length in bytes. Max: @c ESP_BLE_CONN_ADV_DATA_MAX_LEN (31) for legacy;
+ *                  larger when extended advertising is enabled (platform-dependent).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if len exceeds maximum or data is NULL while len > 0
+ *  - ESP_ERR_NO_MEM on allocation failure
+ */
+esp_err_t esp_ble_conn_scan_rsp_data_set(const uint8_t *data, uint16_t len);
+
+/**
+ * @brief   Set periodic advertising data (extended advertising only).
+ *
+ * @param[in] data  Raw periodic advertising data. Can be NULL to clear.
+ * @param[in] len   Data length in bytes (platform-dependent max when CONFIG_BLE_CONN_MGR_PERIODIC_ADV is set).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if len exceeds maximum or data is NULL while len > 0
+ *  - ESP_ERR_NO_MEM on allocation failure
+ *  - ESP_ERR_NOT_SUPPORTED if periodic advertising is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_adv_data_set(const uint8_t *data, uint16_t len);
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP)
+/**
+ * @brief   Set PAwR / periodic advertising parameters used on the next periodic train configure/start.
+ *
+ * @param[in] params  PAwR parameters. Must not be NULL.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if params is NULL
+ *  - ESP_ERR_NOT_SUPPORTED if PAwR is not enabled
+ */
+esp_err_t esp_ble_conn_pawr_params_set(const esp_ble_conn_pawr_params_t *params);
+
+/**
+ * @brief   Supply PAwR subevent data (typically from ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ).
+ *
+ * @param[in] num_subevents  Number of entries in @p items (1 .. CONFIG_BLE_CONN_MGR_PAWR_MAX_SUBEV_SET)
+ * @param[in] items          Subevent data descriptors
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG on bad arguments
+ *  - ESP_ERR_NO_MEM on allocation failure
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAwR is not enabled
+ */
+esp_err_t esp_ble_conn_pawr_subev_data_set(uint8_t num_subevents, const esp_ble_conn_pawr_subev_data_t *items);
+
+/**
+ * @brief   Select which PAwR subevents to follow on an established sync (Tag).
+ *
+ * @param[in] sync_handle       Periodic sync handle
+ * @param[in] include_tx_power  Include TX power if non-zero
+ * @param[in] num_subevents     Number of subevent indices in @p subevents
+ * @param[in] subevents         Array of subevent indices
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on bad arguments
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAwR is not enabled
+ */
+esp_err_t esp_ble_conn_pawr_sync_subev(uint16_t sync_handle, uint8_t include_tx_power,
+                                       uint8_t num_subevents, const uint8_t *subevents);
+
+/**
+ * @brief   Set response data for a PAwR response slot (Tag).
+ *
+ * @param[in] sync_handle  Periodic sync handle
+ * @param[in] params       Response timing parameters
+ * @param[in] data         Response payload (may be NULL if len is 0)
+ * @param[in] len          Payload length
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on bad arguments
+ *  - ESP_ERR_NO_MEM on allocation failure
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAwR is not enabled
+ */
+esp_err_t esp_ble_conn_pawr_response_data_set(uint16_t sync_handle,
+                                              const esp_ble_conn_pawr_response_params_t *params,
+                                              const uint8_t *data, uint16_t len);
+#endif /* CONFIG_BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP */
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC) || defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+/**
+ * @brief   Create a periodic advertising sync (scan-based).
+ *
+ * @param[in] addr       Advertiser address (6 bytes)
+ * @param[in] addr_type  Advertiser address type
+ * @param[in] sid        Advertising SID (0..15)
+ * @param[in] params     Sync parameters (NULL uses skip=0, timeout=4000, reports enabled)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_INVALID_ARG if addr is NULL
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if periodic sync path is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_sync_create(const uint8_t addr[6], uint8_t addr_type, uint8_t sid,
+                                            const esp_ble_conn_periodic_sync_params_t *params);
+
+/**
+ * @brief   Terminate an established periodic advertising sync.
+ *
+ * @param[in] sync_handle  Periodic sync handle
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if periodic sync path is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_sync_terminate(uint16_t sync_handle);
+
+/**
+ * @brief   Enable or disable periodic advertising reports for a sync.
+ *
+ * @param[in] sync_handle  Periodic sync handle
+ * @param[in] enable       true to enable reports
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if not available in this build
+ */
+esp_err_t esp_ble_conn_periodic_sync_reporting(uint16_t sync_handle, bool enable);
+#endif /* PERIODIC_SYNC || PERIODIC_SYNC_TRANSFER */
+
+#if defined(CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+/**
+ * @brief   Transfer sync info for the local periodic / PAwR train over an ACL link (AP / PAST TX).
+ *
+ * Uses the connection manager extended advertising instance.
+ *
+ * @param[in] conn_handle   ACL connection handle of the peer (Tag)
+ * @param[in] service_data  Service data included in the PAST PDU
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAST is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_sync_set_info(uint16_t conn_handle, uint16_t service_data);
+
+/**
+ * @brief   Transfer an already-synced periodic train to a peer over ACL (PAST TX of remote sync).
+ *
+ * @param[in] sync_handle   Local sync handle to transfer
+ * @param[in] conn_handle   ACL connection handle of the peer
+ * @param[in] service_data  Service data included in the PAST PDU
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAST is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_sync_transfer(uint16_t sync_handle, uint16_t conn_handle, uint16_t service_data);
+
+/**
+ * @brief   Enable or disable PAST reception on an ACL link (Tag / PAST RX).
+ *
+ * When a transfer arrives, ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER is posted. Reception is then
+ * disabled until this API is called again.
+ *
+ * @param[in] conn_handle  ACL connection handle
+ * @param[in] params       Sync parameters for the received train; NULL disables reception
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_FAIL on stack error
+ *  - ESP_ERR_NOT_SUPPORTED if PAST is not enabled
+ */
+esp_err_t esp_ble_conn_periodic_sync_receive(uint16_t conn_handle, const esp_ble_conn_periodic_sync_params_t *params);
+#endif /* CONFIG_BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER */
+
+/**
+ * @brief   Start advertising (peripheral role).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if not initialized or not in peripheral role
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_adv_start(void);
+
+/**
+ * @brief   Stop advertising (peripheral role).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if not initialized
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_adv_stop(void);
+
+/**
+ * @brief   Whether the advertising instance is currently on air (peripheral role).
+ *
+ * @note    This reports what the controller is doing, which is not always what
+ *          was asked for: advertising also stops on its own when a connection
+ *          is established, and a start can fail.
+ *
+ * @param[out] out_active  Receives true while advertising.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if not initialized or not in peripheral role
+ *  - ESP_ERR_INVALID_ARG if out_active is NULL
+ */
+esp_err_t esp_ble_conn_adv_is_active(bool *out_active);
+
+/**
+ * @brief   Configure scan parameters.
+ *
+ * @param[in] params  Scan parameters (NULL to use defaults)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ */
+esp_err_t esp_ble_conn_scan_params_set(const esp_ble_conn_scan_params_t *params);
+
+/**
+ * @brief   Start scanning (central role).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if not initialized or not in central role
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_scan_start(void);
+
+/**
+ * @brief   Stop ongoing BLE scan (central role).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if scan is not active
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_scan_stop(void);
+
+/**
+ * @brief   Initiate MTU exchange on a connection.
+ *
+ * Sets preferred MTU and initiates exchange (central) or sets preferred for future (peripheral).
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] mtu          Desired MTU (BLE_ATT_MTU_DFLT to BLE_ATT_MTU_MAX, typically 512)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_mtu_update(uint16_t conn_handle, uint16_t mtu);
+
+/**
+ * @brief   Set local passkey for pairing (DISP mode).
+ *
+ * When the device displays a passkey during pairing (action DISP), this key
+ * is used and auto-injected. Set to 0 to disable (application handles via
+ * esp_ble_conn_passkey_reply).
+ *
+ * @param[in] passkey  6-digit passkey (0-999999); 0 to clear
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ */
+esp_err_t esp_ble_conn_set_local_passkey(uint32_t passkey);
+
+/**
+ * @brief   Initiate BLE security procedure.
+ *
+ * Call this to start pairing or restore encryption for a bonded peer.
+ * When ESP_BLE_CONN_EVENT_PASSKEY_ACTION occurs,
+ * respond with esp_ble_conn_passkey_reply(), esp_ble_conn_numcmp_reply(),
+ * esp_ble_conn_oob_legacy_tk_reply(), or esp_ble_conn_sc_oob_reply() as needed.
+ *
+ * If pairing is disallowed, this returns ESP_ERR_INVALID_STATE unless an LTK
+ * already exists for the peer.
+ *
+ * @note  For OOB pairing, see "Out-of-band (OOB) pairing" in this component's README.md.
+ *
+ * @param[in] conn_handle  Connection handle
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if conn_handle is BLE_CONN_HANDLE_INVALID or out of range
+ *  - ESP_ERR_INVALID_STATE if pairing is disallowed and no bond LTK exists
+ *  - ESP_ERR_NOT_SUPPORTED if stack SMP is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_security_initiate(uint16_t conn_handle);
+
+/**
+ * @brief   Allow or reject new pairing attempts.
+ *
+ * When @p allowed is false, new Pairing Requests are rejected. Bonded encryption
+ * restore with an existing LTK is still allowed.
+ *
+ * @param[in] allowed  true to allow pairing; false to reject new pairing
+ *
+ * @return
+ *  - ESP_OK on success
+ */
+esp_err_t esp_ble_conn_set_pairing_allowed(bool allowed);
+
+/**
+ * @brief   Query link security state for a connection.
+ *
+ * @param[in]  conn_handle    Connection handle
+ * @param[out] encrypted      Set if the link is encrypted
+ * @param[out] authenticated  Set if the link is authenticated
+ * @param[out] bonded         Set if the link is bonded
+ *
+ * Pass NULL for any unused output.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if handle is invalid or all outputs are NULL
+ */
+esp_err_t esp_ble_conn_get_sec_state(uint16_t conn_handle, bool *encrypted,
+                                     bool *authenticated, bool *bonded);
+
+/**
+ * @brief   Enable or disable SM bonding (GAP Bondable mode).
+ *
+ * @param[in] enable  true to bond and store keys
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_NOT_SUPPORTED if SMP is disabled
+ */
+esp_err_t esp_ble_conn_sm_set_bonding(bool enable);
+
+/**
+ * @brief   Delete stored bonding keys for a peer.
+ *
+ * @param[in] peer_addr       Peer BD_ADDR (6 octets)
+ * @param[in] peer_addr_type  Address type (public/random)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on null address
+ *  - ESP_ERR_NOT_SUPPORTED if SMP is disabled
+ *  - ESP_FAIL on store error
+ */
+esp_err_t esp_ble_conn_delete_bond(const uint8_t peer_addr[6], uint8_t peer_addr_type);
+
+/**
+ * @brief   Reply to passkey action.
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action INPUT.
+ * Pass the passkey entered by the user.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] passkey      6-digit passkey (0-999999)
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE SMP is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_passkey_reply(uint16_t conn_handle, uint32_t passkey);
+
+/**
+ * @brief   Reply to numeric comparison (NUMCMP).
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action NUMCMP.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] accept       true to accept, false to reject
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE SMP is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_numcmp_reply(uint16_t conn_handle, bool accept);
+
+/**
+ * @brief   Set local OOB pairing capability (Pairing Request / Response OOB data flag).
+ *
+ * @param[in] enable  Non-zero to indicate OOB data is available for the next pairing
+ *
+ * @note  Must agree with the peer when both sides use OOB (e.g. NFC). With menuconfig
+ *        `BLE_CONN_MGR_SM` enabled, `BLE_CONN_MGR_SM_CAP` bit0 sets the initial value
+ *        in esp_ble_conn_start(). See README.md (Out-of-band pairing) for context.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ */
+esp_err_t esp_ble_conn_sm_oob_flag_set(bool enable);
+
+/**
+ * @brief   Generate local LE Secure Connections OOB random and confirm values.
+ *
+ * @param[out] out  Buffer for r and c (e.g. to place on an NFC tag for the peer)
+ *
+ * @note  Requires Secure Connections (sm_sc). Typical use: peripheral generates and
+ *        exports OOB data; central reads peer OOB over the side channel during pairing.
+ *        See README.md (Out-of-band pairing) for a full flow.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if out is NULL
+ *  - ESP_ERR_INVALID_STATE if BLE connection manager is not initialized
+ *  - ESP_ERR_NOT_SUPPORTED if LE SC OOB is not supported in this build
+ *  - ESP_FAIL on other stack error
+ */
+esp_err_t esp_ble_conn_sc_oob_data_generate(esp_ble_conn_sc_oob_data_t *out);
+
+/**
+ * @brief   Reply with legacy LE OOB Temporary Key (16 bytes).
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action ESP_BLE_CONN_SM_ACT_OOB.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] tk           16-byte TK from the OOB channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE SMP is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_oob_legacy_tk_reply(uint16_t conn_handle, const uint8_t tk[16]);
+
+/**
+ * @brief   Reply with LE Secure Connections OOB data.
+ *
+ * Call when ESP_BLE_CONN_EVENT_PASSKEY_ACTION has action ESP_BLE_CONN_SM_ACT_OOB_SC.
+ * Pass local data from esp_ble_conn_sc_oob_data_generate() and/or remote data from the
+ * side channel; use NULL for a side that is not available (depends on initiator role).
+ * Local and remote buffers are copied and need not stay valid after this returns.
+ * See README.md (Out-of-band pairing) for when to pass local vs remote.
+ *
+ * @param[in] conn_handle  Connection handle
+ * @param[in] local        Local (r, c), or NULL
+ * @param[in] remote       Peer (r, c), or NULL
+ *
+ * @return
+ *  - ESP_OK if the stack accepted the OOB reply for the current pairing step (pairing may still fail later;
+ *    outcome is also reported via ESP_BLE_CONN_EVENT_ENC_CHANGE / pairing events)
+ *  - ESP_ERR_INVALID_ARG if conn_handle is invalid or both local and remote are NULL
+ *  - ESP_ERR_NOT_SUPPORTED if NimBLE LE SC OOB is not supported in this build
+ *  - ESP_FAIL if the supplied OOB data does not match the active pairing procedure (pairing is aborted),
+ *    or on other stack error
+ */
+esp_err_t esp_ble_conn_sc_oob_reply(uint16_t conn_handle,
+                                    const esp_ble_conn_sc_oob_data_t *local,
+                                    const esp_ble_conn_sc_oob_data_t *remote);
+
+/**
+ * @brief   Create an L2CAP CoC server
+ *
+ * @param[in] psm     Protocol/Service Multiplexer to listen on (must be in range 0x0001-0x00FF for LE)
+ * @param[in] mtu     Maximum SDU size to use for the server (must be in range 23-512 bytes)
+ * @param[in] cb      L2CAP CoC event callback
+ * @param[in] cb_arg  Callback argument
+ *
+ * @note The callback context is persistent for this PSM and is reused across
+ *       incoming connections. It is not auto-freed until the L2CAP CoC memory
+ *       pool is released.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL callback, PSM out of range 0x0001-0x00FF, or MTU out of range)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_create_server(uint16_t psm, uint16_t mtu,
+                                               esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                               void *cb_arg);
+
+/**
+ * @brief   Initiate an L2CAP CoC connection
+ *
+ * @param[in] conn_handle  Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid)
+ * @param[in] psm          Protocol/Service Multiplexer to connect to (must be in range 0x0001-0x00FF for LE)
+ * @param[in] mtu          Maximum SDU size to use for the connection (must be in range 23-512 bytes)
+ * @param[in] sdu_size     Receive buffer size for the first SDU (must be in range 23-65535 bytes).
+ *                         This size is used to allocate the initial RX buffer for the channel.
+ *                         Applications typically set it to the expected peer CoC MTU.
+ * @param[in] cb           L2CAP CoC event callback
+ * @param[in] cb_arg       Callback argument
+ *
+ * @note The callback context is auto-freed if the connection attempt fails
+ *       (ESP_BLE_CONN_L2CAP_COC_EVENT_CONNECTED with non-zero status) and after
+ *       ESP_BLE_CONN_L2CAP_COC_EVENT_DISCONNECTED.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL callback, conn_handle/PSM/sdu_size out of range, or MTU out of range)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_connect(uint16_t conn_handle, uint16_t psm, uint16_t mtu,
+                                         uint16_t sdu_size,
+                                         esp_ble_conn_l2cap_coc_event_cb_t cb,
+                                         void *cb_arg);
+
+/**
+ * @brief   Send an SDU over an L2CAP CoC channel
+ *
+ * @param[in] chan  L2CAP CoC channel
+ * @param[in] sdu   SDU to send (data buffer is not owned by the stack, can be freed
+ *                  immediately after this function returns)
+ *
+ * @note Flow control: If the channel is stalled (buffer full), this function returns
+ *       ESP_ERR_NOT_FINISHED. The caller should wait for ESP_BLE_CONN_L2CAP_COC_EVENT_TX_UNSTALLED
+ *       event before retrying the send operation.
+ *
+ * @note Memory pool: If mbuf allocation fails (ESP_ERR_NO_MEM), it indicates the memory
+ *       pool is exhausted. The caller should wait and retry later, or check if there
+ *       are pending operations that need to complete.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (NULL channel, NULL sdu, invalid data pointer, or zero length)
+ *  - ESP_ERR_INVALID_STATE if memory pool not initialized or channel not connected
+ *  - ESP_ERR_NO_MEM if mbuf allocation failed (memory pool exhausted)
+ *  - ESP_ERR_NOT_FINISHED if channel is stalled or send would block (wait for TX_UNSTALLED event)
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_send(esp_ble_conn_l2cap_coc_chan_t chan,
+                                      const esp_ble_conn_l2cap_coc_sdu_t *sdu);
+
+/**
+ * @brief   Provide a receive buffer for an L2CAP CoC channel
+ *
+ * @param[in] chan      L2CAP CoC channel
+ * @param[in] sdu_size  Receive buffer size for next SDU
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if memory pool not initialized or allocation failed
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_recv_ready(esp_ble_conn_l2cap_coc_chan_t chan,
+                                            uint16_t sdu_size);
+
+/**
+ * @brief   Disconnect an L2CAP CoC channel
+ *
+ * @param[in] chan  L2CAP CoC channel
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_disconnect(esp_ble_conn_l2cap_coc_chan_t chan);
+
+/**
+ * @brief   Get L2CAP CoC channel information
+ *
+ * @param[in]  chan      L2CAP CoC channel
+ * @param[out] chan_info Channel info output
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NOT_SUPPORTED if L2CAP CoC is disabled
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_l2cap_coc_get_chan_info(esp_ble_conn_l2cap_coc_chan_t chan,
+                                               esp_ble_conn_l2cap_coc_chan_info_t *chan_info);
+
+/**
+ * @brief   Register scan callback for BLE central role
+ *
+ * @param[in] cb      Scan callback (can be NULL to disable)
+ * @param[in] cb_arg  Callback argument
+ *
+ * @note When the callback returns true, a connection is initiated to that peer.
+ *       Only one outgoing connection attempt is allowed at a time. If a connection
+ *       attempt is already in progress, further scan results that would trigger
+ *       connect are skipped until the current attempt completes (success or fail).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ */
+esp_err_t esp_ble_conn_register_scan_callback(esp_ble_conn_scan_cb_t cb, void *cb_arg);
+
+/**
+ * @brief   Parse AD type data from raw advertising data
+ *
+ * @param[in]  adv_data   Raw advertising data
+ * @param[in]  adv_len    Raw advertising data length
+ * @param[in]  ad_type    Advertising data type
+ * @param[out] out_data   Output data pointer (points into adv_data)
+ * @param[out] out_len    Output data length
+ *
+ * @return
+ *  - ESP_OK if AD type is found
+ *  - ESP_ERR_NOT_FOUND if AD type is not present
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ */
+esp_err_t esp_ble_conn_parse_adv_data(const uint8_t *adv_data, uint16_t adv_len, uint8_t ad_type,
+                                      const uint8_t **out_data, uint8_t *out_len);
 
 /**
  * @brief This api is typically used to notify actively
@@ -363,9 +1922,67 @@ esp_err_t esp_ble_conn_disconnect(void);
 esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
 
 /**
+ * @brief Send notification/indication to a specific connection.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] inbuff      Notify payload (characteristic UUID and data).
+ *
+ * @note The given `conn_handle` is the effective target; `inbuff->write_conn_id` is ignored. Use this API for
+ *       multi-connection when sending to a specific link.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_notify_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff);
+
+/**
+ * @brief Send a notification on a specific connection using a characteristic value handle.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] attr_handle Characteristic value handle from `esp_ble_conn_get_chr_handle()`.
+ * @param[in] data        Notify payload; may be NULL when `data_len` is 0.
+ * @param[in] data_len    Notify payload length.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_TIMEOUT if completion is not received within wait timeout
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_notify_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                             const uint8_t *data, uint16_t data_len);
+
+/**
+ * @brief Send an indication on a specific connection using a characteristic value handle.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] attr_handle Characteristic value handle from `esp_ble_conn_get_chr_handle()`.
+ * @param[in] data        Indicate payload; may be NULL when `data_len` is 0.
+ * @param[in] data_len    Indicate payload length.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_ERR_TIMEOUT if confirmation is not received within wait timeout
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_indicate_by_attr_handle(uint16_t conn_handle, uint16_t attr_handle,
+                                               const uint8_t *data, uint16_t data_len);
+
+/**
  * @brief This api is typically used to read actively
  *
- * @param[in]  outbuf The pointer to store read data.
+ * @param[in,out] outbuf Read request/response buffer. If `outbuf->data` is NULL, this function returns a
+ *                       borrowed pointer to the internal read cache and sets `data_len` to the full value
+ *                       length; do not free that pointer, and do not use it after disconnect, a later
+ *                       read that replaces the cache, or deinit. Otherwise, `data_len` is the caller-owned
+ *                       buffer capacity and is updated to the number of bytes copied (truncated when the
+ *                       buffer is smaller than the characteristic value).
  *
  * @return
  *  - ESP_OK on success
@@ -373,6 +1990,25 @@ esp_err_t esp_ble_conn_notify(const esp_ble_conn_data_t *inbuff);
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *outbuf);
+
+/**
+ * @brief Read characteristic on a specific connection.
+ *
+ * @param[in]     conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in,out] outbuf      Read request/response buffer. If `outbuf->data` is NULL, this function returns a
+ *                            borrowed pointer to the internal read cache and sets `data_len` to the full
+ *                            value length; do not free that pointer, and do not use it after disconnect, a
+ *                            later read that replaces the cache, or deinit. Otherwise, `data_len` is the
+ *                            caller-owned buffer capacity and is updated to the number of bytes copied
+ *                            (truncated when the buffer is smaller than the characteristic value).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_TIMEOUT if read completion is not received within wait timeout
+ *  - ESP_FAIL or stack-specific error code on read failure
+ */
+esp_err_t esp_ble_conn_read_by_handle(uint16_t conn_handle, esp_ble_conn_data_t *outbuf);
 
 /**
  * @brief This api is typically used to write actively
@@ -387,6 +2023,20 @@ esp_err_t esp_ble_conn_read(esp_ble_conn_data_t *outbuf);
 esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff);
 
 /**
+ * @brief Write characteristic on a specific connection.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] inbuff      Write payload (characteristic UUID and data).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_write_by_handle(uint16_t conn_handle, const esp_ble_conn_data_t *inbuff);
+
+/**
  * @brief This api is typically used to subscribe actively
  *
  * @param[in]  desc   The declarations of descriptors
@@ -398,6 +2048,73 @@ esp_err_t esp_ble_conn_write(const esp_ble_conn_data_t *inbuff);
  *  - ESP_FAIL on other error
  */
 esp_err_t esp_ble_conn_subscribe(esp_ble_conn_desc_t desc, const esp_ble_conn_data_t *inbuff);
+
+/**
+ * @brief Subscribe to notifications/indications on a specific connection.
+ *
+ * @param[in] conn_handle Connection handle (valid range 0x0000–0x0EFF; BLE_CONN_HANDLE_INVALID is invalid).
+ * @param[in] desc        Descriptor type (e.g. ESP_BLE_CONN_DESC_CIENT_CONFIG for CCCD).
+ * @param[in] inbuff      Subscribe payload (characteristic UUID and enable flags).
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG on invalid parameters (e.g. conn_handle out of range)
+ *  - ESP_ERR_NO_MEM if system resources are insufficient
+ *  - ESP_FAIL on other error
+ */
+esp_err_t esp_ble_conn_subscribe_by_handle(uint16_t conn_handle, esp_ble_conn_desc_t desc,
+                                           const esp_ble_conn_data_t *inbuff);
+
+/**
+ * @brief   Get the GATT value handle of a local characteristic.
+ *
+ * `inst` selects the Nth matching (service UUID, characteristic UUID) pair in
+ * `esp_ble_conn_add_svc()` order. Use 0 when the pair is unique.
+ *
+ * @param[in]  svc_type    Service UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  svc_uuid    Service UUID
+ * @param[in]  chr_type    Characteristic UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  chr_uuid    Characteristic UUID
+ * @param[in]  inst        0-based index among matches
+ * @param[out] out_handle  Pointer to store the characteristic value handle
+ *
+ * @note Call after `ESP_BLE_CONN_EVENT_STARTED`.
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if the UUID type is invalid or out_handle is NULL
+ *  - ESP_ERR_INVALID_STATE if the characteristic is not registered yet
+ *  - ESP_ERR_NOT_FOUND if no matching characteristic exists
+ */
+esp_err_t esp_ble_conn_get_chr_handle(uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
+                                      uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
+                                      uint8_t inst, uint16_t *out_handle);
+
+/**
+ * @brief   Get the GATT value handle of a discovered (peer) characteristic.
+ *
+ * Looks up the service discovery table owned by `conn_handle`. Discovery
+ * results from other live links are isolated, and the table is discarded when
+ * that link disconnects. Call after `ESP_BLE_CONN_EVENT_DISC_COMPLETE` for the
+ * requested link. `conn_handle` must still be live.
+ *
+ * @param[in]  conn_handle Connection handle of the discovered peer
+ * @param[in]  svc_type    Service UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  svc_uuid    Service UUID
+ * @param[in]  chr_type    Characteristic UUID type (`BLE_CONN_UUID_TYPE_*`)
+ * @param[in]  chr_uuid    Characteristic UUID
+ * @param[out] out_handle  Pointer to store the peer characteristic value handle
+ *
+ * @return
+ *  - ESP_OK on success
+ *  - ESP_ERR_INVALID_ARG if parameters are invalid
+ *  - ESP_ERR_NOT_FOUND if the link or characteristic is not found
+ *  - ESP_ERR_NOT_SUPPORTED if Central role is not enabled
+ */
+esp_err_t esp_ble_conn_get_peer_chr_handle(uint16_t conn_handle,
+                                           uint8_t svc_type, esp_ble_conn_uuid_t svc_uuid,
+                                           uint8_t chr_type, esp_ble_conn_uuid_t chr_uuid,
+                                           uint16_t *out_handle);
 
 /**
  * @brief This api is typically used to add service actively

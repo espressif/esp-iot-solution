@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
 
+#include <stdint.h>
 #include "esp_err.h"
 #include "button_types.h"
 
@@ -16,11 +17,14 @@ extern "C" {
  * @brief Configuration structure for a touch button.
  *
  * This structure defines the configuration parameters required to initialize a touch button.
- * It specifies the touch channel, activation threshold, and whether to skip low-level initialization.
+ * It specifies the touch channel, an absolute activation threshold, and
+ * whether to skip low-level initialization. The threshold uses the same raw
+ * count units as `touch_button_sensor`; it is not a ratio or floating-point
+ * value.
  */
 typedef struct {
     int32_t touch_channel;      /*!< The touch sensor channel assigned to the button */
-    float channel_threshold;    /*!< Activation threshold for the touch channel (range: 0.0 - 1.0) */
+    uint32_t channel_threshold; /*!< Absolute unscaled activation threshold for the touch channel */
     bool skip_lowlevel_init;    /*!< If true, skips low-level initialization (useful for pre-configured setups) */
 } button_touch_config_t;
 
@@ -39,7 +43,7 @@ typedef struct {
  *      - ESP_OK on success
  *      - ESP_ERR_INVALID_ARG if any argument is NULL
  *      - ESP_ERR_NO_MEM if memory allocation fails
- *      - ESP_FAIL if touch button sensor or button creation fails
+ *      - Other errors returned by touch button sensor or button creation
  */
 esp_err_t iot_button_new_touch_button_device(const button_config_t *button_config, const button_touch_config_t *touch_config, button_handle_t *ret_button);
 

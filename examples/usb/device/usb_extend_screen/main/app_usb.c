@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,23 +15,38 @@
 #include "esp_private/usb_phy.h"
 #include "usb_descriptors.h"
 #include "device/usbd.h"
+#include "app_lcd.h"
 #include "app_usb.h"
 
 static const char *TAG = "app_usb";
+static usb_phy_handle_t s_phy_hdl;
 
 //--------------------------------------------------------------------+
 // USB PHY config
 //--------------------------------------------------------------------+
-static void usb_phy_init(void)
+static esp_err_t usb_phy_init(void)
 {
-    usb_phy_handle_t phy_hdl;
+    if (s_phy_hdl) {
+        return ESP_OK;
+    }
+
     // Configure USB PHY
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
+        .otg_speed = USB_PHY_SPEED_UNDEFINED,
     };
+
+#if CONFIG_TINYUSB_RHPORT_HS
+    phy_conf.target = USB_PHY_TARGET_UTMI;
+    phy_conf.otg_speed = USB_PHY_SPEED_HIGH;
+#else
     phy_conf.target = USB_PHY_TARGET_INT;
-    usb_new_phy(&phy_conf, &phy_hdl);
+    phy_conf.otg_speed = USB_PHY_SPEED_FULL;
+#endif
+
+    ESP_RETURN_ON_ERROR(usb_new_phy(&phy_conf, &s_phy_hdl), TAG, "USB PHY init failed");
+    return ESP_OK;
 }
 
 static void tusb_device_task(void *arg)
@@ -44,8 +59,14 @@ static void tusb_device_task(void *arg)
 esp_err_t app_usb_init(void)
 {
     esp_err_t ret = ESP_OK;
+    uint16_t screen_width;
+    uint16_t screen_height;
 
-    usb_phy_init();
+    ESP_RETURN_ON_ERROR(app_lcd_get_resolution(&screen_width, &screen_height),
+                        TAG, "get display resolution failed");
+    ESP_RETURN_ON_ERROR(usb_descriptors_init(screen_width, screen_height),
+                        TAG, "initialize USB descriptors failed");
+    ESP_RETURN_ON_ERROR(usb_phy_init(), TAG, "USB PHY init failed");
     bool usb_init = tusb_init();
     if (!usb_init) {
         ESP_LOGE(TAG, "USB Device Stack Init Fail");
@@ -62,7 +83,7 @@ esp_err_t app_usb_init(void)
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "app_hid_init failed");
 #endif
 
-#if CFG_TUD_AUDIO
+#if CONFIG_UAC_AUDIO_ENABLE
     ret =  app_uac_init();
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ESP_FAIL, TAG, "app_uac_init failed");
 #endif

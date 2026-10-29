@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
@@ -143,10 +143,10 @@ class target2_c:
 
 # Remove specific functions from IRAM
 class relink_c:
-    def __init__(self, input_file, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+    def __init__(self, input_file, library_file, object_file, function_file, sdkconfig_file, missing_function_info, compile_commands_file=None):
         self.filter = filter_c(input_file)
 
-        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
+        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump, compile_commands_file)
         self.targets = []
         for lib_name in libraries.libs:
             lib = libraries.libs[lib_name]
@@ -195,7 +195,7 @@ class relink_c:
         flash_done = False
         flash_text = '(.stub)'
 
-        if espidf_version == '5.0':
+        if espidf_version == '5.0' or espidf_version == '5.1':
             flash_text = '(.stub .gnu.warning'
 
         new_lines = []
@@ -274,7 +274,7 @@ class relink_c:
 
 # Link specific functions to IRAM
 class relink2_c:
-    def __init__(self, input_file, library_file, object_file, function_file, sdkconfig_file, missing_function_info):
+    def __init__(self, input_file, library_file, object_file, function_file, sdkconfig_file, missing_function_info, compile_commands_file=None):
         self.filter = filter_c(input_file)
 
         rodata_exclude = []
@@ -282,7 +282,7 @@ class relink2_c:
         rodata = []
         iram = []
 
-        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump)
+        libraries = configuration.generator(library_file, object_file, function_file, sdkconfig_file, missing_function_info, espidf_objdump, compile_commands_file)
         self.targets = []
 
         for lib_name in libraries.libs:
@@ -333,7 +333,7 @@ class relink2_c:
         iram_text = '*(.iram1 .iram1.*)'
         if espidf_version == '5.3' and target == 'esp32c2':
             iram_text = '_iram_text_start = ABSOLUTE(.);'
-        elif espidf_version == '5.0':
+        elif espidf_version == '5.0' or espidf_version == '5.1':
             flash_text = '*(.stub .gnu.warning'
 
         for line in lines:
@@ -418,6 +418,11 @@ def main():
         required=True)
 
     argparser.add_argument(
+        '--compile-commands',
+        help='CMake compile_commands.json; used by if_compiled function rules',
+        type=str)
+
+    argparser.add_argument(
         '--debug', '-d',
         help='Debug level (option is \'debug\')',
         default='no',
@@ -456,9 +461,9 @@ def main():
     espidf_version = args.version
 
     if not args.link_to_iram:
-        relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+        relink = relink_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info, args.compile_commands)
     else:
-        relink = relink2_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info)
+        relink = relink2_c(args.input, args.library, args.object, args.function, args.sdkconfig, args.missing_function_info, args.compile_commands)
     relink.save(args.input, args.output, args.target)
 
 if __name__ == '__main__':

@@ -18,7 +18,9 @@
 #include "esp_tinyuf2.h"
 
 #define RX_UNREADBUF_SZ_DEFAULT 64 // buffer storing all unread RX data
+#ifndef MIN
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif
 
 typedef struct {
     size_t rx_unread_buf_sz;

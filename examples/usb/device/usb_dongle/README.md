@@ -1,13 +1,13 @@
-# ESP32-S 系列 USB 无线适配器方案介绍
+# ESP 系列 USB 无线适配器方案介绍
 
 ## 1.概述
 
-本示例程序演示 ESP32-S 系列芯片如何实现 USB Dongle 设备功能，支持以下功能：
+本示例程序演示受支持的 ESP 芯片如何实现 USB Dongle 设备功能，支持以下功能：
 
 * 支持 Host 主机通过 USB-ECM/RNDIS 无线上网
 * 支持 Host 主机通过 USB-BTH 进行 BLE 扫描、广播、配对、连接、绑定以及读写数据
 * 支持 Host 主机通过 USB-DFU 进行设备升级
-* 支持 Host 主机通过 USB-CDC、UART 对 ESP32-S 系列设备进行通信和控制
+* 支持 Host 主机通过 USB-CDC、UART 对 ESP 设备进行通信和控制
 * 支持多种 system、Wi-Fi 控制命令，使用 FreeRTOS-Plus-CLI 命令行接口，易拓展更多命令
 * 支持使用 USB webusb / 串口 / smartconfig 等多种配网方式
 * 支持热插拔
@@ -20,6 +20,10 @@
 * ESP32-S2
 
 * ESP32-S3
+
+* ESP32-P4
+
+* ESP32-S31
 
 ### <span id = "connect">2.2 引脚分配</span>
 
@@ -35,9 +39,16 @@ ESP BOARD          USB CONNECTOR (type A)
                           --
 ```
 
-|             | USB_DP | USB_DM |
-| ----------- | ------ | ------ |
-| ESP32-S2/S3 | GPIO20 | GPIO19 |
+|                       | USB_DP | USB_DM |
+| --------------------- | ------ | ------ |
+| ESP32-S2/S3           | GPIO20 | GPIO19 |
+| ESP32-P4 2.0          | Pin 50 | Pin 49 |
+| ESP32-P4 1.1          | GPIO27 | GPIO26 |
+| ESP32-S31             | Pin 44 | Pin 45 |
+
+ESP32-S31 的 USB 2.0 PHY 引脚为 USB-OTG 专用引脚，不能作为普通 GPIO 使用；ESP32-S31 仅支持 USB 2.0 PHY。
+
+使用 ESP32-S31-Korvo-1 时，请将 USB 主机连接到板载 **USB 2.0 Type-A** 接口，该接口连接到 ESP32-S31 的 USB 2.0 OTG High-Speed 外设；板载 USB Type-C 接口不是 USB-OTG 接口。接口位置请参考 [ESP32-S31-Korvo-1 用户指南](https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s31/esp32-s31-korvo-1/user_guide.html)。
 
 * ESP32-S2-Saola
 
@@ -49,10 +60,9 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ### 2.3 软件准备
 
-1. 确认 ESP-IDF 环境成功搭建。
+1. 使用支持目标芯片的 ESP-IDF 版本。ESP32-S31 需要 ESP-IDF 6.1 或更高版本，并且在当前 SDK 中仍为 preview 目标。
+
     ```
-    >git checkout release/v5.0
-    >git pull origin release/v5.0
     >git submodule update --init --recursive
     >
     ```
@@ -65,10 +75,17 @@ ESP BOARD          USB CONNECTOR (type A)
     >
     ```
 
-3. 设置编译目标为 `esp32s2` 或 `esp32s3`。
+3. ESP32-S2、ESP32-S3 或 ESP32-P4 使用普通命令设置编译目标：
 
     ```
     >idf.py set-target esp32s2
+    >
+    ```
+
+   ESP32-S31 当前需要增加 preview 选项：
+
+    ```
+    >idf.py --preview set-target esp32s31
     >
     ```
 
@@ -78,7 +95,7 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ![uart_config](./_static/uart_config.png)
 
-目前 USB-Dongle 支持如下最大组合选项：
+ESP32-S2/S3 受 USB 端点资源限制，最多支持如下组合：
 
 | USB-ECM/RNDIS | USB-BTH | USB-CDC | UART | USB-DFU | WEBUSB |
 | :-----------: | :-----: | :-----: | :--: | :-----: | ------ |
@@ -91,9 +108,16 @@ ESP BOARD          USB CONNECTOR (type A)
 * UART 默认在 CDC 使能时禁用。
 * UART 可以用于命令通讯，与此同时，你也可以用于蓝牙通讯。
 * 可以通过 `component config -> TinyUSB Stack` 选择 USB 设备。
-* 同时使能 RNDIS/ECM 和 BTH 时，建议禁用 CDC，采用 UART 发送命令，可以通过 `Example Configuration` 进行串口配置。
-
->由于目前硬件限制，EndPoint 不能超过一定数量，故不支持 ECM/RNDIS、BTH、CDC 同时使能。
+* ESP32-S31 默认使用 TinyUSB RHPort0 的 High Speed 模式；ESP32-P4 的 High Speed 使用 RHPort1，ESP32-S2/S3 默认使用 Full Speed。
+* ESP32-S2/S3 的 USB 控制器共有 7 个端点（包括 EP0），最多支持 5 个 IN 端点（包括 EP0），因此不能同时使能 ECM/RNDIS、BTH 和 CDC。同时使能 ECM/RNDIS 和 BTH 时，应禁用 CDC 并使用 UART 发送命令；可以通过 `Example Configuration` 配置串口。
+* ESP32-P4/S31 的 USB High-Speed 控制器共有 16 个端点（包括 EP0），最多支持 8 个 IN 端点（包括 EP0）。从端点资源看，可以同时使能 ECM/RNDIS、BTH 和 CDC。
+* 实际可用组合还受芯片功能、内存和应用分区大小限制；同时使能多个 USB Class 时，可能需要增大 app 分区。
+* 使用 USB-BTH 时请注意：
+  * 关闭 CDC（以及网卡 Class），让 BTH 占用 USB interface 0；否则主机可能只能看到 USB 设备，无法创建 `hciX`。
+  * `BTH ISO ALT COUNT` 设置成 1 或者 2，默认为 1。
+  * ESP32-S3 可使用 `sdkconfig.ci.bth`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" set-target esp32s3`）。
+  * ESP32-S31 可使用 `sdkconfig.ci.bth`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.bth" --preview set-target esp32s31`）。
+  * ESP32-S31 连接 Windows 主机（BR/EDR + BLE 双模）时，可使用 `sdkconfig.ci.esp32s31.bth_windows`（`idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.esp32s31.bth_windows" --preview set-target esp32s31`），测试使用的 ESP-IDF 版本为 release/v6.1（commit `9a97f6c54ec`）。
 
 ### 2.5 固件编译&烧录
 
@@ -101,6 +125,13 @@ ESP BOARD          USB CONNECTOR (type A)
 
 ```
 >idf.py -p (PORT) build flash monitor
+>
+```
+
+ESP32-S31 需要增加 preview 选项：
+
+```
+>idf.py --preview -p (PORT) build flash monitor
 >
 ```
 
@@ -150,6 +181,45 @@ ESP BOARD          USB CONNECTOR (type A)
 * [通过 sta 命令来连接至对应路由器](./Commands.md#3sta)
 * [通过 startsmart 命令开启 smartconfig 配网](./Commands.md#5smartconfig)
 
+#### 2.6.1 通过 CDC 发送命令
+
+Windows 和 Linux 均可通过 CDC 发送命令。使能 USB-CDC 并烧录固件后，将开发板的 USB-OTG 接口连接至主机。在已激活 ESP-IDF 环境的终端中，先查找 CDC 串口：
+
+```text
+python -m serial.tools.list_ports -v
+```
+
+根据操作系统选择对应的串口打开命令：
+
+**Linux：**
+
+```bash
+python -m serial.tools.miniterm /dev/ttyACM0 115200 --eol LF --echo
+```
+
+**Windows：**
+
+```powershell
+python -m serial.tools.miniterm COM5 115200 --eol LF --echo
+```
+
+将 `/dev/ttyACM0` 或 `COM5` 替换为实际串口名。`--eol LF` 使回车键发送 `\n`，`--echo` 显示本地输入；按 `Ctrl+]` 退出终端。打开前请退出正在使用同一端口的其他串口工具。也可以使用其他串口终端，将发送行尾设置为 LF 或 CRLF。
+
+在串口终端中逐条输入命令，每条命令后按回车：
+
+```text
+help
+version
+ram
+scan
+sta -s MyWiFi -p MyPassword
+sta
+```
+
+将 `MyWiFi` 和 `MyPassword` 替换为路由器的 SSID 和密码。`scan` 和 `sta` 需要使能 USB-ECM/RNDIS/NCM。完整命令说明见 [Commands.md](./Commands.md)。
+
+出现 `Wi-Fi STA connected` 和 `connect success` 表示 ESP 已连接至 Wi-Fi。
+
 ### 2.7 网络设备常见问题
 
 - #### Windows
@@ -175,7 +245,7 @@ Device Drivers   --->
 				Host For RDNIS and ActiveSync Devices
 ```
 
-如果确定使能上述模块依然无法看到网络设备，请通过 `dmesg` 命令查看内核信息， 确定 Linux 内核中是否有探测到 ESP32-S USB 网络设备，以及是否有错误打印信息。
+如果确定使能上述模块依然无法看到网络设备，请通过 `dmesg` 命令查看内核信息，确定 Linux 内核中是否探测到 ESP USB 网络设备，以及是否有错误打印信息。
 
 ## 3. 配置连接 Wi-Fi 网络
 
@@ -274,6 +344,6 @@ sudo dfu-util -d <VendorID> -a 0 -U <OTA_BIN_PATH>
 
 #### 常见问题和错误
 
-1.  各平台 dfu-util 工具安装错误的问题请参考[此链接](https://support.particle.io/hc/en-us/articles/360039251394-Installing-DFU-util) 。
-2. dfu-util 执行时打印 “No DFU capable USB device available”， 这说明 dfu-util 没有探测到 ESP32-S 芯片的 DFU 设备，请确保在配置项已经使能 DFU 功能。在 Ubuntu 中，请确保使用了管理员权限操作。
+1.  各平台 dfu-util 工具安装错误的问题请参考[此链接](https://docs.particle.io/archives/installing-dfu-util/) 。
+2. dfu-util 执行时打印 “No DFU capable USB device available”，这说明 dfu-util 没有探测到 ESP 芯片的 DFU 设备，请确保在配置项已经使能 DFU 功能。在 Ubuntu 中，请确保使用了管理员权限操作。
 sudo apt install dfu-util

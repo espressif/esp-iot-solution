@@ -106,7 +106,7 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
 驱动接口
 ---------------
 
-对于开发者而言，通常更加关心 LCD 的驱动接口，目前在物联网领域比较常见的接口类型有 ``SPI``、 ``QSPI``、 ``I80``、 ``RGB`` 和 ``MIPI-DSI``，它们在 ``占用 IO 数量``、 ``并行数据位数``、 ``数据传输带宽``、 ``GRAM 位置`` 等方面的参数对比如下：
+对于开发者而言，通常更加关心 LCD 的驱动接口，目前在物联网领域比较常见的接口类型有 ``SPI``、 ``QSPI``、 ``I80``、 ``RGB`` 和 ``MIPI-DSI``，它们在 ``占用 IO 数量``、 ``数据位宽 / Lane 数量``、 ``数据传输带宽``、 ``GRAM 位置`` 等方面的参数对比如下：
 
 参数对比
 ^^^^^^^^^^^^^^^
@@ -118,7 +118,7 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
     * - 类型
       - 描述
       - 占用 IO 数量
-      - 并行数据位数
+      - 数据位宽 / Lane 数量
       - 数据传输带宽
       - GRAM 位置
     * - SPI
@@ -148,7 +148,7 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
     * - MIPI-DSI
       - 采⽤差分信号传输⽅式的串⾏接⼝，基于 MIPI 的⾼速、低功率可扩展串⾏互联的 D-PHY 物理层规范
       - 较多
-      - 1/2/3/4
+      - 1/2/3/4 Lane
       - 最大
       - LCD 或主控
 
@@ -210,6 +210,7 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
 
   - :doc:`./spi_lcd`
   - :doc:`./rgb_lcd`
+  - :doc:`./mipi_dsi_lcd`
   - I80 LCD 详解（待更新）
   - QSPI LCD 详解（待更新）
 
@@ -223,12 +224,12 @@ LCD 具有很多优点，例如：能耗低、寿命⻓、可靠性⾼、清晰�
   - **TE (tear effect)**：推荐连接至 GPIO，通过 GPIO 中断来获取 TE 信号，以实现帧同步。
   - **Power (VCC、GND)**：推荐全部连接至对应的系统电源，而不要让一部分引脚浮空。
 
-对于不同接口类型的引脚，主控 MCU 需要采用不同的连接方式，下面将分别介绍 ``SPI`` ``QSPI`` ``I80`` 和 ``RGB`` 四种接口的典型连接方式。
+对于不同接口类型的引脚，主控 MCU 需要采用不同的连接方式，下面将分别介绍 ``SPI`` ``QSPI`` ``I80`` 和 ``RGB`` 四种接口的典型连接方式。``MIPI-DSI`` 接口的连接与时序说明请参考 :doc:`MIPI DSI LCD 详解 <mipi_dsi_lcd>`。
 
 SPI 接口
 ^^^^^^^^^^^^^^^
 
-``SPI`` 接口的 LCD 硬件设计请参考开发板 `ESP32-C3-LCDkit <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32c3/esp32-c3-lcdkit/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/_static/esp32-c3-lcdkit/schematics/SCH_ESP32-C3-LCDkit-DB_V1.0_20230329.pdf>`__，其典型连接示意图如下：
+``SPI`` 接口的 LCD 硬件设计请参考开发板 `ESP32-C3-LCDkit <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32c3/esp32-c3-lcdkit/index.html>`_ 及其 `LCD 子板 <https://dl.espressif.com/dl/schematics/SCH_ESP32-C3-LCDkit-DB_V1.0_20230329.pdf>`__，其典型连接示意图如下：
 
 .. figure:: ../../../_static/display/screen/lcd_connection_spi.png
     :align: center
@@ -240,7 +241,7 @@ SPI 接口
 .. note::
 
   - ``Interface I 模式`` 仅需使用 ``SDA`` 一根数据线， ``Interface II 模式`` 需要使用 ``MISO & MOSI`` 两根数据线。
-  - 通常情况下不需要从 LCD 读取数据，因此可以不连接 ``MOSI``。如果有需要的话请注意，大多数 SPI LCD 读取时的最大时钟频率要远小于写入时的频率。
+  - 通常情况下不需要从 LCD 读取数据，因此可以不连接 ``MISO``。如果有需要的话请注意，大多数 SPI LCD 读取时的最大时钟频率要远小于写入时的频率。
   - 由于 ``3-line 模式`` （无 D/C 信号线）下，每传输单位数据（通常为字节）都需要先传输 D/C 信号（1-bit），而目前 ESP 的 SPI 外设不支持直接传输 9-bit 数据，因此通常采用上图所示的 ``4-line 模式`` 。
 
 QSPI 接口
@@ -263,7 +264,7 @@ QSPI 接口
 I80 接口
 ^^^^^^^^^^^^^^^
 
-``I80`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.5' LCD_ZJY)，其典型连接示意图如下：
+``I80`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`__ (3.5' LCD_ZJY)，其典型连接示意图如下：
 
 .. figure:: ../../../_static/display/screen/lcd_connection_i80.png
     :align: center
@@ -280,7 +281,7 @@ I80 接口
 RGB 接口
 ^^^^^^^^^^^^^^^
 
-``RGB`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/_static/esp32-s3-lcd-ev-board/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.2_20230509.pdf>`__ (3.95' LCD_QMZX)，其典型连接示意图如下：
+``RGB`` 接口的 LCD 硬件设计请参考开发板 `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/index.html>`_ 及其 `LCD 子板 <https://dl.espressif.com/dl/schematics/SCH_ESP32-S3-LCD-EV-Board-SUB2_V1.3_20231010.pdf>`__ (3.95' LCD_QMZX)，其典型连接示意图如下：
 
 .. figure:: ../../../_static/display/screen/lcd_connection_rgb.png
     :align: center
@@ -359,4 +360,4 @@ RGB 接口
 
 .. note::
 
-  - 若需要在无 LCD 的情况下开发，可以通过 `esp_lcd_usb_display 组件 <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ 通过 USB UVC 在 PC 显示器上模拟 LCD 的显示效果，从而调试应用程序。其对应示例为 `usb_lcd_display <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_lcd_display>`_
+  - 若需要在无 LCD 的情况下开发，可以通过 `esp_lcd_usb_display 组件 <https://components.espressif.com/components/espressif/esp_lcd_usb_display>`_ 通过 USB UVC 在 PC 显示器上模拟 LCD 的显示效果，从而调试应用程序。其对应示例为 :example:`usb/device/usb_lcd_display`

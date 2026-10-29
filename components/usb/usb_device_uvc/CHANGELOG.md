@@ -1,4 +1,30 @@
 # ChangeLog
+
+## v1.3.1 2026-5-25
+
+### Bug Fix:
+
+* Fix TinyUSB RHPort high-speed configuration for ESP32-S31: use RHPORT0 instead of RHPORT1 (RHPORT1 is only for ESP32-P4).
+
+## v1.3.0 2026-5-9
+
+### Enhancements:
+
+* Update tinyusb version and add ESP32-S31/H4 support.
+
+### Bug Fix:
+
+* Fix blank screen on bulk mode reopen by resetting the IN endpoint and invoking `stop_cb` before `start_cb` on re-commit.
+
+## v1.2.0 2025-8-5
+
+* Support deinitialization.
+* Fix image format setting during initialization stage.
+
+## v1.1.3 2025-7-21
+
+* Fix incorrect `_stridx` in UVC descriptors when using dual cameras. 
+
 ## v1.1.2 2024-10-25
 
 * Add test-apps

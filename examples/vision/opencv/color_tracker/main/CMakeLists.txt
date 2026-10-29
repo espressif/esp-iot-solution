@@ -9,6 +9,16 @@ set_source_files_properties(
         "-Wno-deprecated-enum-enum-conversion"
     )
 
+set_source_files_properties(
+    "lcd.cpp"
+    PROPERTIES
+        COMPILE_OPTIONS
+        "-Wno-missing-field-initializers"
+    )
+
+idf_component_get_property(esp_video_component_lib espressif__esp_video COMPONENT_LIB)
+target_compile_options(${esp_video_component_lib} PRIVATE "-Wno-deprecated-declarations")
+
 set(MODIFY_EXE ${PROJECT_DIR}/modify_opencv.py)
 set(OPENCV_CMAKE_TARGET "${PROJECT_DIR}/managed_components/espressif__opencv/CMakeLists.txt")
 set(OPENCV_CMAKE_SOURCE "CMakeLists.txt.opencv")

@@ -19,9 +19,6 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_partition.h"
-#if __has_include("spi_flash_mmap.h")
-#include "spi_flash_mmap.h"
-#endif
 
 #include "gprof_types.h"
 #include "gprof.h"
@@ -544,7 +541,7 @@ esp_err_t esp_gprof_dump(void)
     esp_err_t err;
     const uint8_t *p;
     const uint8_t *end;
-    spi_flash_mmap_handle_t mmap_handle;
+    esp_partition_mmap_handle_t mmap_handle;
     esp_gprof_t *gp = &s_gprof;
 
     /* Check GProf state */
@@ -554,7 +551,7 @@ esp_err_t esp_gprof_dump(void)
 
     /* Map partition to be continuous memory block */
     err = esp_partition_mmap(gp->part, sizeof(esp_gprof_hdr_t), gp->saved_size,
-                             SPI_FLASH_MMAP_DATA, &buf, &mmap_handle);
+                             ESP_PARTITION_MMAP_DATA, &buf, &mmap_handle);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to map partition, error is %s", esp_err_to_name(err));
         return err;
@@ -595,7 +592,7 @@ esp_err_t esp_gprof_dump(void)
     }
 
     /* Free mapped flash */
-    spi_flash_munmap(mmap_handle);
+    esp_partition_munmap(mmap_handle);
 
     return err;
 }

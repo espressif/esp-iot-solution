@@ -6,4 +6,4 @@
 .. toctree::
     :maxdepth: 2
 
-    4G 解决方案 <4g/index>
+    ESP Weaver <weaver>

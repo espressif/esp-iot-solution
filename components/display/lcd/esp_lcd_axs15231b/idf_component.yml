@@ -1,11 +1,14 @@
-version: "1.0.1"
+version: "2.1.1"
 description: ESP LCD & Touch AXS15231B
-url: https://github.com/espressif/esp-bsp/tree/master/components/lcd/esp_lcd_axs15231b
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/lcd/esp_lcd_axs15231b
 issues: https://github.com/espressif/esp-iot-solution/issues
 repository: https://github.com/espressif/esp-iot-solution.git
 dependencies:
   esp_lcd_touch:
     public: true
     version: '^1'
-  idf: ">5.0.4,!=5.1.1"
+  idf: ">=5.3"
   cmake_utilities: "0.*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

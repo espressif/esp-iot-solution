@@ -3,6 +3,8 @@ USB Device Solution
 
 :link_to_translation:`zh_CN:[中文]`
 
+ESP32-S2/S3/P4/etc. has a USB-OTG peripheral that supports USB device mode, which can be connected to a PC or other USB host devices via USB. By combining the device TinyUSB protocol stack and device class drivers, it can be used to develop various USB devices, such as HID devices, CDC devices, and composite devices. The following describes the related solutions based on USB devices.
+
 USB Audio Device Solution
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18,7 +20,7 @@ Features:
 Hardware:
 ~~~~~~~~~
 
-* Chip: ESP32-S2, ESP32-S3
+* Chip: ESP32-S2, ESP32-S3, ESP32-P4
 * Peripheral: USB-OTG
 
 Links:
@@ -41,7 +43,7 @@ Features:
 Hardware:
 ~~~~~~~~~
 
-* Chip: ESP32-S2, ESP32-S3
+* Chip: ESP32-S2, ESP32-S3, ESP32-P4
 * Peripheral: USB-OTG
 
 Links:
@@ -64,7 +66,7 @@ Features:
 Hardware:
 ~~~~~~~~~
 
-* Chip: ESP32-S2, ESP32-S3
+* Chip: ESP32-S2, ESP32-S3, ESP32-P4
 * Peripheral: USB-OTG
 
 Links:
@@ -87,7 +89,7 @@ Features:
 Hardware:
 ~~~~~~~~~
 
-* Chip: ESP32-S2, ESP32-S3
+* Chip: ESP32-S2, ESP32-S3, ESP32-P4
 * Peripheral: USB-OTG
 
 Links:
@@ -146,4 +148,4 @@ Hardware
 Links
 ~~~~~~~~~~
 
-- [P4 USB Extended Screen Example](https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_extend_screen)
+- `P4 USB Extended Screen Example <https://github.com/espressif/esp-iot-solution/tree/master/examples/usb/device/usb_extend_screen>`_

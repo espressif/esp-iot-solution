@@ -1,4 +1,4 @@
-version: "1.0.2"
+version: "2.0.2"
 targets:
   - esp32p4
 description: ESP LCD JD9165 (MIPI-DSI)

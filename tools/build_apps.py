@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -12,11 +12,28 @@ import os
 import re
 import logging
 from pathlib import Path
-from typing import List
+import typing as t
+from typing import ClassVar
+import shutil
+import subprocess
+import yaml
+import tempfile
 
-from idf_build_apps import App, build_apps, find_apps, setup_logging
+from idf_build_apps import build_apps, find_apps, setup_logging
+from idf_build_apps.app import CMakeApp
+
+try:
+    from idf_component_manager.dependencies import download_project_dependencies
+    from idf_component_tools.manager import ManifestManager
+    from idf_component_tools.utils import ProjectRequirements
+except ImportError:
+    download_project_dependencies = None
+    ManifestManager = None
+    ProjectRequirements = None
 
 logger = logging.getLogger('idf_build_apps')
+IDF_PATH = os.getenv('IDF_PATH', '')
+BOARD_NAME = 'default'
 
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 APPS_BUILD_PER_JOB = 30
@@ -26,14 +43,221 @@ IGNORE_WARNINGS = [
     r'1/2 app partitions are too small',
     r'The current IDF version does not support using the gptimer API',
     r'DeprecationWarning: pkg_resources is deprecated as an API',
+    r'Warning: The smallest app partition is nearly full',
     r'\'ADC_ATTEN_DB_11\' is deprecated',
     r'warning: unknown kconfig symbol*',
     r'warning High Performance Mode \(QSPI Flash > 80MHz\) is optional feature that depends on flash model. Read Docs First!',
     r'warning HPM-DC, which helps to run some flash > 80MHz by adjusting dummy cycles, is no longer enabled by default.',
     r'warning To enable this feature, your bootloader needs to have the support for it \(by explicitly selecting BOOTLOADER_FLASH_DC_AWARE\)',
     r'warning If your bootloader does not support it, select SPI_FLASH_HPM_DC_DISABLE to suppress the warning. READ DOCS FIRST!',
+    r'warning: casting \'CvRNG\' {aka \'long long unsigned int\'} to \'cv::RNG&\' does not use \'cv::RNG::RNG\(uint64\)\' \[-Wcast-user-defined\]', # OpenCV warning: for examples/robot/ragtime_panthera
+    r'WARNING: The following Kconfig variables were used in "if" clauses, but not',  # Due to the introduction of Kconfig and package manager dependencies, compilation warnings are generated
     r'.+MultiCommand.+',
+    r'warning: \'ISP_AWB_SAMPLE_POINT_BEFORE_CCM\' is deprecated: Use ISP_AWB_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
+    r'warning: \'ISP_AE_SAMPLE_POINT_AFTER_DEMOSAIC\' is deprecated: Use ISP_AE_SAMPLE_POINT_0 instead \[-Wdeprecated-declarations\]',
+    r'warning: \'touch_cst816s_read_id\' declared \'static\' but never defined \[-Wunused-function\]',
+    r'warning: \'(ws2812_set_rgb|led_gpio_set_on)\' defined but not used \[-Wunused-function\]',
+    r'warning: \'on_refresh_done\' is deprecated: Deprecated, use on_frame_buf_complete instead \[-Wdeprecated-declarations\]',
+    r'WARNING: Component "espressif/esp_gmf_audio" not found',
+    r'WARNING: Component "espressif/esp_gmf_io" not found',
 ]
+
+class CustomApp(CMakeApp):
+    build_system: t.Literal['custom'] = 'custom'  # Must be unique to identify your custom app type
+    MANIFEST_NAMES: ClassVar[t.Tuple[str, ...]] = ('idf_component.yml', 'idf_component.yaml')
+    BMGR_KEYS: ClassVar[t.Tuple[str, ...]] = ('espressif/esp_board_manager', 'esp_board_manager')
+
+    def _build(
+        self,
+        *,
+        manifest_rootpath: t.Optional[str] = None,
+        modified_components: t.Optional[t.List[str]] = None,
+        modified_files: t.Optional[t.List[str]] = None,
+        check_app_dependencies: bool = False,
+    ) -> None:
+        # Remove managed_components and dependencies.lock to avoid conflicts
+        shutil.rmtree(os.path.join(self.work_dir, 'managed_components'), ignore_errors=True)
+        if os.path.isfile(os.path.join(self.work_dir, 'dependencies.lock')):
+            os.remove(os.path.join(self.work_dir, 'dependencies.lock'))
+        board_name = BOARD_NAME.strip()
+        is_bmgr_project = board_name != 'default' and self.is_board_manager_project()
+        original_extra_actions_path = os.environ.get('IDF_EXTRA_ACTIONS_PATH')
+        try:
+            if board_name != 'default':
+                if is_bmgr_project:
+                    self._pre_hook(board_name)
+                    board_defaults = (
+                        Path(self.work_dir).absolute()
+                        / 'components' / 'gen_bmgr_codes' / 'board_manager.defaults'
+                    )
+                    if not board_defaults.is_file():
+                        raise FileNotFoundError(f'Board Manager defaults were not generated: {board_defaults}')
+                    # idf_build_apps passes -DSDKCONFIG_DEFAULTS on the idf.py command
+                    # line, overriding the environment and Board Manager's idf.py
+                    # hook. Include the generated board config explicitly and last
+                    # so board-specific Kconfig settings take precedence.
+                    if str(board_defaults) not in self._sdkconfig_files:
+                        self._sdkconfig_files.append(str(board_defaults))
+                else:
+                    logger.warning(
+                        "Board '%s' specified but app '%s' has no esp_board_manager dependency; building as normal.",
+                        board_name,
+                        self.name,
+                    )
+            super()._build(
+                manifest_rootpath=manifest_rootpath,
+                modified_components=modified_components,
+                modified_files=modified_files,
+                check_app_dependencies=check_app_dependencies,
+            )
+        finally:
+            if is_bmgr_project:
+                if original_extra_actions_path is None:
+                    os.environ.pop('IDF_EXTRA_ACTIONS_PATH', None)
+                else:
+                    os.environ['IDF_EXTRA_ACTIONS_PATH'] = original_extra_actions_path
+
+    def _get_project_manifest_paths(self) -> t.List[Path]:
+        proj = Path(self.work_dir).absolute()
+        manifest_paths = []
+
+        main_dir = proj / 'main'
+        manifest_paths.extend(main_dir / name for name in self.MANIFEST_NAMES if (main_dir / name).is_file())
+
+        components_dir = proj / 'components'
+        if components_dir.is_dir():
+            for component_dir in sorted(path for path in components_dir.iterdir() if path.is_dir()):
+                manifest_paths.extend(
+                    component_dir / name
+                    for name in self.MANIFEST_NAMES
+                    if (component_dir / name).is_file()
+                )
+
+        return manifest_paths
+
+    def _find_bmgr_dependency(self) -> t.Optional[t.Tuple[Path, str, t.Any]]:
+        for manifest_path in self._get_project_manifest_paths():
+            try:
+                with open(manifest_path, 'r', encoding='utf-8') as f:
+                    deps = (yaml.safe_load(f) or {}).get('dependencies', {})
+            except (OSError, yaml.YAMLError) as e:
+                logger.warning('Failed to read %s: %s', manifest_path, e)
+                continue
+
+            if not isinstance(deps, dict):
+                continue
+
+            bmgr_key = next((key for key in self.BMGR_KEYS if key in deps), None)
+            if bmgr_key:
+                return manifest_path, bmgr_key, deps[bmgr_key]
+
+        return None
+
+    def is_board_manager_project(self) -> bool:
+        return self._find_bmgr_dependency() is not None
+
+    def clear_project_generated_files(self) -> None:
+        proj_path = Path(self.work_dir).absolute()
+        shutil.rmtree(proj_path / 'managed_components', ignore_errors=True)
+        shutil.rmtree(proj_path / 'components' / 'gen_bmgr_codes', ignore_errors=True)
+        (proj_path / 'board_manager.defaults').unlink(missing_ok=True)
+
+    def _download_bmgr_component(self) -> bool:
+        """
+        Extract the esp_board_manager dependency from the manifest file and download it.
+        Returns True if successful, False otherwise.
+        """
+        if not all([yaml, download_project_dependencies, ManifestManager, ProjectRequirements]):
+            logger.warning('idf-component-manager is not available, cannot download board manager component')
+            return False
+
+        proj = Path(self.work_dir).absolute()
+        managed_path = proj / 'managed_components'
+        lock_path = proj / 'dependencies.lock'
+
+        bmgr_dep = self._find_bmgr_dependency()
+        if not bmgr_dep:
+            logger.warning(
+                'esp_board_manager dependency not found in project manifests under %s/main or %s/components/*',
+                proj,
+                proj,
+            )
+            return False
+
+        manifest_path, bmgr_key, bmgr_value = bmgr_dep
+
+        managed_path.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_manifest = Path(temp_dir) / 'idf_component.yml'
+                with open(temp_manifest, 'w', encoding='utf-8') as f:
+                    yaml.dump({'dependencies': {bmgr_key: bmgr_value}}, f)
+
+                manifest = ManifestManager(str(temp_dir), 'temp').load()
+                download_project_dependencies(
+                    ProjectRequirements([manifest]),
+                    str(lock_path),
+                    str(managed_path),
+                )
+                logger.info('Successfully downloaded esp_board_manager component from %s to %s', manifest_path, managed_path)
+                return True
+        except Exception as e:
+            logger.error('Error downloading esp_board_manager component: %s', e)
+            return False
+
+    def _pre_hook(self, board_name: str) -> None:
+        logger.info(
+            "Pre build hook for app '%s' at '%s' for target '%s', board '%s'",
+            self.name,
+            self.work_dir,
+            self.target,
+            board_name,
+        )
+        self.clear_project_generated_files()
+        if not board_name:
+            logger.info('No board name specified, skip the pre build hook')
+            return
+        if not IDF_PATH:
+            logger.warning('IDF_PATH is not set; skip board manager config generation.')
+            return
+
+        # Download board manager component if needed
+        bmgr_path = Path(self.work_dir).absolute() / 'managed_components' / 'espressif__esp_board_manager'
+        if not bmgr_path.exists():
+            logger.info('Board manager component not found, downloading...')
+            if not self._download_bmgr_component():
+                logger.error('Failed to download board manager component, cannot generate config')
+                return
+
+        # Keep the Board Manager extra action available for the generator and build.
+        # The generated board_manager.defaults must additionally be inserted into
+        # idf_build_apps SDKCONFIG_DEFAULTS in _build() to override its explicit
+        # CMake command-line defaults.
+        extra_actions_paths = [
+            path for path in os.environ.get('IDF_EXTRA_ACTIONS_PATH', '').split(';') if path
+        ]
+        # idf.py supports semicolon-separated extension paths. Keep any
+        # existing actions available when the Board Manager hook runs.
+        if os.path.realpath(bmgr_path) not in {os.path.realpath(path) for path in extra_actions_paths}:
+            extra_actions_paths.append(str(bmgr_path))
+        os.environ['IDF_EXTRA_ACTIONS_PATH'] = ';'.join(extra_actions_paths)
+        env = os.environ.copy()
+
+        subprocess.run(
+            [
+                sys.executable,
+                f'{IDF_PATH}/tools/idf.py',
+                'gen-bmgr-config',
+                '-c',
+                str(Path(self.work_dir).absolute() / 'boards'),
+                '-b',
+                board_name,
+            ],
+            cwd=self.work_dir,
+            env=env,
+            check=True,
+        )
 
 def _get_idf_version():
     if os.environ.get('IDF_VERSION'):
@@ -52,18 +276,20 @@ def get_cmake_apps(
     paths,
     target,
     config_rules_str,
+    ignore_warnings,
+    recursive,
     default_build_targets,
-):  # type: (List[str], str, List[str]) -> List[App]
+):  # type: (List[str], str, str, bool, bool, List[str]) -> List[App]
     idf_ver = _get_idf_version()
     apps = find_apps(
         paths,
-        recursive=True,
+        recursive=recursive,
         target=target,
         build_dir=f'{idf_ver}/build_@t_@w',
         config_rules_str=config_rules_str,
         build_log_filename='build_log.txt',
         size_json_filename='size.json',
-        check_warnings=True,
+        check_warnings=not ignore_warnings,
         no_preserve=False,
         default_build_targets=default_build_targets,
         manifest_files=[
@@ -71,13 +297,16 @@ def get_cmake_apps(
             str(Path(PROJECT_ROOT) /'examples'/'.build-rules.yml'),
             str(Path(PROJECT_ROOT) /'tools'/'.build-rules.yml'),
         ],
+        build_system=CustomApp,
     )
     return apps
 
 
 def main(args):  # type: (argparse.Namespace) -> None
     default_build_targets = args.default_build_targets.split(',') if args.default_build_targets else None
-    apps = get_cmake_apps(args.paths, args.target, args.config, default_build_targets)
+    global BOARD_NAME
+    BOARD_NAME = (args.board or '').strip()
+    apps = get_cmake_apps(args.paths, args.target, args.config, args.ignore_warnings, args.recursive, default_build_targets)
 
     if args.find:
         if args.output:
@@ -109,6 +338,7 @@ def main(args):  # type: (argparse.Namespace) -> None
         dry_run=False,
         collect_size_info=args.collect_size_info,
         keep_going=True,
+        check_warnings=not args.ignore_warnings,
         ignore_warning_strs=IGNORE_WARNINGS,
         copy_sdkconfig=True,
         no_preserve=False,
@@ -118,6 +348,16 @@ def main(args):  # type: (argparse.Namespace) -> None
 
 
 if __name__ == '__main__':
+    def str2bool(v):
+        if isinstance(v, bool):
+            return v
+        if v.lower() in ('yes', 'true', 't', 'y', '1'):
+            return True
+        elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError('Boolean value expected.')
+
     parser = argparse.ArgumentParser(
         description='Build all the apps for different test types. Will auto remove those non-test apps binaries',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -176,6 +416,24 @@ if __name__ == '__main__':
     parser.add_argument(
         '-o', '--output',
         help='Print the found apps to the specified file instead of stdout'
+    )
+    parser.add_argument(
+        '-r', '--recursive',
+        type=str2bool,
+        nargs='?',
+        default=True,
+        const=True,
+        help='Build apps recursively',
+    )
+    parser.add_argument(
+        '--ignore-warnings',
+        action='store_true',
+        help='Ignore warnings when building apps',
+    )
+    parser.add_argument(
+        '--board',
+        default='default',
+        help='Board Manager board name. Empty value disables Board Manager flow.',
     )
 
     arguments = parser.parse_args()

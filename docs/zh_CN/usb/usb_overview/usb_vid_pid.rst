@@ -8,7 +8,6 @@ VID 和 PID 是 USB 设备的唯一标识符，用于区分不同的 USB 设备�
 以下情况您可以免申请 VID 和 PID
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 * 如果您的产品使用的是 USB Host 模式，您不需要申请 VID 和 PID。
 * 如果您的产品使用的是 USB Device 模式，准备使用乐鑫的 VID（0x303A）, 并且基于 TinyUSB 协议栈开发 USB 标准设备，那您不需要申请 PID，使用 TinyUSB 默认 PID 即可。
 
@@ -35,3 +34,5 @@ USB 认证是一个可选的过程，但在以下情况下必须进行产品认�
 * 如果产品打算使用 USB 标志、商标或宣传资料中提及 USB 认证。
 
 具体认证流程和要求，请查阅 https://www.usb.org 或联系 `USB-IF 授权测试实验室 <https://www.usb.org/labs>`_\ 。
+
+此外，关于 USB 信号指令测试的详细步骤与固件，请参考 :doc:`USB Signal Quality Test <./usb_signal_quality>`

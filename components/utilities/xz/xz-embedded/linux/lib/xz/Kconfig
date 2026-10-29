@@ -1,5 +1,5 @@
 config XZ_DEC
-	tristate "XZ decompression support"
+	bool "XZ decompression support"
 	select CRC32
 	help
 	  LZMA2 compression algorithm and BCJ filters are supported using
@@ -45,7 +45,7 @@ config XZ_DEC_BCJ
 	default n
 
 config XZ_DEC_TEST
-	tristate "XZ decompressor tester"
+	bool "XZ decompressor tester"
 	default n
 	depends on XZ_DEC
 	help

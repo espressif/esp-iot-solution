@@ -1,0 +1,7 @@
+menu "BLE Profile: MIDI over BLE"
+    config BLE_MIDI_PROFILE
+        bool "Enable MIDI over BLE Profile"
+        default n
+        help
+            Enable support for MIDI over BLE (BLE-MIDI) profile.
+endmenu

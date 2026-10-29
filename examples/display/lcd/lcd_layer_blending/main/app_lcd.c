@@ -71,7 +71,11 @@ esp_err_t app_lcd_init(esp_lcd_panel_handle_t *panel_handle)
 
     ESP_LOGI(TAG, "Install LCD driver of ek79007");
     esp_lcd_panel_handle_t display_handle;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG_CF(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#else
     esp_lcd_dpi_panel_config_t dpi_config = EK79007_1024_600_PANEL_60HZ_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#endif
     dpi_config.num_fbs = LCD_PPA_BLEND_FRAME_BUFFER_NUMS;
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {

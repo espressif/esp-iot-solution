@@ -1,0 +1,2 @@
+# Baseline matrix profile for unit tests
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

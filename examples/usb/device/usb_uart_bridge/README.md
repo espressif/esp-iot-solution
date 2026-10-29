@@ -48,8 +48,19 @@ The example using `ESP32-S3-OTG` board by default, the IO configuration is as fo
 |     19      |  USB D-   |             Fixed              |
 |     46      |  UART-RX  |    Link to target board TX     |
 |     45      |  UART-TX  |    Link to target board RX     |
-|     26      | Boot(IO0) | Link to target board Boot(IO0) |
+|     26      |   Boot    |    Link to target board Boot   |
 |      3      | EN (RST)  |  Link to target board EN(RST)  |
+
+If you are using `ESP32-P4-Function-EV-Board` board, the IO configuration is as follows:
+
+| ESP32-P4 IO | Function  |             Remark             |
+| :---------: | :-------: | :----------------------------: |
+|   pin 50    |  USB D+   |             Fixed              |
+|   pin 49    |  USB D-   |             Fixed              |
+|     27      |  UART-RX  |    Link to target board TX     |
+|     46      |  UART-TX  |    Link to target board RX     |
+|      6      |   Boot    |    Link to target board Boot   |
+|      5      | EN (RST)  |  Link to target board EN(RST)  |
 
 ### Build and Flash
 
@@ -61,7 +72,7 @@ The example using `ESP32-S3-OTG` board by default, the IO configuration is as fo
     . $HOME/esp/esp-idf/export.sh
     ```
 
-3. Set ESP-IDF build target to `esp32s2` or `esp32s3`
+3. Set ESP-IDF build target to `esp32s2`, `esp32s3` or `esp32p4`
 
     ```bash
     idf.py set-target esp32s3

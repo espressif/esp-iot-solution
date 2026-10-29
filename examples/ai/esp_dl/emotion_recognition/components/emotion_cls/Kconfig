@@ -1,0 +1,35 @@
+menu "models: emotion_cls"
+    config FLASH_EMOTION_CLS
+        bool "flash emotion_cls"
+        default y
+
+    choice
+        prompt "default model"
+        default EMOTION_CLS
+        help
+            default emotion_cls model
+        config EMOTION_CLS
+            bool "emotion_cls"
+            depends on FLASH_EMOTION_CLS
+    endchoice
+
+    config DEFAULT_EMOTION_CLS_MODEL
+        int
+        default 0 if EMOTION_CLS
+
+    choice
+        prompt "model location"
+        default EMOTION_CLS_MODEL_IN_FLASH_RODATA
+        help
+            emotion_cls model location
+        config EMOTION_CLS_MODEL_IN_FLASH_RODATA
+            bool "flash_rodata"
+        config EMOTION_CLS_MODEL_IN_FLASH_PARTITION
+            bool "flash_partition"
+    endchoice
+
+    config EMOTION_CLS_MODEL_LOCATION
+        int
+        default 0 if EMOTION_CLS_MODEL_IN_FLASH_RODATA
+        default 1 if EMOTION_CLS_MODEL_IN_FLASH_PARTITION
+endmenu

@@ -6,120 +6,68 @@ Touch Button Sensor
 Overview
 --------
 
-The ``touch_button_sensor`` component provides enhanced touch button detection functionality for ESP32 series chips. It uses multiple frequency sampling (for ESP32-P4) and FSM-based processing to provide reliable touch detection even in noisy environments.
+The ``touch_button_sensor`` component (published as version 0.3.0) combines the touch low-level driver and the touch FSM. It accepts complete multi-frequency frames, reports the positive fused amplitude, and emits debounced active/inactive callbacks. The component is intended for testing and evaluation. It requires ESP-IDF 5.5 or newer on the targets listed by its component manifest.
 
-.. note::
-   - ESP32/ESP32-S2/ESP32-S3 touch-related components are intended for testing or demo purposes only. Due to the poor anti-interference capability of the touch functionality, it may not pass EMS testing, and therefore, it is not recommended for mass production products.
-   - This component is currently applicable to ESP32, ESP32-S2, and ESP32-S3, and requires an IDF version greater than or equal to v5.3.
+The low-level driver performs its own startup alignment before the button callbacks are registered. A button held during startup can therefore affect the initial operating point; tune the threshold from the target's measured FSM decision-domain amplitude.
 
-Key Features
-^^^^^^^^^^^^^^
+Configuration
+-------------
 
-* Multi-frequency touch sampling for improved noise immunity
-* FSM-based touch detection with configurable thresholds
-* Debounce support for reliable state changes
-* Support for multiple touch channels
-* Callback-based event notification
-
-Dependencies
-^^^^^^^^^^^^^^
-
-* touch_sensor_fsm
-* touch_sensor_lowlevel
-
-Configuration Parameters
------------------------------
-
-Touch Button Configuration Structure
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-The touch button can be configured via the :cpp:type:`touch_button_config_t` structure:
+Use :cpp:type:`touch_button_config_t`:
 
 .. code:: c
 
     typedef struct {
-        uint32_t channel_num;          /*!< Number of touch button sensor channels */
-        uint32_t *channel_list;        /*!< Touch channel list */
-        float *channel_threshold;       /*!< Threshold for touch detection for each channel */
-        uint32_t *channel_gold_value;   /*!< (Optional) Reference values for touch channels */
-        uint32_t debounce_times;        /*!< Number of consecutive readings needed to confirm state change */
-        bool skip_lowlevel_init;        /*!< Skip low level initialization when working with existing touch driver */
+        uint32_t channel_num;
+        uint32_t *channel_list;
+        uint32_t *thresholds;
+        uint32_t sample_period_ms;
+        uint32_t sample_cfg_num;
+        uint32_t debounce_active;
+        uint32_t debounce_inactive;
+        bool skip_lowlevel_init;
     } touch_button_config_t;
 
-Parameter Descriptions
-^^^^^^^^^^^^^^^^^^^^^^^
+``thresholds`` contains one absolute normalized FSM decision threshold per channel. It is not a percentage and does not use a legacy reference-value array. Zero sample settings select the low-level defaults. Zero debounce settings select the FSM defaults. When ``skip_lowlevel_init`` is true, the application must own and start a compatible low-level instance first.
 
-+--------------------+------------------------------------------------+---------------+
-|     Parameter      |                  Description                   | Default Value |
-+====================+================================================+===============+
-| channel_num        | Number of touch button sensor channels         | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_list       | Array of touch channel numbers to use          | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_threshold  | Array of threshold values for each channel     | -             |
-+--------------------+------------------------------------------------+---------------+
-| channel_gold_value | Reference values for touch channels (optional) | NULL          |
-+--------------------+------------------------------------------------+---------------+
-| debounce_times     | Consecutive readings for state change          | 3             |
-+--------------------+------------------------------------------------+---------------+
-| skip_lowlevel_init | Skip touch driver initialization if exists     | false         |
-+--------------------+------------------------------------------------+---------------+
-
-API Usage Examples
----------------------
-
-Create and Initialize
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example
+-------
 
 .. code:: c
 
+    static uint32_t channels[] = {1, 2, 3, 4};
+    static uint32_t thresholds[] = {70, 70, 70, 70};
     touch_button_config_t config = {
-        .channel_num = 1,
-        .channel_list = (uint32_t[]){8},            // Using touch channel 8
-        .channel_threshold = (float[]){0.02},       // 2% change threshold
-        .channel_gold_value = NULL,                  // No reference values
-        .debounce_times = 3,                        // 3 readings to confirm
-        .skip_lowlevel_init = false                 // Initialize touch hardware
+        .channel_num = 4,
+        .channel_list = channels,
+        .thresholds = thresholds,
+        .sample_period_ms = 20,
+        .sample_cfg_num = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
+        .skip_lowlevel_init = false,
     };
-    touch_button_handle_t btn_handle = NULL;
-    esp_err_t ret = touch_button_sensor_create(&config, &btn_handle, button_state_callback, NULL);
+    touch_button_handle_t handle = NULL;
+    ESP_ERROR_CHECK(touch_button_sensor_create(&config, &handle,
+                                               button_state_callback, NULL));
 
-State Change Callback
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+    while (true) {
+        ESP_ERROR_CHECK(touch_button_sensor_handle_events(handle));
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
 
-The callback function is called when a touch button state changes:
+The callback receives the channel and stable state. Use :cpp:func:`touch_button_sensor_get_data` for the current positive fused amplitude and :cpp:func:`touch_button_sensor_get_state` for the current state. The published component exposes only this public button API; it does not provide a wrapper debug switch or the FSM private headers. For raw, baseline, fusion, or FSM snapshot diagnostics, build the repository FSM example, which owns the debug configuration and private include path.
 
 .. code:: c
 
-    void button_state_callback(touch_button_handle_t handle, uint32_t channel, touch_state_t state, void *arg)
+    static void button_state_callback(touch_button_handle_t handle,
+                                      uint32_t channel, touch_state_t state,
+                                      void *arg)
     {
-        switch (state) {
-            case TOUCH_STATE_ACTIVE:
-                printf("Button channel %d pressed\n", channel);
-                break;
-            case TOUCH_STATE_INACTIVE:
-                printf("Button channel %d released\n", channel);
-                break;
-        }
+        (void)handle;
+        (void)arg;
+        printf("channel=%" PRIu32 " state=%d\n", channel, state);
     }
-
-
-Event Handling
-^^^^^^^^^^^^^^^^
-
-The touch button sensor component provides an event handling mechanism to process touch events in a non-blocking way. Events should be handled periodically in your application's main loop or in a dedicated task.
-
-.. code:: c
-
-    // In your main loop or task
-    while (1) {
-        // Process any pending touch events
-        touch_button_sensor_handle_events(btn_handle);
-        
-        // Add delay to prevent tight loop
-        vTaskDelay(pdMS_TO_TICKS(20));  // 20ms interval is typically sufficient
-    }
-
 
 Examples
 --------
@@ -127,6 +75,8 @@ Examples
 - :example:`touch/touch_button_sensor`
 
 API Reference
----------------
+-------------
 
-.. include-build-file:: inc/touch_button_sensor.inc
+The structured public API header is maintained with the published component:
+
+`touch_button_sensor public API <https://components.espressif.com/components/espressif/touch_button_sensor>`_.

@@ -20,4 +20,25 @@ menu "ADC Mic"
         default 16380 if ADC_MIC_APPLY_GAIN = 3
         default 32760 if ADC_MIC_APPLY_GAIN = 4
 
+    config ADC_MIC_TASK_PRIORITY
+        int "Task Priority"
+        default 1
+        range 0 15
+        help
+            Task priority for the ADC mic worker task.
+
+    config ADC_MIC_TASK_STACK_SIZE
+        int "Task Stack Size"
+        default 3072
+        range 2048 8192
+        help
+            Stack size for the ADC mic worker task.
+
+    config ADC_MIC_TASK_CORE
+        int "Task Core"
+        default -1
+        range -1 1
+        help
+            Core for the ADC mic worker task, -1 means no affinity.
+        depends on SOC_CPU_CORES_NUM > 1 && !FREERTOS_UNICORE
 endmenu

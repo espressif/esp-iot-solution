@@ -2,4 +2,4 @@
 dependencies:
   esp_lcd_st7703:
     version: "*"
-    path: "../../../esp_lcd_st7703"
+    override_path: "../../../esp_lcd_st7703"

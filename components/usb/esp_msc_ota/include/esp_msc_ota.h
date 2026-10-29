@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -17,6 +17,7 @@ extern "C"
 #include "esp_event.h"
 #include "esp_app_format.h"
 #include "esp_ota_ops.h"
+#include "esp_msc_host.h"
 
 /**
  * @brief Declare Event Base for ESP MSC OTA
@@ -26,23 +27,29 @@ extern "C"
 ESP_EVENT_DECLARE_BASE(ESP_MSC_OTA_EVENT);
 /** @endcond **/
 
+/**
+ * @brief MSC OTA events posted on ESP_MSC_OTA_EVENT event base.
+ */
 typedef enum {
-    ESP_MSC_OTA_START,                 /*!< Start update */
-    ESP_MSC_OTA_READY_UPDATE,          /*!< Ready to update */
-    ESP_MSC_OTA_WRITE_FLASH,           /*!< Flash write operation  */
-    ESP_MSC_OTA_FAILED,                /*!< Update failed */
-    ESP_MSC_OTA_GET_IMG_DESC,          /*!< Get image description */
-    ESP_MSC_OTA_VERIFY_CHIP_ID,        /*!< Verify chip id */
-    ESP_MSC_OTA_UPDATE_BOOT_PARTITION, /*!< Boot partition update after successful ota update */
-    ESP_MSC_OTA_FINISH,                /*!< OTA finished */
-    ESP_MSC_OTA_ABORT,                 /*!< OTA aborted */
+    ESP_MSC_OTA_START,                 /*!< Start update, event data: NULL */
+    ESP_MSC_OTA_READY_UPDATE,          /*!< Ready to update, event data: NULL */
+    ESP_MSC_OTA_WRITE_FLASH,           /*!< Flash write operation, event data: float *progress */
+    ESP_MSC_OTA_FAILED,                /*!< Update failed, event data: esp_err_t *err */
+    ESP_MSC_OTA_GET_IMG_DESC,          /*!< Get image description, event data: NULL */
+    ESP_MSC_OTA_VERIFY_CHIP_ID,        /*!< Verify chip id, event data: esp_chip_id_t *chip_id */
+    ESP_MSC_OTA_UPDATE_BOOT_PARTITION, /*!< Boot partition update after successful ota update, event data: esp_partition_subtype_t *subtype */
+    ESP_MSC_OTA_FINISH,                /*!< OTA finished, event data: NULL */
+    ESP_MSC_OTA_ABORT,                 /*!< OTA aborted, event data: NULL */
 } esp_msc_ota_event_t;
 
+/**
+ * @brief Internal state of an esp_msc_ota handle.
+ */
 typedef enum {
-    ESP_MSC_OTA_INIT,
-    ESP_MSC_OTA_BEGIN,
-    ESP_MSC_OTA_IN_PROGRESS,
-    ESP_MSC_OTA_SUCCESS,
+    ESP_MSC_OTA_INIT,        /*!< Handle allocated but esp_msc_ota_begin() not called yet */
+    ESP_MSC_OTA_BEGIN,       /*!< esp_msc_ota_begin() succeeded, ready for esp_msc_ota_perform() */
+    ESP_MSC_OTA_IN_PROGRESS, /*!< Firmware image is being written to flash */
+    ESP_MSC_OTA_SUCCESS,     /*!< Full firmware image has been written */
 } esp_msc_ota_status_t;
 
 /**
@@ -50,18 +57,22 @@ typedef enum {
  *
  */
 typedef struct {
-    const char *ota_bin_path;    /*!< OTA binary name, must be an exact match. Note: By default file names cannot exceed 11 bytes e.g. "/usb/ota.bin" */
-    bool bulk_flash_erase;       /*!< Erase entire flash partition during initialization. By default flash partition is erased during write operation and in chunk of 4K sector size */
-    bool skip_msc_connect_wait;  /*!< Skip waiting for MSC device to connect, if true means MSC device is already connected */
-    TickType_t wait_msc_connect; /*!< Wait time for MSC device to connect */
-    size_t buffer_size;          /*!< Buffer size for OTA write operation, must larger than 1024 */
+    esp_msc_host_handle_t host_handle; /*!< MSC host handle. OTA waits for this host's VFS mounted state and locks file access through the host API */
+    const char *ota_bin_path;          /*!< OTA binary name, must be an exact match. Note: By default file names cannot exceed 11 bytes e.g. "/usb/ota.bin" */
+    TickType_t wait_msc_connect;       /*!< Wait time for MSC VFS mount in FreeRTOS ticks */
+    size_t buffer_size;                /*!< Buffer size for OTA write operation, must larger than 1024 */
+    bool bulk_flash_erase;             /*!< Erase entire flash partition during initialization. By default flash partition is erased during write operation and in chunk of 4K sector size */
 } esp_msc_ota_config_t;
 
 /**
- * @brief Handle for the MSC ota
+ * @brief Opaque MSC OTA handle.
  *
+ * The concrete type is private to the component; users must only pass the
+ * value returned by esp_msc_ota_begin() to the OTA APIs. Note that this is a
+ * different type from esp_msc_host_handle_t and the two handles must not be
+ * used interchangeably.
  */
-typedef void *esp_msc_ota_handle_t;
+typedef struct esp_msc_ota_ctx *esp_msc_ota_handle_t;
 
 /**
  * @brief Start MSC OTA Firmware upgrade
@@ -76,7 +87,7 @@ typedef void *esp_msc_ota_handle_t;
  *     - ESP_ERR_NO_MEM: Failed to allocate memory for msc_ota handle
  *     - ESP_FAIL: For generic failure.
  */
-esp_err_t esp_msc_ota_begin(esp_msc_ota_config_t *config, esp_msc_ota_handle_t *handle);
+esp_err_t esp_msc_ota_begin(const esp_msc_ota_config_t *config, esp_msc_ota_handle_t *handle);
 
 /**
  * @brief Read data from the firmware on the USB flash drive and start the upgrade,
@@ -141,7 +152,7 @@ esp_err_t esp_msc_ota_abort(esp_msc_ota_handle_t handle);
  *    - ESP_OK: Success
  *    - For other errors, please check the API for the specific error.
  */
-esp_err_t esp_msc_ota(esp_msc_ota_config_t *config);
+esp_err_t esp_msc_ota(const esp_msc_ota_config_t *config);
 
 /**
  * @brief Reads app description from image header. The app description provides information
@@ -156,16 +167,6 @@ esp_err_t esp_msc_ota(esp_msc_ota_config_t *config);
  *    - ESP_FAIL: Fail to read image header
  */
 esp_err_t esp_msc_ota_get_img_desc(esp_msc_ota_handle_t handle, esp_app_desc_t *new_app_info);
-
-/**
- * @brief When you manage the MSC HOST function, call this api to notify msc_ota that the u-disk
- *        has been inserted and the VFS filesystem has been mounted.
- *
- * @param[in] handle Handle for the MSC ota
- * @param[in] if_connect
- * @return alaways return ESP_OK
- */
-esp_err_t esp_msc_ota_set_msc_connect_state(esp_msc_ota_handle_t handle, bool if_connect);
 
 /**
  * @brief Get the status of the MSC ota

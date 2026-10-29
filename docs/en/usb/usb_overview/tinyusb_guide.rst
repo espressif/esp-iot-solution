@@ -206,4 +206,3 @@ In UVC devices, a single physical camera has a VC (video control) descriptor, an
             |-- Video Streaming
 
 Refer to :doc:`/usb/usb_device/usb_device_uvc` for more information.
-

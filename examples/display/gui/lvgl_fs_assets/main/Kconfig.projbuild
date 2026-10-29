@@ -1,0 +1,21 @@
+menu "LVGL FS Assets Demo Configuration"
+
+choice EXAMPLE_FS_TYPE
+    prompt "Storage filesystem type"
+    default EXAMPLE_FS_SPIFFS
+    help
+        Select the filesystem used for the storage partition.
+        The example packages the same image and binfont assets into the
+        selected filesystem and mounts them at /storage during boot.
+
+    config EXAMPLE_FS_SPIFFS
+        bool "SPIFFS"
+
+    config EXAMPLE_FS_FATFS
+        bool "FATFS"
+
+    config EXAMPLE_FS_LITTLEFS
+        bool "LittleFS"
+endchoice
+
+endmenu

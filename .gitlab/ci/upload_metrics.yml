@@ -1,0 +1,110 @@
+.upload_metrics_template: &upload_metrics_template
+  stage: deploy
+  image: python:3.12-slim
+  tags:
+    - deploy
+  before_script:
+    - pip install --no-cache-dir esp-metrics-cli
+  variables:
+    ESP_METRICS_PROJECT_URL: "$CI_PROJECT_URL"
+    ESP_METRICS_PROJECT_ID: "$CI_PROJECT_ID"
+    ESP_METRICS_COMMIT_SHA: "$CI_COMMIT_SHA"
+    ESP_METRICS_BRANCH_NAME: "$CI_COMMIT_REF_NAME"
+
+# For LVGL Framerate Test
+.upload_metrics_lvgl_adapter_benchmark_template: &upload_metrics_lvgl_adapter_benchmark_template
+  <<: *upload_metrics_template
+  script:
+    - python components/display/tools/esp_lvgl_adapter/benchmark/metrics/convert_xunit_to_metric_json.py XUNIT_RESULT.xml > metrics.json
+    - esp-metrics-cli validate -d components/display/tools/esp_lvgl_adapter/benchmark/metrics/schema.yml -i metrics.json --verbose
+    - esp-metrics-cli upload -d components/display/tools/esp_lvgl_adapter/benchmark/metrics/schema.yml -i metrics.json
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - metrics.json
+    expire_in: 1 day
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32s3:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32s3, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32p4:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32p4, 5.5, generic,eco4]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32c2:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32c2, 5.5, xtal_40mhz]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32c3:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32c3, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32c5:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32c5, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_benchmark_idf5_5_esp32c6:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_benchmark: [esp32c6, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32s3:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32s3, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32p4:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32p4, 5.5, generic,eco4]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32c2:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32c2, 5.5, xtal_40mhz]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32c3:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32c3, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32c5:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32c5, 5.5, generic]"
+      artifacts: true
+      optional: false
+
+upload_metrics_lvgl_adapter_rgb888_benchmark_idf5_5_esp32c6:
+  <<: *upload_metrics_lvgl_adapter_benchmark_template
+  needs:
+    - job: "components_test_esp_lvgl_adapter_rgb888_benchmark: [esp32c6, 5.5, generic]"
+      artifacts: true
+      optional: false

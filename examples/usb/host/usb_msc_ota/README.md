@@ -1,3 +1,6 @@
+| Supported Targets | ESP32-P4 | ESP32-S2 | ESP32-S3 | ESP32-S31 |
+| ----------------- | -------- | -------- | -------- | --------- |
+
 # USB Host MSC OTA Example
 
 This example demonstrates how to use [esp_msc_ota](https://components.espressif.com/components/espressif/esp_msc_ota) to OTA with USB disk or other MSC devices.
@@ -6,22 +9,28 @@ This example demonstrates how to use [esp_msc_ota](https://components.espressif.
 
 ### Hardware Required
 
-The example can be run on ESP32-S2 or ESP32-S3 based development board with USB Disk (with Fat32 format).
+A development board with USB Host interface and a USB Disk with Fat32 format are required.
 
 ### Setup the Hardware
 
 Connect the external USB MSC device to ESP32-S USB interface directly.
 
-| ESP32-Sx GPIO | USB Device  |
-| ------------- | ----------- |
-| 20            | D+ (green)  |
-| 19            | D- (white)  |
-| GND           | GND (black) |
-| +5V           | +5V (red)   |
+```
+┌─────────────┐          ┌─────────────────┐
+│             ┼──────────┼5V               │
+│  USB Disk   ┼──────────┼GND              │
+│             │          │    ESP32-xx     │
+│             │          │                 │
+│             ┼──────────┼USB D+           │
+│             ┼──────────┼USB D-           │
+│             │          │                 │
+└─────────────┘          │                 │
+                         └─────────────────┘
+```
 
 ### Configure the project
 
-1. Use the command below to set build target to esp32s2 or esp32s3.
+1. Use the command below to set build target.
 
     ```
     idf.py set-target esp32s3

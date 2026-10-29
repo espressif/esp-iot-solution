@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,19 +7,13 @@
 #include <string.h>
 
 #include "esp_log.h"
-#include "esp_flash_encrypt.h"
-#include "esp_idf_version.h"
 #include "bootloader_flash_priv.h"
 #include "bootloader_storage_flash.h"
 #include "bootloader_custom_malloc.h" // Note, this header is just used to provide malloc() and free() support.
+#include "bootloader_custom_utility.h"
 
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
-#include "hal/wdt_hal.h"
-#if (ESP_IDF_VERSION_MAJOR == 5) && (ESP_IDF_VERSION_MINOR >= 1)
 static wdt_hal_context_t rtc_wdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
-#else
-static wdt_hal_context_t rtc_wdt_ctx = {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL};
-#endif // ESP_IDF_VERSION_MAJOR
 static bool rtc_wdt_ctx_enabled = false;
 #endif
 
@@ -79,8 +73,14 @@ static size_t bootloader_storage_flash_stream_read(size_t src_addr, size_t size,
         actual_read_size += 4;
     }
 
-    ESP_LOGD("test", "src_addr: %u, size: %u, left_addr: %u, actual_read_size: %u", src_addr, size, byte_stream->left_addr, actual_read_size);
-    if (bootloader_flash_read(byte_stream->left_addr, byte_stream->stream_buffer, actual_read_size, true) != ESP_OK) {
+    ESP_LOGD(TAG, "src_addr: %u, size: %u, left_addr: %u, actual_read_size: %u",
+             (unsigned)src_addr, (unsigned)size, (unsigned)byte_stream->left_addr,
+             (unsigned)actual_read_size);
+    /* Honor allow_decrypt so RMW of the destination does not share the
+     * cache-mapped MMU window with source reads when encryption is off. */
+    bootloader_custom_sync_int_cache();
+    if (bootloader_flash_read(byte_stream->left_addr, byte_stream->stream_buffer,
+                              actual_read_size, allow_decrypt) != ESP_OK) {
         ESP_LOGE(TAG, "read origin old err");
         return 0;
     }
@@ -106,6 +106,7 @@ esp_err_t bootloader_storage_flash_write(size_t dest_addr, void *src, size_t siz
 
     memcpy(byte_stream->stream_buffer + (dest_addr - byte_stream->left_addr), src, size);
 
+    bootloader_custom_sync_int_cache();
     return bootloader_flash_write(byte_stream->left_addr, byte_stream->stream_buffer, actual_read_size, allow_decrypt);
 }
 
@@ -129,7 +130,7 @@ int bootloader_storage_flash_input(void *buf, int size)
     static uint32_t write_count = 0;
 
     if (custom_ota_config->dst_offset + size < custom_ota_config->dst_size) {
-        if (esp_flash_encryption_enabled()) {
+        if (bootloader_custom_flash_encryption_enabled()) {
             encryption = true;
         }
         if (bootloader_storage_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption) != ESP_OK) {
@@ -149,7 +150,6 @@ int bootloader_storage_flash_input(void *buf, int size)
         }
     }
     write_count++;
-
 #endif
 
     return size;
@@ -171,9 +171,10 @@ int bootloader_storage_flash_input(void *buf, int size)
     if (custom_ota_config->dst_offset + size < custom_ota_config->dst_size) {
         uint32_t dst_addr = custom_ota_config->dst_addr + custom_ota_config->dst_offset;
         ESP_LOGD(TAG, "write buffer %x to %x, len %d", buf, dst_addr, size);
-        if (esp_flash_encryption_enabled()) {
+        if (bootloader_custom_flash_encryption_enabled()) {
             encryption = true;
         }
+        bootloader_custom_sync_int_cache();
         bootloader_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption);
         custom_ota_config->dst_offset += size;
     }

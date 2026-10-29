@@ -237,7 +237,7 @@ bp1658cj_cw_current_t bp1658cj_cw_current_mapping(int current_mA)
     return (bp1658cj_cw_current_t)(current_mA / 5);
 }
 
-esp_err_t bp1658cj_init(driver_bp1658cj_t *config, void(*hook_func)(void *))
+esp_err_t bp1658cj_init(driver_bp1658cj_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
 
@@ -281,8 +281,8 @@ esp_err_t bp1658cj_deinit(void)
     DRIVER_CHECK(s_bp1658cj, "not init", return ESP_ERR_INVALID_STATE);
 
     bp1658cj_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_bp1658cj);
     s_bp1658cj = NULL;
     return ESP_OK;

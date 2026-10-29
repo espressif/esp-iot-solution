@@ -11,3 +11,6 @@ Other Resources
     ADC Range Extension<adc_range>
     Zero Detection <zero_detection>
     ADC Two-Point Calibration Scheme <adc_tp_calibration>
+    Protocomm Extension <protocomm_ext>
+    Network Provisioner <network_provisioner>
+    ESP Local Controller <esp_local_controller>

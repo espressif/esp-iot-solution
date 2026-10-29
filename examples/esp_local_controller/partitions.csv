@@ -1,0 +1,5 @@
+# Name,   Type, SubType, Offset,  Size, Flags
+# HTTP + NimBLE central in one image exceeds the 1.5 MB single-app-large layout.
+nvs,      data, nvs,     ,        0x6000,
+phy_init, data, phy,     ,        0x1000,
+factory,  app,  factory, ,        0x200000,

@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -79,6 +80,7 @@ static inline void kbd_handler(keyboard_btn_t *kbd)
     bool key_change_dec_flag = false;
     uint32_t key_last_pressed_num = kbd->key_pressed_num;
     uint32_t key_release_num = 0;
+    const uint32_t max_key_num = kbd->output_gpio_num * kbd->input_gpio_num;
     // Clear all output level
     uint32_t output_level = kbd->active_level ? OUTPUT_MASK_LOW : OUTPUT_MASK_HIGE;
     if (kbd->enable_power_save) {
@@ -104,10 +106,15 @@ static inline void kbd_handler(keyboard_btn_t *kbd)
                     kbd->button_level[currect_btn_num] = kbd->active_level ? read_gpio_level : !read_gpio_level;
                     // Make a report
                     if (kbd->button_level[currect_btn_num] == 1) {
-                        key_change_inc_flag = true;
-                        kbd->key_data[kbd->key_pressed_num].output_index = i;
-                        kbd->key_data[kbd->key_pressed_num].input_index = j;
-                        kbd->key_pressed_num++;
+                        if (kbd->key_pressed_num >= max_key_num) {
+                            ESP_LOGE(TAG, "key_data overflow: pressed=%" PRIu32 " max=%" PRIu32 " row=%d col=%d",
+                                     kbd->key_pressed_num, max_key_num, i, j);
+                        } else {
+                            key_change_inc_flag = true;
+                            kbd->key_data[kbd->key_pressed_num].output_index = i;
+                            kbd->key_data[kbd->key_pressed_num].input_index = j;
+                            kbd->key_pressed_num++;
+                        }
                     } else {
                         key_change_dec_flag = true;
                         /*!< Remove kbd->key_data and move the data forward */
@@ -119,11 +126,20 @@ static inline void kbd_handler(keyboard_btn_t *kbd)
                                 break;
                             }
                         }
-                        kbd->key_pressed_num--;
+                        if (kbd->key_pressed_num > 0) {
+                            kbd->key_pressed_num--;
+                        } else {
+                            ESP_LOGE(TAG, "key_pressed_num underflow on release: row=%d col=%d", i, j);
+                        }
 
-                        kbd->key_release_data[key_release_num].output_index = i;
-                        kbd->key_release_data[key_release_num].input_index = j;
-                        key_release_num++;
+                        if (key_release_num >= max_key_num) {
+                            ESP_LOGE(TAG, "key_release_data overflow: release=%" PRIu32 " max=%" PRIu32 " row=%d col=%d",
+                                     key_release_num, max_key_num, i, j);
+                        } else {
+                            kbd->key_release_data[key_release_num].output_index = i;
+                            kbd->key_release_data[key_release_num].input_index = j;
+                            key_release_num++;
+                        }
                     }
                 }
             } else {
@@ -229,6 +245,13 @@ static void IRAM_ATTR kbd_power_save_isr_handler(void* arg)
         kbd->gptimer_start = true;
     }
     kbd_gpios_intr_control(kbd->input_gpios, kbd->input_gpio_num, false);
+
+    // ISR 唤醒后立刻通知做第一次扫描
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xEventGroupSetBitsFromISR(kbd->event_group, KBD_TIMER_NOTIFY, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
 }
 
 esp_err_t keyboard_button_create(keyboard_btn_config_t *kbd_cfg, keyboard_btn_handle_t *kbd_handle)

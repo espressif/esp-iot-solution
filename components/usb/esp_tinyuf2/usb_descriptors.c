@@ -35,9 +35,15 @@ tusb_desc_device_t const desc_device = {
     .bDescriptorType    = TUSB_DESC_DEVICE,
     .bcdUSB             = USB_BCD,
 
-    // Use Interface Association Descriptor (IAD) for CDC
-    // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1)
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+    // Use Interface Association Descriptor (IAD) for CDC.
+    // As required by USB Specs IAD's subclass must be common class (2) and protocol must be IAD (1).
+    .bDeviceClass       = TUSB_CLASS_MISC,
+    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
+#else
     .bDeviceClass       = TUSB_CLASS_UNSPECIFIED,
+#endif
     .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
 
     .idVendor           = CONFIG_TUSB_VID,
@@ -73,14 +79,19 @@ enum {
 
 #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN)
 
-#define EPNUM_MSC_OUT     0x01
-#define EPNUM_MSC_IN      0x81
+#define EPNUM_MSC_OUT       0x01
+#define EPNUM_MSC_IN        0x81
+#define FS_MSC_EP_SIZE      64
+#define HS_MSC_EP_SIZE      512
+
 #ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
-#define EPNUM_CDC_NOTIF   0x84
-#define EPNUM_CDC_OUT     0x02
-#define EPNUM_CDC_IN      0x83
+#define EPNUM_CDC_NOTIF     0x84
+#define EPNUM_CDC_OUT       0x02
+#define EPNUM_CDC_IN        0x83
+#define FS_CDC_EP_SIZE      64
+#define HS_CDC_EP_SIZE      512
 #undef CONFIG_TOTAL_LEN
-#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
+#define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN + TUD_CDC_DESC_LEN)
 #endif
 
 uint8_t const desc_fs_configuration[] = {
@@ -88,11 +99,59 @@ uint8_t const desc_fs_configuration[] = {
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
 #ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
     // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
-    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, FS_CDC_EP_SIZE),
 #endif
     // Interface number, string index, EP Out & EP In address, EP size
-    TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64),
+    TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, FS_MSC_EP_SIZE),
 };
+
+#if TUD_OPT_HIGH_SPEED
+uint8_t const desc_hs_configuration[] = {
+    // Config number, interface count, string index, total length, attribute, power in mA
+    TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0x00, 100),
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+    // Interface number, string index, EP notification address and size, EP data address (out, in) and size.
+    TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF, 8, EPNUM_CDC_OUT, EPNUM_CDC_IN, HS_CDC_EP_SIZE),
+#endif
+    // Interface number, string index, EP Out & EP In address, EP size
+    TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 5, EPNUM_MSC_OUT, EPNUM_MSC_IN, HS_MSC_EP_SIZE),
+};
+
+uint8_t desc_other_speed_config[CONFIG_TOTAL_LEN];
+
+tusb_desc_device_qualifier_t const desc_device_qualifier = {
+    .bLength            = sizeof(tusb_desc_device_qualifier_t),
+    .bDescriptorType    = TUSB_DESC_DEVICE_QUALIFIER,
+    .bcdUSB             = USB_BCD,
+
+#ifdef CONFIG_ENABLE_UF2_USB_CONSOLE
+    .bDeviceClass       = TUSB_CLASS_MISC,
+    .bDeviceSubClass    = MISC_SUBCLASS_COMMON,
+    .bDeviceProtocol    = MISC_PROTOCOL_IAD,
+#else
+    .bDeviceClass       = TUSB_CLASS_UNSPECIFIED,
+#endif
+    .bMaxPacketSize0    = CFG_TUD_ENDPOINT0_SIZE,
+    .bNumConfigurations = 0x01,
+    .bReserved          = 0x00
+};
+
+uint8_t const *tud_descriptor_device_qualifier_cb(void)
+{
+    return (uint8_t const *) &desc_device_qualifier;
+}
+
+uint8_t const *tud_descriptor_other_speed_configuration_cb(uint8_t index)
+{
+    (void) index; // for multiple configurations
+
+    uint8_t const *desc_config = (tud_speed_get() == TUSB_SPEED_HIGH) ? desc_fs_configuration : desc_hs_configuration;
+    memcpy(desc_other_speed_config, desc_config, CONFIG_TOTAL_LEN);
+    desc_other_speed_config[1] = TUSB_DESC_OTHER_SPEED_CONFIG;
+
+    return desc_other_speed_config;
+}
+#endif
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
 // Application return pointer to descriptor
@@ -101,7 +160,11 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 {
     (void) index; // for multiple configurations
 
+#if TUD_OPT_HIGH_SPEED
+    return (tud_speed_get() == TUSB_SPEED_HIGH) ? desc_hs_configuration : desc_fs_configuration;
+#else
     return desc_fs_configuration;
+#endif
 }
 
 //--------------------------------------------------------------------+

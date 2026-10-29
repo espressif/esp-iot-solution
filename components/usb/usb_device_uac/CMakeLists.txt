@@ -1,6 +1,12 @@
+set(priv_requires esp_timer)
+
+if(${IDF_VERSION_MAJOR} LESS 6)
+    list(APPEND priv_requires usb)       # USB PHY is part of usb component in IDF < 6.0
+endif()
+
 idf_component_register(SRCS usb_device_uac.c
                     INCLUDE_DIRS "include"
-                    PRIV_REQUIRES usb esp_timer)
+                    PRIV_REQUIRES ${priv_requires})
 
 if(NOT CONFIG_USB_DEVICE_UAC_AS_PART)
         # Determine whether tinyusb is fetched from component registry or from local path

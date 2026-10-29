@@ -1,0 +1,6 @@
+version: "0.1.0"
+dependencies:
+    idf: ">=5.0"
+    usb_device_uvc:
+      version: "*"
+      override_path: "../../../usb_device_uvc"

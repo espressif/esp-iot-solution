@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -193,6 +193,87 @@ TEST_CASE("SENSOR_HUB test for virtual sensors", "[virtual sensors][iot]")
     TEST_ASSERT(ESP_OK == i2c_bus_delete(&i2c_bus));
     TEST_ASSERT(NULL == i2c_bus);
 }
+
+#ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
+/* A humiture driver supplied entirely at runtime, NOT via SENSOR_HUB_DETECT_FN. */
+static esp_err_t rt_humi_init(void **ctx, i2c_bus_handle_t bus, uint8_t addr)
+{
+    *ctx = (void *)(uintptr_t)addr; /* trivial per-instance context */
+    return ESP_OK;
+}
+static esp_err_t rt_humi_deinit(void *ctx)
+{
+    return ESP_OK;
+}
+static esp_err_t rt_humi_test(void *ctx)
+{
+    return ESP_OK;
+}
+static esp_err_t rt_humi_acquire_humidity(void *ctx, float *h)
+{
+    *h = 55.5f;
+    return ESP_OK;
+}
+static esp_err_t rt_humi_acquire_temperature(void *ctx, float *t)
+{
+    *t = 25.0f;
+    return ESP_OK;
+}
+
+static humiture_impl_t s_runtime_humi_impl = {
+    .init = rt_humi_init,
+    .deinit = rt_humi_deinit,
+    .test = rt_humi_test,
+    .acquire_humidity = rt_humi_acquire_humidity,
+    .acquire_temperature = rt_humi_acquire_temperature,
+};
+
+TEST_CASE("SENSOR_HUB runtime driver registration", "[runtime][iot]")
+{
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+    i2c_bus_handle_t bus = i2c_bus_create(I2C_MASTER_NUM, &conf);
+    TEST_ASSERT(bus != NULL);
+
+    /* register a user-provided driver at runtime, then use it by name */
+    TEST_ASSERT(ESP_OK == iot_sensor_register_driver("runtime_humi", HUMITURE_ID, &s_runtime_humi_impl));
+    /* duplicate name registration must be rejected */
+    TEST_ASSERT(ESP_ERR_INVALID_STATE == iot_sensor_register_driver("runtime_humi", HUMITURE_ID, &s_runtime_humi_impl));
+
+    sensor_config_t cfg = {
+        .bus = bus,
+        .addr = 0x10,
+        .type = HUMITURE_ID,
+        .mode = MODE_POLLING,
+        .min_delay = 100,
+    };
+    sensor_handle_t handle = NULL;
+    TEST_ASSERT(ESP_OK == iot_sensor_create("runtime_humi", &cfg, &handle));
+    TEST_ASSERT(NULL != handle);
+
+    sensor_event_handler_instance_t handler = NULL;
+    TEST_ASSERT(ESP_OK == iot_sensor_handler_register(handle, sensor_event_handler, &handler));
+    TEST_ASSERT(ESP_OK == iot_sensor_start(handle));
+    vTaskDelay(500 / portTICK_RATE_MS);
+    TEST_ASSERT(ESP_OK == iot_sensor_stop(handle));
+    vTaskDelay(100 / portTICK_RATE_MS);
+    TEST_ASSERT(ESP_OK == iot_sensor_handler_unregister(handle, handler));
+    TEST_ASSERT(ESP_OK == iot_sensor_delete(handle));
+
+    /* the runtime driver can now be removed; a second removal reports not found */
+    TEST_ASSERT(ESP_OK == iot_sensor_unregister_driver("runtime_humi"));
+    TEST_ASSERT(ESP_ERR_NOT_FOUND == iot_sensor_unregister_driver("runtime_humi"));
+
+    TEST_ASSERT(ESP_OK == i2c_bus_delete(&bus));
+    TEST_ASSERT(NULL == bus);
+}
+#endif
 
 TEST_CASE("SENSOR_HUB scan driver", "[virtual sensors][drivers][iot]")
 {

@@ -83,7 +83,6 @@ Solution
 
 Users have the option to download the script :download:`ignore_hwserial_usb_serial_jtag.bat <../../../_static/ignore_hwserial_usb_serial_jtag.bat>` , then run it with administrative privileges by right-clicking and selecting **Run as Administrator**.
 
-
 .. Note::
 
     The above command is for Windows 10/11. For Windows 7 or other versions, the registry path is different. Please download the script :download:`ignore_hwserial_usb_serial_jtag_win7.bat <../../../_static/ignore_hwserial_usb_serial_jtag_win7.bat>` and run it with Administrative privileges.

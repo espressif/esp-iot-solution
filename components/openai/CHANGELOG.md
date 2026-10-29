@@ -1,10 +1,35 @@
 # ChangeLog
 
+## v1.2.0 - 2026-10-22
+
+### Enhancements
+
+* Support GPT Image generation models, image model/quality/output-format setters, and streaming Base64 image fragments without buffering the full result in RAM.
+* Stream image responses with a host-tested incremental SSE parser and bounded heap workspace.
+
+### Bug Fixes
+
+* Release the temporary HTTP payload after parsing image responses.
+* Use an explicit supported GPT Image resolution and retain legacy response-format defaults for compatible backends.
+
+### Tests
+
+* Refresh the image-understanding fixture and audio model, and prevent main-task stack overflow in image-generation integration tests.
+* Run the live OpenAI API hardware test on ESP-IDF 5.5; retain compilation checks on 5.3, 5.4, and 5.5.
+
+
+## v1.1.0 - 2025-7-24
+
+### Enhancements
+
+* Chat completion supports multi-modal input [#464](https://github.com/espressif/esp-iot-solution/pull/464)
+* Text-to-speech supports streaming output [#464](https://github.com/espressif/esp-iot-solution/pull/464)
+
 ## v1.0.2 - 2025-2-11
 
 ### Bug Fixes:
 
-* Fix OpenAI_Request not handling chunked data correctly [!467](https://github.com/espressif/esp-iot-solution/pull/467)
+* Fix OpenAI_Request not handling chunked data correctly [#467](https://github.com/espressif/esp-iot-solution/pull/467)
 
 ## v1.0.1 - 2024-11-5
 

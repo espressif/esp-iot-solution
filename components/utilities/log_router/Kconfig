@@ -1,0 +1,48 @@
+menu "LOG ROUTER"
+
+    config LOG_ROUTER_BUFFER_SIZE
+        int "Buffer size (bytes)"
+        range 2048 10240
+        default 4096
+        help
+            Size of the buffer used for log buffering.
+            Larger buffer reduces flash write frequency but uses more RAM.
+            Range: 2KB (2048) to 10KB (10240)
+
+    config LOG_ROUTER_FLUSH_THRESHOLD_PERCENT
+        int "Flush threshold percentage"
+        range 50 90
+        default 75
+        help
+            Percentage of buffer size at which to trigger a flush.
+            Higher percentage means more data buffered before writing to flash.
+            Range: 50% to 90%
+
+    config LOG_ROUTER_FLUSH_TIMEOUT_MS
+        int "Flush timeout (milliseconds)"
+        range 2000 10000
+        default 2000
+        help
+            Maximum time to wait before flushing buffer to flash.
+            Shorter timeout ensures more frequent writes but may reduce performance.
+            Range: 2 seconds (2000ms) to 10 seconds (10000ms)
+
+    config LOG_ROUTER_FORMAT_BUFFER_SIZE
+        int "Log format buffer size (bytes)"
+        range 256 1024
+        default 256
+        help
+            Size of the buffer used for formatting log messages in log_router.
+            Larger buffer can handle longer log messages but uses more stack space.
+            Range: 256 to 1024 bytes
+
+    config LOG_ROUTER_DEBUG_OUTPUT
+        bool "Enable debug output"
+        default y
+        help
+            Enable debug output for log router operations.
+            When enabled, printf statements will show buffer flush events,
+            timeout triggers, and error conditions.
+            Disable this in production to improve performance.
+
+endmenu

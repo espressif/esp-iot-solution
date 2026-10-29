@@ -1,0 +1,116 @@
+menu "ESP-GMP"
+
+    config ESP_GMP_MAX_PAYLOAD
+        int "Maximum GMP payload bytes (product policy cap)"
+        range 64 65535
+        default 4096
+        help
+            Upper bound for GMP payload before transport limits are applied.
+            Runtime effective limit is min(this, registered transport max_payload).
+
+    config ESP_GMP_MAX_LINKS
+        int "Maximum registered links"
+        range 1 16
+        default 4
+
+    config ESP_GMP_TX_QUEUE_DEPTH
+        int "Queued outgoing GMP messages per link"
+        range 1 16
+        default 4
+
+    config ESP_GMP_FLUX_WINDOW_SIZE
+        int "Default Flux adapter window size for GMP sends (0 = Flux default 6)"
+        range 0 255
+        default 6
+
+    config ESP_GMP_FLUX_WINDOW_THRESHOLD
+        int "Default Flux adapter window threshold percent for GMP sends"
+        range 0 100
+        default 50
+
+    config ESP_GMP_MAX_HANDLERS
+        int "Maximum group packet handlers"
+        range 1 16
+        default 8
+
+    config ESP_GMP_MAX_LINK_EVENT_SUBSCRIBERS
+        int "Maximum link-event subscribers"
+        range 1 16
+        default 8
+
+    menu "Profiles"
+
+        config ESP_GMP_PROFILE_OS
+            bool "OS profile (capability query)"
+            default y
+            help
+                Standard OS group: OS_CAP_QUERY and runtime capability registration.
+                Recommended for all products that use optional OTA/FT profiles.
+
+        config ESP_GMP_PROFILE_OTA
+            bool "OTA profile"
+            default y
+            help
+                Enable OTA upload profile (device and/or host roles below).
+
+        config ESP_GMP_OTA_DEVICE
+            bool "OTA device (receiver / being upgraded)"
+            depends on ESP_GMP_PROFILE_OTA
+            default y
+            help
+                Compile device-side OTA handler (writes app_update partition).
+
+        config ESP_GMP_OTA_HOST
+            bool "OTA host (sender / uploader)"
+            depends on ESP_GMP_PROFILE_OTA
+            default n
+            help
+                Compile host-side OTA upload_stream API (no app_update dependency).
+
+        config ESP_GMP_PROFILE_FILE_TRANSFER
+            bool "File Transfer profile"
+            default n
+            help
+                Enable file transfer profile (FS send/recv over GMP).
+
+        config ESP_GMP_FT_DATA_PIPE_DEPTH
+            int "File Transfer DATA pipeline depth"
+            depends on ESP_GMP_PROFILE_FILE_TRANSFER
+            range 1 8
+            default 2
+            help
+                Max in-flight FT DATA_BLOCK requests on the sender.
+                1 = classic stop-and-wait. Values >1 pipeline within the GMP
+                TX queue / Flux window (capped by esp_gmp_recommended_pipeline_depth).
+
+    endmenu
+
+    menu "ESP-GMP OTA"
+        depends on ESP_GMP_PROFILE_OTA
+
+        config ESP_GMP_OTA_CHUNK_HINT
+            int "DATA chunk hint in start response (0 = auto from link MTU)"
+            range 0 65535
+            default 0
+            depends on ESP_GMP_OTA_DEVICE
+
+        config ESP_GMP_OTA_RESTART_DELAY_MS
+            int "Delay before esp_restart() after successful OTA (ms)"
+            range 0 10000
+            default 500
+            depends on ESP_GMP_OTA_DEVICE
+
+        config ESP_GMP_OTA_APPLY_TASK_STACK
+            int "OTA apply task stack size (bytes)"
+            default 4096
+            depends on ESP_GMP_OTA_DEVICE
+
+        config ESP_GMP_OTA_APPLY_TASK_PRIO
+            int "OTA apply task priority"
+            range 1 25
+            default 5
+            depends on ESP_GMP_OTA_DEVICE
+
+    endmenu
+
+endmenu

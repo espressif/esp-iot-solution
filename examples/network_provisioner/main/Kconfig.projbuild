@@ -1,0 +1,77 @@
+menu "Network Provisioner Example"
+
+    config EXAMPLE_SUPPORT_SOFTAP_WIFI
+        bool "Build SoftAP (HTTP) + Wi-Fi provisioning"
+        default y
+        depends on ESP_WIFI_ENABLED
+        help
+            Join the device SoftAP then provision Wi-Fi credentials over HTTP.
+            Can be combined with BLE modes in the same firmware; pick at runtime.
+
+    config EXAMPLE_SUPPORT_BLE_WIFI
+        bool "Build BLE + Wi-Fi provisioning"
+        default y
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER
+        help
+            Provision Wi-Fi credentials over BLE (NimBLE central + observer).
+            Can be combined with SoftAP / Thread.
+
+    config EXAMPLE_SUPPORT_BLE_THREAD
+        bool "Build BLE + Thread provisioning"
+        default y
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER
+        help
+            Provision Thread Active Operational Dataset over BLE.
+            The peer device needs IEEE 802.15.4 (e.g. ESP32-H2 / C6); the
+            controller only needs NimBLE.
+
+    config EXAMPLE_PROV_POP
+        string "Default Proof of Possession (Sec1, TEST ONLY)"
+        default "abcd1234"
+        help
+            Test-only default when peer sec_ver=1 and the console prompt is left empty.
+            Do not ship production firmware with a fixed PoP. Align with the device
+            example for lab bring-up; prefer typing a fresh PoP at the prompt.
+
+    config EXAMPLE_PROV_SEC2_USERNAME
+        string "Default Sec2 username (TEST ONLY)"
+        default "wifiprov"
+        help
+            Test-only default when peer sec_ver=2 and the username prompt is left empty.
+
+    config EXAMPLE_PROV_SEC2_PASSWORD
+        string "Default Sec2 password (TEST ONLY)"
+        default "abcd1234"
+        help
+            Test-only default when peer sec_ver=2 and the password prompt is left empty.
+            Do not ship production firmware with fixed Sec2 credentials.
+
+    config EXAMPLE_PROV_NAME_PREFIX
+        string "Device BLE name / SoftAP SSID prefix"
+        default "PROV_"
+        depends on EXAMPLE_SUPPORT_SOFTAP_WIFI || EXAMPLE_SUPPORT_BLE_WIFI || EXAMPLE_SUPPORT_BLE_THREAD
+        help
+            Filter hint for listing peers. After a scan the example prints every
+            discovered SoftAP / BLE device name; selection is interactive.
+            Matching devices (prefix) are marked in the menu.
+
+    config EXAMPLE_PROV_SOFTAP_PASSWORD
+        string "Device SoftAP password"
+        default ""
+        depends on EXAMPLE_SUPPORT_SOFTAP_WIFI
+
+    config EXAMPLE_PROV_HTTP_URL
+        string "Device provisioning HTTP URL (host part used after SoftAP join)"
+        default "http://192.168.4.1:80"
+        depends on EXAMPLE_SUPPORT_SOFTAP_WIFI
+
+    config EXAMPLE_THREAD_DATASET_HEX
+        string "Optional default Thread dataset hex (TEST ONLY)"
+        default ""
+        depends on EXAMPLE_SUPPORT_BLE_THREAD
+        help
+            Optional lab default for the console prompt. Prefer entering the
+            Active Operational Dataset hex at runtime; do not bake real network
+            keys into released firmware.
+
+endmenu

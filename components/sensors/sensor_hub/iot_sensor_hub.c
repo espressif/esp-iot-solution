@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -96,12 +96,31 @@ typedef struct _iot_sensor_slist_t {
 
 static SLIST_HEAD(sensor_slist_head_t, _iot_sensor_slist_t) s_sensor_slist_head = SLIST_HEAD_INITIALIZER(s_sensor_slist_head);
 
+/* runtime driver registry: the runtime counterpart of the link-time
+ * SENSOR_HUB_DETECT_FN section. Lets users register a driver impl at runtime. */
+typedef struct _sensor_driver_node_t {
+    const char *name;
+    sensor_type_t type;
+    void *impl;
+    SLIST_ENTRY(_sensor_driver_node_t) next;
+} _sensor_driver_node_t;
+
+static SLIST_HEAD(sensor_driver_slist_head_t, _sensor_driver_node_t) s_sensor_driver_slist_head = SLIST_HEAD_INITIALIZER(s_sensor_driver_slist_head);
+static StaticSemaphore_t s_driver_registry_mutex_buffer;
+static SemaphoreHandle_t s_driver_registry_mutex = NULL;
+
+/* create the registry mutex statically before app_main */
+static __attribute__((constructor)) void iot_sensor_driver_registry_init(void)
+{
+    s_driver_registry_mutex = xSemaphoreCreateMutexStatic(&s_driver_registry_mutex_buffer);
+}
+
 static iot_sensor_impl_t s_sensor_impls[] = {
 #ifdef CONFIG_SENSOR_INCLUDED_HUMITURE
     {
         .type = HUMITURE_ID,
         .create = humiture_create,
-        .delete = humiture_delete,
+        .remove = humiture_delete,
         .acquire = humiture_acquire,
         .control = humiture_control,
     },
@@ -110,7 +129,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
     {
         .type = IMU_ID,
         .create = imu_create,
-        .delete = imu_delete,
+        .remove = imu_delete,
         .acquire = imu_acquire,
         .control = imu_control,
     },
@@ -119,7 +138,7 @@ static iot_sensor_impl_t s_sensor_impls[] = {
     {
         .type = LIGHT_SENSOR_ID,
         .create = light_sensor_create,
-        .delete = light_sensor_delete,
+        .remove = light_sensor_delete,
         .acquire = light_sensor_acquire,
         .control = light_sensor_control,
     },
@@ -239,7 +258,7 @@ static void sensor_default_task(void *arg)
         xSemaphoreTake(s_sensor_node_mutex, portMAX_DELAY);
         SLIST_FOREACH(node, p_sensor_list_head, next) {
             if ((uxBits >> (node->p_sensor->event_bit)) & 0x01) {
-                node->p_sensor->impl->acquire(node->p_sensor->driver_handle, &sensor_data_group);
+                ESP_ERROR_CHECK_WITHOUT_ABORT(node->p_sensor->impl->acquire(node->p_sensor->driver_handle, &sensor_data_group));
                 acquire_time = sensor_get_timestamp_us();
                 for (uint8_t i = 0; i < sensor_data_group.number; i++) {
                     /*.event_id and .data assignment during acquire stage*/
@@ -248,7 +267,7 @@ static void sensor_default_task(void *arg)
                     sensor_data_group.sensor_data[i].sensor_name = node->p_sensor->name;
                     sensor_data_group.sensor_data[i].min_delay = node->p_sensor->min_delay;
                     sensor_data_group.sensor_data[i].sensor_addr = node->p_sensor->addr;
-                    sensors_event_post(node->p_sensor->event_base, sensor_data_group.sensor_data[i].event_id, &(sensor_data_group.sensor_data[i]), sizeof(sensor_data_t), 0);
+                    ESP_ERROR_CHECK_WITHOUT_ABORT(sensors_event_post(node->p_sensor->event_base, sensor_data_group.sensor_data[i].event_id, &(sensor_data_group.sensor_data[i]), sizeof(sensor_data_t), 0));
                 }
             }
         }
@@ -379,7 +398,19 @@ esp_err_t iot_sensor_create(const char *sensor_name, const sensor_config_t *conf
     if (s_event_group == NULL) {
         s_event_group = xEventGroupCreate();
         s_sensor_node_mutex = xSemaphoreCreateMutex();
-        SENSOR_CHECK(s_sensor_node_mutex != NULL, "sensor_node xSemaphoreCreateMutex failed", ESP_FAIL);
+        if (s_event_group == NULL || s_sensor_node_mutex == NULL) {
+            /* free the partially created resources so the next create retries */
+            if (s_event_group != NULL) {
+                vEventGroupDelete(s_event_group);
+                s_event_group = NULL;
+            }
+            if (s_sensor_node_mutex != NULL) {
+                vSemaphoreDelete(s_sensor_node_mutex);
+                s_sensor_node_mutex = NULL;
+            }
+            ret = ESP_FAIL;
+            SENSOR_CHECK_GOTO(false, "sensor event group/mutex create failed", cleanup_sensor);
+        }
     }
 
     // add sensor to list, event_bit will be set internal
@@ -433,12 +464,12 @@ esp_err_t iot_sensor_create(const char *sensor_name, const sensor_config_t *conf
     *p_sensor_handle = (sensor_handle_t)sensor;
     return ESP_OK;
 
-cleanup_sensor:
-    free(sensor);
-    *p_sensor_handle = NULL;
-    return ret;
 cleanup_sensor_node:
     sensor_remove_node(sensor);
+cleanup_sensor:
+    if (sensor->driver_handle != NULL) {
+        sensor->impl->remove(&sensor->driver_handle);
+    }
     free(sensor);
     *p_sensor_handle = NULL;
     return ret;
@@ -567,7 +598,7 @@ esp_err_t iot_sensor_delete(sensor_handle_t p_sensor_handle)
         ESP_LOGW(TAG, "sensor set power failed ret = %s", esp_err_to_name(ret));
     }
 
-    ret = sensor->impl->delete (&sensor->driver_handle);
+    ret = sensor->impl->remove(&sensor->driver_handle);
     SENSOR_CHECK(ret == ESP_OK && sensor->driver_handle == NULL, "sensor driver delete failed", ret);
 
     /*free the resource then set handle to NULL*/
@@ -613,16 +644,141 @@ esp_err_t iot_sensor_delete(sensor_handle_t p_sensor_handle)
 int iot_sensor_scan()
 {
     int sensor_count = 0;
+
+    /* hold the registry lock across both loops so a link-time driver shadowed
+     * by a same-named runtime driver is only counted once (runtime wins) */
+    bool have_registry = (s_driver_registry_mutex != NULL && pdTRUE == xSemaphoreTake(s_driver_registry_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT));
+
+    /* runtime-registered drivers */
+    if (have_registry) {
+        _sensor_driver_node_t *node;
+        SLIST_FOREACH(node, &s_sensor_driver_slist_head, next) {
+            ESP_LOGI(TAG, "Find %s driver (runtime), type: %s", node->name, SENSOR_TYPE_STRING[node->type]);
+            sensor_count++;
+        }
+    }
+
     // search the sensor driver from a specific segment
     for (sensor_hub_detect_fn_t *p = &__sensor_hub_detect_fn_array_start; p < &__sensor_hub_detect_fn_array_end; ++p) {
         sensor_info_t info;
         sensor_device_impl_t sensor_device_impl = (*(p->fn))(&info);
-        if (sensor_device_impl != NULL) {
+        if (sensor_device_impl == NULL) {
+            continue;
+        }
+        /* skip if a runtime driver of the same name already shadows it */
+        bool shadowed = false;
+        if (have_registry) {
+            _sensor_driver_node_t *node;
+            SLIST_FOREACH(node, &s_sensor_driver_slist_head, next) {
+                if (strcmp(info.name, node->name) == 0) {
+                    shadowed = true;
+                    break;
+                }
+            }
+        }
+        if (!shadowed) {
             ESP_LOGI(TAG, "Find %s driver, type: %s", info.name, SENSOR_TYPE_STRING[info.sensor_type]);
             sensor_count++;
         }
     }
+
+    if (have_registry) {
+        xSemaphoreGive(s_driver_registry_mutex);
+    }
     return sensor_count;
+}
+
+void *iot_sensor_find_driver(const char *sensor_name, sensor_type_t *sensor_type)
+{
+    if (sensor_name == NULL) {
+        return NULL;
+    }
+
+    /* 1) runtime registry takes precedence over link-time drivers */
+    if (s_driver_registry_mutex != NULL && pdTRUE == xSemaphoreTake(s_driver_registry_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT)) {
+        _sensor_driver_node_t *node;
+        SLIST_FOREACH(node, &s_sensor_driver_slist_head, next) {
+            if (strcmp(sensor_name, node->name) == 0) {
+                void *impl = node->impl;
+                if (sensor_type != NULL) {
+                    *sensor_type = node->type;
+                }
+                xSemaphoreGive(s_driver_registry_mutex);
+                return impl;
+            }
+        }
+        xSemaphoreGive(s_driver_registry_mutex);
+    }
+
+    /* 2) link-time drivers registered via SENSOR_HUB_DETECT_FN */
+    for (sensor_hub_detect_fn_t *p = &__sensor_hub_detect_fn_array_start; p < &__sensor_hub_detect_fn_array_end; ++p) {
+        sensor_info_t info;
+        void *impl = (*(p->fn))(&info);
+        if (impl != NULL && strcmp(sensor_name, info.name) == 0) {
+            if (sensor_type != NULL) {
+                *sensor_type = info.sensor_type;
+            }
+            return impl;
+        }
+    }
+
+    return NULL;
+}
+
+esp_err_t iot_sensor_register_driver(const char *sensor_name, sensor_type_t sensor_type, void *impl)
+{
+    SENSOR_CHECK(sensor_name != NULL && impl != NULL, "sensor name/impl can not be NULL", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(sensor_type > NULL_ID && sensor_type < SENSOR_TYPE_MAX, "invalid sensor type", ESP_ERR_INVALID_ARG);
+    SENSOR_CHECK(s_driver_registry_mutex != NULL, "registry mutex not initialized", ESP_ERR_INVALID_STATE);
+
+    SENSOR_CHECK(pdTRUE == xSemaphoreTake(s_driver_registry_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT), "take registry mutex timeout", ESP_ERR_TIMEOUT);
+
+    _sensor_driver_node_t *node;
+    SLIST_FOREACH(node, &s_sensor_driver_slist_head, next) {
+        if (strcmp(sensor_name, node->name) == 0) {
+            xSemaphoreGive(s_driver_registry_mutex);
+            ESP_LOGE(TAG, "driver '%s' already registered", sensor_name);
+            return ESP_ERR_INVALID_STATE;
+        }
+    }
+
+    node = calloc(1, sizeof(_sensor_driver_node_t));
+    if (node == NULL) {
+        xSemaphoreGive(s_driver_registry_mutex);
+        return ESP_ERR_NO_MEM;
+    }
+    node->name = sensor_name;
+    node->type = sensor_type;
+    node->impl = impl;
+    SLIST_INSERT_HEAD(&s_sensor_driver_slist_head, node, next);
+    xSemaphoreGive(s_driver_registry_mutex);
+
+    ESP_LOGI(TAG, "registered runtime driver '%s', type: %s", sensor_name, SENSOR_TYPE_STRING[sensor_type]);
+    return ESP_OK;
+}
+
+esp_err_t iot_sensor_unregister_driver(const char *sensor_name)
+{
+    SENSOR_CHECK(sensor_name != NULL, "sensor name can not be NULL", ESP_ERR_INVALID_ARG);
+
+    if (s_driver_registry_mutex == NULL) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    SENSOR_CHECK(pdTRUE == xSemaphoreTake(s_driver_registry_mutex, SENSOR_NODE_MUTEX_TICKS_TO_WAIT), "take registry mutex timeout", ESP_ERR_TIMEOUT);
+
+    esp_err_t ret = ESP_ERR_NOT_FOUND;
+    _sensor_driver_node_t *node;
+    SLIST_FOREACH(node, &s_sensor_driver_slist_head, next) {
+        if (strcmp(sensor_name, node->name) == 0) {
+            SLIST_REMOVE(&s_sensor_driver_slist_head, node, _sensor_driver_node_t, next);
+            free(node);
+            ret = ESP_OK;
+            break;
+        }
+    }
+    xSemaphoreGive(s_driver_registry_mutex);
+    return ret;
 }
 
 esp_err_t iot_sensor_handler_register(sensor_handle_t sensor_handle, sensor_event_handler_t handler, sensor_event_handler_instance_t *context)

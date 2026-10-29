@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -89,11 +89,12 @@ esp_err_t uvc_device_init(void);
 
 /**
  * @brief Deinitialize the UVC device
- * @note  This function is not implemented yet because tinyusb does not support deinitialization
+ *
  * @return ESP_OK on success
- *         ESP_FAIL if the UVC device could not be deinitialized
+ *         ESP_ERR_INVALID_STATE if the UVC device is not initialized, or event group is NULL
+ *
  */
-//esp_err_t uvc_device_deinit(void);
+esp_err_t uvc_device_deinit(void);
 
 #ifdef __cplusplus
 }

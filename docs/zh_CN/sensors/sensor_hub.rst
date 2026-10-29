@@ -46,6 +46,40 @@ Sensor Hub 使用方法
 
         target_link_libraries(${COMPONENT_LIB} INTERFACE "-u humiture_sht3x_init")
 
+每个回调函数都作用于每实例上下文：``init`` 通过 ``void **sensor_ctx`` 出参生成上下文，其余回调函数的第一个参数即为该上下文。因此，同一驱动实现可以支持挂载在不同地址的多个传感器实例：
+
+.. code-block:: c
+
+        esp_err_t humiture_sht3x_init(void **sensor_ctx, bus_handle_t handle, uint8_t addr);
+        esp_err_t humiture_sht3x_deinit(void *sensor_ctx);
+
+运行时注册驱动
+""""""""""""""""""
+
+除了链接期的 ``SENSOR_HUB_DETECT_FN`` 机制，还可以在运行时通过 :cpp:func:`iot_sensor_register_driver` 提供驱动实现，并通过 :cpp:func:`iot_sensor_unregister_driver` 移除。当驱动在链接期无法确定，或需要动态选择/配置时，这种方式非常有用。实现表与 ``SENSOR_HUB_DETECT_FN`` 使用的完全一致：
+
+.. code-block:: c
+
+        static humiture_impl_t my_humiture_impl = {
+            .init = my_humiture_init,            /* esp_err_t (*)(void **ctx, bus_handle_t, uint8_t) */
+            .deinit = my_humiture_deinit,        /* esp_err_t (*)(void *ctx) */
+            .test = my_humiture_test,
+            .acquire_humidity = my_humiture_acquire_humidity,
+            .acquire_temperature = my_humiture_acquire_temperature,
+        };
+
+        /* 注册之后，即可像链接期驱动一样按名称创建实例 */
+        iot_sensor_register_driver("my_humiture", HUMITURE_ID, &my_humiture_impl);
+        iot_sensor_create("my_humiture", &config, &sensor_handle);
+        ...
+        iot_sensor_delete(sensor_handle);
+        iot_sensor_unregister_driver("my_humiture");
+
+.. note::
+
+    - ``sensor_hub`` 不会拷贝名称和实现表；请保持两者有效，直到驱动被取消注册，且由它创建的所有实例都被删除。
+    - 同名的运行时注册驱动优先于链接期驱动，两者都会被 :cpp:func:`iot_sensor_scan` 报告。
+
 应用开发者：
 ^^^^^^^^^^^^^
 

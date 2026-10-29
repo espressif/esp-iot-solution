@@ -854,7 +854,8 @@ XZ_EXTERN void xz_dec_reset(struct xz_dec *s)
 XZ_EXTERN void xz_dec_end(struct xz_dec *s)
 {
 	if (s != NULL) {
-		xz_dec_lzma2_end(s->lzma2);
+		if (s->lzma2 != NULL)
+			xz_dec_lzma2_end(s->lzma2);
 #ifdef XZ_DEC_BCJ
 		xz_dec_bcj_end(s->bcj);
 #endif

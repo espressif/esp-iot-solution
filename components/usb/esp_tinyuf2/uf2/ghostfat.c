@@ -45,12 +45,18 @@ static uint32_t _flash_size;
 #define STR0(x) #x
 #define STR(x) STR0(x)
 
+#if defined(__GNUC__)
+#define UF2_NONSTRING __attribute__((nonstring))
+#else
+#define UF2_NONSTRING
+#endif
+
 #define UF2_ARRAY_SIZE(_arr)    ( sizeof(_arr) / sizeof(_arr[0]) )
 #define UF2_DIV_CEIL(_v, _d)    ( ((_v) / (_d)) + ((_v) % (_d) ? 1 : 0) )
 
 typedef struct {
     uint8_t JumpInstruction[3];
-    uint8_t OEMInfo[8];
+    uint8_t OEMInfo[8] UF2_NONSTRING;
     uint16_t SectorSize;
     uint8_t SectorsPerCluster;
     uint16_t ReservedSectors;
@@ -67,8 +73,8 @@ typedef struct {
     uint8_t Reserved;
     uint8_t ExtendedBootSig;
     uint32_t VolumeSerialNumber;
-    uint8_t VolumeLabel[11];
-    uint8_t FilesystemIdentifier[8];
+    uint8_t VolumeLabel[11] UF2_NONSTRING;
+    uint8_t FilesystemIdentifier[8] UF2_NONSTRING;
 } __attribute__((packed)) FAT_BootBlock;
 
 typedef struct {
@@ -89,7 +95,7 @@ typedef struct {
 STATIC_ASSERT(sizeof(DirEntry) == 32);
 
 typedef struct FileContent {
-    char const name[11];
+    char const name[11] UF2_NONSTRING;
     void const * content;
     uint32_t size;       // OK to use uint32_T b/c FAT32 limits filesize to (4GiB - 2)
 

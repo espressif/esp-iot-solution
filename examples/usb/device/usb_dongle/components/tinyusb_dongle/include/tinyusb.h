@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2020-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2020-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,6 +14,22 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief GPIO mapping for an external USB PHY
+ *
+ * Set unused signals to -1.
+ */
+typedef struct {
+    int vp_io_num;
+    int vm_io_num;
+    int rcv_io_num;
+    int suspend_n_io_num;
+    int oen_io_num;
+    int vpo_io_num;
+    int vmo_io_num;
+    int fs_edge_sel_io_num;
+} tinyusb_ext_phy_io_config_t;
 
 /**
  * @brief Configuration structure of the TinyUSB core
@@ -31,6 +47,7 @@ typedef struct {
     const char **string_descriptor;            /*!< Pointer to array of string descriptors. If set to NULL, TinyUSB device will use a default string descriptors whose values are set in Kconfig */
     int string_descriptor_count;               /*!< Number of descriptors in above array */
     bool external_phy;                         /*!< Should USB use an external PHY */
+    const tinyusb_ext_phy_io_config_t *external_phy_io; /*!< GPIO mapping. Required when external_phy is true */
     union {
         struct {
             const uint8_t *configuration_descriptor;            /*!< Pointer to a configuration descriptor. If set to NULL, TinyUSB device will use a default configuration descriptor whose values are set in Kconfig */

@@ -1,0 +1,14 @@
+dependencies:
+  idf:
+    version: ">=5.5.5"
+
+  lvgl/lvgl:
+    version: ">=9.6,<10"
+    public: true
+
+  hw_init:
+    path: "../components/hw_init"
+
+  espressif/button:
+    version: "4.*"
+    override_path: "../../../../../../button"

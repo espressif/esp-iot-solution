@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,6 +26,7 @@ static const char* TAG = "LIGHT|RGBW|UV";
 typedef struct {
     bus_handle_t bus;
     bool is_init;
+    void *driver_ctx;
     const light_impl_t* impl;
 } sensor_light_t;
 
@@ -39,29 +40,32 @@ sensor_light_handle_t light_sensor_create(bus_handle_t bus, const char *sensor_n
         return NULL;
     }
 
-    // search the sensor driver from a specific segment
-    for (sensor_hub_detect_fn_t *p = &__sensor_hub_detect_fn_array_start; p < &__sensor_hub_detect_fn_array_end; ++p) {
-        sensor_info_t info;
-        sensor_device_impl_t sensor_device_impl = (*(p->fn))(&info);
-
-        if (sensor_device_impl != NULL && strcmp(sensor_name, info.name) == 0) {
-            sensor_light_t* p_sensor = (sensor_light_t*)malloc(sizeof(sensor_light_t));
-            SENSOR_CHECK(p_sensor != NULL, "light sensor creat failed", NULL);
-            p_sensor->bus = bus;
-            p_sensor->impl = (light_impl_t *)(sensor_device_impl);
-
-            esp_err_t ret = p_sensor->impl->init(bus, addr);
-            if (ret != ESP_OK) {
-                free(p_sensor);
-                ESP_LOGE(TAG, "light sensor init failed");
-                return NULL;
-            }
-            p_sensor->is_init = true;
-            return (sensor_light_handle_t)p_sensor;
-        }
+    // resolve the driver impl by name (runtime registry first, then link-time)
+    sensor_type_t driver_type = NULL_ID;
+    void *driver_impl = iot_sensor_find_driver(sensor_name, &driver_type);
+    if (driver_impl == NULL) {
+        ESP_LOGE(TAG, "no light driver named '%s' found", sensor_name);
+        return NULL;
+    }
+    if (driver_type != LIGHT_SENSOR_ID) {
+        ESP_LOGE(TAG, "driver '%s' is a %s driver, not light", sensor_name, SENSOR_TYPE_STRING[driver_type]);
+        return NULL;
     }
 
-    return NULL;
+    sensor_light_t* p_sensor = (sensor_light_t*)malloc(sizeof(sensor_light_t));
+    SENSOR_CHECK(p_sensor != NULL, "light sensor creat failed", NULL);
+    p_sensor->bus = bus;
+    p_sensor->impl = (light_impl_t *)driver_impl;
+    p_sensor->driver_ctx = NULL;
+
+    esp_err_t ret = p_sensor->impl->init(&p_sensor->driver_ctx, bus, addr);
+    if (ret != ESP_OK) {
+        free(p_sensor);
+        ESP_LOGE(TAG, "light sensor init failed");
+        return NULL;
+    }
+    p_sensor->is_init = true;
+    return (sensor_light_handle_t)p_sensor;
 }
 
 esp_err_t light_sensor_delete(sensor_light_handle_t *sensor)
@@ -71,12 +75,13 @@ esp_err_t light_sensor_delete(sensor_light_handle_t *sensor)
 
     if (!p_sensor->is_init) {
         free(p_sensor);
+        *sensor = NULL;
         return ESP_OK;
     }
 
-    p_sensor->is_init = false;
-    esp_err_t ret = p_sensor->impl->deinit();
+    esp_err_t ret = p_sensor->impl->deinit(p_sensor->driver_ctx);
     SENSOR_CHECK(ret == ESP_OK, "light sensor de-init failed", ESP_FAIL);
+    p_sensor->is_init = false;
     free(p_sensor);
     *sensor = NULL;
     return ESP_OK;
@@ -94,7 +99,7 @@ esp_err_t light_sensor_test(sensor_light_handle_t sensor)
         return ESP_ERR_NOT_SUPPORTED;
     }
 
-    esp_err_t ret = p_sensor->impl->test();
+    esp_err_t ret = p_sensor->impl->test(p_sensor->driver_ctx);
     return ret;
 }
 
@@ -102,7 +107,7 @@ esp_err_t light_sensor_acquire_light(sensor_light_handle_t sensor, float *lux)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_light_t *p_sensor = (sensor_light_t*)(sensor);
-    esp_err_t ret = p_sensor->impl->acquire_light(lux);
+    esp_err_t ret = p_sensor->impl->acquire_light(p_sensor->driver_ctx, lux);
     return ret;
 }
 
@@ -110,7 +115,7 @@ esp_err_t light_sensor_acquire_rgbw(sensor_light_handle_t sensor, rgbw_t *rgbw)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_light_t *p_sensor = (sensor_light_t*)(sensor);
-    esp_err_t ret = p_sensor->impl->acquire_rgbw(&rgbw->r, &rgbw->g, &rgbw->b, &rgbw->w);
+    esp_err_t ret = p_sensor->impl->acquire_rgbw(p_sensor->driver_ctx, &rgbw->r, &rgbw->g, &rgbw->b, &rgbw->w);
     return ret;
 }
 
@@ -118,7 +123,7 @@ esp_err_t light_sensor_acquire_uv(sensor_light_handle_t sensor, uv_t *uv)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_light_t *p_sensor = (sensor_light_t*)(sensor);
-    esp_err_t ret = p_sensor->impl->acquire_uv(&uv->uv, &uv->uva, &uv->uvb);
+    esp_err_t ret = p_sensor->impl->acquire_uv(p_sensor->driver_ctx, &uv->uv, &uv->uva, &uv->uvb);
     return ret;
 }
 
@@ -126,7 +131,10 @@ esp_err_t light_sensor_sleep(sensor_light_handle_t sensor)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_light_t *p_sensor = (sensor_light_t*)(sensor);
-    esp_err_t ret = p_sensor->impl->sleep();
+    if (p_sensor->impl->sleep == NULL) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    esp_err_t ret = p_sensor->impl->sleep(p_sensor->driver_ctx);
     return ret;
 }
 
@@ -134,7 +142,10 @@ esp_err_t light_sensor_wakeup(sensor_light_handle_t sensor)
 {
     SENSOR_CHECK(sensor != NULL, "sensor handle can't be NULL ", ESP_ERR_INVALID_ARG);
     sensor_light_t *p_sensor = (sensor_light_t*)(sensor);
-    esp_err_t ret = p_sensor->impl->wakeup();
+    if (p_sensor->impl->wakeup == NULL) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    esp_err_t ret = p_sensor->impl->wakeup(p_sensor->driver_ctx);
     return ret;
 }
 
@@ -148,13 +159,13 @@ static esp_err_t light_sensor_set_power(sensor_light_handle_t sensor, sensor_pow
         if (p_sensor->impl->wakeup == NULL) {
             return ESP_ERR_NOT_SUPPORTED;
         }
-        ret = p_sensor->impl->wakeup();
+        ret = p_sensor->impl->wakeup(p_sensor->driver_ctx);
         break;
     case POWER_MODE_SLEEP:
         if (p_sensor->impl->sleep == NULL) {
             return ESP_ERR_NOT_SUPPORTED;
         }
-        ret = p_sensor->impl->sleep();
+        ret = p_sensor->impl->sleep(p_sensor->driver_ctx);
         break;
     default:
         ret = ESP_ERR_NOT_SUPPORTED;
@@ -169,22 +180,31 @@ esp_err_t light_sensor_acquire(sensor_light_handle_t sensor, sensor_data_group_t
     sensor_light_t *p_sensor = (sensor_light_t *)(sensor);
     esp_err_t ret;
     int i = 0;
-    ret = p_sensor->impl->acquire_light(&data_group->sensor_data[i].light);
+    ret = p_sensor->impl->acquire_light(p_sensor->driver_ctx, &data_group->sensor_data[i].light);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_LIGHT_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
-    ret = p_sensor->impl->acquire_rgbw(&data_group->sensor_data[i].rgbw.r, &data_group->sensor_data[i].rgbw.g,
+    ret = p_sensor->impl->acquire_rgbw(p_sensor->driver_ctx, &data_group->sensor_data[i].rgbw.r, &data_group->sensor_data[i].rgbw.g,
                                        &data_group->sensor_data[i].rgbw.b, &data_group->sensor_data[i].rgbw.w);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_RGBW_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
-    ret = p_sensor->impl->acquire_uv(&data_group->sensor_data[i].uv.uv, &data_group->sensor_data[i].uv.uva,
+    ret = p_sensor->impl->acquire_uv(p_sensor->driver_ctx, &data_group->sensor_data[i].uv.uv, &data_group->sensor_data[i].uv.uva,
                                      &data_group->sensor_data[i].uv.uvb);
     if (ESP_OK == ret) {
         data_group->sensor_data[i].event_id = SENSOR_UV_DATA_READY;
         i++;
+    } else if (ret != ESP_ERR_NOT_SUPPORTED) {
+        data_group->number = i;
+        return ret;
     }
     data_group->number = i;
     return ESP_OK;
@@ -198,7 +218,7 @@ esp_err_t light_sensor_set_work_mode(sensor_light_handle_t sensor, sensor_mode_t
     if (p_sensor->impl->set_mode == NULL) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    return p_sensor->impl->set_mode(work_mode);
+    return p_sensor->impl->set_mode(p_sensor->driver_ctx, work_mode);
 }
 
 esp_err_t light_sensor_set_range(sensor_light_handle_t sensor, sensor_range_t range)
@@ -209,7 +229,7 @@ esp_err_t light_sensor_set_range(sensor_light_handle_t sensor, sensor_range_t ra
     if (p_sensor->impl->set_range == NULL) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    return p_sensor->impl->set_range(range);
+    return p_sensor->impl->set_range(p_sensor->driver_ctx, range);
 }
 
 esp_err_t light_sensor_control(sensor_light_handle_t sensor, sensor_command_t cmd, void *args)

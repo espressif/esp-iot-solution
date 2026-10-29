@@ -13,7 +13,7 @@ HMI（人机交互）开发板，可外接屏幕，并且集成了 SD-Card、DAC
 等外设，主要用于 HMI 相关开发与评估。开发板预留屏幕接口类型：SPI
 串行接口、8 位并行接口、16 位并行接口。
 
-:doc:`HMI Solution <../hmi_solution/index>` 这里提供的一些 HMI 示例可在ESP32-LCDKit 开发板上运行。
+:doc:`显示 <../display/index>` 这里提供的一些 LCD 和 GUI 示例可在 ESP32-LCDKit 开发板上运行。
 
 .. figure:: ../../_static/hw-reference/lcdkit/esp32_lcdkit.jpg
    :align: center

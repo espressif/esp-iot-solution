@@ -3,6 +3,10 @@ dependencies:
   ## Required IDF version
   idf:
     version: ">=4.0.0"
+  led_indicator:
+    version: "*"
+    override_path: "../../"
+  esp_io_expander_tca9554: "^2"
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

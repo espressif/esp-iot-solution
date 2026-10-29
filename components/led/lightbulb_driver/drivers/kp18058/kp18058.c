@@ -351,7 +351,7 @@ kp18058_chopping_freq_t kp18058_chopping_freq_mapping(int freq_hz)
     return KP18058_CHOPPING_INVALID;
 }
 
-esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *))
+esp_err_t kp18058_init(driver_kp18058_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
 
@@ -432,8 +432,8 @@ esp_err_t kp18058_deinit(void)
     DRIVER_CHECK(s_kp18058, "not init", return ESP_ERR_INVALID_STATE);
 
     kp18058_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_kp18058);
     s_kp18058 = NULL;
     return ESP_OK;

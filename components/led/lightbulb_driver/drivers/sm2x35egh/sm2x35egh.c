@@ -222,7 +222,7 @@ sm2x35egh_cw_current_t sm2335egh_cw_current_mapping(int current_mA)
     return (sm2x35egh_cw_current_t)((current_mA - 5) / 5);
 }
 
-esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))
+esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
@@ -236,8 +236,6 @@ esp_err_t sm2x35egh_init(driver_sm2x35egh_t *config, void(*hook_func)(void *))
 
     s_sm2x35egh->rgb_current = config->rgb_current;
     s_sm2x35egh->cw_current = config->cw_current;
-
-    NULL;
 
     if (config->freq_khz > 400) {
         config->freq_khz = 400;
@@ -266,8 +264,8 @@ esp_err_t sm2x35egh_deinit(void)
     DRIVER_CHECK(s_sm2x35egh, "not init", return ESP_ERR_INVALID_STATE);
 
     sm2x35egh_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_sm2x35egh);
     s_sm2x35egh = NULL;
     return ESP_OK;

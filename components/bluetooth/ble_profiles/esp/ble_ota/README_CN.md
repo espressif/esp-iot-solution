@@ -5,3 +5,7 @@
 ## 从机示例代码
 
 [ESP BLE OTA](https://github.com/espressif/esp-iot-solution/tree/master/examples/bluetooth/ble_ota)
+
+> ![TIP]
+>
+> 使用 NimBLE 时，可能需要增大 `CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE`。

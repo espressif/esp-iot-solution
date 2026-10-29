@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,8 +7,29 @@
 #pragma once
 
 #include "esp_flash_partitions.h"
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 1)
+#include "esp_efuse.h"
+#else
+#include "esp_flash_encrypt.h"
+#endif
 #include "bootloader_utility.h"
 #include "bootloader_custom_ota.h"
+#include "soc/soc_caps.h"
+#if defined(SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE) && SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+#include "hal/cache_ll.h"
+#endif
+
+#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
+#include "hal/wdt_hal.h"
+#if !defined(RWDT_HAL_CONTEXT_DEFAULT)
+#if CONFIG_IDF_TARGET_ESP32H2
+#define RWDT_HAL_CONTEXT_DEFAULT()     {.inst = WDT_RWDT, .rwdt_dev = &LP_WDT}
+#else
+#define RWDT_HAL_CONTEXT_DEFAULT()     {.inst = WDT_RWDT, .rwdt_dev = &RTCCNTL}
+#endif
+#endif // RWDT_HAL_CONTEXT_DEFAULT
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,6 +37,32 @@ extern "C" {
 
 #define ESP_ERR_CUSTOM_OTA_BASE        0x2100
 #define CUSTOM_OTA_IMAGE_TYPE_INVALID (ESP_ERR_CUSTOM_OTA_BASE + 1)
+
+/*
+ * ESP32-P4 caches internal SRAM in L1 and external flash in L2. The ROM
+ * flash helpers disable L2. If L1 still holds a dirty dictionary, that
+ * writeback goes into a disabled L2 and the next LZMA symbol fails with
+ * XZ_DATA_ERROR. Write the data cache back first.
+ *
+ * Do not disable L1 DCache here. Cache_Disable_L1_DCache also drops the
+ * L1 ICache tags, and the bootloader fetches instructions through that
+ * cache, so the CPU stops before the next log line.
+ */
+static inline void bootloader_custom_sync_int_cache(void)
+{
+#if defined(SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE) && SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+    cache_ll_writeback_all(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA, CACHE_LL_ID_ALL);
+#endif
+}
+
+static inline bool bootloader_custom_flash_encryption_enabled(void)
+{
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 1)
+    return esp_efuse_is_flash_encryption_enabled();
+#else
+    return esp_flash_encryption_enabled();
+#endif
+}
 
 typedef enum {
     DECOMPRESS_ENGINE,

@@ -1,0 +1,666 @@
+/*
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Display Bridge Common - Shared utilities for v8 and v9 bridge implementations
+ */
+
+#pragma once
+
+/*********************
+ *      INCLUDES
+ *********************/
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "lvgl_port_private.h"
+#include "esp_err.h"
+#include "esp_lcd_panel_ops.h"
+#include "adapter_internal.h"
+#include "esp_attr.h"
+
+/*********************
+ *      DEFINES
+ *********************/
+
+#define ESP_LV_ADAPTER_BRIDGE_BLOCK_SIZE_SMALL_DEFAULT  (32)
+#define ESP_LV_ADAPTER_BRIDGE_BLOCK_SIZE_LARGE_DEFAULT  (256)
+#define ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_COUNT           (2U)
+
+#if SOC_DMA2D_SUPPORTED
+typedef enum {
+    DISPLAY_BRIDGE_DMA2D_COPY_UNCHECKED = 0,
+    DISPLAY_BRIDGE_DMA2D_COPY_ENABLED,
+    DISPLAY_BRIDGE_DMA2D_COPY_DISABLED,
+} display_bridge_dma2d_copy_state_t;
+
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
+#include "esp_async_color_convert.h"
+#else
+#include "esp_async_fbcpy.h"
+#endif
+#endif
+
+typedef struct {
+    uint8_t *buffers[ESP_LV_ADAPTER_TE_BOUNCE_BUFFER_COUNT];
+    uint8_t count;
+    size_t capacity;
+#if SOC_DMA2D_SUPPORTED
+    display_bridge_dma2d_copy_state_t dma2d_copy_state;
+#endif
+} display_bridge_te_bounce_t;
+
+/* Forward declaration */
+typedef struct esp_lv_adapter_display_bridge esp_lv_adapter_display_bridge_t;
+
+void display_bridge_te_bounce_alloc(display_bridge_te_bounce_t *bounce,
+                                    size_t requested_rows,
+                                    size_t row_bytes,
+                                    size_t alignment);
+void display_bridge_te_bounce_free(display_bridge_te_bounce_t *bounce);
+
+/*********************
+ *      TYPEDEFS
+ *********************/
+
+/**
+ * @brief Runtime display information
+ */
+typedef struct {
+    uint16_t hor_res;               /*!< Horizontal resolution in pixels */
+    uint16_t ver_res;               /*!< Vertical resolution in pixels */
+    esp_lv_adapter_rotation_t rotation;   /*!< Display rotation */
+    uint8_t frame_buffer_count;     /*!< Number of frame buffers */
+    size_t frame_buffer_size;       /*!< Size of each frame buffer in bytes */
+    uint8_t color_bytes;            /*!< Bytes per pixel */
+    void *frame_buffers[3];         /*!< Frame buffer pointers (max 3) */
+} esp_lv_adapter_display_runtime_info_t;
+
+/**
+ * @brief VSYNC timing measurement and jitter detection
+ */
+typedef struct {
+    int64_t vsync_prev_ts_us;       /*!< Previous vsync interrupt timestamp (us) */
+    uint32_t refresh_period_us;     /*!< Measured refresh period (us) */
+    int64_t flush_post_ts_us;       /*!< Timestamp after last blit/flush (us) */
+    uint32_t shield_threshold_us;   /*!< Jitter shield threshold (0 to disable) */
+    bool shield_enabled;            /*!< Jitter shield enabled flag */
+} esp_lv_adapter_vsync_timing_t;
+
+/**
+ * @brief Dirty region tracking for partial updates
+ */
+typedef struct {
+    uint16_t inv_p;                         /*!< Number of invalid areas */
+    uint8_t inv_area_joined[LV_INV_BUF_SIZE];  /*!< Join flags for areas */
+    lv_area_t inv_areas[LV_INV_BUF_SIZE];  /*!< Invalid area coordinates */
+} esp_lv_adapter_display_dirty_region_t;
+
+/**********************
+ *   INLINE HELPERS
+ **********************/
+
+/**
+ * @brief Get display width from runtime info
+ */
+static inline uint16_t display_runtime_width_px(const esp_lv_adapter_display_runtime_info_t *runtime)
+{
+    return runtime->hor_res;
+}
+
+/**
+ * @brief Get display height from runtime info
+ */
+static inline uint16_t display_runtime_height_px(const esp_lv_adapter_display_runtime_info_t *runtime)
+{
+    return runtime->ver_res;
+}
+
+/**
+ * @brief Get display rotation from runtime info
+ */
+static inline esp_lv_adapter_rotation_t display_runtime_rotation(const esp_lv_adapter_display_runtime_info_t *runtime)
+{
+    return runtime->rotation;
+}
+
+/**
+ * @brief Get bytes per pixel from runtime info
+ */
+static inline uint8_t display_runtime_color_bytes(const esp_lv_adapter_display_runtime_info_t *runtime)
+{
+    return runtime->color_bytes;
+}
+
+/**
+ * @brief Reset dirty region tracker
+ */
+static inline void display_dirty_region_reset(esp_lv_adapter_display_dirty_region_t *region)
+{
+    region->inv_p = 0;
+    memset(region->inv_area_joined, 0, sizeof(region->inv_area_joined));
+}
+
+/**
+ * @brief Convert LVGL coordinates to physical coordinates with rotation
+ *
+ * @param lv_x LVGL X coordinate
+ * @param lv_y LVGL Y coordinate
+ * @param phy_x Output physical X coordinate
+ * @param phy_y Output physical Y coordinate
+ * @param rotation Display rotation
+ * @param hor_res Horizontal resolution
+ * @param ver_res Vertical resolution
+ */
+static inline void display_coord_to_phy(int lv_x, int lv_y, int *phy_x, int *phy_y,
+                                        esp_lv_adapter_rotation_t rotation,
+                                        uint16_t hor_res,
+                                        uint16_t ver_res)
+{
+    switch (rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        *phy_x = hor_res - 1 - lv_y;
+        *phy_y = lv_x;
+        break;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        *phy_x = hor_res - 1 - lv_x;
+        *phy_y = ver_res - 1 - lv_y;
+        break;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        *phy_x = lv_y;
+        *phy_y = ver_res - 1 - lv_x;
+        break;
+    default:
+        *phy_x = lv_x;
+        *phy_y = lv_y;
+        break;
+    }
+}
+
+/**********************
+ *   PUBLIC API
+ **********************/
+
+/* Dirty region management */
+
+/**
+ * @brief Capture current dirty region from LVGL
+ *
+ * @param dst Destination dirty region structure
+ * @param areas Source area array from LVGL
+ * @param joined Join flags array from LVGL
+ * @param count Number of areas
+ */
+void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
+                                  const lv_area_t *areas,
+                                  const uint8_t *joined,
+                                  uint16_t count);
+
+/* Rotation and copy operations */
+
+/**
+ * @brief Rotate and copy a region with stride support (IRAM optimized)
+ *
+ * @param src Source buffer
+ * @param dst_fb Destination framebuffer
+ * @param lv_x_start Start X in LVGL coordinates
+ * @param lv_y_start Start Y in LVGL coordinates
+ * @param lv_x_end End X in LVGL coordinates
+ * @param lv_y_end End Y in LVGL coordinates
+ * @param src_stride_px Source stride in pixels
+ * @param hor_res Horizontal resolution
+ * @param ver_res Vertical resolution
+ * @param rotation Display rotation
+ * @param color_bytes Bytes per pixel
+ * @param block_size_small Small block size for cache optimization
+ * @param block_size_large Large block size for cache optimization
+ */
+void display_rotate_copy_region(const void *src,
+                                void *dst_fb,
+                                uint16_t lv_x_start,
+                                uint16_t lv_y_start,
+                                uint16_t lv_x_end,
+                                uint16_t lv_y_end,
+                                uint16_t src_stride_px,
+                                uint16_t hor_res,
+                                uint16_t ver_res,
+                                esp_lv_adapter_rotation_t rotation,
+                                uint8_t color_bytes,
+                                int block_size_small,
+                                int block_size_large);
+
+/**
+ * @brief Rotate an entire image (IRAM optimized)
+ *
+ * @param src Source image buffer
+ * @param dst Destination buffer
+ * @param width Image width
+ * @param height Image height
+ * @param rotation Rotation angle (0, 90, 180, 270)
+ * @param color_bytes Bytes per pixel
+ * @param block_size_small Small block size for cache optimization
+ * @param block_size_large Large block size for cache optimization
+ */
+void display_rotate_image(const void *src,
+                          void *dst,
+                          int width,
+                          int height,
+                          int rotation,
+                          uint8_t color_bytes,
+                          int block_size_small,
+                          int block_size_large);
+
+/* Cache management */
+
+/**
+ * @brief Get cache line size for the memory region containing the given address
+ *
+ * @param addr Buffer address
+ * @return Cache line size in bytes, or 0 if the address is not cacheable
+ */
+size_t display_bridge_get_cache_line_size_by_addr(const void *addr);
+
+/**
+ * @brief Synchronize cache for a specific memory range
+ *
+ * @param addr Starting address
+ * @param size Size in bytes
+ * @param cache_line_size Cache line size for alignment
+ */
+void display_cache_msync_range(const void *addr,
+                               size_t size,
+                               size_t cache_line_size);
+
+/**
+ * @brief Synchronize cache for a framebuffer (allows unaligned)
+ *
+ * @param buffer Framebuffer pointer
+ * @param size Framebuffer size in bytes
+ */
+void display_cache_msync_framebuffer(void *buffer,
+                                     size_t size);
+
+/**
+ * @brief Invalidate CPU cache for a framebuffer (Memory to Cache)
+ *
+ * Use after hardware accelerators (DMA2D/PPA) write directly to PSRAM,
+ * so subsequent CPU reads fetch fresh data from memory instead of stale cache.
+ *
+ * @param buffer Framebuffer pointer
+ * @param size Framebuffer size in bytes
+ */
+void display_cache_msync_invalidate_framebuffer(void *buffer,
+                                                size_t size);
+
+/* LCD operations */
+
+/**
+ * @brief Send full framebuffer to LCD panel
+ *
+ * @param panel LCD panel handle
+ * @param runtime Runtime display information
+ * @param frame_buffer Framebuffer to send
+ * @return esp_err_t ESP_OK on success, error code otherwise
+ */
+esp_err_t display_lcd_blit_full(esp_lcd_panel_handle_t panel,
+                                const esp_lv_adapter_display_runtime_info_t *runtime,
+                                void *frame_buffer);
+
+/**
+ * @brief Send framebuffer region to LCD panel
+ *
+ * @param panel LCD panel handle
+ * @param x_start Starting X coordinate (inclusive)
+ * @param y_start Starting Y coordinate (inclusive)
+ * @param x_end Ending X coordinate (exclusive)
+ * @param y_end Ending Y coordinate (exclusive)
+ * @param frame_buffer Framebuffer data for the specified region
+ * @return esp_err_t ESP_OK on success, error code otherwise
+ */
+esp_err_t display_lcd_blit_area(esp_lcd_panel_handle_t panel,
+                                int x_start,
+                                int y_start,
+                                int x_end,
+                                int y_end,
+                                const void *frame_buffer);
+
+/* Copy incompatible DMA2D windows through the CPU before submitting a MIPI framebuffer. */
+esp_err_t display_lcd_blit_mipi_partial(esp_lcd_panel_handle_t panel,
+                                        const esp_lv_adapter_display_runtime_info_t *runtime,
+                                        const lv_area_t *area, const void *pixels);
+
+/**
+ * @brief Acquire next available frame buffer for double/triple buffering
+ *
+ * @param runtime Runtime display information
+ * @param toggle_slot Pointer to toggle state variable
+ * @return void* Next available buffer, or NULL if unavailable
+ */
+void *display_runtime_acquire_next_buffer(esp_lv_adapter_display_runtime_info_t *runtime,
+                                          void **toggle_slot);
+
+void display_bridge_get_block_sizes(int *block_small, int *block_large);
+
+size_t display_bridge_get_cache_line_size(void);
+
+/* Pipeline management */
+
+typedef struct {
+    uint32_t submitted;
+    uint32_t completed;
+    uint32_t notifications_inflight;
+    TaskHandle_t waiter;
+} display_bridge_dummy_transfer_t;
+
+#define ESP_LV_ADAPTER_DUMMY_DRAW_EVT_COLOR_DONE (1U << 0)
+
+esp_err_t display_bridge_dummy_transfer_begin(display_bridge_dummy_transfer_t *transfer,
+                                              portMUX_TYPE *lock, uint32_t *ticket);
+void display_bridge_dummy_transfer_cancel(display_bridge_dummy_transfer_t *transfer,
+                                          portMUX_TYPE *lock, uint32_t ticket);
+/* Publish raw completion after forwarding the callback's display events. */
+bool display_bridge_dummy_transfer_done(display_bridge_dummy_transfer_t *transfer,
+                                        portMUX_TYPE *lock);
+esp_err_t display_bridge_dummy_transfer_wait(display_bridge_dummy_transfer_t *transfer,
+                                             portMUX_TYPE *lock, uint32_t ticket, int32_t timeout_ms);
+esp_err_t display_bridge_dummy_transfer_wait_idle(display_bridge_dummy_transfer_t *transfer,
+                                                  portMUX_TYPE *lock, int32_t timeout_ms);
+
+/**
+ * @brief Initialize pipeline from runtime config (call from bridge create with impl's pipeline and cfg)
+ *
+ * Decides whether pipeline is used from cfg->base.tear_avoid_mode and rotation.
+ * If used, inits the pipeline (lock, lists, elems) and sets *out_disp_fb and *out_draw_fb.
+ * Caller must free pipeline->elems in bridge destroy.
+ *
+ * @param pipeline Pipeline to init (e.g. &impl->pipeline)
+ * @param cfg Runtime config (base, frame_buffers, frame_buffer_count must be set)
+ * @param out_disp_fb Output display (front) buffer pointer (e.g. &impl->disp_fb)
+ * @param out_draw_fb Output draw (back) buffer pointer (e.g. &impl->draw_fb)
+ * @return 1 if pipeline in use and inited, 0 if pipeline not used, -1 on alloc failure
+ */
+int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pipeline,
+                                          esp_lv_adapter_display_runtime_config_t *cfg,
+                                          void **out_disp_fb, void **out_draw_fb);
+
+/**
+ * @brief Drop a stale pipeline wakeup before re-checking the buffer lists.
+ *
+ * wake == NULL clears the current task's notification index 0. A bridge-owned
+ * binary semaphore is drained instead, leaving the caller's notifications intact.
+ */
+void display_bridge_waiter_drain(SemaphoreHandle_t wake);
+
+/** Block until the next pipeline wakeup. See display_bridge_waiter_drain(). */
+void display_bridge_waiter_take(SemaphoreHandle_t wake);
+
+/* Submit and publish ownership together; RGB preserves an early switch event.
+ * wake selects the task notification (NULL) or a bridge semaphore. */
+esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
+                                       esp_lcd_panel_handle_t panel,
+                                       const esp_lv_adapter_display_runtime_info_t *runtime,
+                                       void **front, void **pending, void *buffer,
+                                       bool rgb, SemaphoreHandle_t wake);
+
+void display_bridge_pipeline_color_done(esp_lv_adapter_display_pipeline_t *p);
+
+/**
+ * @brief Retire a busy buffer and publish its pending front (ISR context)
+ *
+ * On true, notify the producer with vTaskNotifyGiveFromISR() to wake pipeline waits.
+ */
+bool display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *p,
+                                             void **front, void **pending);
+
+/**
+ * @brief Take a free buffer from the pipeline (no wait)
+ */
+struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapter_display_pipeline_t *p);
+
+/**
+ * @brief Wait for a free buffer from the pipeline.
+ *
+ * Blocks until a buffer is moved to the empty list. wake == NULL waits on the
+ * current task's notification index 0. A non-NULL binary semaphore is used
+ * instead, so this wait does not clear or add caller task notifications.
+ * The ISR must give that same semaphore after display_bridge_pipeline_release_buf_isr().
+ */
+struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p,
+                                                                   SemaphoreHandle_t wake);
+
+/**
+ * @brief Initialize runtime information from configuration
+ *
+ * @note Shared runtime metadata initialization for LVGL v8 and v9.
+ *
+ * @param runtime Runtime info structure to initialize
+ * @param cfg Display runtime configuration
+ */
+esp_err_t display_bridge_init_runtime_info(esp_lv_adapter_display_runtime_info_t *runtime,
+                                           const esp_lv_adapter_display_runtime_config_t *cfg);
+
+/**
+ * @brief Record timestamp after a successful flush/blit operation
+ */
+void display_bridge_vsync_record_flush_post(esp_lv_adapter_vsync_timing_t *t);
+
+/**
+ * @brief Update VSYNC timing and check for jitter (ISR context)
+ *
+ * @param t VSYNC timing context
+ * @return true if jitter detected (should skip/delay), false otherwise
+ */
+bool display_bridge_vsync_on_isr(esp_lv_adapter_vsync_timing_t *t);
+
+/**
+ * @brief Configure VSYNC jitter shield
+ *
+ * @param t VSYNC timing context
+ * @param threshold_us Threshold in microseconds (e.g. 1000), 0 to disable
+ */
+void display_bridge_vsync_config_jitter_shield(esp_lv_adapter_vsync_timing_t *t, uint32_t threshold_us);
+
+/**
+ * @brief Get the measured refresh rate for the interface in Hz
+ *
+ * @param t VSYNC timing context
+ * @return Refresh rate in Hz, or 0 if not measured yet
+ */
+uint32_t display_bridge_vsync_get_refresh_rate_hz(esp_lv_adapter_vsync_timing_t *t);
+
+#if SOC_DMA2D_SUPPORTED
+/**
+ * @brief Hardware resource structure for DMA2D/PPA
+ */
+typedef struct {
+    size_t data_cache_line_size;
+#if CONFIG_SOC_PPA_SUPPORTED
+    void *ppa_handle;  /* ppa_client_handle_t */
+#endif
+#if CONFIG_SOC_DMA2D_SUPPORTED
+    void *fbcpy_handle;  /* esp_async_fbcpy_handle_t */
+    void *dma2d_mutex;   /* SemaphoreHandle_t */
+    void *dma2d_done_sem; /* SemaphoreHandle_t */
+#endif
+} esp_lv_adapter_display_bridge_hw_resource_t;
+
+/**
+ * @brief Get global hardware resource singleton
+ *
+ * Acquires hardware resources with reference counting. The first call
+ * initializes PPA and DMA2D hardware. Subsequent calls increment the
+ * reference count.
+ *
+ * @return Pointer to hardware resource structure, or NULL on failure
+ */
+esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_get_hw_resource(void);
+
+/**
+ * @brief Peek current shared bridge HW resources without changing refcount
+ *
+ * @return Pointer to initialized shared HW resource, or NULL if not initialized
+ */
+esp_lv_adapter_display_bridge_hw_resource_t *display_bridge_peek_hw_resource(void);
+
+/**
+ * @brief Release hardware resource reference
+ *
+ * Decrements the reference count. When the count reaches zero, all hardware
+ * resources (PPA, DMA2D, semaphores) are freed.
+ *
+ * This function should be called when a display is destroyed.
+ *
+ * @return
+ *      - ESP_OK: Success
+ *      - ESP_ERR_INVALID_STATE: Resources not initialized
+ */
+esp_err_t display_bridge_release_hw_resource(void);
+
+/**
+ * @brief DMA2D completion callback
+ *
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
+ */
+#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
+bool display_bridge_dma2d_done_callback(async_color_convert_handle_t mcp,
+                                        async_color_convert_event_data_t *event_data,
+                                        void *cb_args);
+#else
+bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
+                                        esp_async_fbcpy_event_data_t *event_data,
+                                        void *cb_args);
+#endif
+
+/**
+ * @brief Synchronous DMA2D copy operation
+ *
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
+ *
+ * @param trans_desc DMA transfer descriptor
+ * @param timeout_ms Timeout in milliseconds
+ * @return esp_err_t ESP_OK on success
+ */
+esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms);
+
+esp_err_t display_bridge_copy_to_dma_buffer(const void *src,
+                                            void *dst,
+                                            size_t width,
+                                            size_t height,
+                                            uint8_t color_bytes,
+                                            size_t cache_line_size,
+                                            display_bridge_dma2d_copy_state_t *dma2d_state);
+
+#endif /* SOC_DMA2D_SUPPORTED */
+
+/**
+ * @brief Prepare shared bridge HW resources for a board-managed light sleep cycle
+ *
+ * Declared and defined unconditionally so it can be called on any target. It is
+ * a no-op without DMA2D. When DMA2D is present and peripheral power-down in
+ * light sleep is enabled, it keeps the peripheral power domain on across sleep
+ * because 2D-DMA has no sleep retention support.
+ *
+ * @return
+ *      - ESP_OK: Success or no guard required
+ *      - Other: Failed to acquire the sleep retention power lock
+ */
+esp_err_t display_bridge_prepare_hw_resource_for_sleep(void);
+
+/**
+ * @brief Release any shared bridge HW guard acquired for a light sleep cycle
+ *
+ * Declared and defined unconditionally. Safe to call even when no guard was
+ * activated during sleep preparation, including on targets without DMA2D.
+ *
+ * @return
+ *      - ESP_OK: Success or no guard was active
+ *      - Other: Failed to release the sleep retention power lock
+ */
+esp_err_t display_bridge_resume_hw_resource_after_sleep(void);
+
+/**
+ * @brief Whether flash encryption is active (cached runtime efuse check)
+ *
+ * When true, DMA access to external RAM must be 16-byte aligned in both address
+ * and length; callers should align flush areas accordingly.
+ */
+bool display_bridge_flash_encryption_active(void);
+
+/**
+ * @brief Get the maximum DMA alignment required by external memory
+ *
+ * @return Alignment in bytes
+ */
+size_t display_bridge_dma2d_ext_mem_alignment(void);
+
+/**
+ * @brief Whether DMA to this buffer needs strict external-memory alignment
+ *
+ * Uses the IDF MSPI constraints when available, including encryption and PSRAM
+ * ECC. Internal RAM is unrestricted; encryption-exempt PSRAM still requires
+ * alignment when ECC is enabled.
+ *
+ * @param buffer Buffer pointer
+ * @return true if strict external-memory DMA alignment is required
+ */
+bool display_bridge_dma2d_buffer_needs_alignment(const void *buffer);
+
+/**
+ * @brief Whether X-axis rounding alone can make DMA2D accesses safe for this picture
+ *
+ * Returns true when stride bytes satisfy the MSPI alignment and the buffer
+ * requires strict alignment handling. In this case X-axis
+ * (offset and width) rounding is sufficient; Y does not need adjustment.
+ *
+ * @param buffer     Picture base pointer
+ * @param stride_px  Picture stride in pixels
+ * @param color_bytes Bytes per pixel
+ * @return true if only X-axis (offset/width) rounding is needed
+ */
+bool display_bridge_dma2d_x_rounding_sufficient(const void *buffer,
+                                                size_t stride_px,
+                                                uint8_t color_bytes);
+
+/**
+ * @brief Whether a DMA2D window satisfies external-memory alignment
+ *
+ * @param buffer       Picture base pointer
+ * @param stride_px    Picture stride in pixels
+ * @param offset_x_px  Window start X in pixels
+ * @param copy_width_px Window width in pixels
+ * @param color_bytes  Bytes per pixel
+ * @return true if the DMA2D window is safe to access
+ */
+bool display_bridge_dma2d_window_is_compatible(const void *buffer,
+                                               size_t stride_px,
+                                               size_t offset_x_px,
+                                               size_t copy_width_px,
+                                               uint8_t color_bytes);
+
+/**
+ * @brief Expand an LVGL invalidated area so external-memory DMA stays aligned
+ *
+ * Rounds x1 down and x2 up so the per-row byte offset and length are multiples
+ * of the external-memory alignment for the given color depth. Y is not
+ * adjusted because row-start alignment depends on stride bytes, not row index.
+ *
+ * @param area     Invalidated area, expanded in place
+ * @param hor_res  Display width used to clamp x2, or <= 0 to skip clamping
+ * @param color_bytes Bytes per pixel
+ */
+void display_bridge_align_area_for_enc_dma(lv_area_t *area, int hor_res, uint8_t color_bytes);
+
+/**
+ * @brief Destroy display bridge and release resources
+ *
+ * Releases hardware resources (PPA, DMA2D) with reference counting and
+ * frees the bridge structure. Safe to call with NULL pointer.
+ *
+ * @note Shared by the LVGL v8 and v9 bridge implementations.
+ *
+ * @param bridge Display bridge structure to destroy
+ */
+void display_bridge_common_destroy(esp_lv_adapter_display_bridge_t *bridge);

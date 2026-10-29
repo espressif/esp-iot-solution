@@ -14,8 +14,8 @@ extern "C" {
 *
 */
 typedef enum {
+    IOT_ETH_LINK_DOWN, /*!< Ethernet link is down */
     IOT_ETH_LINK_UP,  /*!< Ethernet link is up */
-    IOT_ETH_LINK_DOWN /*!< Ethernet link is down */
 } iot_eth_link_t;
 
 #ifdef __cplusplus

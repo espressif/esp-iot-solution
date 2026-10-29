@@ -39,6 +39,13 @@ typedef unsigned char bool;
 
 #include "xz.h"
 
+/*
+ * Keep decoder state and I/O buffers on the cacheable heap. On ESP32-P4
+ * the bootloader places only the multi-call LZMA2 dictionary on the
+ * non-cacheable alias and reads it with 32-bit accesses. XZ_SINGLE uses
+ * the caller's output buffer and stays on byte access. Byte loads and
+ * stores on that alias return the wrong data.
+ */
 #define kmalloc(size, flags) malloc(size)
 #define kfree(ptr) free(ptr)
 #define vmalloc(size) malloc(size)

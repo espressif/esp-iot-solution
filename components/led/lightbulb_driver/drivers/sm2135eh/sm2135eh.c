@@ -230,7 +230,7 @@ sm2135eh_wy_current_t sm2135eh_wy_current_mapping(int current_mA)
     return SM2135EH_WY_CURRENT_MAX;
 }
 
-esp_err_t sm2135eh_init(driver_sm2135eh_t *config, void(*hook_func)(void *))
+esp_err_t sm2135eh_init(driver_sm2135eh_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
 
@@ -274,8 +274,8 @@ esp_err_t sm2135eh_deinit(void)
     DRIVER_CHECK(s_sm2135eh, "not init", return ESP_ERR_INVALID_STATE);
 
     sm2135eh_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_sm2135eh);
     s_sm2135eh = NULL;
     return ESP_OK;

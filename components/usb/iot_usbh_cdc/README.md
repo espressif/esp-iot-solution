@@ -1,13 +1,13 @@
 ## iot_usbh_cdc Component
 
-This component implements a simple version of the USB host CDC driver. The API is designed similarly to [ESP-IDF UART driver](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/api-reference/peripherals/uart.html), which can be used to replace the original UART driver to realize the update from UART to USB.
+This component implements a simple version of the USB host CDC driver. 
 
 **Features:**
 
-1. Similar API to ESP-IDF UART driver
-2. Support USB CDC device (The notify interface is not supported)
-3. Support USB Vendor device
-4. Support USB CDC multiple interface
+1. Support USB CDC device
+2. Support USB Vendor device
+3. Support USB CDC multiple interface
+4. Support USB HUB to connect multiple USB devices
 
 ### User Guide
 

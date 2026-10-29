@@ -1,5 +1,47 @@
 # ChangeLog
 
+## v2.1.1 - 2026-10-10
+
+### Bugfix:
+
+* Log the RGB panel pointer before freeing it during deletion, fixing GCC 15 use-after-free build errors when debug logging is enabled.
+
+## v2.1.0 - 2026-09-29
+
+### Enhancements:
+
+* Add opt-in `supports_madctl_mv` capability for validated SPI/QSPI modules whose MADCTL.MV bit exchanges the address axes.
+* Keep `swap_xy()` returning `ESP_ERR_NOT_SUPPORTED` by default because MV behavior is module-specific.
+* Preserve the cached MADCTL value when a mirror or axis-swap command fails.
+
+## v2.0.3 - 2025-12-15
+
+### Changes:
+
+* Start from esp-idf v6.0, DMA2D can only be enable by calling `esp_lcd_dpi_panel_enable_dma2d`
+
+## v2.0.2 - 2025-12-10
+
+### Bugfix:
+
+* Fix draw_bitmap not propagating tx_color errors, preventing system deadlock on SPI transmission failures
+
+## v2.0.1 - 2025-11-12
+
+* Updated MIPI-DSI structs for IDF6
+
+## v2.0.0 - 2025-10-29
+
+### Changes:
+
+* Compatible with ESP-IDF v6.0
+
+## v1.0.4 - 2025-09-15
+
+### Changes:
+
+* Updated phy_clk_src default value from MIPI_DSI_PHY_CLK_SRC_DEFAULT to 0
+
 ## v1.0.3 - 2025-6-23
 
 ### bugfix：

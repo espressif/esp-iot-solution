@@ -1,5 +1,39 @@
 # ChangeLog
 
+## v2.0.3 - 2026-10-10
+
+### Bugfix:
+
+* Log the RGB panel pointer before freeing it during deletion, fixing GCC 15 use-after-free build errors when debug logging is enabled.
+
+## v2.0.2~2 - 2026-05-28
+
+### Changes:
+
+* Add esp32s31 target support for RGB interface
+
+## v2.0.2 - 2025-12-10
+
+### Changes:
+
+* Start from esp-idf v6.0, DMA2D can only be enable by calling `esp_lcd_dpi_panel_enable_dma2d`
+
+## v2.0.1 - 2025-11-12
+
+* Updated MIPI-DSI structs for IDF6
+
+## v2.0.0 - 2025-10-29
+
+### Changes:
+
+* Compatible with ESP-IDF v6.0
+
+## v1.1.4 - 2025-09-15
+
+### Changes:
+
+* Updated phy_clk_src default value from MIPI_DSI_PHY_CLK_SRC_DEFAULT to 0
+
 ## v1.1.3 - 2025-6-23
 
 ### bugfix：

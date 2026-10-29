@@ -5,116 +5,81 @@ USB PPP
 
 PPP 是一种网络中最为基础的协议。PPP 协议（Point-to-Point Protocol） 是一种数据链路层协议，它是为在同等单元之间传输数据包这样的简单链路而设计的。这种链路提供全双工操作，并按照顺序传递数据包。PPP 为基于各种主机、网桥和路由器的简单连接提供一种共通的解决方案。
 
-`iot_usbh_modem <https://components.espressif.com/components/espressif/iot_usbh_modem>`_ 组件实现了 USB 主机 PPP 拨号的全流程。支持通过 USB 接口连接 4G Cat.1/4 模块，实现 PPP 拨号上网。支持通过 Wi-Fi softAP 热点共享互联网给其他设备。
+`iot_usbh_modem <https://components.espressif.com/components/espressif/iot_usbh_modem>`_ 组件实现了 USB 主机 PPP 拨号的全流程。支持通过 USB 接口连接 4G Cat.1/4 模块，实现 PPP 拨号上网。
 
 特性：
     * 快速启动
     * 支持热插拔
     * 支持 Modem+AT 双接口（需要模组支持）
     * 支持 PPP 标准协议 （大部分 4G 模组均支持）
-    * 支持 4G 转 Wi-Fi 热点
     * 支持 NAPT 网络地址转换
-    * 支持电源管理
-    * 支持网络自动恢复
-    * 支持卡检测、信号质量检测
-    * 支持网页配置界面
 
 已支持的模组型号：
 ------------------
 
-下表是已经支持的 4G 模组型号，可直接在 menuconfig 中通过宏 :c:macro:`MODEM_TARGET` 配置，如配置后不生效，请直接在 menuconfig 中选择 `MODEM_TARGET_USER` 并手动配置 ITF 接口。
+下表是已经支持的 4G 模组型号，可以按照 :ref:`example-label` 添加自己的模组支持。
 
 .. note::
 
-    同一个模组可能存在多个功能固件，具体请咨询模组厂商是否支持 PPP 拨号。
+    同一个模组可能存在多个功能固件，具体请咨询对应厂商是否支持 PPP 拨号。
 
-+-----------------+
-|    模组型号     |
-+=================+
-| ML302-DNLM/CNLM |
-+-----------------+
-| NT26            |
-+-----------------+
-| EC600NCNLC-N06  |
-+-----------------+
-| AIR780E         |
-+-----------------+
-| MC610_EU        |
-+-----------------+
-| EC20_CE         |
-+-----------------+
-| EG25_GL         |
-+-----------------+
-| YM310_X09       |
-+-----------------+
-| SIM7600E        |
-+-----------------+
-| A7670E          |
-+-----------------+
-| SIM7070G        |
-+-----------------+
-| SIM7080G        |
-+-----------------+
++-----------+---------------------------------------------+----------+----------+----------+
+| 型号      | 固件版本                                    | ESP32-S2 | ESP32-S3 | ESP32-P4 |
++===========+=============================================+==========+==========+==========+
+| ML302     | ML302-CNLM_MBRH0S00                         | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| Air780E   | AirM2M_780EVT_V2010_LTE_AT                  | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| EC600N-CN | EC600NCNLDR03A03M16_OCP                     | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| EC20      | EC20CEFHLGR06A07M1G                         | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| YM310     | YM310.X09S_AT.A60_R2.1.3.241121             | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| A7600C1   | Model: A7600C1-LNAS\                        | ✅       | ✅       | ✅       |
+|           | Revision: A7600M6_V8.18.1                   |          |          |          |
++-----------+---------------------------------------------+----------+----------+----------+
+| A7670E    | Model: A7670E-FASE\                         | ✅       | ✅       | ✅       |
+|           | Revision: A7670M7_V1.11.1                   |          |          |          |
++-----------+---------------------------------------------+----------+----------+----------+
+| SIM7080G  | Revision: 1951B17SIM7080                    | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| LE270-CN  | 12007.6005.00.02.03.04                      | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
+| MC610-EU  | 16000.1000.00.97.20.10                      | ✅       | ✅       | ✅       |
++-----------+---------------------------------------------+----------+----------+----------+
 
-设置 PPP 接口
----------------
 
-PPP 接口一般为 USB CDC 接口，一定具有一个 CDC data 接口，包含两个 bulk 端点，用于输入和输出数据。可能具有一个 CDC notify 接口，包含一个 interrupt 端点。本应用代码中并不使用该接口。
+添加一个新的 4G 模组支持
+---------------------------
 
-PPP 接口可用于传输 AT 指令和 PPP 数据传输，通过发送 "+++" 数据进行切换。
+4G 模组的 USB 描述符通常拥有多个接口，例如 Modem 接口、AT 指令接口、Debug 接口等。主机可以通过虚拟的 Modem 接口与蜂窝通信模组进行数据通信，例如发送AT命令进行控制操作，或者收发网络数据。通常情况下 Modem 接口在拨号成功后变成数据模式传输 PPP 数据，可以通过发送 "+++" 返回命令模式；还有些模组具有一个独立的 AT 指令接口，这时允许数据通信和AT指令交互同时进行。下面是添加一个新的 4G 模组支持的步骤：
 
-示例描述符
-~~~~~~~~~~~~~
-
-大部分的 PPP 接口的 bInterfaceClass 都为 0xFF (Vendor Specific Class)。如下图改 USB 设备的 PPP 接口的 bInterfaceNumber 为 0x03。
-
-示例 USB 描述符：
+1. 确认 4G 模组 **支持 USB PPP 拨号**;
+2. 确认 **4G SIM 卡已激活** 以及网络访问已打开;
+3. 确认 4G 模组的 USB 描述符信息中 ``Vendor ID``、 ``Product ID``、Modem 接口号以及可选的 AT 指令接口号，可以通过 `usbtreeview <https://www.uwe-sieber.de/usbtreeview_e.html>`_ 工具查看;
+4. 将上述描述符中的信息填入到 :c:struct:`usbh_modem_config_t` 结构体中;
 
 .. note::
 
-    以下描述符为示例，并非所有的描述符都如下，可能带有 IAD 接口描述符或者不具有 interrupt 端点。
-
-.. code-block:: c
-
-    *** Interface descriptor ***
-    bLength 9
-    bDescriptorType 4
-    bInterfaceNumber 3
-    bAlternateSetting 0
-    bNumEndpoints 3
-    bInterfaceClass 0xff
-    bInterfaceSubClass 0x0
-    bInterfaceProtocol 0x0
-    iInterface 8
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x8a   EP 10 IN
-            bmAttributes 0x3        INT
-            wMaxPacketSize 16
-            bInterval 16
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x82   EP 2 IN
-            bmAttributes 0x2        BULK
-            wMaxPacketSize 64
-            bInterval 0
-            *** Endpoint descriptor ***
-            bLength 7
-            bDescriptorType 5
-            bEndpointAddress 0x1    EP 1 OUT
-            bmAttributes 0x2        BULK
-            wMaxPacketSize 64
-            bInterval 0
-
-当我们找到了 PPP 接口后，可以配置 :c:macro:`MODEM_TARGET` 为 `MODEM_TARGET_USER`，并配置 :c:macro:`MODEM_USB_ITF` 为 PPP 接口的 bInterfaceNumber。
-
-双 PPP 接口
-~~~~~~~~~~~~~
-
-为了保证数据传输时还能传输 AT 指令，可以使用两个 PPP 接口，一个用于传输数据，一个用于传输 AT 指令。需要额外的配置 :c:macro:`MODEM_USB_ITF2`。
+    不同 4G 模组支持的基本 AT 命令大致相同，但可能存在一些特殊命令需要用户自行实现。
 
 .. note::
 
-    是否具有第二个 AT 指令接口，要视设备而定。
+    有些模组的 PPP 接口并非标准 CDC 接口，而是 Vendor Specific Class 接口，驱动也支持部分这种模组。
+
+.. note::
+
+    有些 4G 模组通过 PPP 帧就可以自动从数据模式切换到命令模式，无需发送 "+++"。此时需要关闭 ``MODEM_EXIT_PPP_WITH_AT_CMD`` 配置选项。
+
+.. _example-label:
+
+示例代码
+-------------------------------
+
+:example:`usb/host/usb_cdc_4g_module`
+
+API 参考
+-------------
+
+.. include-build-file:: inc/iot_usbh_modem.inc

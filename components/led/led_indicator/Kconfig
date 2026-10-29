@@ -9,6 +9,10 @@ menu "LED Indicator"
         bool "Enable gamma correction"
         default "y"
 
+    config USE_MI_RGB_BLINK_DEFAULT
+        bool "Use Xiaomi rgb blink default"
+        default "n"
+
     menu "LEDC Config"
 
         choice LEDC_SPEED_MODE

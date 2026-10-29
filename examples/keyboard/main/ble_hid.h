@@ -1,4 +1,5 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/*
+ * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,7 +11,8 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-#include "btn_progress.h"
+#include "esp_err.h"
+#include "hid_report_types.h"
 
 /**
  * @brief Initialize BLE HID device.
@@ -35,6 +37,13 @@ esp_err_t ble_hid_deinit(void);
  * @param report hid report
  */
 void ble_hid_keyboard_report(hid_report_t report);
+
+/**
+ * @brief Send ble hid battery level
+ *
+ * @param battery_level
+ */
+void ble_hid_battery_report(int battery_level);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,6 @@
+# Requires >= 4MB flash. images (data subtype 0x40) is 4 slots x 2 x 8KB banks.
+# Name,   Type, SubType, Offset,  Size, Flags
+nvs,      data, nvs,     0x9000,  0x6000,
+phy_init, data, phy,     0xf000,  0x1000,
+factory,  app,  factory, 0x10000, 2M,
+images,   data, 0x40,    0x210000, 0x10000,

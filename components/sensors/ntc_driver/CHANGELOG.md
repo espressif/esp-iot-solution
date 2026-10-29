@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.2.1 - 2026-06-9
+
+### fix:
+
+- Fix memory leak on ESP32-C3/C6 caused by dual calibration init
+
 ## v1.2.0 - 2025-02-24
 
 ### Improve:

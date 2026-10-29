@@ -46,6 +46,40 @@ At the same time, add the interface dependency in the component's ``CMakeLists.t
 
         target_link_libraries(${COMPONENT_LIB} INTERFACE "-u humiture_sht3x_init")
 
+Each callback works on a per-instance context: ``init`` produces the context through the ``void **sensor_ctx`` out-parameter, and every other callback receives it as the first argument. In this way, one driver implementation can back multiple sensor instances at different addresses:
+
+.. code-block:: c
+
+        esp_err_t humiture_sht3x_init(void **sensor_ctx, bus_handle_t handle, uint8_t addr);
+        esp_err_t humiture_sht3x_deinit(void *sensor_ctx);
+
+Registering a driver at runtime
+"""""""""""""""""""""""""""""""
+
+Besides the link-time ``SENSOR_HUB_DETECT_FN`` mechanism, a driver implementation can be supplied at runtime via :cpp:func:`iot_sensor_register_driver`, and removed via :cpp:func:`iot_sensor_unregister_driver`. This is useful when the driver is not known at link time, or when it is selected/configured dynamically. The implementation table is identical to the one used by ``SENSOR_HUB_DETECT_FN``:
+
+.. code-block:: c
+
+        static humiture_impl_t my_humiture_impl = {
+            .init = my_humiture_init,            /* esp_err_t (*)(void **ctx, bus_handle_t, uint8_t) */
+            .deinit = my_humiture_deinit,        /* esp_err_t (*)(void *ctx) */
+            .test = my_humiture_test,
+            .acquire_humidity = my_humiture_acquire_humidity,
+            .acquire_temperature = my_humiture_acquire_temperature,
+        };
+
+        /* register, then create by name exactly like a link-time driver */
+        iot_sensor_register_driver("my_humiture", HUMITURE_ID, &my_humiture_impl);
+        iot_sensor_create("my_humiture", &config, &sensor_handle);
+        ...
+        iot_sensor_delete(sensor_handle);
+        iot_sensor_unregister_driver("my_humiture");
+
+.. note::
+
+    - ``sensor_hub`` does not copy the name or the implementation table; keep both valid until the driver is unregistered and all instances created from it are deleted.
+    - Runtime-registered drivers take precedence over link-time drivers that share the same name, and both are reported by :cpp:func:`iot_sensor_scan`.
+
 Application developer
 ^^^^^^^^^^^^^^^^^^^^^^^
 

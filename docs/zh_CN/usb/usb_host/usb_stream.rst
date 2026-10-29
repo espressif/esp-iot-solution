@@ -3,6 +3,9 @@ USB Stream 组件说明
 
 :link_to_translation:`en:[English]`
 
+.. warning::
+   这个组件已经被停止维护，请使用 `usb_host_uvc <https://components.espressif.com/components/espressif/usb_host_uvc>`_ 和 `usb_host_uac <https://components.espressif.com/components/espressif/usb_host_uac>`_ 替代
+
 ``usb_stream`` 是基于 ESP32-S2/ESP32-S3 的 USB UVC + UAC 主机驱动程序，支持从 USB 设备读取/写入/控制多媒体流。例如最多同时支持 1 路摄像头 + 1 路麦克风 + 1 路播放器数据流。
 
 特性：

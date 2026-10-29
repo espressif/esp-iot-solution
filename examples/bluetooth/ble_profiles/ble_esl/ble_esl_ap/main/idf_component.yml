@@ -1,0 +1,14 @@
+dependencies:
+  idf: ">=6.1"
+  ble_conn_mgr:
+    version: "~1.*"
+    override_path: "../../../../../../components/bluetooth/ble_conn_mgr"
+  ble_esl:
+    version: "~1.*"
+    override_path: "../../../../../../components/bluetooth/ble_profiles/std/ble_esl"
+  ble_otp:
+    version: "~0.2.*"
+    override_path: "../../../../../../components/bluetooth/ble_profiles/std/ble_otp"
+  ble_services:
+    version: "~1.*"
+    override_path: "../../../../../../components/bluetooth/ble_services"

@@ -149,7 +149,7 @@ ESP32-C3 旋钮屏
 
 | **相关链接:**
 
-- 代码仓库： `esp32-c3-lcdkit <https://github.com/espressif/esp-dev-kits/tree/master/esp32-c3-lcdkit/examples/knob_panel>`__
+- 示例入口： `ESP32-C3-LCDkit 用户指南 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32c3/esp32-c3-lcdkit/user_guide.html>`__
 - 相关视频：
     - `ESP32-C3 旋钮屏 Demo <https://www.bilibili.com/video/BV1nG4y1d7Ja/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
     - `ESP32-C3-LCDKit旋钮屏开发板 <https://www.bilibili.com/video/BV1GM4y177A6/?spm_id_from=333.999.0.0&vd_source=2dce370e48c5640c913869575b606ebe>`__
@@ -168,12 +168,12 @@ ESP32-C3 旋钮屏
 
 | **硬件:**
 
-- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - 屏幕： LCD 子板 2（480x480）
 
 | **相关链接:**
 
-- 代码仓库： `esp32-s3-lcd-ev-board/86-box Smart Panel Example <https://github.com/espressif/esp-dev-kits/tree/master/esp32-s3-lcd-ev-board/examples/86box_smart_panel>`__
+- 示例入口： `ESP32-S3-LCD-EV-Board 用户指南 <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - 相关视频： `ESP32-S3 智能语音触控面板 <https://www.bilibili.com/video/BV12G4y1o7A7/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
 
 | **特性:**
@@ -191,12 +191,12 @@ ESP32-C3 旋钮屏
 
 | **硬件:**
 
-- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - 屏幕： LCD 子板 3（800x480）
 
 | **相关链接:**
 
-- 代码仓库： `esp32-s3-lcd-ev-board/USB Camera LCD Example <https://github.com/espressif/esp-dev-kits/tree/master/esp32-s3-lcd-ev-board/examples/usb_camera_lcd>`__
+- 示例入口： :example:`usb/host/usb_camera_lcd_display`
 - 相关视频： `ESP32-S3 驱动 RGB 接口屏 + USB CDC 摄像头 Demo <https://www.bilibili.com/video/BV1ZM411k7tZ/?share_source=copy_web&vd_source=0f97bc013051255d733b8e1e7bf54008>`__
 
 | **特性:**
@@ -215,7 +215,7 @@ ESP32-C3 旋钮屏
 
 | **硬件:**
 
-- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/en/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
+- 开发板： `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`__
 - 屏幕： 7 英寸、RGB 接口、800x480 分辨率
 
 | **相关链接:**
@@ -264,13 +264,13 @@ LCD 参考资料
 - LCD 方案 & 开发指南
 
   - `ESP-HMI 智能屏方案 <https://www.espressif.com/zh-hans/solutions/hmi/smart-displays>`_
-  - `快速入门 GUI（上） <https://www.bilibili.com/read/cv19147389?spm_id_from=333.999.0.0>`_
-  - `快速入门 GUI（下） <https://www.bilibili.com/read/cv19354117?spm_id_from=333.999.0.0>`_
+  - 快速入门 GUI（上）
+  - 快速入门 GUI（下）
   - `ESP LCD 开发指南 <https://docs.espressif.com/projects/espressif-esp-iot-solution/zh_CN/latest/display/screen.html>`_
 
 - LCD 相关开发板购买
 
-  - `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/espressif-esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`_：目前支持 800 x 480 4.3 寸（RGB） 和 480 x 480 3.95 寸（RGB）两种子板，支持电容触屏。 `购买链接 <https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-8715811636.23.4bc567d8eBiLiI&id=680580609719>`_
+  - `ESP32-S3-LCD-EV-Board <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32s3/esp32-s3-lcd-ev-board/user_guide.html>`_：目前支持 800 x 480 4.3 寸（RGB） 和 480 x 480 3.95 寸（RGB）两种子板，支持电容触屏。 `购买链接 <https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-8715811636.23.4bc567d8eBiLiI&id=680580609719>`_
   - `ESP32-S3-BOX <https://github.com/espressif/esp-box/blob/master/docs/hardware_overview/esp32_s3_box/hardware_overview_for_box.md>`_ ： 240 x 320 2.4 寸（SPI）ILI9342，支持电容触屏。 `购买链接 <https://item.taobao.com/item.htm?spm=a1z10.1-c.w4004-10057817917.13.36b47931Jgygni&id=732842971319&skuId=5456418374248>`__
   - `ESP32-S3-BOX-Lite <https://github.com/espressif/esp-box/blob/master/docs/getting_started_cn.md>`_ : 240 x 320 2.4 寸（SPI）ST7789V，不支持触屏，但是屏上有 3 个按键。 `购买链接 <https://item.taobao.com/item.htm?spm=a1z10.3-c.w4002-8715811646.10.1b7719b0Af0aPp&id=658634202331>`__
   - `ESP32-C3-LCDkit <https://docs.espressif.com/projects/esp-dev-kits/zh_CN/latest/esp32c3/esp32-c3-lcdkit/user_guide.html>`_ : 240 x 240 1.28 寸（SPI）GC9A01，不支持触屏。 `购买链接 <https://item.taobao.com/item.htm?spm=a1z10.5-c.w4002-8715811636.21.74eb570eCig1wf&id=722089055506>`__

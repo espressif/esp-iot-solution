@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -8,12 +8,11 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_check.h"
+#include "esp_system.h"
 #include "esp_msc_host.h"
 #include "esp_msc_ota.h"
 #include "usb/usb_host.h"
-#ifdef CONFIG_ESP32_S3_USB_OTG
-#include "bsp/esp-bsp.h"
-#endif
+#include "driver/gpio.h"
 
 static const char *TAG = "usb_msc_ota";
 
@@ -49,9 +48,11 @@ static void msc_ota_event_handler(void *arg, esp_event_base_t event_base,
         float progress = *(float *)event_data;
         print_progressbar(progress, 1.0);
         break;
-    case ESP_MSC_OTA_FAILED:
-        ESP_LOGI(TAG, "ESP_MSC_OTA_FAILED");
+    case ESP_MSC_OTA_FAILED: {
+        esp_err_t err = *(esp_err_t *)event_data;
+        ESP_LOGI(TAG, "ESP_MSC_OTA_FAILED, err: %s", esp_err_to_name(err));
         break;
+    }
     case ESP_MSC_OTA_GET_IMG_DESC:
         ESP_LOGI(TAG, "ESP_MSC_OTA_GET_IMG_DESC");
         break;
@@ -75,8 +76,32 @@ static void msc_ota_event_handler(void *arg, esp_event_base_t event_base,
 void app_main(void)
 {
 #ifdef CONFIG_ESP32_S3_USB_OTG
-    bsp_usb_mode_select_host();
-    bsp_usb_host_power_mode(BSP_USB_HOST_POWER_MODE_USB_DEV, true);
+    // USB mode select host
+    const gpio_config_t io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_18),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&io_config));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_18, 1));
+
+    // Set host usb dev power mode
+    const gpio_config_t power_io_config = {
+        .pin_bit_mask = BIT64(GPIO_NUM_17) | BIT64(GPIO_NUM_12) | BIT64(GPIO_NUM_13),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    ESP_ERROR_CHECK(gpio_config(&power_io_config));
+
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_17, 1)); // Configure the limiter 500mA
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_13, 0)); // Turn power off
+    vTaskDelay(pdMS_TO_TICKS(10));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_12, 1)); // Turn on usb dev power mode
 #endif
     esp_event_loop_create_default();
     ESP_ERROR_CHECK(esp_event_handler_register(ESP_MSC_OTA_EVENT, ESP_EVENT_ANY_ID, &msc_ota_event_handler, NULL));
@@ -90,14 +115,15 @@ void app_main(void)
     esp_msc_host_install(&msc_host_config, &host_handle);
 
     esp_msc_ota_config_t config = {
+        .host_handle = host_handle,
         .ota_bin_path = OTA_FILE_NAME,
         .wait_msc_connect = portMAX_DELAY,
     };
 #if CONFIG_SIMPLE_MSC_OTA
     esp_err_t ret = esp_msc_ota(&config);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "esp_msc_ota failed, ret: %d", ret);
-    }
+    ESP_GOTO_ON_ERROR(ret, fail, TAG, "esp_msc_ota failed, ret: %d", ret);
+    ESP_LOGI(TAG, "esp msc ota complete, restart system");
+    esp_restart();
 #else
     esp_msc_ota_handle_t msc_ota_handle = NULL;
 
@@ -107,19 +133,21 @@ void app_main(void)
     do {
         ret = esp_msc_ota_perform(msc_ota_handle);
         if (ret != ESP_OK) {
-            break;
             ESP_LOGE(TAG, "esp_msc_ota_perform: (%s)\n", esp_err_to_name(ret));
+            break;
         }
     } while (!esp_msc_ota_is_complete_data_received(msc_ota_handle));
 
     if (esp_msc_ota_is_complete_data_received(msc_ota_handle)) {
-        esp_msc_ota_end(msc_ota_handle);
-        ESP_LOGI(TAG, "esp msc ota complete");
+        ret = esp_msc_ota_end(msc_ota_handle);
+        ESP_GOTO_ON_ERROR(ret, fail, TAG, "esp_msc_ota_end failed, err: %d", ret);
+        ESP_LOGI(TAG, "esp msc ota complete, restart system");
+        esp_restart();
     } else {
         esp_msc_ota_abort(msc_ota_handle);
         ESP_LOGE(TAG, "esp msc ota failed");
     }
-fail:
 #endif
-    esp_msc_host_uninstall(host_handle);
+fail:
+    ESP_LOGW(TAG, "MSC host remains installed; unplug the USB disk before uninstalling the host");
 }

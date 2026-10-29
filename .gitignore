@@ -84,6 +84,9 @@ test_multi_heap_host
 # VS Code Settings
 .vscode/
 
+# Cursor Settings
+.cursor/
+
 # VIM files
 *.swp
 *.swo
@@ -123,3 +126,10 @@ output.json
 
 #components cache
 **/dist/
+
+*.log
+
+# AI related files
+.cursor/
+.codex
+.gemini/

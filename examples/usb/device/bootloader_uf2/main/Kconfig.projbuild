@@ -25,6 +25,7 @@ menu "Bootloader UF2 APP Config"
         range 0 46 if IDF_TARGET_ESP32S2
         range 0 48 if IDF_TARGET_ESP32S3
         range 0 54 if IDF_TARGET_ESP32P4
+        range 0 62 if IDF_TARGET_ESP32S31
         help
             GPIO number for LED indicator for bootloader UF2.
 endmenu

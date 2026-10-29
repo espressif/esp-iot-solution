@@ -1,5 +1,5 @@
-| Supported Targets | ESP32-S3 |
-| ----------------- | -------- |
+| Supported Targets | ESP32-S3 | ESP32-C5 |
+| ----------------- | -------- | -------- |
 
 | Supported LCD Controllers | ST77903 |
 | ------------------------- | ------- |
@@ -12,7 +12,7 @@
 
 This example shows how to use ST77903 display driver from Component manager in esp-idf project. These components are using API provided by `esp_lcd` component. This example will draw a fancy dash board with the LVGL library.
 
-This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
+This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/9.2/porting/index.html).
 
 ## How to use the example
 
@@ -111,15 +111,15 @@ I (1125) main_task: Returned from app_main()
 | Buffering Mode |                    Description                    |    Special Configurations     |
 | :------------: | :-----------------------------------------------: | :---------------------------: |
 |     Mode1      | One buffer with 100-line heights in internal SRAM |               *               |
-|     Mode2      |   One buffer with frame-size in internal PSRAM    |  sdkconfig.test.psram_buffer  |
-|     Mode3      |  Full-refresh with two frame-size PSRAM buffers   | sdkconfig.test.full_refresh_1 |
-|     Mode4      |   Direct-mode with two frame-size PSRAM buffers   |  sdkconfig.test.direct_mode   |
-|     Mode5      | Full-refresh with three frame-size PSRAM buffers  | sdkconfig.test.full_refresh_2 |
+|     Mode2      |   One buffer with frame-size in internal PSRAM    | sdkconfig.ci.avoid_tear_mode1 |
+|     Mode3      |  Full-refresh with two frame-size PSRAM buffers   | sdkconfig.ci.avoid_tear_mode2 |
+|     Mode4      |   Direct-mode with two frame-size PSRAM buffers   | sdkconfig.ci.avoid_tear_mode3 |
+|     Mode5      | Full-refresh with three frame-size PSRAM buffers  | sdkconfig.ci.avoid_tear_mode4 |
 
 **Note:** To test the above modes, run the following commands to configure project (take ESP32-S3R8 and `Mode4` as an example):
 ```
 rm -rf build sdkconfig sdkconfig.old
-idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults.psram_octal_ddr;sdkconfig.test.direct_mode" reconfigure
+idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.ci.avoid_tear_mode3" reconfigure
 ```
 
 ### Average FPS using ESP32-S3R2

@@ -87,7 +87,7 @@ Example 1: Defining a brightness setting: Setting the indicator light to 50% bri
 
     const blink_step_t test_blink_50_brightness[] = {
         {LED_BLINK_BRIGHTNESS, LED_STATE_50_PERCENT, 500},   // step1: set to half brightness 500 ms
-        {LED_BLINK_STOP, 0, 0},                              // step4: stop blink (50% brightness)
+        {LED_BLINK_STOP, 0, 0},                              // step2: stop blink (50% brightness)
     };
 
 Example 2: Defining a looping blink: Gradually turning on for 0.5s, then gradually turning off for 0.5s, repeating the sequence.
@@ -230,16 +230,15 @@ Create an indicator by specifying an IO and a set of configuration information.
 
 .. code:: c
 
+   led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
+    };
     led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
         .blink_lists = led_indicator_get_sample_lists(),
         .blink_list_num = led_indicator_get_sample_lists_num(),
     };
-    led_indicator_handle_t led_handle = led_indicator_create(8, &config); // attach to gpio 8
+    esp_err_t ret = led_indicator_new_gpio_device(&config, &led_indicator_gpio_config, &led_handle);
 
 
 Start/stop blinking: control your indicator to start/stop a specified type of blink by calling corresponding functions. The functions are returned immediately after calling, and the blink process is controlled by the internal timer. The same indicator can perform multiple blink types in turn based on their priorities.
@@ -288,14 +287,14 @@ Custom light blink
         [BLINK_NUM] = NULL,
     };
 
+    led_indicator_gpio_config_t led_indicator_gpio_config = {
+        .gpio_num = 1,              /**< num of GPIO */
+        .is_active_level_high = 1,
+    };
+
     led_indicator_config_t config = {
-        .mode = LED_GPIO_MODE,
-        .led_gpio_config = {
-            .active_level = 1,
-            .gpio_num = 1,
-        },
-        .blink_lists = led_blink_lst,
-        .blink_list_num = BLINK_MAX,
+        .blink_lists = led_blink_lst,,
+        .blink_list_num = BLINK_MAX,,
     };
 
 By defining ``led_blink_lst[]`` to achieve the custom indicator.

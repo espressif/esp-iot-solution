@@ -2,7 +2,6 @@
 # in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.5)
 
-set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/unit-test-app/components"
-                         "../../esp_msc_ota")
+set(EXTRA_COMPONENT_DIRS "../../esp_msc_ota")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp_msc_ota_test)

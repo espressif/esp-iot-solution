@@ -1,24 +1,30 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "sdkconfig.h"
 #include "btn_progress.h"
-#include "tinyusb_hid.h"
-#include "ble_hid.h"
+#include "hid_transport.h"
 #include "bsp/keycodes.h"
 #include "bsp/keymap.h"
 #include "usb_descriptors.h"
 #include "rgb_matrix.h"
 #include "pixel.h"
 #include "settings.h"
+#include "esp_log.h"
 #include "esp_system.h"
-#include "esp_pm.h"
 #include "bsp/esp-bsp.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+
+static const char *TAG = "btn_progress";
 
 static btn_report_type_t report_type = TINYUSB_HID_REPORT;
 static light_type_t light_type = RGB_MATRIX;
+static SemaphoreHandle_t s_switch_lock;
 
 #define HSV_MAX 18
 static uint8_t hsv_index = 0;
@@ -43,18 +49,68 @@ static uint8_t hsv_color[HSV_MAX][3] = {
     {43,  255, 255}, // HSV_YELLOW
 };
 
+static SemaphoreHandle_t get_switch_lock(void)
+{
+    if (!s_switch_lock) {
+        s_switch_lock = xSemaphoreCreateMutex();
+    }
+    return s_switch_lock;
+}
+
+esp_err_t keyboard_switch_report_type(btn_report_type_t new_type)
+{
+    if (new_type >= BTN_REPORT_TYPE_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    SemaphoreHandle_t lock = get_switch_lock();
+    if (lock) {
+        xSemaphoreTake(lock, portMAX_DELAY);
+    }
+
+    if (new_type == report_type) {
+        if (lock) {
+            xSemaphoreGive(lock);
+        }
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "switch report type %d -> %d", report_type, new_type);
+
+    report_type = new_type;
+
+    sys_param_t *sys_param = settings_get_parameter();
+    sys_param->report_type = new_type;
+    if (new_type == BLE_HID_REPORT) {
+        light_type = RGB_MATRIX;
+        sys_param->light_type = RGB_MATRIX;
+        btn_progress_set_light_type(RGB_MATRIX);
+    }
+
+    esp_err_t ret = settings_write_parameter_to_nvs();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "save report type failed: %s", esp_err_to_name(ret));
+        if (lock) {
+            xSemaphoreGive(lock);
+        }
+        return ret;
+    }
+
+    bsp_ws2812_clear();
+    bsp_ws2812_enable(false);
+    ESP_LOGI(TAG, "restart to apply report type %d", new_type);
+    if (lock) {
+        xSemaphoreGive(lock);
+    }
+    vTaskDelay(pdMS_TO_TICKS(200));
+    esp_restart();
+
+    return ESP_OK;
+}
+
 static void _report(hid_report_t report)
 {
-    switch (report_type) {
-    case TINYUSB_HID_REPORT:
-        tinyusb_hid_keyboard_report(report);
-        break;
-    case BLE_HID_REPORT:
-        ble_hid_keyboard_report(report);
-        break;
-    default:
-        break;
-    }
+    hid_transport_keyboard_report(report);
 }
 
 void btn_progress(keyboard_btn_report_t kbd_report)
@@ -79,7 +135,7 @@ void btn_progress(keyboard_btn_report_t kbd_report)
         case QK_MOMENTARY ... QK_MOMENTARY_MAX:
             // Momentary action_layer
             mo_action_layer = QK_MOMENTARY_GET_LAYER(kc);
-            printf("Momentary action_layer: %d\n", mo_action_layer);
+            ESP_LOGI(TAG, "Momentary action_layer: %d", mo_action_layer);
             continue;
             break;
 
@@ -90,27 +146,15 @@ void btn_progress(keyboard_btn_report_t kbd_report)
             break;
 
         case QK_OUTPUT_USB:
-            if (report_type == TINYUSB_HID_REPORT) {
-                break;
-            }
-            if (report_type == BLE_HID_REPORT) {
-                ble_hid_deinit();
-            }
-            report_type = TINYUSB_HID_REPORT;
-            sys_param->report_type = TINYUSB_HID_REPORT;
-            settings_write_parameter_to_nvs();
-            esp_restart();
+#if CONFIG_KEYBOARD_KEY_OUTPUT_SWITCH_ENABLE
+            keyboard_switch_report_type(TINYUSB_HID_REPORT);
+#endif
             break;
 
         case QK_OUTPUT_BLUETOOTH:
-            if (report_type == BLE_HID_REPORT) {
-                break;
-            }
-            report_type = BLE_HID_REPORT;
-            sys_param->report_type = BLE_HID_REPORT;
-            settings_write_parameter_to_nvs();
-            esp_restart();
-
+#if CONFIG_KEYBOARD_KEY_OUTPUT_SWITCH_ENABLE
+            keyboard_switch_report_type(BLE_HID_REPORT);
+#endif
             break;
 
         /*!< Change to win11 light or local light */

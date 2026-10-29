@@ -277,7 +277,7 @@ static esp_err_t panel_sh8601_draw_bitmap(esp_lcd_panel_t *panel, int x_start, i
     }, 4), TAG, "send command failed");
     // transfer frame buffer
     size_t len = (x_end - x_start) * (y_end - y_start) * sh8601->fb_bits_per_pixel / 8;
-    tx_color(sh8601, io, LCD_CMD_RAMWR, color_data, len);
+    ESP_RETURN_ON_ERROR(tx_color(sh8601, io, LCD_CMD_RAMWR, color_data, len), TAG, "send color data failed");
 
     return ESP_OK;
 }

@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <stddef.h>
 #include "cJSON.h"
 
 /*<! Enum for image sizes */
@@ -50,8 +51,13 @@ typedef enum {
     OPENAI_AUDIO_OUTPUT_FORMAT_MP3,
     OPENAI_AUDIO_OUTPUT_FORMAT_OPUS,
     OPENAI_AUDIO_OUTPUT_FORMAT_AAC,
-    OPENAI_AUDIO_OUTPUT_FORMAT_FLAC
+    OPENAI_AUDIO_OUTPUT_FORMAT_FLAC,
+    OPENAI_AUDIO_OUTPUT_FORMAT_WAV,
+    OPENAI_AUDIO_OUTPUT_FORMAT_PCM,
+    OPENAI_AUDIO_OUTPUT_FORMAT_MAX,
 } OpenAI_Audio_Output_Format;
+
+typedef void (*OpenAI_StreamCallback)(const uint8_t *data, size_t length);
 
 /**
  * @brief Struct for Embedding data
@@ -461,6 +467,19 @@ typedef struct OpenAI_ChatCompletion {
      * @return OpenAI_StringResponse_t*
      */
     OpenAI_StringResponse_t *(*message)(struct OpenAI_ChatCompletion *chatCompletion, const char *p, bool save);
+
+    /**
+     * @brief Send a multi-modal message (text / image_url / input_audio) for completion.
+     *        This is an extended API supporting richer content types.
+     *
+     * @param chatCompletion[in] The chat completion object
+     * @param type[in] The content type string ("text", "image_url", "input_audio", etc.)
+     * @param p[in]    The content value corresponding to the type
+     * @param save[in] Save conversation with the first assistant response if true
+     * @return OpenAI_StringResponse_t* The response from OpenAI
+     */
+    OpenAI_StringResponse_t *(*multiModalMessage)(struct OpenAI_ChatCompletion *chatCompletion, const char *type, const char *p, bool save);
+
 } OpenAI_ChatCompletion_t;
 
 /**
@@ -512,6 +531,13 @@ typedef struct OpenAI_Edit {
 } OpenAI_Edit_t;
 
 /**
+ * Receives Base64 fragments of one generated image. The fragment is not
+ * NUL-terminated. Return false to abort the HTTP request.
+ * The callback can decode/write image data incrementally without PSRAM.
+ */
+typedef bool (*OpenAI_ImageStreamCallback)(const char *base64_chunk, size_t length, void *user_data);
+
+/**
  * @brief Creates an image given a prompt.
  *
  */
@@ -556,6 +582,25 @@ typedef struct OpenAI_ImageGeneration {
      * @return OpenAI_ImageResponse_t* the generated image/images
      */
     OpenAI_ImageResponse_t *(*prompt)(struct OpenAI_ImageGeneration *imageGeneration, char *p);
+
+    /** Choose a GPT Image model. Defaults to gpt-image-2. */
+    void (*setModel)(struct OpenAI_ImageGeneration *imageGeneration, const char *model);
+
+    /** Optional GPT Image quality: low, medium, high, or auto. */
+    void (*setQuality)(struct OpenAI_ImageGeneration *imageGeneration, const char *quality);
+
+    /** Optional GPT Image output encoding: jpeg, png, or webp. */
+    void (*setOutputFormat)(struct OpenAI_ImageGeneration *imageGeneration, const char *format);
+
+    /**
+     * Stream a generated image as Base64 fragments (never allocates the full
+     * image in RAM). Only one image per request is supported in this mode.
+     * New GPT Image models return Base64, not URLs; setResponseFormat(URL)
+     * is ignored for them. 256x256 and 512x512 are not supported by GPT Image.
+     * Returns true only after the final image event was received.
+     */
+    bool (*promptStream)(struct OpenAI_ImageGeneration *imageGeneration, const char *prompt,
+                         OpenAI_ImageStreamCallback callback, void *user_data);
 } OpenAI_ImageGeneration_t;
 
 /**
@@ -745,13 +790,22 @@ typedef struct OpenAI_AudioSpeech {
     void (*setResponseFormat)(struct OpenAI_AudioSpeech *createSpeech, OpenAI_Audio_Output_Format rf);
 
     /**
-     * @brief Send the message for completion. Save it with the first response if selected.
+     * @brief Send the message for completion.
      *
      * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
      * @param p[in] the message for audio generation
      * @return *
      */
     OpenAI_SpeechResponse_t *(*speech)(struct OpenAI_AudioSpeech *createSpeech, char *p);
+
+    /**
+     * @brief Send the message for completion.
+     *
+     * @param createSpeech[in] the point of OpenAI_SpeechResponse_t
+     * @param p[in] the message for audio generation
+     * @param stream_callback[in] the callback function for audio stream
+     */
+    void (*speechStream)(struct OpenAI_AudioSpeech *createSpeech, char *p, OpenAI_StreamCallback stream_callback);
 
 } OpenAI_AudioSpeech_t;
 

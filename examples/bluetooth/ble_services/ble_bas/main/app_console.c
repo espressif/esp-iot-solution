@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,15 +9,25 @@
 #include "esp_system.h"
 #include "esp_log.h"
 #include "esp_console.h"
-#include "esp_vfs_dev.h"
+#include "esp_vfs_fat.h"
 #include "driver/uart.h"
 #include "linenoise/linenoise.h"
 #include "argtable3/argtable3.h"
-#include "esp_vfs_fat.h"
+#include "sys/unistd.h"
 
 static const char* TAG = "app_console";
 
 #define PROMPT_STR CONFIG_IDF_TARGET
+
+/* For old versions of ESP-IDF, use esp_vfs_dev_ API instead of uart_vfs_dev_ API */
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+#include "esp_vfs_dev.h"
+#define uart_vfs_dev_port_set_rx_line_endings esp_vfs_dev_uart_port_set_rx_line_endings
+#define uart_vfs_dev_port_set_tx_line_endings esp_vfs_dev_uart_port_set_tx_line_endings
+#define uart_vfs_dev_use_driver esp_vfs_dev_uart_use_driver
+#else
+#include "driver/uart_vfs.h"
+#endif
 
 static void initialize_console(void)
 {
@@ -29,9 +39,9 @@ static void initialize_console(void)
     setvbuf(stdin, NULL, _IONBF, 0);
 
     /* Minicom, screen, idf_monitor send CR when ENTER key is pressed */
-    esp_vfs_dev_uart_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
+    uart_vfs_dev_port_set_rx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CR);
     /* Move the caret to the beginning of the next line on '\n' */
-    esp_vfs_dev_uart_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
+    uart_vfs_dev_port_set_tx_line_endings(CONFIG_ESP_CONSOLE_UART_NUM, ESP_LINE_ENDINGS_CRLF);
 
     /* Configure UART. Note that REF_TICK is used so that the baud rate remains
      * correct while APB frequency is changing in light sleep mode.
@@ -52,7 +62,7 @@ static void initialize_console(void)
     ESP_ERROR_CHECK(uart_param_config(CONFIG_ESP_CONSOLE_UART_NUM, &uart_config));
 
     /* Tell VFS to use UART driver */
-    esp_vfs_dev_uart_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
+    uart_vfs_dev_use_driver(CONFIG_ESP_CONSOLE_UART_NUM);
 
     /* Initialize the console */
     esp_console_config_t console_config = {

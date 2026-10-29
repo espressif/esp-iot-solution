@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_idf_version.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -58,6 +59,14 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     case HTTP_EVENT_ON_HEADER:
         ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
         break;
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    case HTTP_EVENT_ON_HEADERS_COMPLETE:
+        ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADERS_COMPLETE");
+        break;
+    case HTTP_EVENT_ON_STATUS_CODE:
+        ESP_LOGD(TAG, "HTTP_EVENT_ON_STATUS_CODE");
+        break;
+#endif
     case HTTP_EVENT_ON_DATA:
         ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         break;
@@ -69,6 +78,8 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         break;
     case HTTP_EVENT_REDIRECT:
         ESP_LOGD(TAG, "HTTP_EVENT_REDIRECT");
+        break;
+    default:
         break;
     }
     return ESP_OK;

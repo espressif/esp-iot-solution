@@ -1,9 +1,13 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
+
+#include "soc/soc_caps.h"
+
+#if SOC_MCPWM_SUPPORTED
 
 #include "BLDCDriver.h"
 #include "foc_utils.h"
@@ -11,6 +15,17 @@
 #include "defaults.h"
 #include "drivers/hardware_api.h"
 #include "driver/mcpwm_prelude.h"
+
+struct EspMcpwmDriverParams {
+    int group_id = 0;
+    mcpwm_timer_handle_t timer = NULL;
+    mcpwm_oper_handle_t oper[3] = {};
+    mcpwm_cmpr_handle_t comparator[3] = {};
+    mcpwm_gen_handle_t generator[3][2] = {};
+    uint32_t period_ticks = 0;
+    bool center_aligned = false;
+    void *lowside_cs_params = nullptr;
+};
 
 class BLDCDriver6PWM : public BLDCDriver {
 public:
@@ -99,3 +114,5 @@ private:
     mcpwm_cmpr_handle_t comparator[3];
     mcpwm_gen_handle_t generator[3][2];
 };
+
+#endif // SOC_MCPWM_SUPPORTED

@@ -17,7 +17,7 @@
 #include "esp_lcd_touch_gt911.h"
 #include "esp_lcd_st7701.h"
 #include "lv_demos.h"
-#include "lvgl_port_v8.h"
+#include "esp_lv_adapter.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your LCD spec //////////////////////////////
@@ -27,7 +27,7 @@
 #define EXAMPLE_LCD_BIT_PER_PIXEL       (18)
 #define EXAMPLE_RGB_BIT_PER_PIXEL       (16)
 #define EXAMPLE_RGB_DATA_WIDTH          (16)
-#define EXAMPLE_RGB_BOUNCE_BUFFER_SIZE  (EXAMPLE_LCD_H_RES * CONFIG_EXAMPLE_LCD_RGB_BOUNCE_BUFFER_HEIGHT)
+#define EXAMPLE_RGB_BOUNCE_BUFFER_SIZE  (EXAMPLE_LCD_H_RES * 20)
 #define EXAMPLE_LCD_IO_RGB_DISP         (-1)             // -1 if not used
 #define EXAMPLE_LCD_IO_RGB_VSYNC        (GPIO_NUM_17)
 #define EXAMPLE_LCD_IO_RGB_HSYNC        (GPIO_NUM_16)
@@ -69,11 +69,6 @@
 #endif
 
 static const char *TAG = "example";
-
-IRAM_ATTR static bool rgb_lcd_on_vsync_event(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)
-{
-    return lvgl_port_notify_lcd_vsync();
-}
 
 static const st7701_lcd_init_cmd_t lcd_init_cmds[] = {
 //  {cmd, { data }, data_size, delay_ms}
@@ -140,6 +135,12 @@ void app_main()
 
     ESP_LOGI(TAG, "Install ST7701 panel driver");
     esp_lcd_panel_handle_t lcd_handle = NULL;
+
+    // Calculate required frame buffer count based on rotation
+    esp_lv_adapter_rotation_t rotation = CONFIG_EXAMPLE_LCD_ROTATION;
+    uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
+                          ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB, rotation);
+
     esp_lcd_rgb_panel_config_t rgb_config = {
         .clk_src = LCD_CLK_SRC_DEFAULT,
         .psram_trans_align = 64,
@@ -170,7 +171,7 @@ void app_main()
         },
         .timings = ST7701_480_480_PANEL_60HZ_RGB_TIMING(),
         .flags.fb_in_psram = 1,
-        .num_fbs = LVGL_PORT_LCD_BUFFER_NUMS,
+        .num_fbs = num_fbs,
         .bounce_buffer_size_px = EXAMPLE_RGB_BOUNCE_BUFFER_SIZE,
     };
     rgb_config.timings.h_res = EXAMPLE_LCD_H_RES;
@@ -199,17 +200,9 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_panel_init(lcd_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(lcd_handle, true));
 
-    esp_lcd_rgb_panel_event_callbacks_t cbs = {
-#if EXAMPLE_RGB_BOUNCE_BUFFER_SIZE > 0
-        .on_bounce_frame_finish = rgb_lcd_on_vsync_event,
-#else
-        .on_vsync = rgb_lcd_on_vsync_event,
-#endif
-    };
-    esp_lcd_rgb_panel_register_event_callbacks(lcd_handle, &cbs, NULL);
-
-    esp_lcd_touch_handle_t tp_handle = NULL;
 #if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+    esp_lcd_touch_handle_t tp_handle = NULL;
+
     ESP_LOGI(TAG, "Initialize I2C bus");
     const i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
@@ -247,7 +240,40 @@ void app_main()
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(tp_io_handle, &tp_cfg, &tp_handle));
 #endif // CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
 
-    ESP_ERROR_CHECK(lvgl_port_init(lcd_handle, tp_handle, LVGL_PORT_INTERFACE_RGB));
+    // Initialize LVGL adapter
+    ESP_LOGI(TAG, "Initialize LVGL adapter");
+    esp_lv_adapter_config_t adapter_config = ESP_LV_ADAPTER_DEFAULT_CONFIG();
+    ESP_ERROR_CHECK(esp_lv_adapter_init(&adapter_config));
+
+    // Register display to LVGL adapter
+    ESP_LOGI(TAG, "Register display to LVGL adapter");
+    esp_lv_adapter_display_config_t display_config = ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(
+                                                         lcd_handle,
+                                                         io_handle,
+                                                         EXAMPLE_LCD_H_RES,
+                                                         EXAMPLE_LCD_V_RES,
+                                                         rotation
+                                                     );
+    lv_display_t *disp = esp_lv_adapter_register_display(&display_config);
+    if (disp == NULL) {
+        ESP_LOGE(TAG, "Failed to register display");
+        return;
+    }
+
+    // Register touch input device (if available)
+#if CONFIG_EXAMPLE_LCD_TOUCH_CONTROLLER_GT911
+    ESP_LOGI(TAG, "Register touch input to LVGL adapter");
+    esp_lv_adapter_touch_config_t touch_config = ESP_LV_ADAPTER_TOUCH_DEFAULT_CONFIG(disp, tp_handle);
+    lv_indev_t *touch = esp_lv_adapter_register_touch(&touch_config);
+    if (touch == NULL) {
+        ESP_LOGE(TAG, "Failed to register touch");
+        return;
+    }
+#endif
+
+    // Start LVGL adapter task
+    ESP_LOGI(TAG, "Start LVGL adapter");
+    ESP_ERROR_CHECK(esp_lv_adapter_start());
 
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
     ESP_LOGI(TAG, "Turn on LCD backlight");
@@ -256,13 +282,13 @@ void app_main()
 
     ESP_LOGI(TAG, "Display LVGL demos");
     // Lock the mutex due to the LVGL APIs are not thread-safe
-    if (lvgl_port_lock(-1)) {
+    if (esp_lv_adapter_lock(-1) == ESP_OK) {
         // lv_demo_stress();
-        // lv_demo_benchmark();
-        lv_demo_music();
+        lv_demo_benchmark();
+        // lv_demo_music();
         // lv_demo_widgets();
 
         // Release the mutex
-        lvgl_port_unlock();
+        esp_lv_adapter_unlock();
     }
 }

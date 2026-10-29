@@ -1,0 +1,23 @@
+{
+  "screen": "hello",
+  "w": 240, "h": 240,
+  "screen_bg": "#101018",
+  "font": "DejaVuSans.ttf",
+  "default_font_size": 18,
+  "objects": [
+    {"type": "container", "parent": -1, "x": 0, "y": 0, "w": 240, "h": 240,
+     "bg_color": "#182030"},
+    {"type": "container", "parent": 0, "x": 30, "y": 44, "w": 180, "h": 76,
+     "bg_color": "#243050", "radius": 12,
+     "border_color": "#4060B0", "border_width": 2},
+    {"type": "label", "parent": 1, "x": 16, "y": 12, "w": 150, "h": 24,
+     "text": "Hello, ESP-GSP", "fg_color": "#FFFFFF"},
+    {"type": "label", "parent": 1, "x": 16, "y": 42, "w": 150, "h": 20,
+     "text": "Compiled UI", "font_size": 13, "fg_color": "#90A0C0"},
+    {"type": "label", "parent": 0, "x": 30, "y": 140, "w": 130, "h": 20,
+     "text": "System load", "font_size": 13, "fg_color": "#C0C8E0"},
+    {"type": "progress", "parent": 0, "x": 30, "y": 168, "w": 180, "h": 16,
+     "value": 0, "bind": "load", "name": "load", "bg_color": "#20283C",
+     "fg_color": "#60C080", "radius": 5}
+  ]
+}

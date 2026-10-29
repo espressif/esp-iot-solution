@@ -1,0 +1,11 @@
+# Immediate Alert Service
+
+menuconfig BLE_IAS
+    bool "GATT Immediate Alert Service"
+    help
+      Enable support for the Bluetooth Immediate Alert Service (IAS),
+      which exposes the Alert Level characteristic for immediate alerting.
+
+if BLE_IAS
+
+endif # BLE_IAS

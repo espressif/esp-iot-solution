@@ -2,6 +2,6 @@ dependencies:
   idf: ">=4.4"
 
   esp_lcd_axs15231b:
-    version: "^1"
+    version: "*"
     override_path: "../../../../../../components/display/lcd/esp_lcd_axs15231b"
     public: true

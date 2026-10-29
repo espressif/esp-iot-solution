@@ -1,3 +1,4 @@
 idf_component_register(SRC_DIRS "."
                         INCLUDE_DIRS "."
-                        PRIV_REQUIRES unity test_utils iot_usbh_cdc usb)
+                        PRIV_REQUIRES unity test_utils iot_usbh_cdc usb driver esp_timer
+                        )

@@ -4,7 +4,7 @@ Implementation of the ST77903 QSPI LCD controller with [esp_lcd](https://docs.es
 
 | LCD controller | Communication interface |    Component name    |                                                                            Link to datasheet                                                                            |
 | :------------: | :---------------------: | :------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-|    ST77903     |          QSPI           | esp_lcd_ST77903_qspi | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf), [PDF2](https://dl.espressif.com/AE/esp-iot-solution/ST77903_Customer_Application_Notes.pdf) |
+|    ST77903     |          QSPI           | esp_lcd_st77903_qspi | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf), [PDF2](https://dl.espressif.com/AE/esp-iot-solution/ST77903_Customer_Application_Notes.pdf) |
 
 For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
 
@@ -49,7 +49,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
         .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st77903(&panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st77903_qspi(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel_handle, true, false));   // This function can only be called when the refresh task is not running
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));     // This function can control the display on/off and the refresh task run/stop

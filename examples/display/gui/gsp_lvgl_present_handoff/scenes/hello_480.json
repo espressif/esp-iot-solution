@@ -1,0 +1,77 @@
+{
+  "screen": "hello",
+  "w": 480,
+  "h": 800,
+  "screen_bg": "#101018",
+  "font": "DejaVuSans.ttf",
+  "default_font_size": 26,
+  "objects": [
+    {
+      "type": "container",
+      "parent": -1,
+      "x": 0,
+      "y": 0,
+      "w": 480,
+      "h": 800,
+      "bg_color": "#182030"
+    },
+    {
+      "type": "container",
+      "parent": 0,
+      "x": 40,
+      "y": 160,
+      "w": 400,
+      "h": 180,
+      "bg_color": "#243050",
+      "radius": 16,
+      "border_color": "#4060B0",
+      "border_width": 2
+    },
+    {
+      "type": "label",
+      "parent": 1,
+      "x": 28,
+      "y": 32,
+      "w": 344,
+      "h": 40,
+      "text": "Hello, ESP-GSP",
+      "fg_color": "#FFFFFF"
+    },
+    {
+      "type": "label",
+      "parent": 1,
+      "x": 28,
+      "y": 94,
+      "w": 344,
+      "h": 30,
+      "text": "Compiled UI runtime",
+      "font_size": 18,
+      "fg_color": "#90A0C0"
+    },
+    {
+      "type": "label",
+      "parent": 0,
+      "x": 40,
+      "y": 440,
+      "w": 240,
+      "h": 30,
+      "text": "System load",
+      "font_size": 18,
+      "fg_color": "#C0C8E0"
+    },
+    {
+      "type": "progress",
+      "parent": 0,
+      "x": 40,
+      "y": 500,
+      "w": 400,
+      "h": 28,
+      "value": 0,
+      "bind": "load",
+      "name": "load",
+      "bg_color": "#20283C",
+      "fg_color": "#60C080",
+      "radius": 9
+    }
+  ]
+}

@@ -29,6 +29,11 @@ list(APPEND srcs            "hts/src/esp_hts.c")
 list(APPEND include         "hts/include")
 endif()
 
+if(CONFIG_BLE_IAS)
+list(APPEND srcs            "ias/src/esp_ias.c")
+list(APPEND include         "ias/include")
+endif()
+
 if(CONFIG_BLE_TPS)
 list(APPEND srcs            "tps/src/esp_tps.c")
 list(APPEND include         "tps/include")
@@ -52,6 +57,27 @@ endif()
 if(CONFIG_BLE_WSS)
 list(APPEND srcs            "wss/src/esp_wss.c")
 list(APPEND include         "wss/include")
+endif()
+
+if(CONFIG_BLE_MIDI)
+list(APPEND srcs            "midi/src/esp_ble_midi_svc.c")
+list(APPEND include         "midi/include")
+endif()
+
+if(CONFIG_BLE_OTS)
+list(APPEND srcs            "ots/src/esp_ots.c")
+list(APPEND include         "ots/include")
+endif()
+
+if(CONFIG_BLE_ESL)
+list(APPEND srcs            "esl/src/esp_esl.c")
+endif()
+# ESL UUIDs / TLV helpers are shared by Tag (server) and AP (client) profiles.
+list(APPEND include         "esl/include")
+
+if(CONFIG_BLE_OTA_SVC)
+list(APPEND srcs            "ota/src/esp_ble_ota_svc.c")
+list(APPEND include         "ota/include")
 endif()
 
 list(APPEND req "ble_conn_mgr")

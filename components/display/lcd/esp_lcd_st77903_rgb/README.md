@@ -4,7 +4,7 @@ Implementation of the ST77903 RGB LCD controller with [esp_lcd](https://docs.esp
 
 | LCD controller | Communication interface | Component name |                                                                            Link to datasheet                                                                             |
 | :------------: | :---------------------: | :------------: | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
-|     ST77903     |        RGB         | esp_lcd_ST77903_rgb | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf)|
+|     ST77903     |        RGB         | esp_lcd_st77903_rgb | [PDF1](https://dl.espressif.com/AE/esp-iot-solution/ST77903_SPEC_P0.5.pdf)|
 
 For more information on LCD, please refer to the [LCD documentation](https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/index.html).
 
@@ -86,7 +86,7 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
         .bits_per_pixel = EXAMPLE_LCD_BIT_PER_PIXEL,    // Implemented by LCD command `3Ah` (16/18/24)
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st77903(io_handle, &panel_config, &panel_handle));    /**
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st77903_rgb(io_handle, &panel_config, &panel_handle));    /**
                                                                                              * Only create RGB when `enable_io_multiplex` is set to 0,
                                                                                              * or initialize ST77903 meanwhile
                                                                                              */

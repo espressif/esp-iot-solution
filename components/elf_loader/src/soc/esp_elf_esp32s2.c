@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <stdbool.h>
 #include <sys/errno.h>
 #include "esp_idf_version.h"
 #include "esp_attr.h"
@@ -58,24 +59,25 @@ extern void spi_flash_enable_interrupts_caches_and_other_cpu(void);
  */
 int IRAM_ATTR esp_elf_arch_init_mmu(esp_elf_t *elf)
 {
-    int ret;
     int off;
+    bool mapped = false;
     uint32_t ibus_secs;
     volatile uint32_t dbus_secs;
-    esp_elf_sec_t *sec = &elf->sec[ELF_SEC_TEXT];
     volatile uint32_t *p = MMU_REG;
 
-    if (sec->size % MMU_UNIT_SIZE) {
-        ibus_secs = IADDR_2_SECS(sec->size) + 1;
-    } else {
-        ibus_secs = IADDR_2_SECS(sec->size);
+    /* .got.loc may extend the executable span; the allocation can also
+     * begin inside an MMU page, so include that first-page displacement. */
+    ibus_secs = esp_elf_mmu_page_span((uintptr_t)elf->ptext,
+                                      elf->text_alloc_size, MMU_UNIT_SIZE);
+    if (!ibus_secs || ibus_secs > ESP_MMU_IBUS_MAX - ESP_MMU_IBUS_OFF) {
+        return -EINVAL;
     }
 
     dbus_secs = PSRAM_SECS(elf->ptext);
 
     spi_flash_disable_interrupts_caches_and_other_cpu();
 
-    for (off = ESP_MMU_IBUS_OFF; off < ESP_MMU_IBUS_MAX; off++) {
+    for (off = ESP_MMU_IBUS_OFF; off <= ESP_MMU_IBUS_MAX - ibus_secs; off++) {
         if (p[off] == MMU_INVALID) {
             int j;
 
@@ -90,6 +92,7 @@ int IRAM_ATTR esp_elf_arch_init_mmu(esp_elf_t *elf)
                     p [off + k] = MMU_ACCESS_SPIRAM | (dbus_secs + k);
                 }
 
+                mapped = true;
                 break;
             }
         }
@@ -97,17 +100,17 @@ int IRAM_ATTR esp_elf_arch_init_mmu(esp_elf_t *elf)
 
     spi_flash_enable_interrupts_caches_and_other_cpu();
 
-    if (off >= ESP_MMU_IBUS_MAX) {
-        ret = -EIO;
-    } else {
-        elf->mmu_off  = off;
-        elf->mmu_num  = ibus_secs;
-        elf->text_off = ICACHE_ADDR(off) - PSRAM_ALIGN(elf->ptext);
-
-        ret = 0;
+    /* The final candidate starts at MAX - ibus_secs, so falling out of
+     * the loop does not imply off >= MAX when multiple pages are needed. */
+    if (!mapped) {
+        return -EIO;
     }
 
-    return ret;
+    elf->mmu_off  = off;
+    elf->mmu_num  = ibus_secs;
+    elf->text_off = ICACHE_ADDR(off) - PSRAM_ALIGN(elf->ptext);
+
+    return 0;
 }
 
 /**

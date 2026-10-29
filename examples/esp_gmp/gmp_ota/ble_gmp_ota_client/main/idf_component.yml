@@ -1,0 +1,14 @@
+dependencies:
+  idf: ">=5.0"
+  esp_flux:
+    version: "*"
+    override_path: "../../../../../components/esp_flux"
+  esp_gmp:
+    version: "*"
+    override_path: "../../../../../components/esp_gmp"
+  ble_session_manager:
+    version: "*"
+    path: "../../../../esp_flux/common_components/ble_session_manager"
+  gmp_ota_common:
+    version: "*"
+    path: "../../common_components/gmp_ota_common"

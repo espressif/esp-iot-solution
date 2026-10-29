@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -109,10 +109,19 @@ static bool bootloader_custom_ota_md5_check(uint32_t src_addr)
     uint32_t len = 0;
     uint32_t bootloader_custom_ota_header_length = sizeof(bootloader_custom_ota_header_t);
 
+    bool allow_decrypt = bootloader_custom_flash_encryption_enabled();
     esp_rom_md5_init(&md5_context);
     for (uint32_t loop = 0; loop < custom_ota_header->length;) {
         len = (custom_ota_header->length - loop > MD5_BUF_SIZE) ? MD5_BUF_SIZE : (custom_ota_header->length - loop);
-        bootloader_flash_read(src_addr + bootloader_custom_ota_header_length + loop, data, len, true);
+        if ((len & 3U) != 0) {
+            ESP_LOGE(TAG, "compressed length is not 4-byte aligned");
+            return false;
+        }
+        if (bootloader_flash_read(src_addr + bootloader_custom_ota_header_length + loop,
+                                  data, len, allow_decrypt) != ESP_OK) {
+            ESP_LOGE(TAG, "custom OTA MD5 read error!");
+            return false;
+        }
         esp_rom_md5_update(&md5_context, data, len);
         loop += len;
     }

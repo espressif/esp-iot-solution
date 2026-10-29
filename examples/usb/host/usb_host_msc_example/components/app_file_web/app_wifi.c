@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -26,6 +26,11 @@
 
 #define EXAMPLE_SSID_LEN            32
 #define EXAMPLE_PASSWORD_LEN        64
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define ESP_IF_WIFI_STA WIFI_IF_STA
+#define ESP_IF_WIFI_AP WIFI_IF_AP
+#endif
 
 static const char *TAG = "wifi";
 

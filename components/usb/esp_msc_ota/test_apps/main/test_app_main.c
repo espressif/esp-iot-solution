@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,10 +7,11 @@
 #include "unity.h"
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"
+#include "esp_event.h"
 #include "esp_heap_caps.h"
 
 // Some resources are lazy allocated in GPTimer driver, the threshold is left for that case
-#define TEST_MEMORY_LEAK_THRESHOLD (5000)
+#define TEST_MEMORY_LEAK_THRESHOLD (1024)
 
 static size_t before_free_8bit;
 static size_t before_free_32bit;
@@ -19,10 +20,15 @@ void setUp(void)
 {
     before_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     before_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
+
+    esp_err_t err = esp_event_loop_create_default();
+    TEST_ASSERT_TRUE(err == ESP_OK || err == ESP_ERR_INVALID_STATE);
 }
 
 void tearDown(void)
 {
+    esp_event_loop_delete_default();
+
     size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
     unity_utils_check_leak(before_free_8bit, after_free_8bit, "8BIT", TEST_MEMORY_LEAK_THRESHOLD);

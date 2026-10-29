@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v1.0.2 - 2026-09-07
+
+* Add ESP32-S31 and ESP-IDF 6.2 build support
+* Fix use-after-free when allocating RMT symbol storage fails
+
+## v1.0.1 - 2025-12-24
+
+* Change learn_param to dynamic allocation
+
 ## v1.0.0 - 2024-08-09
 
 * Update README

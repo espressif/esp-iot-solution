@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "model.cpp"
+        "predict.cpp"
+        "gesture_model.cpp"
+        "test_data.cpp"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        imu_gesture
+)

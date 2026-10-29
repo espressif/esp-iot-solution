@@ -1,40 +1,27 @@
 menu "IoT USB Host CDC"
 
     config USBH_TASK_CORE_ID
-        int "usbh task core_id"
+        int "usbh CDC task core_id"
         default 0
         range -1 1
         help
-            usb host task to specified core
+            usb host CDC task to specified core
 
     config USBH_TASK_BASE_PRIORITY
-        int "usbh task base priority"
+        int "usbh CDC task base priority"
         default 5
         help
-            usb task base priority
+            usb host CDC task base priority
 
-    config CONTROL_TRANSFER_BUFFER_SIZE
-        int "usbh control transfer size"
-        default 512
+    config USBH_CDC_CONTROL_TRANSFER_BUFFER_SIZE
+        int "usbh CDC control transfer size"
+        default 256
         help
-            usb host control transfer size
+            usb host CDC control transfer buffer size
 
-    config IN_TRANSFER_BUFFER_SIZE
-        int "usbh IN transfer buffer size"
-        default 512
+    config USBH_CDC_IN_EP_RETRY_COUNT
+        int "usbh CDC IN EP retry count"
+        default 3
         help
-            usb host IN transfer buffer size
-
-    config OUT_TRANSFER_BUFFER_SIZE
-        int "usbh OUT transfer buffer size"
-        default 512
-        help
-            usb host OUT transfer buffer size
-
-    config DEVICE_ADDRESS_LIST_NUM
-        int "usbh device address list num"
-        default 10
-        help
-            usb host device address list num
-
+            usb host CDC IN EP retry count, exceed this count will stop transfer
 endmenu

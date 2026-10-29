@@ -15,7 +15,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 
 ```
     idf.py add-dependency "espressif/esp_lcd_st7701"
@@ -29,7 +29,7 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 For most RGB LCDs, they typically use a "3-Wire SPI + Parallel RGB" interface. The "3-Wire SPI" interface is used for transmitting command data and the "Parallel RGB" interface is used for sending pixel data.
 
-It's recommended to use the [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions) component to bit-bang the "3-Wire SPI" interface through **GPIO** or an **IO expander** (like [TCA9554](https://components.espressif.com/components/espressif/esp_io_expander_tca9554)). To do this, please first add this component to your project manually. Then, refer to the following code to initialize the GC9503 controller.
+It's recommended to use the [esp_lcd_panel_io_additions](https://components.espressif.com/components/espressif/esp_lcd_panel_io_additions) component to bit-bang the "3-Wire SPI" interface through **GPIO** or an **IO expander** (like [TCA9554](https://components.espressif.com/components/espressif/esp_io_expander_tca9554)). To do this, please first add this component to your project manually. Then, refer to the following code to initialize the ST7701 controller.
 
 ```c
     ESP_LOGI(TAG, "Install 3-wire SPI panel IO");
@@ -151,7 +151,11 @@ It's recommended to use the [esp_lcd_panel_io_additions](https://components.espr
 
     ESP_LOGI(TAG, "Install LCD driver of st7701");
     esp_lcd_panel_handle_t panel_handle = NULL;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     esp_lcd_dpi_panel_config_t dpi_config = ST7701_480_360_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#else
+    esp_lcd_dpi_panel_config_t dpi_config = ST7701_480_360_PANEL_60HZ_DPI_CONFIG_CF(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#endif
     st7701_vendor_config_t vendor_config = {
         // .init_cmds = lcd_init_cmds,      // Uncomment these line if use custom initialization commands
         // .init_cmds_size = sizeof(lcd_init_cmds) / sizeof(st7701_lcd_init_cmd_t),

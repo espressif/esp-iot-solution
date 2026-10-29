@@ -1,11 +1,12 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
 
 #include "esp_err.h"
+#include "hid_report_types.h"
 #include "keyboard_button.h"
 
 #ifdef __cplusplus
@@ -23,31 +24,19 @@ typedef enum {
     LAMP_ARRAY_MATRIX,
 } light_type_t;
 
-typedef struct {
-    uint32_t report_id;    // Report identifier
-    union {
-        struct {
-            uint8_t modifier;     // Modifier keys
-            uint8_t reserved;     // Reserved byte
-            uint8_t keycode[15];  // Keycode
-        } keyboard_full_key_report;  // Keyboard full key report
-        struct {
-            uint8_t modifier;   // Modifier keys
-            uint8_t reserved;   // Reserved byte
-            uint8_t keycode[6]; // Keycodes
-        } keyboard_report;  // Keyboard report
-        struct {
-            uint16_t keycode;    // Keycode
-        } consumer_report;
-    };
-} hid_report_t;
-
 /**
  * @brief Button progress function.
  *
  * @param kbd_report Keyboard button report.
  */
 void btn_progress(keyboard_btn_report_t kbd_report);
+
+/**
+ * @brief Switch HID report transport at runtime.
+ *
+ * @param new_type New report transport type.
+ */
+esp_err_t keyboard_switch_report_type(btn_report_type_t new_type);
 
 /**
  * @brief Set the report type for button progress.

@@ -118,7 +118,7 @@ sm2182e_cw_current_t sm2182e_cw_current_mapping(int current_mA)
     return SM2182E_CW_CURRENT_MAX;
 }
 
-esp_err_t sm2182e_init(driver_sm2182e_t *config, void(*hook_func)(void *))
+esp_err_t sm2182e_init(driver_sm2182e_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
 
@@ -160,8 +160,8 @@ esp_err_t sm2182e_deinit(void)
     DRIVER_CHECK(s_sm2182e, "not init", return ESP_ERR_INVALID_STATE);
 
     sm2182e_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_sm2182e);
     s_sm2182e = NULL;
     return ESP_OK;

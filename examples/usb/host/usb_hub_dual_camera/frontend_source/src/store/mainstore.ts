@@ -1,7 +1,6 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { Camera, CameraActived } from "@/utils";
-import { WebBase } from "@/utils";
 
 export const useMainStore = defineStore("main", () => {
   const cameraNumberLimit = ref<number>(1);
@@ -12,14 +11,9 @@ export const useMainStore = defineStore("main", () => {
 
   const netRequestStatus = ref<"normal" | "error">("normal");
 
-  const webBase = new WebBase(new URL(location.href));
-
   const fetchServerSideStatus = async () => {
-    const statusApiEndpoint = webBase.getAvailableUrl("/api/cameras", true);
-    if (!statusApiEndpoint) return;
-
     try {
-      const response = await fetch(statusApiEndpoint);
+      const response = await fetch("/api/cameras");
       const resjson = await response.json();
 
       if (resjson.limit && typeof resjson.limit === "number") {
@@ -77,7 +71,6 @@ export const useMainStore = defineStore("main", () => {
     clientCameraActivedList,
     clientCameraOptions,
     netRequestStatus,
-    webBase,
     fetchServerSideStatus,
   };
 });

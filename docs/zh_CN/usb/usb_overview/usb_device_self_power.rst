@@ -8,7 +8,7 @@
 
 USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，或\ **借助 ADC/GPIO 由软件检测**\ 。
 
-由于 ESP32S2/S3 内部 USB PHY 不支持硬件检测逻辑，该功能需要借助 ADC/GPIO 由软件实现，其中使用 GPIO 检测方法最为简便，实现方法如下：
+由于 ESP32S2/S3/P4 内部 USB PHY 不支持硬件检测逻辑，该功能需要借助 ADC/GPIO 由软件实现，其中使用 GPIO 检测方法最为简便，实现方法如下：
 
 **对于 ESP-IDF 4.4 及更早版本:**
 
@@ -22,7 +22,7 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
     *
     * @brief For USB Self-power device, the VBUS voltage must be monitored to achieve hot-plug,
     *        The simplest solution is detecting GPIO level as voltage signal.
-    *        A divider resistance Must be used due to ESP32S2/S3 has no 5V tolerate pin.
+    *        A divider resistance Must be used due to ESP32S2/S3/P4 has no 5V tolerate pin.
     *
     *   5V VBUS ┌──────┐    ┌──────┐   GND
     *    ───────┤ 100K ├─┬──┤ 100K ├──────
@@ -59,15 +59,6 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
 .. code-block:: C
 
        #define VBUS_MONITORING_GPIO_NUM GPIO_NUM_4
-       // Configure GPIO Pin for vbus monitoring
-       const gpio_config_t vbus_gpio_config = {
-           .pin_bit_mask = BIT64(VBUS_MONITORING_GPIO_NUM),
-           .mode = GPIO_MODE_INPUT,
-           .intr_type = GPIO_INTR_DISABLE,
-           .pull_up_en = false,
-           .pull_down_en = false,
-       };
-       ESP_ERROR_CHECK(gpio_config(&vbus_gpio_config));
        const tinyusb_config_t tusb_cfg = {
            .device_descriptor = &descriptor_config,
            .string_descriptor = string_desc_arr,
@@ -78,3 +69,11 @@ USB 设备 VBUS 检测方法一般有两种方法：由 USB PHY 硬件检测，�
            .vbus_monitor_io = VBUS_MONITORING_GPIO_NUM,
        };
        ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
+若使用原生 TinyUSB 开发，则需要在 Phy 初始化阶段进行配置：
+
+.. code-block:: C
+
+    const usb_phy_otg_io_conf_t otg_io_conf = USB_PHY_SELF_POWERED_DEVICE(VBUS_MONITORING_GPIO_NUM);
+    phy_conf.otg_io_conf = &otg_io_conf;
+    usb_new_phy(&phy_conf, &s_phy_hdl);

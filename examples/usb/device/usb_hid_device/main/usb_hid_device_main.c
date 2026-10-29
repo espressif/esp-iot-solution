@@ -1,4 +1,4 @@
-/* SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+/* SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include "sdkconfig.h"
 #include "iot_button.h"
+#include "button_gpio.h"
 #include "esp_private/usb_phy.h"
 #include "tinyusb_hid.h"
 #ifdef CONFIG_ESP32_S3_USB_OTG
@@ -30,16 +31,6 @@
 
 static int s_button_gpio[EXAMPLE_BUTTON_NUM] = {EXAMPLE_BUTTON_UP, EXAMPLE_BUTTON_DOWN, EXAMPLE_BUTTON_LEFT, EXAMPLE_BUTTON_RIGHT};
 static button_handle_t s_button_handles[EXAMPLE_BUTTON_NUM] = {NULL};
-
-static int get_button_gpio(button_handle_t btn_hdl)
-{
-    for (size_t i = 0; i < EXAMPLE_BUTTON_NUM; i++) {
-        if (s_button_handles[i] == btn_hdl) {
-            return s_button_gpio[i];
-        }
-    }
-    return -1;
-}
 
 #ifdef CONFIG_SUBCLASS_KEYBOARD
 #if CONFIG_ENABLE_FULL_KEY_KEYBOARD
@@ -93,10 +84,12 @@ static bool remove_key(uint8_t key)
     return false;
 }
 #endif
-static void button_keyboard_cb(void *arg, void *arg2)
+static void button_keyboard_cb(void *arg, void *data)
 {
-    button_handle_t button_hdl = (button_handle_t)arg;
-    int button_gpio = get_button_gpio(button_hdl);
+    int button_gpio = (int)data;
+    button_event_t event = iot_button_get_event(arg);
+    ESP_LOGI(TAG, "Button GPIO %d event %d", button_gpio, event);
+
     uint8_t key = 0;
     switch (button_gpio) {
     case EXAMPLE_BUTTON_UP:
@@ -119,7 +112,7 @@ static void button_keyboard_cb(void *arg, void *arg2)
         break;
     }
 
-    if (iot_button_get_event(button_hdl) == BUTTON_PRESS_UP) {
+    if (event == BUTTON_PRESS_UP) {
         remove_key(key);
         ESP_LOGI(TAG, "Remove Keyboard %c", key - HID_KEY_A + 'a');
     } else {
@@ -129,10 +122,11 @@ static void button_keyboard_cb(void *arg, void *arg2)
     tinyusb_hid_keyboard_report(0, keycode);
 }
 #elif defined CONFIG_SUBCLASS_MOUSE
-static void button_mouse_cb(void *arg, void *arg2)
+static void button_mouse_cb(void *arg, void *data)
 {
-    button_handle_t button_hdl = (button_handle_t)arg;
-    int button_gpio = get_button_gpio(button_hdl);
+    int button_gpio = (int)data;
+    ESP_LOGI(TAG, "Button GPIO %d", button_gpio);
+
     int mouse_offset_x = 0, mouse_offset_y = 0;
     switch (button_gpio) {
     case EXAMPLE_BUTTON_UP:
@@ -208,7 +202,11 @@ static void usb_phy_init(void)
         .controller = USB_PHY_CTRL_OTG,
         .otg_mode = USB_OTG_MODE_DEVICE,
         .target = USB_PHY_TARGET_INT,
+        .otg_speed = USB_PHY_SPEED_FULL,
     };
+#if CONFIG_TINYUSB_RHPORT_HS
+    phy_conf.otg_speed = USB_PHY_SPEED_HIGH;
+#endif
     usb_new_phy(&phy_conf, &phy_hdl);
 }
 
@@ -219,46 +217,31 @@ void app_main(void)
 #endif
     // switch esp usb phy to usb-otg
     usb_phy_init();
-    tud_init(BOARD_TUD_RHPORT);
+    bool usb_init = tusb_init();
+    if (!usb_init) {
+        ESP_LOGE(TAG, "TinyUSB init failed");
+        return;
+    }
+
     xTaskCreate(tusb_device_task, "TinyUSB", 4096, NULL, 5, NULL);
     tinyusb_hid_init();
 
     /* buttons init, buttons used to simulate keyboard or mouse events */
-    button_config_t cfg = {
-        .type = BUTTON_TYPE_GPIO,
-        .gpio_button_config = {
-            .active_level = 0,
-        },
+    button_config_t btn_cfg = {0};
+    button_gpio_config_t btn_gpio_cfg = {
+        .active_level = 0,
     };
 
     for (size_t i = 0; i < EXAMPLE_BUTTON_NUM; i++) {
-        cfg.gpio_button_config.gpio_num = s_button_gpio[i];
-        s_button_handles[i] = iot_button_create(&cfg);
-        if (s_button_handles[i] == NULL) {
-            ESP_LOGE(TAG, "Button io = %d created failed", s_button_gpio[i]);
-            assert(0);
-        } else {
-            ESP_LOGI(TAG, "Button io = %d created", s_button_gpio[i]);
-        }
-    }
-
+        btn_gpio_cfg.gpio_num = s_button_gpio[i];
+        ESP_ERROR_CHECK(iot_button_new_gpio_device(&btn_cfg, &btn_gpio_cfg, &s_button_handles[i]));
 #ifdef CONFIG_SUBCLASS_KEYBOARD
-    button_cb_t button_cb = button_keyboard_cb;
-    ESP_LOGI(TAG, "HID Keyboard demo: press button to simulate keyboard");
+        ESP_ERROR_CHECK(iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_UP, NULL, button_keyboard_cb, (void*)s_button_gpio[i]));
+        ESP_ERROR_CHECK(iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_DOWN, NULL, button_keyboard_cb, (void*)s_button_gpio[i]));
 #elif defined CONFIG_SUBCLASS_MOUSE
-    button_cb_t button_cb = button_mouse_cb;
-    ESP_LOGI(TAG, "HID Mouse demo: press button to simulate mouse");
+        ESP_ERROR_CHECK(iot_button_register_cb(s_button_handles[i], BUTTON_SINGLE_CLICK, NULL, button_mouse_cb, (void*)s_button_gpio[i]));
 #endif
-    ESP_LOGI(TAG, "Wait Mount through USB interface");
-
-    /* register button callback, send HID report when click button */
-    for (size_t i = 0; i < EXAMPLE_BUTTON_NUM; i++) {
-#ifdef CONFIG_SUBCLASS_KEYBOARD
-        iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_DOWN, button_cb, NULL);
-        iot_button_register_cb(s_button_handles[i], BUTTON_PRESS_UP, button_cb, NULL);
-#elif defined CONFIG_SUBCLASS_MOUSE
-        iot_button_register_cb(s_button_handles[i], BUTTON_SINGLE_CLICK, button_cb, NULL);
-#endif
+        ESP_LOGI(TAG, "Button io = %d created", s_button_gpio[i]);
     }
 
     while (1) {

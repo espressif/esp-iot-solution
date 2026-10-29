@@ -1,0 +1,7 @@
+## IDF Component Manager Manifest File
+targets:
+  - esp32p4
+dependencies:
+  esp_lcd_st7123:
+    version: "*"
+    override_path: "../../../esp_lcd_st7123"

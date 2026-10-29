@@ -1,3 +1,15 @@
+## v1.3.0 - 2026-10-27
+
+* relinker: add IDF v5.1.x support
+* relinker: skip ESP-IDF 5.1 Wi-Fi and coexistence objects that are not part of the current build
+* relinker: use the IDF 5.1 mbedtls object path that matches v5.0 and v5.3
+
+## v1.2.0 - 2026-10-15
+
+* relinker: add optional `if_compiled` rules backed by CMake's compilation database, preserving compatibility with existing four-column CSV configurations.
+* relinker: support the ESP-IDF 5.3 Bluetooth/NimBLE memory layout change on ESP32-C3. Keep the old `bt_osi_mem_*` IRAM-strip rules when compiled, and use `nimble_mem_*` rules for newer builds.
+* relinker: add automated tests for both compilation layouts and low-speed mode.
+
 ## v1.1.1 - 2025-02-25
 
 * relinker: some typo

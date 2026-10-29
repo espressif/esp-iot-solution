@@ -1,0 +1,4 @@
+CONFIG_IDF_TARGET="esp32p4"
+
+# Default to test REV < 3
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y

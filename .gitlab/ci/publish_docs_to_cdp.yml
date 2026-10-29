@@ -3,6 +3,9 @@
   image: $ESP_DOCS_ENV_IMAGE
   tags:
     - deploy_docs
+  # This API is not yet complete, see merge request ae_group/esp-iot-solution!1328 or DOC-11242 for details
+  # Allow failure to avoid blocking the pipeline
+  allow_failure: true
   script:
     - git config --global credential.helper store
     # Pass GitLab credentials

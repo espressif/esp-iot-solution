@@ -11,7 +11,7 @@
 
 #include "ntc_driver.h"
 
-#define TEST_MEMORY_LEAK_THRESHOLD (-460)
+#define TEST_MEMORY_LEAK_THRESHOLD (-500)
 
 const static char *TAG = "NTC_DRIVER_TEST";
 

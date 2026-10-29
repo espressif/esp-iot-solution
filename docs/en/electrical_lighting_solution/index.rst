@@ -7,3 +7,4 @@ Electrical&Lighting Solution
     :maxdepth: 2
 
     Lightbulb Driver <lightbulb_driver>
+    DALI Bus Driver <dali>

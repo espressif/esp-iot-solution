@@ -23,6 +23,7 @@ menu "USB MSC Device Demo"
 
     choice STORAGE_MEDIA
         prompt "Storage Media"
+        default USE_EXTERNAL_SDCARD if ESP32_S3_USB_OTG
         default USE_INTERNAL_FLASH
 
         config USE_INTERNAL_FLASH
@@ -30,66 +31,200 @@ menu "USB MSC Device Demo"
 
         config USE_EXTERNAL_SDCARD
             bool "Use External SDCard"
-
-        choice SDCARD_INTERFACE
-            prompt "SD Card Interface"
-            depends on USE_EXTERNAL_SDCARD
-            default SDCARD_INTFC_SPI
-
-            config SDCARD_INTFC_SPI
-                bool "Use SPI interface"
-
-            config SDCARD_INTFC_SDIO
-                bool "Use SDIO interface"
-        endchoice
-
-        config DISK_BLOCK_SIZE
-            int "disk block size used for format"
-            depends on USE_EXTERNAL_SDCARD
-            default 512
-
-        menu "SD Card PIN CONFIG"
-
-        config SDCARD_SPI_CS_PIN
-            int "SD Card SPI CS pin"
-            depends on SDCARD_INTFC_SPI
-            default 34
-
-        config SDCARD_SPI_CLK_PIN
-            int "SD Card SPI CLK pin"
-            depends on SDCARD_INTFC_SPI
-            default 36
-
-        config SDCARD_SPI_DI_PIN
-            int "SD Card SPI DI pin"
-            depends on SDCARD_INTFC_SPI
-            default 35
-
-        config SDCARD_SPI_DO_PIN
-            int "SD Card SPI DO pin"
-            depends on SDCARD_INTFC_SPI
-            default 37
-
-        config SDCARD_SDIO_DO_PIN
-            int "SD Card SDIO DO pin"
-            depends on SDCARD_INTFC_SDIO
-            default 37
-
-        config SDCARD_SDIO_CMD_PIN
-            int "SD Card SDIO CMD pin"
-            depends on SDCARD_INTFC_SDIO
-            default 35
-
-        config SDCARD_SDIO_CLK_PIN
-            int "SD Card SDIO CLK pin"
-            depends on SDCARD_INTFC_SDIO
-            default 36
-        endmenu
     endchoice
+
+    choice SDCARD_INTERFACE
+        prompt "SD Card Interface"
+        depends on USE_EXTERNAL_SDCARD
+        default SDCARD_INTFC_SDIO if ESP32_S3_USB_OTG
+        default SDCARD_INTFC_SPI
+
+        config SDCARD_INTFC_SPI
+            bool "Use SPI interface"
+
+        config SDCARD_INTFC_SDIO
+            bool "Use SDIO interface"
+    endchoice
+
+    config FORMAT_IF_MOUNT_FAILED
+        bool "Format file system if mount failed"
+        default y
+        help
+            If this option is enabled, the file system will be formatted if mounting fails.
+
+    config FATFS_MAX_FILES
+        int "Maximum number of open files"
+        range 1 10
+        default 3
+        help
+            Maximum number of files that can be open at the same time.
+
+    config DISK_BLOCK_SIZE
+        int "disk block size used for format"
+        depends on USE_EXTERNAL_SDCARD
+        range 512 32768
+        default 16384
+        help
+            Block size used for formatting the disk. A larger block size can improve performance
+            but may waste space on small files. Typical values are 4096 or 16384.
+
+    menu "SD Card PIN CONFIG"
+
+    config SDCARD_SPI_CS_PIN
+        int "SD Card SPI CS pin"
+        depends on SDCARD_INTFC_SPI
+        default 34 if ESP32_S3_USB_OTG
+        default 10
+
+    config SDCARD_SPI_CLK_PIN
+        int "SD Card SPI CLK pin"
+        depends on SDCARD_INTFC_SPI
+        default 36 if ESP32_S3_USB_OTG
+        default 12
+
+    config SDCARD_SPI_DI_PIN
+        int "SD Card SPI DI pin"
+        depends on SDCARD_INTFC_SPI
+        default 35 if ESP32_S3_USB_OTG
+        default 11
+
+    config SDCARD_SPI_DO_PIN
+        int "SD Card SPI DO pin"
+        depends on SDCARD_INTFC_SPI
+        default 37 if ESP32_S3_USB_OTG
+        default 13
+
+    config SDCARD_SDIO_D0_PIN
+        int "SD Card SDIO D0 pin"
+        depends on SDCARD_INTFC_SDIO
+        default 37 if ESP32_S3_USB_OTG
+        default 13
+
+    config SDCARD_SDIO_CMD_PIN
+        int "SD Card SDIO CMD pin"
+        depends on SDCARD_INTFC_SDIO
+        default 35 if ESP32_S3_USB_OTG
+        default 11
+
+    config SDCARD_SDIO_CLK_PIN
+        int "SD Card SDIO CLK pin"
+        depends on SDCARD_INTFC_SDIO
+        default 36 if ESP32_S3_USB_OTG
+        default 12
+
+    choice SDCARD_SDIO_DATA_WIDTH
+        prompt "SDIO Data Width"
+        depends on SDCARD_INTFC_SDIO
+        default SDCARD_SDIO_DATA_WIDTH_4 if ESP32_S3_USB_OTG
+        default SDCARD_SDIO_DATA_WIDTH_1
+        help
+            Select SDIO bus width: 1-line or 4-line.
+
+        config SDCARD_SDIO_DATA_WIDTH_1
+            bool "1-line mode"
+
+        config SDCARD_SDIO_DATA_WIDTH_4
+            bool "4-line mode"
+    endchoice
+
+    config SDCARD_SDIO_D1_PIN
+        int "SD Card SDIO D1 pin (for 4-line)"
+        depends on SDCARD_INTFC_SDIO && SDCARD_SDIO_DATA_WIDTH_4
+        default 38 if ESP32_S3_USB_OTG
+        default 14
+
+    config SDCARD_SDIO_D2_PIN
+        int "SD Card SDIO D2 pin (for 4-line)"
+        depends on SDCARD_INTFC_SDIO && SDCARD_SDIO_DATA_WIDTH_4
+        default 33 if ESP32_S3_USB_OTG
+        default 9
+
+    config SDCARD_SDIO_D3_PIN
+        int "SD Card SDIO D3 pin (for 4-line)"
+        depends on SDCARD_INTFC_SDIO && SDCARD_SDIO_DATA_WIDTH_4
+        default 34 if ESP32_S3_USB_OTG
+        default 10
+    endmenu
 
     config WIFI_HTTP_ACCESS
         bool "Enable WiFi HTTP files server"
         default y
+
+    config HTTP_UPLOAD_MAX_FILE_SIZE_MB
+        int "Max upload file size (MB)"
+        default -1
+        depends on WIFI_HTTP_ACCESS
+        help
+            Set the maximum allowed file upload size in megabytes. Default is 20MB.
+            Set to -1 for no limit.
+
+    config HTTP_REDIRECT_TO_ROOT
+        bool "Redirect to root after file operations"
+        default n
+        depends on WIFI_HTTP_ACCESS
+        help
+            If enabled, after file upload or delete operations, the server will redirect to root path ("/").
+            This will trigger a full disk scan to update the file list. Disable this on large file systems
+            where scanning is slow.
+
+    config FILE_READ_BUFFER_SIZE
+        int "Size of HTTP file read buffer (KB)"
+        default 16
+        range 4 128
+        depends on WIFI_HTTP_ACCESS
+        help
+            Size of buffer used when reading files from storage during HTTP downloads in KB.
+            This affects the chunk size sent to clients. Larger values may improve download speed
+            but require more memory.
+
+    config FILE_WRITE_TASK_STACK_SIZE
+        int "File write task stack size"
+        default 4096
+        depends on WIFI_HTTP_ACCESS
+        help
+            Stack size in bytes for the file write task.
+            The task handles receiving data from the RingBuffer and
+            writing it to the filesystem.
+
+    config FILE_WRITE_BUFFER_COUNT
+        int "Number of RingBuffer items for file writes"
+        default 3
+        range 3 16
+        depends on WIFI_HTTP_ACCESS
+        help
+            Number of items that can be stored in the RingBuffer.
+            Higher values allow for more pending file chunks in the buffer,
+            which can improve throughput with slower SD cards.
+
+    config FILE_WRITE_BUFFER_SIZE
+        int "Size of each RingBuffer item (KB)"
+        default 16
+        range 16 512
+        depends on WIFI_HTTP_ACCESS
+        help
+            Size of each RingBuffer item in KB. This determines the maximum
+            size of each data chunk during file transfers. Larger values
+            may improve throughput but require more memory.
+
+    config FILE_DMA_BUFFER_SIZE
+        int "Size of DMA buffer for fwrite operations (KB)"
+        default 32
+        range 8 64
+        depends on WIFI_HTTP_ACCESS
+        help
+            Size of DMA buffer for file write operations in KB (kilobytes).
+            This buffer is used by the file system to improve write performance.
+            Increasing this value can improve SD card write throughput.
+
+    config FILE_WRITE_TIMEOUT_MS
+        int "File write timeout (milliseconds)"
+        default -1
+        range -1 300000
+        depends on WIFI_HTTP_ACCESS
+        help
+            Maximum time to wait for file write completion in milliseconds.
+            After this timeout, the HTTP upload will fail with a timeout error.
+            Default is -1, which means wait indefinitely.
 
     menu "WiFi Settings"
         config ESP_WIFI_ROUTE_SSID
@@ -140,5 +275,22 @@ menu "USB MSC Device Demo"
             help
             Set the Maximum retry to avoid station reconnecting to the softAP unlimited when the softAP is really inexistent.
     endmenu
+
+    config SELF_POWERED_DEVICE
+        bool "Self-powered device"
+        default n
+        help
+            Select 'y' if the device is self-powered and does not draw power from USB VBUS.
+
+    config VBUS_MONITOR_IO
+        int "VBUS monitor GPIO number"
+        depends on SELF_POWERED_DEVICE
+        range 0 46 if IDF_TARGET_ESP32S2
+        range 0 48 if IDF_TARGET_ESP32S3
+        default 2
+        help
+            Connect VBUS to a voltage comparator chip/circuit that can detect
+            the thresholds (4.35 V and 4.75 V) and output a 3.3 V logic level
+            to the ESP32-S2/S3, indicating whether VBUS is valid.
 
 endmenu

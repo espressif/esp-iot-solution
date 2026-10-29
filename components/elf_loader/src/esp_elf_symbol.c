@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <time.h>
 #include <reent.h>
+#include <errno.h>
 #include <pthread.h>
 #include <setjmp.h>
 #include <getopt.h>
@@ -17,8 +18,42 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
+#if CONFIG_LIBC_PICOLIBC
+/*
+ * picolibc compatibility wrappers.
+ *
+ * In picolibc:
+ * - __errno is not a function (errno is a _Thread_local int variable).
+ * - __getreent() is a macro defined as NULL by ESP-IDF platform reent.h.
+ * - _ctype_ is a macro (_ctype_b + _CTYPE_OFFSET) in ctype.h; picolibc
+ *   exports the underlying _ctype_b[384] table. Newlib-built ELFs resolve
+ *   _ctype_ and index it as (_ctype_ + 1)[c]; _CTYPE_OFFSET is 127.
+ */
+static int *s_picolibc_errno_func(void)
+{
+    return &errno;
+}
+
+static struct _reent *s_picolibc_getreent_func(void)
+{
+    return NULL;
+}
+
+extern const char _ctype_b[];
+#ifndef _CTYPE_OFFSET
+#define _CTYPE_OFFSET 127
+#endif
+static const char * const s_picolibc_ctype_tbl = _ctype_b + _CTYPE_OFFSET;
+#endif /* CONFIG_LIBC_PICOLIBC */
+
 #include "rom/ets_sys.h"
 
+#include "esp_log.h"
+#include "esp_elf.h"
+
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+#include "private/esp_dlmod.h"
+#endif
 #include "private/elf_symbol.h"
 
 extern int __ltdf2(double a, double b);
@@ -26,6 +61,8 @@ extern unsigned int __fixunsdfsi(double a);
 extern int __gtdf2(double a, double b);
 extern double __floatunsidf(unsigned int i);
 extern double __divdf3(double a, double b);
+
+static const char *TAG = "ELF_SYMBOL";
 
 /** @brief Libc public functions symbols look-up table */
 
@@ -52,6 +89,7 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
     ESP_ELFSYM_EXPORT(fputc),
     ESP_ELFSYM_EXPORT(fputs),
     ESP_ELFSYM_EXPORT(printf),
+    ESP_ELFSYM_EXPORT(vprintf),
     ESP_ELFSYM_EXPORT(vfprintf),
     ESP_ELFSYM_EXPORT(fprintf),
     ESP_ELFSYM_EXPORT(fwrite),
@@ -84,13 +122,18 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
     ESP_ELFSYM_EXPORT(pthread_join),
     ESP_ELFSYM_EXPORT(pthread_exit),
 
-    /* newlib */
-
+    /* libc (newlib / picolibc) */
+#if CONFIG_LIBC_PICOLIBC
+    { "__errno", (void*)s_picolibc_errno_func },
+    { "__getreent", (void*)s_picolibc_getreent_func },
+    { "_ctype_", (void*)s_picolibc_ctype_tbl },
+#elif defined(__HAVE_LOCALE_INFO__) && __HAVE_LOCALE_INFO__
     ESP_ELFSYM_EXPORT(__errno),
     ESP_ELFSYM_EXPORT(__getreent),
-#ifdef __HAVE_LOCALE_INFO__
     ESP_ELFSYM_EXPORT(__locale_ctype_ptr),
 #else
+    ESP_ELFSYM_EXPORT(__errno),
+    ESP_ELFSYM_EXPORT(__getreent),
     ESP_ELFSYM_EXPORT(_ctype_),
 #endif
 
@@ -156,9 +199,14 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
  *
  * @return Symbol address if success or 0 if failed.
  */
-uintptr_t elf_find_sym(const char *sym_name)
+uintptr_t elf_find_sym_default(const char *sym_name)
 {
-    const struct esp_elfsym *syms;
+    if (!sym_name) {
+        ESP_LOGE(TAG, "Invalid parameter: sym_name is NULL");
+        return 0;
+    }
+
+    esp_elf_symbol_table_t *syms;
 
 #ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
     syms = g_esp_libc_elfsyms;
@@ -199,7 +247,17 @@ uintptr_t elf_find_sym(const char *sym_name)
 
         syms++;
     }
+
 #endif
 
+    uintptr_t sym_addr = esp_elf_find_symbol(sym_name);
+    if (sym_addr) {
+        return sym_addr;
+    }
+
+#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
+    return (uintptr_t)dlmod_getaddr(sym_name);
+#else
     return 0;
+#endif
 }

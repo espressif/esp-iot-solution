@@ -13,7 +13,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency "espressif/esp_lcd_gc9b71"
 ```

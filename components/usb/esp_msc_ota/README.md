@@ -33,15 +33,17 @@ Please use the component manager command `add-dependency` to add `esp_msc_ota` a
     esp_msc_host_handle_t host_handle = NULL;
     esp_msc_host_install(&msc_host_config, &host_handle);
     esp_msc_ota_config_t config = {
+        .host_handle = host_handle,
         .ota_bin_path = "/usb/ota_test.bin",
         .wait_msc_connect = pdMS_TO_TICKS(5000),
     };
     esp_msc_ota(&config);
-    esp_msc_host_uninstall(host_handle);
 ```
 
 ## Notes
 
+* Set `skip_init_usb_host_driver` to true only when the application has already installed the USB Host Library and has a task calling `usb_host_lib_handle_events()`.
+* `esp_msc_host_uninstall()` can only be called after the USB disk is disconnected and the MSC device is no longer mounted.
 * For the default file system, filenames should not exceed 11 characters. If support for long-named files is needed, please enable any of the macros below:
 
     * CONFIG_FATFS_LFN_HEAP

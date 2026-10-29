@@ -1,0 +1,13 @@
+menu "Network Provisioner"
+
+    config NETWORK_PROVISIONER_DEFAULT_POLL_TIMEOUT_MS
+        int "Default provision status poll timeout (ms)"
+        default 60000
+        range 1000 600000
+
+    config NETWORK_PROVISIONER_DEFAULT_POLL_INTERVAL_MS
+        int "Default provision status poll interval (ms)"
+        default 1000
+        range 100 10000
+
+endmenu

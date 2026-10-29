@@ -33,15 +33,17 @@
     esp_msc_host_handle_t host_handle = NULL;
     esp_msc_host_install(&msc_host_config, &host_handle);
     esp_msc_ota_config_t config = {
+        .host_handle = host_handle,
         .ota_bin_path = "/usb/ota_test.bin",
         .wait_msc_connect = pdMS_TO_TICKS(5000),
     };
     esp_msc_ota(&config);
-    esp_msc_host_uninstall(host_handle);
 ```
 
 ## 注意事项
 
+* 仅当应用已经安装 USB Host Library，并且已有任务调用 `usb_host_lib_handle_events()` 时，才将 `skip_init_usb_host_driver` 设置为 true。
+* 仅当 U 盘已拔出且 MSC 设备不再挂载时，才可以调用 `esp_msc_host_uninstall()`。
 * 默认的文件系统，文件名不要超过 11 个字，如果需要支持长命名文件。请打开下方的任意宏
 
     * CONFIG_FATFS_LFN_HEAP

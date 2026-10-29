@@ -246,7 +246,7 @@ esp_err_t bp57x8d_set_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t
     return iic_driver_write(addr, _value, sizeof(_value));
 }
 
-esp_err_t bp57x8d_init(driver_bp57x8d_t *config, void(*hook_func)(void *))
+esp_err_t bp57x8d_init(driver_bp57x8d_t *config, void(*hook_func)(void *, void *), void *user_data)
 {
     esp_err_t err = ESP_OK;
     DRIVER_CHECK(config, "config is null", return ESP_ERR_INVALID_ARG);
@@ -287,8 +287,8 @@ esp_err_t bp57x8d_deinit(void)
     DRIVER_CHECK(s_bp5758d, "not init", return ESP_ERR_INVALID_STATE);
 
     bp57x8d_set_shutdown();
-    iic_driver_deinit();
     iic_driver_task_destroy();
+    iic_driver_deinit();
     free(s_bp5758d);
     s_bp5758d = NULL;
     return ESP_OK;

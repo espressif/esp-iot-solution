@@ -8,7 +8,7 @@ According to the USB protocol requirements, self-powered USB devices must detect
 
 There are generally two methods for USB device VBUS detection: detection by USB PHY hardware, or \ **detection by software with the help of ADC/GPIO**\.
 
-The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, this function needs to be implemented by software with the help of ADC/GPIO. Among them, using the GPIO detection method is the simplest. The implementation is as follows:
+The internal USB PHY of ESP32S2/S3/P4 does not support hardware detection logic, this function needs to be implemented by software with the help of ADC/GPIO. Among them, using the GPIO detection method is the simplest. The implementation is as follows:
 
 **For ESP-IDF 4.4 and earlier versions:**
 
@@ -22,7 +22,7 @@ The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, th
     *
     * @brief For USB Self-power device, the VBUS voltage must be monitored to achieve hot-plug,
     *        The simplest solution is detecting GPIO level as voltage signal.
-    *        A divider resistance Must be used due to ESP32S2/S3 has no 5V tolerate pin.
+    *        A divider resistance Must be used due to ESP32S2/S3/P4 has no 5V tolerate pin.
     *
     *   5V VBUS ┌──────┐    ┌──────┐   GND
     *    ───────┤ 100K ├─┬──┤ 100K ├──────
@@ -59,15 +59,6 @@ The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, th
 .. code-block:: C
 
        #define VBUS_MONITORING_GPIO_NUM GPIO_NUM_4
-       // Configure GPIO Pin for vbus monitoring
-       const gpio_config_t vbus_gpio_config = {
-           .pin_bit_mask = BIT64(VBUS_MONITORING_GPIO_NUM),
-           .mode = GPIO_MODE_INPUT,
-           .intr_type = GPIO_INTR_DISABLE,
-           .pull_up_en = false,
-           .pull_down_en = false,
-       };
-       ESP_ERROR_CHECK(gpio_config(&vbus_gpio_config));
        const tinyusb_config_t tusb_cfg = {
            .device_descriptor = &descriptor_config,
            .string_descriptor = string_desc_arr,
@@ -78,3 +69,11 @@ The internal USB PHY of ESP32S2/S3 does not support hardware detection logic, th
            .vbus_monitor_io = VBUS_MONITORING_GPIO_NUM,
        };
        ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
+If you are using native TinyUSB development, you need to configure this during the PHY initialization stage:
+
+.. code-block:: C
+
+    const usb_phy_otg_io_conf_t otg_io_conf = USB_PHY_SELF_POWERED_DEVICE(VBUS_MONITORING_GPIO_NUM);
+    phy_conf.otg_io_conf = &otg_io_conf;
+    usb_new_phy(&phy_conf, &s_phy_hdl);

@@ -1,6 +1,6 @@
 /*
  * SPDX-FileCopyrightText: 2019 Ha Thach (tinyusb.org),
- * SPDX-FileContributor: 2020-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileContributor: 2020-2026 Espressif Systems (Shanghai) CO LTD
  * SPDX-License-Identifier: MIT
  *
  * Copyright (c) 2019 Ha Thach (tinyusb.org),
@@ -70,7 +70,11 @@ extern "C" {
 #endif
 
 #ifdef CONFIG_TINYUSB_RHPORT_HS
+#if CONFIG_IDF_TARGET_ESP32P4
 #   define CFG_TUSB_RHPORT1_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#else
+#   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_HIGH_SPEED
+#endif
 #else
 #   define CFG_TUSB_RHPORT0_MODE    OPT_MODE_DEVICE | OPT_MODE_FULL_SPEED
 #endif
@@ -78,7 +82,7 @@ extern "C" {
 #define CFG_TUSB_OS                 OPT_OS_FREERTOS
 
 // Espressif IDF requires "freertos/" prefix in include path
-#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3)
+#if TU_CHECK_MCU(OPT_MCU_ESP32S2, OPT_MCU_ESP32S3, OPT_MCU_ESP32P4, OPT_MCU_ESP32S31)
 #define CFG_TUSB_OS_INC_PATH    freertos/
 #endif
 
@@ -122,6 +126,9 @@ extern "C" {
 
 // Number of BTH ISO alternatives
 #define CFG_TUD_BTH_ISO_ALT_COUNT   CONFIG_TINYUSB_BTH_ISO_ALT_COUNT
+
+// Match the ACL receive buffer to the FS/HS bulk endpoint packet size.
+#define CFG_TUD_BTH_DATA_EPSIZE     (TUD_OPT_HIGH_SPEED ? 512 : 64)
 
 // Enabled device class driver
 #define CFG_TUD_CDC                 CONFIG_TINYUSB_CDC_COUNT

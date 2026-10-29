@@ -1,0 +1,7 @@
+## IDF Component Manager
+dependencies:
+  idf:
+    version: ">=5.3"
+  espressif/esp_local_controller:
+    version: "^1.0.0"
+    override_path: "../../../components/esp_local_controller"

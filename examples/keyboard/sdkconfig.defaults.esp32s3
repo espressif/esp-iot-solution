@@ -1,0 +1,6 @@
+# Keyboard HID descriptor: 3 keyboard reports + 6 lighting feature reports
+CONFIG_BT_NIMBLE_SVC_HID_MAX_RPTS=12
+# ble_svc_hid_params on stack (~3.7KB with 12 reports); default 4096 overflows
+CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=8192
+# nimble_hid_start_gatts in esp_ble_hidd_dev_init runs on main; ble_svc_hid_add copies params by value
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

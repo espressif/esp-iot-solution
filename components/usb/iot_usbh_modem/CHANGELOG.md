@@ -1,5 +1,30 @@
 # ChangeLog
 
+## v2.2.0 - 2026-06-11
+
+### Features:
+
+* Support ESP32-S31.
+
+## v2.1.0 - 2026-05-21
+
+### Features:
+
+* Added optional PDP context setup before PPP dial-up.
+
+## v2.0.0 - 2025-10-15
+
+### Bug Fixes:
+
+* Improved driver compatibility with 4G modules.
+* Fixed hot-plugging stability issues.
+
+### Break Changes:
+
+* Removed wifi related code and dependencies.
+* Separate AT command related code into a new component.
+* Modify the api name prefix to `usbh_modem_`
+
 ## v1.2.0 - 2025-05-20
 
 * update iot_usbh_cdc to 2.0.0

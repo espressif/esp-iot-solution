@@ -42,10 +42,16 @@ if(CONFIG_TINYUSB_NET_MODE_NCM
          )
 endif() # CONFIG_TINYUSB_NET_MODE_NCM || CONFIG_TINYUSB_NET_MODE_ECM || CONFIG_TINYUSB_NET_MODE_RNDIS
 
+if(${IDF_VERSION_MAJOR} LESS 6)
+    set(usb_phy_requires usb)
+else()
+    set(usb_phy_requires esp_hw_support)
+endif()
+
 idf_component_register(SRCS ${srcs}
                        INCLUDE_DIRS "include"
                        PRIV_INCLUDE_DIRS "include_private"
-                       PRIV_REQUIRES usb
+                       PRIV_REQUIRES ${usb_phy_requires}
                        REQUIRES fatfs vfs bt nvs_flash app_update
                        )
 

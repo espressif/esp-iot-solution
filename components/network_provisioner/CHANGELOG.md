@@ -1,0 +1,34 @@
+# Changelog
+
+## [2.0.0] - 2026-10-20
+
+### Added
+- `network_provisioner_create_ble()` owns the NimBLE central transport
+- `network_provisioner_set_security()` for Sec0 / Sec1 PoP / Sec2 username and password
+- `network_provisioner_ble_scan()` / `ble_connect_cfg()` / `ble_has_char()` for controller-side BLE discovery
+- `network_provisioner_add_endpoint()`, `network_provisioner_send()`, and `network_provisioner_get_version()` so an application endpoint does not call protocomm_ext directly
+- BLE scan and characteristic lookup reject a non-BLE transport
+- Name filters use the full advertised name; the stored name stays NUL-terminated
+
+### Changed
+- Require `protocomm_ext` ^1.0.1, which provides `protocomm_ext_get_transport_method()`
+
+## [1.0.1] - 2026-10-16
+
+### Added
+- Target: esp32p4
+
+## [1.0.0] - 2026-07-14
+
+### Added
+- Controller-side network provisioning client for Wi-Fi and Thread
+- Endpoints compatible with `espressif/network_provisioning`: config / scan / ctrl
+- High-level `network_provisioner_provision_wifi()` / `provision_thread()`
+- Runtime capability parsing from `proto-ver` (`prov.cap` / `prov.sec_ver`)
+- Host unit tests for capabilities parsing and protobuf encode/decode
+- Example under `examples/network_provisioner` (SoftAP, BLE, Thread)
+
+### Fixed
+- Parse `cap` / `sec_ver` only inside the `prov` JSON object; require `sec_ver` for structured responses
+- Cap Wi-Fi / Thread scan `count` and `result_count` at `NETWORK_PROVISIONER_MAX_SCAN_RESULTS`
+- Pin `protocomm_ext` with registry `version` plus in-tree `override_path`

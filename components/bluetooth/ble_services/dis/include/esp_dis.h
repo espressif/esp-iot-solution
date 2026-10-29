@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -267,6 +267,15 @@ esp_err_t esp_ble_dis_set_pnp_id(esp_ble_dis_pnp_t *pnp_id);
  *  - ESP_FAIL on error
  */
 esp_err_t esp_ble_dis_init(void);
+
+/**
+ * @brief Deinitialization GATT Device Information Service
+ *
+ * @return
+ *  - ESP_OK on successful
+ *  - Error code from esp_ble_conn_remove_svc() on failure
+ */
+esp_err_t esp_ble_dis_deinit(void);
 
 #ifdef __cplusplus
 }

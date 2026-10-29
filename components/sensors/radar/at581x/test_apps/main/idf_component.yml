@@ -1,0 +1,6 @@
+## IDF Component Manager Manifest File
+dependencies:
+  idf: ">=4.0"
+  at581x:
+    version: "*"
+    override_path: "../../"

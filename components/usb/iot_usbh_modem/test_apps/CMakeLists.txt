@@ -4,6 +4,8 @@ cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS "$ENV{IDF_PATH}/tools/unit-test-app/components"
                         "../../iot_usbh_modem"
-                        "../../iot_usbh_cdc")
+                        "../../iot_usbh_cdc"
+                        "../../../iot_eth"
+                        "../../../modem_at")
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(iot_usbh_cdc_test)

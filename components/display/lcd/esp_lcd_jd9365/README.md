@@ -15,7 +15,7 @@ For more information on LCD, please refer to the [LCD documentation](https://doc
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 
 ```
     idf.py add-dependency "espressif/esp_lcd_jd9365"
@@ -59,15 +59,16 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
     ESP_LOGI(TAG, "Install JD9365S panel driver");
     esp_lcd_panel_handle_t panel_handle = NULL;
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(6, 0, 0)
     const esp_lcd_dpi_panel_config_t dpi_config = JD9365_800_1280_PANEL_60HZ_DPI_CONFIG(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#else
+    const esp_lcd_dpi_panel_config_t dpi_config = JD9365_800_1280_PANEL_60HZ_DPI_CONFIG_CF(EXAMPLE_MIPI_DPI_PX_FORMAT);
+#endif
     jd9365_vendor_config_t vendor_config = {
-        .lane_num = 2,
-        .flags = {
-            .use_mipi_interface = 1,
-        },
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
             .dpi_config = &dpi_config,
+            .lane_num = 2,
         },
     };
     const esp_lcd_panel_dev_config_t panel_config = {

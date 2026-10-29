@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2023-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2023-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -15,6 +15,16 @@
 #include "unity.h"
 
 const char *TAG = "TEST";
+
+#if CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32H2
+static constexpr int TEST_STEPPER_2PWM_PINS[2] = {7, 8};
+static constexpr int TEST_STEPPER_2PWM_DIRS[2] = {5, 6};
+static constexpr int TEST_STEPPER_4PWM_PINS[4] = {7, 8, 9, 10};
+#else
+static constexpr int TEST_STEPPER_2PWM_PINS[2] = {4, 5};
+static constexpr int TEST_STEPPER_2PWM_DIRS[2] = {6, 7};
+static constexpr int TEST_STEPPER_4PWM_PINS[4] = {4, 5, 6, 7};
+#endif
 
 TEST_CASE("test as5600", "[sensor][as5600][i2c]")
 {
@@ -109,6 +119,37 @@ TEST_CASE("test esp_simplefoc openloop control", "[single motor][openloop][14pp]
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
     driver.deinit();
+}
+
+TEST_CASE("test stepper driver 2pwm", "[driver][stepper][2pwm]")
+{
+    int dir_pins[2] = {TEST_STEPPER_2PWM_DIRS[0], TEST_STEPPER_2PWM_DIRS[1]};
+    StepperDriver2PWM driver = StepperDriver2PWM(TEST_STEPPER_2PWM_PINS[0], dir_pins[0],
+                                                 TEST_STEPPER_2PWM_PINS[1], dir_pins[1]);
+
+    driver.voltage_power_supply = 12;
+    driver.voltage_limit = 11;
+    TEST_ASSERT_EQUAL(driver.init(), 1);
+
+    driver.enable();
+    driver.setPwm(2.0f, -3.0f);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    driver.disable();
+}
+
+TEST_CASE("test stepper driver 4pwm", "[driver][stepper][4pwm]")
+{
+    StepperDriver4PWM driver = StepperDriver4PWM(TEST_STEPPER_4PWM_PINS[0], TEST_STEPPER_4PWM_PINS[1],
+                                                 TEST_STEPPER_4PWM_PINS[2], TEST_STEPPER_4PWM_PINS[3]);
+
+    driver.voltage_power_supply = 12;
+    driver.voltage_limit = 11;
+    TEST_ASSERT_EQUAL(driver.init(), 1);
+
+    driver.enable();
+    driver.setPwm(2.0f, -3.0f);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    driver.disable();
 }
 
 TEST_CASE("test esp_simplefoc velocity control", "[single motor][velocity][14pp][ledc][drv8313][c3]")

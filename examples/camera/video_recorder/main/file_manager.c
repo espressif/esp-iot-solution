@@ -27,9 +27,10 @@ static const char *TAG = "file manager";
 #else
 #if defined CONFIG_IDF_TARGET_ESP32 || defined CONFIG_IDF_TARGET_ESP32S3
 #include "driver/sdmmc_host.h"
-static sdmmc_card_t *mount_card = NULL;
 #endif // define USE_SPI_MODE /* To enable SPI mode, uncomment this line*/
 #endif // end define CONFIG_EXAMPLE_USE_SDMMC_HOST
+
+static sdmmc_card_t *mount_card = NULL;
 
 // ESP32-S2 doesn't have an SD Host peripheral, always use SPI:
 #ifdef CONFIG_IDF_TARGET_ESP32S2
@@ -170,11 +171,7 @@ esp_err_t fm_sdcard_init(void)
 
 esp_err_t fm_unmount_sdcard(void)
 {
-#ifdef USE_SPI_MODE
     esp_err_t err = esp_vfs_fat_sdcard_unmount(SD_CARD_MOUNT_POINT, mount_card);
-#else
-    esp_err_t err = esp_vfs_fat_sdmmc_unmount();
-#endif
     ESP_ERROR_CHECK(err);
 #ifdef USE_SPI_MODE
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();

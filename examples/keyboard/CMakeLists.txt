@@ -5,6 +5,15 @@
 cmake_minimum_required(VERSION 3.16)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+
+if(IDF_TARGET STREQUAL "esp32h4")
+    set(EXCLUDE_COMPONENTS esp32_s3_kbd_kit)
+elseif(IDF_TARGET STREQUAL "esp32s3")
+    set(EXCLUDE_COMPONENTS esp32_h4_kbd_kit)
+else()
+    message(FATAL_ERROR "keyboard example supports ESP32-S3 and ESP32-H4 only (current: ${IDF_TARGET})")
+endif()
+
 project(keyboard)
 
 # Make MAX brightness configurable

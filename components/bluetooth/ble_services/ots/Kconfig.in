@@ -1,0 +1,29 @@
+# Object Transfer Service
+
+menuconfig BLE_OTS
+    bool "GATT Object Transfer Service"
+    help
+      Enable support for the Bluetooth Object Transfer Service (OTS),
+      which allows transfer of binary objects between devices.
+
+if BLE_OTS
+
+config BLE_OTS_FIRST_CREATED_CHARACTERISTIC_ENABLE
+    bool "Object First Created Characteristic"
+    default y
+    help
+      Set y to enable First Created Characteristic or n to disable it.
+
+config BLE_OTS_LAST_MODIFIED_CHARACTERISTIC_ENABLE
+    bool "Object Last Modified Characteristic"
+    default y
+    help
+      Set y to enable Last Modified Characteristic or n to disable it.
+
+config BLE_OTS_OBJECT_CHANGE_CHARACTERISTIC_ENABLE
+    bool "Object Change Characteristic"
+    default y
+    help
+      Set y to enable Object Change Characteristic or n to disable it.
+
+endif # BLE_OTS

@@ -31,7 +31,6 @@ FOC (Field-Oriented Control) 是一种用于无刷直流电机磁场定向控制
 
 **电机参数**
 
-
 -  ``pp``：极对数，您需要根据实际的三相无刷电机参数设置对应的电机极对数
 -  ``R``：电机相电阻，默认为 ``NOT_SET``
 -  ``KV``: 电机 KV 值，默认为 ``NOT_SET``
@@ -44,7 +43,6 @@ FOC (Field-Oriented Control) 是一种用于无刷直流电机磁场定向控制
         BLDCMotor motor = BLDCMotor(14);
 
 **MOS 驱动器控制参数与引脚**
-
 
 -  ``pwm pin``：PWM 输出引脚，您需要根据实际的 MOS 驱动器电路来设置对应的 PWM 输出引脚
 -  ``enable pin``：MOS 驱动器使能脚，若您的 MOS 驱动器需要手动使能，请手动填入对应的 GPIO，默认为 ``NOT_SET``
@@ -63,7 +61,6 @@ FOC (Field-Oriented Control) 是一种用于无刷直流电机磁场定向控制
 
 **角度传感器**
 
-
 您需要根据实际使用的角度传感器进行对应的实例化，当前支持的角度传感器：
 
 -  ``as5048a``：支持 SPI 方式读取角度数据
@@ -80,7 +77,6 @@ FOC (Field-Oriented Control) 是一种用于无刷直流电机磁场定向控制
 
 **控制器**
 
-
 ``esp_simplefoc`` 支持多种控制方式，您需要根据实际的应用需求进行选择：
 
 -  ``torque``：力矩控制
@@ -91,7 +87,6 @@ FOC (Field-Oriented Control) 是一种用于无刷直流电机磁场定向控制
 
     .. Note::
         若在硬件验证阶段，可优先选择开环控制方案，以实现对硬件的快速验证。
-
 
 4. FOC 初始化与循环控制
 

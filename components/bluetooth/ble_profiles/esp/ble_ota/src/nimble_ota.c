@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
 */
@@ -17,12 +17,35 @@
 #include "host/ble_uuid.h"
 #include "ble_ota.h"
 #include "freertos/semphr.h"
+#include <stdbool.h>
+#include <stdlib.h>
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
 #include "esp_nimble_hci.h"
+
+/*
+ * This is a workaround for the missing os_mbuf_len function in NimBLE.
+ * It is not present in NimBLE 1.3, but is present in NimBLE 1.4.
+ * This function is used to get the length of an os_mbuf.
+ */
+uint16_t
+os_mbuf_len(const struct os_mbuf *om)
+{
+    uint16_t len;
+
+    len = 0;
+    while (om != NULL) {
+        len += om->om_len;
+        om = SLIST_NEXT(om, om_next);
+    }
+
+    return len;
+}
 #endif
 
-#ifdef CONFIG_PRE_ENC_OTA
+/** Last-packet payload trailer after firmware bytes (same on plain and pre-encrypted OTA). */
 #define SECTOR_END_ID                       2
+
+#ifdef CONFIG_PRE_ENC_OTA
 #define ENC_HEADER                          512
 esp_decrypt_handle_t decrypt_handle_cmp;
 #endif
@@ -57,6 +80,8 @@ static const char *TAG = "NimBLE_BLE_OTA";
 static bool start_ota = false;
 static uint32_t cur_sector = 0;
 static uint32_t cur_packet = 0;
+/** Set after in-sector sequence/decrypt failure; stale EOF (0xff) is NACKed until sector is retried cleanly. */
+static bool sector_sequence_error = false;
 static uint8_t *fw_buf = NULL;
 static uint32_t fw_buf_offset = 0;
 
@@ -106,36 +131,57 @@ crc16_ccitt(const unsigned char *buf, int len);
 static esp_err_t
 esp_ble_ota_recv_fw_handler(uint8_t *buf, uint32_t length);
 
-static void
+#ifdef CONFIG_PRE_ENC_OTA
+/**
+ * Feed one BLE sector worth of ciphertext into esp_encrypted_img in a single ordered chunk.
+ * Per-packet decrypt was incorrect with sector retry: AES-GCM state must not advance on
+ * dropped or out-of-order packets.
+ */
+static esp_err_t
+ble_ota_pre_enc_flush_sector(uint8_t *cipher, size_t cipher_len)
+{
+    pre_enc_decrypt_arg_t pargs = {};
+    esp_err_t err;
+
+    if (cipher_len == 0) {
+        return ESP_OK;
+    }
+
+    pargs.data_in = (const char *)cipher;
+    pargs.data_in_len = cipher_len;
+    err = esp_encrypted_img_decrypt_data(decrypt_handle_cmp, &pargs);
+
+    if ((err == ESP_OK || err == ESP_ERR_NOT_FINISHED) &&
+            pargs.data_out != NULL && pargs.data_out_len > 0) {
+        esp_err_t fw_ret = esp_ble_ota_recv_fw_handler((uint8_t *)pargs.data_out, pargs.data_out_len);
+        if (fw_ret != ESP_OK) {
+            err = fw_ret;
+        }
+    }
+    if (pargs.data_out != NULL) {
+        free(pargs.data_out);
+    }
+
+    /* Whole-image decrypt is still in progress; not a per-sector failure. */
+    if (err == ESP_ERR_NOT_FINISHED) {
+        err = ESP_OK;
+    }
+    return err;
+}
+#endif
+
+static esp_err_t
 esp_ble_ota_write_chr(struct os_mbuf *om)
 {
 #ifndef CONFIG_OTA_WITH_PROTOCOMM
     esp_ble_ota_char_t ota_char = find_ota_char_and_desr_by_handle(attribute_handle);
 #endif
 
-#ifdef CONFIG_PRE_ENC_OTA
-    esp_err_t err;
-    pre_enc_decrypt_arg_t pargs = {};
-
-    pargs.data_in_len = om->om_len - 3;
-
-    if (SLIST_NEXT(om, om_next) != NULL) {
-        struct os_mbuf *temp2 = SLIST_NEXT(om, om_next);
-        pargs.data_in_len += temp2->om_len;
+    uint16_t mbuf_len = os_mbuf_len(om);
+    if (mbuf_len < 3) {
+        ESP_LOGW(TAG, "%s: mbuf too short (%u)", __func__, mbuf_len);
+        return ESP_ERR_INVALID_SIZE;
     }
-
-    pargs.data_in = (const char *)malloc(pargs.data_in_len * sizeof(char *));
-    err = os_mbuf_copydata(om, 3, pargs.data_in_len, pargs.data_in);
-
-    if (om->om_data[2] == 0xff) {
-        pargs.data_in_len -= SECTOR_END_ID;
-    }
-
-    err = esp_encrypted_img_decrypt_data(decrypt_handle_cmp, &pargs);
-    if (err != ESP_OK && err != ESP_ERR_NOT_FINISHED) {
-        return;
-    }
-#endif
 
     uint8_t cmd_ack[CMD_ACK_LENGTH] = {0x03, 0x00, 0x00, 0x00, 0x00,
                                        0x00, 0x00, 0x00, 0x00, 0x00,
@@ -143,16 +189,15 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
                                        0x00, 0x00, 0x00, 0x00, 0x00
                                       };
     uint16_t crc16;
+    unsigned int recv_sector = (unsigned int)(om->om_data[0] + (om->om_data[1] * 256));
+    uint8_t recv_packet = om->om_data[2];
 
-    if ((om->om_data[0] + (om->om_data[1] * 256)) != cur_sector) {
-        // sector error
+    if (recv_sector != cur_sector) {
         if ((om->om_data[0] == 0xff) && (om->om_data[1] == 0xff)) {
-            // last sector
             ESP_LOGD(TAG, "Last sector");
         } else {
-            // sector error
-            ESP_LOGE(TAG, "%s - sector index error, cur: %" PRIu32 ", recv: %d", __func__,
-                     cur_sector, (om->om_data[0] + (om->om_data[1] * 256)));
+            ESP_LOGE(TAG, "%s - sector index error, cur: %" PRIu32 ", recv: %u", __func__,
+                     cur_sector, recv_sector);
             cmd_ack[0] = om->om_data[0];
             cmd_ack[1] = om->om_data[1];
             cmd_ack[2] = 0x02; //sector index error
@@ -162,54 +207,162 @@ esp_ble_ota_write_chr(struct os_mbuf *om)
             crc16 = crc16_ccitt(cmd_ack, 18);
             cmd_ack[18] = crc16 & 0xff;
             cmd_ack[19] = (crc16 & 0xff00) >> 8;
+            /* Match sender retry: sector restarts at packet 0. */
+            cur_packet = 0;
+            fw_buf_offset = 0;
+            if (fw_buf) {
+                memset(fw_buf, 0x0, ota_block_size);
+            }
+            sector_sequence_error = false;
 #ifndef CONFIG_OTA_WITH_PROTOCOMM
             esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
 #endif
+            return ESP_ERR_INVALID_STATE;
         }
     }
 
-    if (om->om_data[2] != cur_packet) { // packet seq error
-        if (om->om_data[2] == 0xff) { // last packet
+    if (recv_packet != (uint8_t)cur_packet) {
+        if (recv_packet == 0xff) {
+            if (sector_sequence_error) {
+                ESP_LOGE(TAG, "%s: sector EOF after packet sequence error, NACK sector %" PRIu32,
+                         __func__, cur_sector);
+                cmd_ack[0] = om->om_data[0];
+                cmd_ack[1] = om->om_data[1];
+                cmd_ack[2] = 0x02; /* retry sector (same status byte as sector index error) */
+                cmd_ack[3] = 0x00;
+                cmd_ack[4] = cur_sector & 0xff;
+                cmd_ack[5] = (cur_sector & 0xff00) >> 8;
+                crc16 = crc16_ccitt(cmd_ack, 18);
+                cmd_ack[18] = crc16 & 0xff;
+                cmd_ack[19] = (crc16 & 0xff00) >> 8;
+                sector_sequence_error = false;
+                cur_packet = 0;
+                fw_buf_offset = 0;
+                if (fw_buf) {
+                    memset(fw_buf, 0x0, ota_block_size);
+                }
+#ifndef CONFIG_OTA_WITH_PROTOCOMM
+                esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
+#endif
+                return ESP_ERR_INVALID_STATE;
+            }
             ESP_LOGD(TAG, "last packet");
             goto write_ota_data;
-        } else { // packet seq error
-            ESP_LOGE(TAG, "%s - packet index error, cur: %" PRIu32 ", recv: %d", __func__,
-                     cur_packet, om->om_data[2]);
+        } else {
+            ESP_LOGE(TAG, "%s - packet index error, cur: %" PRIu32 ", recv: %u", __func__,
+                     cur_packet, (unsigned int)recv_packet);
+            sector_sequence_error = true;
+            cur_packet = 0;
+            fw_buf_offset = 0;
+            if (fw_buf) {
+                memset(fw_buf, 0x0, ota_block_size);
+            }
+            return ESP_ERR_INVALID_STATE;
         }
     }
 
 write_ota_data:
+    if (recv_packet != 0xff) {
+        sector_sequence_error = false;
+    }
 #ifdef CONFIG_PRE_ENC_OTA
-    if (pargs.data_out_len > 0) {
-        memcpy(fw_buf + fw_buf_offset, pargs.data_out, pargs.data_out_len);
+    {
+        size_t copy_len = (size_t)mbuf_len - 3;
 
-        free(pargs.data_out);
-        free(pargs.data_in);
-
-        fw_buf_offset += pargs.data_out_len;
-    }
-    ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
-             fw_buf_offset, pargs.data_out_len);
-#else
-    memcpy(fw_buf + fw_buf_offset, om->om_data + 3, om->om_len - 3);
-    fw_buf_offset += om->om_len - 3;
-
-    if (SLIST_NEXT(om, om_next) != NULL) {
-        struct os_mbuf *last;
-        last = om;
-        while (SLIST_NEXT(last, om_next) != NULL) {
-            struct os_mbuf *temp = SLIST_NEXT(last, om_next);
-            memcpy(fw_buf + fw_buf_offset, temp->om_data, temp->om_len);
-            fw_buf_offset += temp->om_len;
-            last = SLIST_NEXT(last, om_next);
-            temp = NULL;
+        if (recv_packet == 0xff) {
+            if (copy_len < SECTOR_END_ID) {
+                ESP_LOGE(TAG, "%s: last packet too short", __func__);
+                fw_buf_offset = 0;
+                if (fw_buf) {
+                    memset(fw_buf, 0x0, ota_block_size);
+                }
+                return ESP_ERR_INVALID_SIZE;
+            }
+            copy_len -= SECTOR_END_ID;
         }
+        if (fw_buf == NULL) {
+            ESP_LOGW(TAG, "%s: fw_buf not allocated", __func__);
+            return ESP_ERR_INVALID_STATE;
+        }
+        if (fw_buf_offset + copy_len > ota_block_size) {
+            ESP_LOGE(TAG, "%s: sector ciphertext overflow", __func__);
+            fw_buf_offset = 0;
+            memset(fw_buf, 0x0, ota_block_size);
+            return ESP_ERR_INVALID_SIZE;
+        }
+        if (copy_len > 0) {
+            if (os_mbuf_copydata(om, 3, copy_len, fw_buf + fw_buf_offset) != 0) {
+                ESP_LOGE(TAG, "%s: copydata failed", __func__);
+                fw_buf_offset = 0;
+                memset(fw_buf, 0x0, ota_block_size);
+                return ESP_FAIL;
+            }
+            fw_buf_offset += copy_len;
+        }
+        ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", cipher accum:%" PRIu32 ", +pkt:%u", cur_sector,
+                 fw_buf_offset, (unsigned int)copy_len);
     }
+#else
+    {
+        size_t copy_len = (size_t)mbuf_len - 3;
 
-    ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%d", cur_sector,
-             fw_buf_offset, om->om_len - 3);
+        if (recv_packet == 0xff) {
+            if (copy_len < SECTOR_END_ID) {
+                ESP_LOGE(TAG, "%s: last packet too short", __func__);
+                fw_buf_offset = 0;
+                if (fw_buf) {
+                    memset(fw_buf, 0x0, ota_block_size);
+                }
+                return ESP_ERR_INVALID_SIZE;
+            }
+            copy_len -= SECTOR_END_ID;
+        }
+        if (fw_buf == NULL) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        if (fw_buf_offset + copy_len > ota_block_size) {
+            ESP_LOGE(TAG, "%s: sector ciphertext overflow", __func__);
+            fw_buf_offset = 0;
+            memset(fw_buf, 0x0, ota_block_size);
+            return ESP_ERR_INVALID_SIZE;
+        }
+        if (copy_len > 0) {
+            if (os_mbuf_copydata(om, 3, copy_len, fw_buf + fw_buf_offset) != 0) {
+                ESP_LOGE(TAG, "%s: copydata failed", __func__);
+                fw_buf_offset = 0;
+                memset(fw_buf, 0x0, ota_block_size);
+                return ESP_FAIL;
+            }
+            fw_buf_offset += copy_len;
+        }
+        ESP_LOGD(TAG, "DEBUG: Sector:%" PRIu32 ", total length:%" PRIu32 ", length:%u", cur_sector,
+                 fw_buf_offset, (unsigned int)copy_len);
+    }
 #endif
-    if (om->om_data[2] == 0xff) {
+    if (recv_packet == 0xff) {
+#ifdef CONFIG_PRE_ENC_OTA
+        esp_err_t derr = ble_ota_pre_enc_flush_sector(fw_buf, fw_buf_offset);
+        if (derr != ESP_OK) {
+            ESP_LOGE(TAG, "%s: decrypt sector failed: %s", __func__, esp_err_to_name(derr));
+            fw_buf_offset = 0;
+            memset(fw_buf, 0x0, ota_block_size);
+            cur_packet = 0;
+            sector_sequence_error = true;
+#ifndef CONFIG_OTA_WITH_PROTOCOMM
+            cmd_ack[0] = om->om_data[0];
+            cmd_ack[1] = om->om_data[1];
+            cmd_ack[2] = 0x02;
+            cmd_ack[3] = 0x00;
+            cmd_ack[4] = cur_sector & 0xff;
+            cmd_ack[5] = (cur_sector & 0xff00) >> 8;
+            crc16 = crc16_ccitt(cmd_ack, 18);
+            cmd_ack[18] = crc16 & 0xff;
+            cmd_ack[19] = (crc16 & 0xff00) >> 8;
+            esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
+#endif
+            return derr;
+        }
+#endif
         cur_packet = 0;
         cur_sector++;
         ESP_LOGD(TAG, "DEBUG: recv %" PRIu32 " sector", cur_sector);
@@ -218,17 +371,20 @@ write_ota_data:
         ESP_LOGD(TAG, "DEBUG: wait next packet");
         cur_packet++;
     }
-    return;
+    return ESP_OK;
 
 sector_end:
+#ifndef CONFIG_PRE_ENC_OTA
     if (fw_buf_offset < ota_block_size) {
         esp_ble_ota_recv_fw_handler(fw_buf, fw_buf_offset);
     } else {
         esp_ble_ota_recv_fw_handler(fw_buf, 4096);
     }
+#endif
 
     fw_buf_offset = 0;
     memset(fw_buf, 0x0, ota_block_size);
+    sector_sequence_error = false;
 
     cmd_ack[0] = om->om_data[0];
     cmd_ack[1] = om->om_data[1];
@@ -241,6 +397,7 @@ sector_end:
 #ifndef CONFIG_OTA_WITH_PROTOCOMM
     esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
 #endif
+    return ESP_OK;
 }
 
 static uint16_t crc16_ccitt(const unsigned char *buf, int len)
@@ -318,15 +475,24 @@ esp_ble_ota_finish(void)
     start_ota = false;
     ota_total_len = 0;
     ota_block_size = 0;
+    sector_sequence_error = false;
+    cur_sector = 0;
+    cur_packet = 0;
+    fw_buf_offset = 0;
     free(fw_buf);
     fw_buf = NULL;
 }
 
-void
+esp_err_t
 esp_ble_ota_write(uint8_t *file, size_t length)
 {
     struct os_mbuf *om = ble_hs_mbuf_from_flat(file, length);
-    esp_ble_ota_write_chr(om);
+    if (om == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    esp_err_t err = esp_ble_ota_write_chr(om);
+    os_mbuf_free_chain(om);
+    return err;
 }
 #else
 
@@ -356,6 +522,15 @@ ble_ota_start_write_chr(struct os_mbuf *om)
 #endif
         ESP_LOGI(TAG, "recv ota start cmd, fw_length = %" PRIu32 "", ota_total_len);
 
+        sector_sequence_error = false;
+        cur_sector = 0;
+        cur_packet = 0;
+        fw_buf_offset = 0;
+
+        if (fw_buf != NULL) {
+            free(fw_buf);
+            fw_buf = NULL;
+        }
         fw_buf = (uint8_t *)malloc(ota_block_size * sizeof(uint8_t));
         if (fw_buf == NULL) {
             ESP_LOGE(TAG, "%s -  malloc fail", __func__);
@@ -391,6 +566,10 @@ ble_ota_start_write_chr(struct os_mbuf *om)
         cmd_ack[18] = crc16 & 0xff;
         cmd_ack[19] = (crc16 & 0xff00) >> 8;
         esp_ble_ota_notification_data(connection_handle, attribute_handle, cmd_ack, ota_char);
+        sector_sequence_error = false;
+        cur_sector = 0;
+        cur_packet = 0;
+        fw_buf_offset = 0;
         free(fw_buf);
         fw_buf = NULL;
     }
@@ -446,12 +625,15 @@ ble_ota_gatt_handler(uint16_t conn_handle, uint16_t attr_handle,
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
 
         ota_char = find_ota_char_and_desr_by_handle(attr_handle);
-        ESP_LOGD(TAG, "client write; len = %d", ctxt->om->om_len);
+        ESP_LOGD(TAG, "client write; len = %d", os_mbuf_len(ctxt->om));
 
         if (ota_char == RECV_FW_CHAR) {
             if (start_ota) {
-                esp_ble_ota_write_chr(ctxt->om);
-
+                esp_err_t werr = esp_ble_ota_write_chr(ctxt->om);
+                if (werr != ESP_OK) {
+                    ESP_LOGE(TAG, "%s: firmware write failed: %s", __func__, esp_err_to_name(werr));
+                    return BLE_ATT_ERR_UNLIKELY;
+                }
             } else {
                 ESP_LOGE(TAG, "%s -  don't receive the start cmd", __func__);
             }

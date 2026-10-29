@@ -1,0 +1,10 @@
+## IDF Component Manager Manifest File
+dependencies:
+  espressif/led_strip: "^2.5.4"
+  ## Required IDF version
+  idf:
+    version: ">=5.0"
+  bthome:
+    override_path: "../../../../../components/bluetooth/ble_adv/bthome"
+  ble_hci:
+    override_path: "../../../../../components/bluetooth/ble_hci"

@@ -21,6 +21,64 @@ menu "ESP KeyBoard Example"
             default 60000
             help
                 "Time to enter light sleep mode and close all light when no key is pressed"
+
+        config ESP_MAX_CPU_FREQ_MHZ
+            int "PM max CPU frequency (MHz) for BLE HID"
+            default 96 if IDF_TARGET_ESP32H4
+            default 240
+            help
+                Maximum CPU frequency used by esp_pm_configure() when BLE HID is active.
+
+        config ESP_MIN_CPU_FREQ_MHZ
+            int "PM min CPU frequency (MHz) for BLE HID"
+            default 32 if IDF_TARGET_ESP32H4
+            default 160
+            help
+                Minimum CPU frequency used by esp_pm_configure() when BLE HID is active.
+    endmenu
+
+    config KEYBOARD_BATTERY_ADC_ENABLE
+        bool "Enable battery ADC monitor"
+        default n if IDF_TARGET_ESP32H4
+        default y
+        help
+            Enables the ADC battery monitor task and BLE battery level reporting.
+
+    config KEYBOARD_KEY_OUTPUT_SWITCH_ENABLE
+        bool "Enable key-based output mode switch"
+        default n if KEYBOARD_HW_MODE_SWITCH_ENABLE
+        default y
+        help
+            Enables QK_OUTPUT_USB / QK_OUTPUT_BLUETOOTH
+            keycodes to switch HID output mode. Disable this when a hardware
+            mode switch owns output mode selection.
+
+    menu "Hardware mode switch"
+        depends on IDF_TARGET_ESP32H4
+
+        config KEYBOARD_HW_MODE_SWITCH_ENABLE
+            bool "Enable hardware mode switch (GPIO13/14)"
+            default y
+            help
+                Two valid positions: left = BLE, center = USB.
+                Other switch positions fall back to USB.
+
+        config KEYBOARD_HW_MODE_GPIO_SW_L
+            int "Mode switch SW_L GPIO"
+            depends on KEYBOARD_HW_MODE_SWITCH_ENABLE
+            default 13
+
+        config KEYBOARD_HW_MODE_GPIO_SW_R
+            int "Mode switch SW_R GPIO"
+            depends on KEYBOARD_HW_MODE_SWITCH_ENABLE
+            default 14
+
+        config KEYBOARD_HW_MODE_GPIO_INTERNAL_PULLUP
+            bool "Enable internal pull-ups for mode switch GPIOs"
+            depends on KEYBOARD_HW_MODE_SWITCH_ENABLE
+            default y
+            help
+                Supplements the external V_BAT pull-ups when the board is powered by USB only.
     endmenu
 
 endmenu

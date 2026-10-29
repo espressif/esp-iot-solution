@@ -6,6 +6,7 @@
 #ifndef APP_LCD_H
 #define APP_LCD_H
 
+#include "esp_idf_version.h"
 #include "esp_lcd_touch.h"
 #include "esp_lcd_panel_ops.h"
 
@@ -14,10 +15,18 @@
 
 #if CONFIG_LCD_PIXEL_FORMAT_RGB565
 #define EXAMPLE_LCD_BIT_PER_PIXEL           (16)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_FMT_RGB565)
+#else
 #define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_PIXEL_FORMAT_RGB565)
+#endif
 #elif CONFIG_LCD_PIXEL_FORMAT_RGB888
 #define EXAMPLE_LCD_BIT_PER_PIXEL           (24)
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_FMT_RGB888)
+#else
 #define EXAMPLE_MIPI_DPI_PX_FORMAT          (LCD_COLOR_PIXEL_FORMAT_RGB888)
+#endif
 #endif
 
 /**

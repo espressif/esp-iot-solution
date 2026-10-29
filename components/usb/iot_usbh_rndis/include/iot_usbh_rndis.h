@@ -7,20 +7,17 @@
 
 #include "esp_err.h"
 #include "iot_eth_interface.h"
+#include "iot_usbh_cdc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * @brief USB Host Ethernet ECM Configuration
+ * @brief USB Host Ethernet RNDIS Configuration
  */
 typedef struct {
-    bool auto_detect;                         /*!< Auto detect RNDIS device */
-    TickType_t auto_detect_timeout;           /*!< Auto detect timeout in ticks, used when auto_detect is true */
-    uint16_t vid;                             /*!< USB device vendor ID, used when auto_detect is false */
-    uint16_t pid;                             /*!< USB device product ID, used when auto_detect is false */
-    int itf_num;                              /*!< interface numbers, used when auto_detect is false */
+    const usb_device_match_id_t *match_id_list; /*!< USB device match ID for RNDIS */
 } iot_usbh_rndis_config_t;
 
 /**
@@ -38,6 +35,15 @@ typedef struct {
  *     - ESP_ERR_NO_MEM: Memory allocation failed
  */
 esp_err_t iot_eth_new_usb_rndis(const iot_usbh_rndis_config_t *config, iot_eth_driver_t **ret_handle);
+
+/**
+ * @brief Get the CDC port handle of the RNDIS driver.
+ *
+ * @param[in] rndis_drv RNDIS Ethernet driver handle
+ *
+ * @return usbh_cdc_port_handle_t CDC port handle of the RNDIS driver
+ */
+usbh_cdc_port_handle_t usb_rndis_get_cdc_port_handle(const iot_eth_driver_t *rndis_drv);
 
 #ifdef __cplusplus
 }

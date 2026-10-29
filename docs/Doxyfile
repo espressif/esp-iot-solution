@@ -20,6 +20,10 @@ PROJECT_NAME = "ESP IoT Solution Guide"
 ## These files are placed in '_inc' directory
 ## and used to include in API reference documentation
 
+## IF YOU ADD NEW FILES HERE
+## DO NOT FORGET TO ADD THEM TO THE .patterns-docs_inc PATTERN
+## IN THE .gitlab/ci/rules.yml FILE
+
 INPUT = \
     $(PROJECT_PATH)/components/audio/adc_mic/adc_mic.h \
     $(PROJECT_PATH)/components/audio/dac_audio/include/dac_audio.h \
@@ -27,27 +31,48 @@ INPUT = \
     $(PROJECT_PATH)/components/avi_player/include/avi_player.h \
     $(PROJECT_PATH)/components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h \
     $(PROJECT_PATH)/components/bluetooth/ble_hci/include/ble_hci.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_adv/bthome/include/bthome_v2.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/esp/ble_ota_raw/include/esp_ble_ota_raw.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_anp/include/esp_anp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_esl/include/esp_eslp_tag.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_esl/include/esp_eslp_ap.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_hrp/include/esp_hrp.h \
     $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_htp/include/esp_htp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/std/ble_otp/include/esp_otp.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_profiles/third_party/ble_midi/include/esp_ble_midi.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/ans/include/esp_ans.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/bas/include/esp_bas.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/bcs/include/esp_bcs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/cts/include/esp_cts.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/dis/include/esp_dis.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/esl/include/esp_esl.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hrs/include/esp_hrs.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/hts/include/esp_hts.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/ias/include/esp_ias.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/ota/include/esp_ble_ota_svc.h \
+    $(PROJECT_PATH)/components/bluetooth/ble_services/ots/include/esp_ots.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/tps/include/esp_tps.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/uds/include/esp_uds.h \
     $(PROJECT_PATH)/components/bluetooth/ble_services/wss/include/esp_wss.h \
     $(PROJECT_PATH)/components/bus/include/i2s_lcd_driver.h \
     $(PROJECT_PATH)/components/button/include/iot_button.h \
-    $(PROJECT_PATH)/components/display/screen/interface_driver/scr_interface_driver.h \
-    $(PROJECT_PATH)/components/display/screen/screen_driver.h \
+    $(PROJECT_PATH)/components/dali/include/dali_color_control_dt8.h \
+    $(PROJECT_PATH)/components/dali/include/dali_control_device.h \
+    $(PROJECT_PATH)/components/dali/include/dali_control_gear.h \
+    $(PROJECT_PATH)/components/dali/include/dali_device_sensors.h \
+    $(PROJECT_PATH)/components/dali/include/dali_system_components.h \
+    $(PROJECT_PATH)/components/dali/include/dali_command.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_config.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_types.h \
+    $(PROJECT_PATH)/components/display/tools/esp_display_present/include/esp_display_present_geometry.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_decoder/include/esp_lv_decoder.h \
     $(PROJECT_PATH)/components/display/tools/esp_lv_fs/include/esp_lv_fs.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lv_present/include/esp_lv_present.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_display.h \
+    $(PROJECT_PATH)/components/display/tools/esp_lvgl_adapter/include/esp_lv_adapter_input.h \
     $(PROJECT_PATH)/components/display/tools/esp_mmap_assets/include/esp_mmap_assets.h \
-    $(PROJECT_PATH)/components/display/touch_panel/touch_panel.h \
     $(PROJECT_PATH)/components/i2c_bus/include/i2c_bus.h \
     $(PROJECT_PATH)/components/iot_eth/include/iot_eth.h \
     $(PROJECT_PATH)/components/ir/ir_learn/include/ir_learn.h \
@@ -59,7 +84,28 @@ INPUT = \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/include/bldc_control.h \
     $(PROJECT_PATH)/components/motor/esp_sensorless_bldc_control/user_cfg/bldc_user_cfg.h \
     $(PROJECT_PATH)/components/motor/servo/include/iot_servo.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_engine.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_mgr.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_tool.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_data.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_property.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_prompt.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_resource.h \
+    $(PROJECT_PATH)/components/mcp-c-sdk/include/esp_mcp_completion.h \
+    $(PROJECT_PATH)/components/esp_weaver/include/esp_weaver.h \
     $(PROJECT_PATH)/components/openai/include/OpenAI.h \
+    $(PROJECT_PATH)/components/protocomm_ext/include/common/protocomm_ext.h \
+    $(PROJECT_PATH)/components/protocomm_ext/include/security/protocomm_ext_security.h \
+    $(PROJECT_PATH)/components/protocomm_ext/include/transports/protocomm_ext_console.h \
+    $(PROJECT_PATH)/components/protocomm_ext/include/transports/protocomm_ext_http.h \
+    $(PROJECT_PATH)/components/protocomm_ext/include/transports/protocomm_ext_nimble.h \
+    $(PROJECT_PATH)/components/network_provisioner/include/network_provisioner.h \
+    $(PROJECT_PATH)/components/esp_local_controller/include/esp_local_controller.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_chat.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_info.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_nvs_ops.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_camera.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_video.h \
     $(PROJECT_PATH)/components/sensors/ntc_driver/include/ntc_driver.h \
     $(PROJECT_PATH)/components/sensors/power_measure/include/power_measure.h \
     $(PROJECT_PATH)/components/sensors/power_monitor/ina236/include/ina236.h \
@@ -69,18 +115,20 @@ INPUT = \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/iot_sensor_hub.h \
     $(PROJECT_PATH)/components/sensors/sensor_hub/include/sensor_type.h \
     $(PROJECT_PATH)/components/spi_bus/include/spi_bus.h \
-    $(PROJECT_PATH)/components/touch/touch_button_sensor/include/touch_button_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_proximity_sensor/include/touch_proximity_sensor.h \
     $(PROJECT_PATH)/components/touch/touch_slider_sensor/include/touch_slider_sensor.h \
+    $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_host.h \
     $(PROJECT_PATH)/components/usb/esp_msc_ota/include/esp_msc_ota.h \
     $(PROJECT_PATH)/components/usb/esp_tinyuf2/esp_tinyuf2.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/iot_usbh_cdc.h \
+    $(PROJECT_PATH)/components/usb/iot_usbh_cdc/include/usbh_helper.h \
     $(PROJECT_PATH)/components/usb/usb_device_uac/include/usb_device_uac.h \
     $(PROJECT_PATH)/components/usb/usb_device_uvc/include/usb_device_uvc.h \
     $(PROJECT_PATH)/components/usb/usb_stream/include/usb_stream.h \
     $(PROJECT_PATH)/components/utilities/adc_tp_calibration/include/adc_tp_calibration.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_rndis/include/iot_usbh_rndis.h \
     $(PROJECT_PATH)/components/usb/iot_usbh_ecm/include/iot_usbh_ecm.h \
+    $(PROJECT_PATH)/components/usb/iot_usbh_modem/include/iot_usbh_modem.h \
     $(PROJECT_PATH)/components/zero_detection/include/zero_detection.h \
 
 ## Get warnings for functions that have no documentation for their parameters or return value

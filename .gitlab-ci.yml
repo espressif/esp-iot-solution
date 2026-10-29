@@ -1,3 +1,11 @@
+spec:
+  inputs:
+    force_push_to_github:
+      type: boolean
+      default: false
+
+---
+
 stages:
   - pre_check
   - build
@@ -23,6 +31,7 @@ workflow:
 
 variables:
   IOT_SOLUTION_PATH: "$CI_PROJECT_DIR"
+  CI_FORCE_PUSH_TO_GITHUB: "$[[ inputs.force_push_to_github ]]"
 
 include:
   - '.gitlab/ci/danger.yml'
@@ -33,3 +42,4 @@ include:
   - '.gitlab/ci/deploy.yml'
   - '.gitlab/ci/target_test.yml'
   - '.gitlab/ci/publish_docs_to_cdp.yml'
+  - '.gitlab/ci/upload_metrics.yml'

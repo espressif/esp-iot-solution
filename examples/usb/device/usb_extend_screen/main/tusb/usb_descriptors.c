@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "esp_check.h"
 #include "tusb.h"
 #include "tusb_config.h"
 #include "uac_config.h"
@@ -83,8 +84,8 @@ uint8_t const *tud_descriptor_device_cb(void)
 //--------------------------------------------------------------------+
 // HID Report Descriptor
 //--------------------------------------------------------------------+
-uint8_t const desc_hid_report[] = {
-    TUD_HID_REPORT_DESC_TOUCH_SCREEN(REPORT_ID_TOUCH, CONFIG_USB_EXTEND_SCREEN_HEIGHT, CONFIG_USB_EXTEND_SCREEN_WIDTH),
+static uint8_t desc_hid_report[] = {
+    TUD_HID_REPORT_DESC_TOUCH_SCREEN(REPORT_ID_TOUCH, 0, 0),
 };
 
 uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
@@ -94,27 +95,42 @@ uint8_t const * tud_hid_descriptor_report_cb(uint8_t instance)
 }
 #endif
 
+enum {
+    STR_INDEX_VENDOR = 4,
+#if CFG_TUD_HID
+    STR_INDEX_HID,
+#endif
+#if CONFIG_UAC_AUDIO_ENABLE
+    STR_INDEX_AUDIO,
+#endif
+};
+
 //--------------------------------------------------------------------+
 // Configuration Descriptor
 //--------------------------------------------------------------------+
 
+#if CONFIG_UAC_AUDIO_ENABLE
+#define UAC_DESC_LEN        TUD_AUDIO_DEVICE_DESC_LEN
+#else
+#define UAC_DESC_LEN        0
+#endif
+
 #define CONFIG_TOTAL_LEN    (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN * CFG_TUD_HID + \
-                             TUD_VENDOR_DESC_LEN * CFG_TUD_VENDOR + \
-                             TUD_AUDIO_DEVICE_DESC_LEN * CFG_TUD_AUDIO)
+                             TUD_VENDOR_DESC_LEN * CFG_TUD_VENDOR + UAC_DESC_LEN)
 
 uint8_t const desc_fs_configuration[] = {
     // Config number, interface count, string index, total length, attribute, power in mA
     TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, 0, 100),
     // Interface number, string index, EP Out & IN address, EP size
 #if CFG_TUD_VENDOR
-    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, 4, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, CFG_TUD_VENDOR_EPSIZE),
+    TUD_VENDOR_DESCRIPTOR(ITF_NUM_VENDOR, STR_INDEX_VENDOR, EPNUM_VENDOR, 0x80 | EPNUM_VENDOR, CFG_TUD_VENDOR_EPSIZE),
 #endif
 #if CFG_TUD_HID
     // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(ITF_NUM_HID, 5, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), CFG_TUD_HID_EP_BUFSIZE, 10),
+    TUD_HID_DESCRIPTOR(ITF_NUM_HID, STR_INDEX_HID, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), (0x80 | EPNUM_HID_DATA), CFG_TUD_HID_EP_BUFSIZE, CONFIG_USB_HS ? 4 : 10),
 #endif
-#if CFG_TUD_AUDIO
-    TUD_AUDIO_DESCRIPTOR(ITF_NUM_AUDIO_CONTROL, 6, EPNUM_AUDIO_OUT, (0x80 | EPNUM_AUDIO_IN), (0x80 | EPNUM_AUDIO_FB)),
+#if CONFIG_UAC_AUDIO_ENABLE
+    TUD_AUDIO_DESCRIPTOR(ITF_NUM_AUDIO_CONTROL, STR_INDEX_AUDIO, EPNUM_AUDIO_OUT, (0x80 | EPNUM_AUDIO_IN), (0x80 | EPNUM_AUDIO_FB)),
 #endif
 };
 
@@ -134,20 +150,7 @@ uint8_t const *tud_descriptor_configuration_cb(uint8_t index)
 #define _STRINGIFY(x)   #x
 #define STRINGIFY(s)    _STRINGIFY(s)
 
-#define VENDOR_STR \
-        CONFIG_IDF_TARGET \
-        "udisp0_" \
-        "R" \
-        STRINGIFY(CONFIG_USB_EXTEND_SCREEN_HEIGHT) \
-        "x" \
-        STRINGIFY(CONFIG_USB_EXTEND_SCREEN_WIDTH) \
-        "_" \
-        "Ejpg" \
-        STRINGIFY(CONFIG_USB_EXYEEND_SCREEN_JEPG_QUALITY) \
-        "_Fps" \
-        STRINGIFY(CONFIG_USB_EXTEND_SCREEN_MAX_FPS) \
-        "_Bl" \
-        STRINGIFY(CONFIG_USB_EXTEND_SCREEN_FRAME_LIMIT_B)
+static char vendor_str[64];
 
 // array of pointer to string descriptors
 char const *string_desc_arr [] = {
@@ -155,11 +158,11 @@ char const *string_desc_arr [] = {
     USB_MANUFACTURER,                 // 1: Manufacturer
     "ESP_Extern_Screen",              // 2: Product
     "012-2021",                       // 3: Serials, should use chip ID
-    VENDOR_STR,                       // 4: Vendor Interface
+    vendor_str,                       // 4: Vendor Interface
 #if CFG_TUD_HID
     "touch",                          // 5: HID Interface
 #endif
-#if CFG_TUD_AUDIO
+#if CONFIG_UAC_AUDIO_ENABLE
     "esp uac",                        // 6: UAC Interface
     "speaker",                        // 7: UAC Interface
     "mic",                            // 8: UAC Interface
@@ -167,6 +170,41 @@ char const *string_desc_arr [] = {
 };
 
 static uint16_t _desc_str[64];
+
+esp_err_t usb_descriptors_init(uint16_t width, uint16_t height)
+{
+    ESP_RETURN_ON_FALSE(width && height, ESP_ERR_INVALID_ARG, "usb_desc",
+                        "invalid display resolution");
+
+#if CFG_TUD_HID
+    unsigned logical_max_count = 0;
+    unsigned physical_max_count = 0;
+    for (size_t i = 0; i + 2 < sizeof(desc_hid_report); i++) {
+        uint16_t value;
+        if (desc_hid_report[i] == 0x26) {
+            value = (logical_max_count++ % 2 == 0) ? width : height;
+        } else if (desc_hid_report[i] == 0x46) {
+            value = (physical_max_count++ % 2 == 0) ? width : height;
+        } else {
+            continue;
+        }
+        desc_hid_report[i + 1] = value & 0xff;
+        desc_hid_report[i + 2] = value >> 8;
+        i += 2;
+    }
+    ESP_RETURN_ON_FALSE(logical_max_count == 10 && physical_max_count == 10,
+                        ESP_ERR_INVALID_STATE, "usb_desc", "unexpected HID report layout");
+#endif
+
+    int written = snprintf(vendor_str, sizeof(vendor_str),
+                           CONFIG_IDF_TARGET "udisp0_R%ux%u_Ejpg%d_Fps%d_Bl%d",
+                           width, height, CONFIG_USB_EXTEND_SCREEN_JPEG_QUALITY,
+                           CONFIG_USB_EXTEND_SCREEN_MAX_FPS,
+                           CONFIG_USB_EXTEND_SCREEN_FRAME_LIMIT_B);
+    ESP_RETURN_ON_FALSE(written > 0 && written < sizeof(vendor_str), ESP_ERR_INVALID_SIZE,
+                        "usb_desc", "vendor descriptor string is too long");
+    return ESP_OK;
+}
 
 // Invoked when received GET STRING DESCRIPTOR request
 // Application return pointer to descriptor, whose contents must exist long enough for transfer to complete

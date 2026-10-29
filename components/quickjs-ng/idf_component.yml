@@ -1,0 +1,15 @@
+version: "0.14.0"
+description: QuickJS-NG JavaScript engine port for ESP-IDF.
+license: "MIT AND Apache-2.0"
+# Upstream source drop lives in quickjs-ng/; do not hand-edit for SPDX—use tools/ci ignore rules.
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/quickjs-ng
+repository: https://github.com/espressif/esp-iot-solution.git
+issues: https://github.com/espressif/esp-iot-solution/issues
+
+dependencies:
+  idf: ">=5.4"
+examples:
+  - path: ../../examples/quickjs-ng
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: QuickJS-NG Project Developers'

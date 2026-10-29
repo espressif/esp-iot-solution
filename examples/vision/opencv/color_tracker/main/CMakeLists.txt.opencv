@@ -79,26 +79,13 @@ include(ExternalProject)
 # Build OpenCV in this directory:
 set(BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/opencv-build)
 
-# List of OpenCV static libraries we expect to see after the build.
-# Obtained manually by looking at ${BINARY_DIR}/install/lib directory.
-# In some cases it's important to have right order of libraries here.
+# color_tracker only uses cv::Mat and imgproc APIs such as cvtColor,
+# inRange, morphologyEx, findContours, contourArea and boundingRect.
 set(opencv_libraries
-    calib3d flann fuzzy
-    objdetect tracking video videostab features2d
-    surface_matching
-    shape stereo stitching structured_light
-    line_descriptor ml phase_unwrapping photo plot quality rapid
-    imgcodecs imgproc core
+    imgproc core
 )
 
-set(3rdparty_libraries
-    zlib
-    libopenjp2
-    libjpeg-turbo
-    libpng
-    libtiff
-    libwebp
-)
+set(3rdparty_libraries)
 
 # List of all static libraries to be produced
 set(all_libraries)
@@ -137,36 +124,40 @@ ExternalProject_Add(opencv_proj
         -DPYTHON_DEFAULT_EXECUTABLE=${python}
         -DCV_CPU_BASELINE_MODE=${CONFIG_IDF_TARGET}
         -DCV_DISABLE_OPTIMIZATION=0
-        -DOPENCV_EXTRA_MODULES_PATH=${CMAKE_CURRENT_LIST_DIR}/opencv_contrib/modules
         -DOPENCV_FORCE_3RDPARTY_BUILD=1
         -DCMAKE_SYSTEM_PROCESSOR=${CONFIG_IDF_TARGET_ARCH}
         -DENABLE_PIC=0
         -DTARGET=${CONFIG_IDF_TARGET}
+        -DBUILD_LIST=core,imgproc
         -DWITH_ADE=0
-        -DWITH_JPEG=1
+        -DWITH_JPEG=0
         -DWITH_OPENCL=0
         -DWITH_OPENEXR=0
         -DWITH_OPENGL=0
         -DWITH_OPENMP=0
-        -DWITH_PNG=1
+        -DWITH_PNG=0
         -DWITH_PROTOBUF=0
-        -DWITH_TIFF=1
-        -DWITH_WEBP=1
+        -DWITH_TIFF=0
+        -DWITH_WEBP=0
         -DBUILD_EXAMPLES=0
-        -DBUILD_PACKAGE=1
+        -DBUILD_PACKAGE=0
         -DBUILD_PERF_TESTS=0
-        -DBUILD_PNG=1
         -DBUILD_SHARED_LIBS=0
         -DBUILD_TESTS=0
-        -DBUILD_ZLIB=1
+        -DBUILD_PNG=0
+        -DBUILD_ZLIB=0
+        -DBUILD_JPEG=0
+        -DBUILD_OPENJPEG=0
+        -DBUILD_TIFF=0
+        -DBUILD_WEBP=0
         -DBUILD_opencv_apps=0
         -DBUILD_opencv_bgsegm=0
         -DBUILD_opencv_datasets=0
-        -DBUILD_opencv_imgcodecs=1
-        -DBUILD_opencv_objdetect=1
+        -DBUILD_opencv_imgcodecs=0
+        -DBUILD_opencv_objdetect=0
         -DBUILD_opencv_imgproc=1
-        -DBUILD_opencv_tracking=1
-        -DBUILD_opencv_video=1
+        -DBUILD_opencv_tracking=0
+        -DBUILD_opencv_video=0
         -DBUILD_opencv_videoio=0
 )
 

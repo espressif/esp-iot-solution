@@ -27,9 +27,48 @@ menu "BLE Connection Management"
         help
             Set the duration to wait for completed. Use a value big enough to avoid retransmissions.
 
+    config BLE_CONN_MGR_MAX_CONNECTIONS
+        int "Maximum BLE connections"
+        range 1 BT_NIMBLE_MAX_CONNECTIONS if BT_NIMBLE_ENABLED
+        range 1 6
+        default 2
+        help
+            Set the maximum number of BLE links managed by BLE connection manager.
+            This value must not exceed the underlying BLE stack's maximum
+            connection configuration.
+
+    config BLE_CONN_MGR_GATT_CHANGED_AUTO
+        bool "Auto trigger GATT Service Changed on schema version update"
+        depends on BT_NIMBLE_ENABLED && (BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH) && BT_NIMBLE_GATT_SERVER
+        default n
+        select BT_NIMBLE_GATT_CACHING if BT_NIMBLE_ENABLED
+        help
+            Automatically compare the configured GATT schema version with a
+            persisted value in NVS at BLE host sync time. If the version changed,
+            ble_conn_mgr calls ble_svc_gatt_changed(0x0001, 0xFFFF) so bonded
+            clients can refresh their attribute cache.
+
+            When this option is enabled, NimBLE GATT caching (CONFIG_BT_NIMBLE_GATT_CACHING)
+            is turned on as well.
+
+    config BLE_CONN_MGR_GATT_SCHEMA_VERSION
+        int "GATT schema version"
+        depends on BLE_CONN_MGR_GATT_CHANGED_AUTO
+        range 1 999
+        default 1
+        help
+            Application-defined GATT database schema version used by
+            BLE_CONN_MGR_GATT_CHANGED_AUTO. Increase this value whenever the
+            server GATT database layout changes.
+
+            Valid range is 1..999. Zero is reserved so the value is never
+            ambiguous next to an unset NVS key. The value is stored with
+            nvs_set_u32 (uint32_t). If you need a larger monotonic counter,
+            bump in application code and call ble_svc_gatt_changed() yourself.
+
     config BLE_CONN_MGR_EXTENDED_ADV
         bool
-        depends on BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        depends on (BLE_CONN_MGR_ROLE_PERIPHERAL || BLE_CONN_MGR_ROLE_BOTH) && SOC_BLE_50_SUPPORTED
         default n
         select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
         prompt "Enable Extended Adv"
@@ -38,7 +77,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_EXTENDED_ADV_CAP
         int
-        range 0 15
+        range 0 255
         depends on BLE_CONN_MGR_EXTENDED_ADV
         default 0
         prompt "Set Extended Advertising Capability"
@@ -79,7 +118,7 @@ menu "BLE Connection Management"
 
     config BLE_CONN_MGR_PERIODIC_SYNC
         bool
-        depends on BLE_CONN_MGR_ROLE_CENTRAL || BLE_CONN_MGR_ROLE_BOTH && SOC_BLE_50_SUPPORTED
+        depends on (BLE_CONN_MGR_ROLE_CENTRAL || BLE_CONN_MGR_ROLE_BOTH) && SOC_BLE_50_SUPPORTED
         default n
         select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
         prompt "Enable Periodic Sync"
@@ -99,8 +138,80 @@ menu "BLE Connection Management"
 
             - BIT0: Reports flag, it is initially disabled when sync is created if set.
 
+    config BLE_CONN_MGR_PERIODIC_SYNC_AUTO_SID
+        int "Auto-create periodic sync on EXT_DISC when Advertising SID matches (-1=disabled)"
+        depends on BLE_CONN_MGR_PERIODIC_SYNC
+        range -1 15
+        default 2
+        help
+            Demo / legacy behavior: when BLE_CONN_MGR_PERIODIC_SYNC is enabled and this value is 0..15,
+            each BLE_GAP_EVENT_EXT_DISC with this Advertising SID triggers ble_gap_periodic_adv_sync_create.
+            Use -1 to disable when the central only needs extended scanning (e.g. extended advertising
+            without periodic trains). Ignored when Periodic Sync is disabled. Default 2 matches Espressif periodic examples.
+
+    config BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER
+        bool
+        depends on SOC_BLE_50_SUPPORTED
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_EXT_SCAN if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_SYNC if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_PERIODIC_ADV_SYNC_TRANSFER if BT_NIMBLE_ENABLED
+        prompt "Enable Periodic Advertising Sync Transfer (PAST)"
+        help
+            Enable Periodic Advertising Sync Transfer (PAST) APIs and events.
+            Use on Access Point to push local PAwR/periodic train sync info over ACL
+            (esp_ble_conn_periodic_sync_set_info), and on Tag to receive it
+            (esp_ble_conn_periodic_sync_receive). Independent of classic Periodic Sync
+            scan path so peripheral-only Tags can enable PAST without CENTRAL role.
+
+    config BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP
+        bool
+        depends on SOC_BLE_PERIODIC_ADV_WITH_RESPONSE
+        depends on (BLE_CONN_MGR_PERIODIC_ADV || BLE_CONN_MGR_PERIODIC_SYNC || BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER)
+        default n
+        select BT_NIMBLE_EXT_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_ENABLE_PERIODIC_ADV if BT_NIMBLE_ENABLED
+        select BT_NIMBLE_PERIODIC_ADV_WITH_RESPONSES if BT_NIMBLE_ENABLED
+        prompt "Enable Periodic Advertising with Responses (PAwR)"
+        help
+            Enable Periodic Advertising with Responses (PAwR) APIs and events.
+            Only available on SoCs with SOC_BLE_PERIODIC_ADV_WITH_RESPONSE (e.g. ESP32-C5/C6/C61/H2).
+            Requires classic Periodic Adv and/or Periodic Sync / PAST so either the advertiser
+            (AP) or synchronizer (Tag) PAwR path can be used.
+
+    config BLE_CONN_MGR_PAWR_MAX_SUBEV_SET
+        int "Max subevents per PAwR subevent-data set call"
+        depends on BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP
+        range 1 64
+        default 16
+        help
+            Upper bound for num_subevents passed to esp_ble_conn_pawr_subev_data_set().
+
     menuconfig BLE_CONN_MGR_SM
         bool "Enable Security Manager"
+
+    config BLE_CONN_MGR_SM_DEFAULT_CAP
+        int "Default Security Manager Capability (when SM disabled)"
+        range 0 15
+        default 0
+        help
+            Security manager capability bitmap used when BLE_CONN_MGR_SM is disabled.
+            Default 0 means no bonding, MITM, or Secure Connections until you raise this
+            (or enable BLE_CONN_MGR_SM). Bits:
+            - BIT0: OOB
+            - BIT1: Bond
+            - BIT2: MITM
+            - BIT3: Secure Connections
+
+    config BLE_CONN_MGR_SM_DEFAULT_KEY_DIST
+        int "Default key distribution (when SM disabled)"
+        range 0 15
+        default 3
+        help
+            Key distribution bitmap used when BLE_CONN_MGR_SM is disabled.
+            Typical default 3 means ENC + ID.
 
     if BLE_CONN_MGR_SM
         choice BLE_CONN_MGR_SM_IO_TYPE
@@ -153,5 +264,22 @@ menu "BLE Connection Management"
                 Set key distribution to indicate which keys to distribute during pairing, it will be set if bond flag is set to 1.
 
     endif # BLE_CONN_MGR_SM
+
+    config BLE_CONN_MGR_L2CAP_COC_MTU
+        int "L2CAP CoC SDU MTU"
+        range 23 512
+        default 512
+        help
+            Set the default SDU MTU used by BLE L2CAP CoC memory pool.
+
+    config BLE_CONN_MGR_SCAN_RESULT_ADV_MAX_LEN
+        int "Max octets copied per extended scan report fragment into esp_ble_conn_scan_result_t"
+        depends on BT_NIMBLE_EXT_ADV
+        range 31 1650
+        default 31
+        help
+            Extended advertising reports may be split across multiple HCI fragments
+            (each up to 255 octets). This sets the size of esp_ble_conn_scan_result_t.adv_data
+            and caps each posted fragment. Larger values increase RAM for every central build.
 
 endmenu

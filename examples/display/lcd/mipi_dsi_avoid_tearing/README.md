@@ -13,11 +13,60 @@
 
 `esp_lcd` allows user to add their own panel drivers in the project scope (i.e. panel driver can live outside of esp-idf), so that the upper layer code like LVGL porting code can be reused without any modifications, as long as user-implemented panel driver follows the interface defined in the `esp_lcd` component.
 
-This example demonstrates how to avoid tearing when using LVGL with MIPI-DSI interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish music player.
+This example demonstrates how to avoid tearing when using LVGL with MIPI-DSI interface screens in an esp-idf project. The example will use the LVGL library to draw a stylish benchmark demo.
 
-The LVGL-related parameter configurations, such as LVGL's registered resolution, LVGL task-related parameters, and tearing prevention methods, can be configured in lvgl_port_v9.h.
+This example uses the `esp_lvgl_adapter` component, which provides a unified LVGL adaptation layer for ESP-IDF. The adapter automatically handles:
+- Display registration with appropriate tearing avoidance mode (uses recommended default)
+- LVGL task management and timer handling
+- Thread-safe access through lock/unlock APIs
+- Automatic VSYNC synchronization
 
-This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/master/porting/index.html).
+The display rotation angle can be configured through `idf.py menuconfig` under `Example Configuration` menu. The adapter will automatically calculate the required number of frame buffers based on the rotation setting.
+
+This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html) to generate the ticks needed by LVGL and uses a dedicated task to run the `lv_timer_handler()`. Since the LVGL APIs are not thread-safe, this example uses a mutex which be invoked before the call of `lv_timer_handler()` and released after it. The same mutex needs to be used in other tasks and threads around every LVGL (lv_...) related function call and code. For more porting guides, please refer to [LVGL porting doc](https://docs.lvgl.io/9.2/porting/index.html).
+
+## Temporary patch (PPA freeze fix)
+
+To avoid a known sporadic PPA freeze issue when using rotation and anti-tearing features, you need to **temporarily apply the patch provided in this repository**:
+
+`components/display/tools/esp_lvgl_adapter/0001-bugfix-lcd-Fixed-PPA-freeze.patch`
+
+This patch targets ESP-IDF release v5.5 at commit `02c5f2dbb95859bc4a35fb6d82bbc0784968efc5`. It fixes a register configuration on the PPA SRM path to avoid freezes under heavy workloads.
+
+### How to apply the patch on ESP-IDF v5.5 (commit 02c5f2d)
+
+1. Prepare the exact ESP-IDF commit:
+
+```
+# assuming you already have an esp-idf repository locally
+export IDF_PATH=/path/to/esp-idf
+cd $IDF_PATH
+git fetch --all
+git checkout 02c5f2dbb95859bc4a35fb6d82bbc0784968efc5
+git submodule update --init --recursive
+```
+
+2. Apply the example-provided patch (using `git am`):
+
+```
+# point to this repository path (replace with your actual path)
+export IOT_SOLUTION=/path/to/esp-iot-solution
+
+cd $IDF_PATH
+git am $IOT_SOLUTION/components/display/tools/esp_lvgl_adapter/0001-bugfix-lcd-Fixed-PPA-freeze.patch
+```
+
+3. With the patched ESP-IDF, go back to this example’s root and follow the “Build and Flash” steps below to build, flash, and verify.
+
+To revert or if you encounter conflicts:
+
+```
+# if conflicts occur during apply
+git am --abort
+
+# if already applied and you want to undo the last patch
+git reset --hard HEAD~1
+```
 
 ## How to use the example
 
@@ -26,7 +75,7 @@ This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en
 ### Hardware Required
 
 * An ESP32-P4-Function-EV-Board.
-* A 7-inch 1024 x 600 LCD screen powered by the [EK79007](https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-p4-function-ev-board/camera_display_datasheet/display_driver_chip_EK79007AD_datasheet.pdf) IC, accompanied by a 32-pin FPC connection [adapter board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-p4-function-ev-board/schematics/esp32-p4-function-ev-board-lcd-subboard-schematics.pdf) ([LCD Specifications](https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-p4-function-ev-board/camera_display_datasheet/display_datasheet.pdf)).
+* A 7-inch 1024 x 600 LCD screen powered by the [EK79007](https://dl.espressif.com/dl/schematics/display_driver_chip_EK79007AD_datasheet.pdf) IC, accompanied by a 32-pin FPC connection [adapter board](https://dl.espressif.com/dl/schematics/esp32-p4-function-ev-board-lcd-subboard-schematics.pdf) ([LCD Specifications](https://dl.espressif.com/dl/schematics/display_datasheet.pdf)).
 * A USB-C cable for power supply and programming.
 * Please refer to the following steps for the connection:
     * **Step 1**. According to the table below, connect the pins on the back of the screen adapter board to the corresponding pins on the development board.
@@ -44,7 +93,10 @@ This example uses the [esp_timer](https://docs.espressif.com/projects/esp-idf/en
 
 ### Configure the Project
 
-Run `idf.py menuconfig` and navigate to `Example Configuration` menu.
+Run `idf.py menuconfig` and navigate to `Example Configuration` menu to configure:
+- **LCD Rotation Angle**: Choose from 0°, 90°, 180°, or 270° rotation (default: 0°)
+
+Note: The tearing avoidance mode is automatically set to the recommended default. The number of frame buffers is calculated automatically based on the rotation angle.
 
 ### Build and Flash
 

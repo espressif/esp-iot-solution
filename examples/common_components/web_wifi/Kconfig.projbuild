@@ -1,0 +1,89 @@
+menu "4G Modem WiFi Config"
+    config ESP_WIFI_STA_SSID
+        string "WiFi STA SSID"
+        default ""
+        help
+            WiFi SSID (network name) to connect to or empty for Off.
+
+    config ESP_WIFI_STA_PASSWORD
+        string "WiFi STA Password"
+        default ""
+        help
+            WiFi Password if WEP/WPA/WPA2 or empty if Open.
+
+    config ESP_WIFI_AP_SSID
+        string "WiFi AP SSID"
+        default "ESP-USB-4G"
+        help
+            AP SSID (network name) to create or empty for Off.
+
+    config ESP_WIFI_AP_PASSWORD
+        string "WiFi AP Password"
+        default ""
+        help
+            AP password for WPA2 or empty for Open.
+
+    config ESP_WIFI_AP_CHANNEL
+        int "WiFi AP Channel"
+        default 6
+        range 1 13
+        help
+            AP channel for better connection performance.
+
+    choice
+        prompt "WiFi Bandwidth"
+        default WIFI_BANDWIFTH_40
+
+        config WIFI_BANDWIFTH_20
+            bool "20MHz"
+        config WIFI_BANDWIFTH_40
+            bool "40MHz"
+    endchoice
+
+    config MODEM_WIFI_MAX_STA
+        int "Maximal STA connections"
+        default 10
+        help
+            Max number of the STA connects to AP.
+
+    config SERVER_IP
+        string "WiFi AP IP Address"
+        default "192.168.4.1"
+        help
+            IP address that the ESP will assign to it's AP interface. You can use this IP to connect to the camera after flashing.
+
+    config ESP_MAXIMUM_RETRY
+        int "Maximum retry"
+        default 5
+        help
+            Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+
+    config EXAMPLE_ENABLE_WEB_ROUTER
+        bool "Open web configuration"
+        default y
+        help
+            Open the web router, you can configure the system parameters
+
+    config EXAMPLE_WEB_MOUNT_POINT
+        string "Website mount point in VFS"
+        default "/spiffs"
+        depends on EXAMPLE_ENABLE_WEB_ROUTER
+        help
+            Specify the mount point in VFS.
+
+    config EXAMPLE_WEB_USERNAME
+        string "Default login username"
+        default "esp32"
+        depends on EXAMPLE_ENABLE_WEB_ROUTER
+        help
+            Default username for logging in to the server.
+
+    config EXAMPLE_WEB_PASSWORD
+        string "Default login password"
+        default "12345678"
+        depends on EXAMPLE_ENABLE_WEB_ROUTER
+        help
+            Default password for logging in to the server.
+
+
+endmenu

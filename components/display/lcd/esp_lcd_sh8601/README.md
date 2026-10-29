@@ -11,7 +11,7 @@ Implementation of the SH8601 LCD controller with [esp_lcd](https://docs.espressi
 ## Add to project
 
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
-You can add them to your project via `idf.py add-dependancy`, e.g.
+You can add them to your project via `idf.py add-dependency`, e.g.
 ```
     idf.py add-dependency "espressif/esp_lcd_sh8601"
 ```
@@ -24,12 +24,9 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ```c
     ESP_LOGI(TAG, "Initialize SPI bus");
-    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
-                                                                    EXAMPLE_PIN_NUM_LCD_DATA0,
-                                                                    EXAMPLE_PIN_NUM_LCD_DATA1,
-                                                                    EXAMPLE_PIN_NUM_LCD_DATA2,
-                                                                    EXAMPLE_PIN_NUM_LCD_DATA3,
-                                                                    EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
+    const spi_bus_config_t buscfg = SH8601_PANEL_BUS_SPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
+                                                                EXAMPLE_PIN_NUM_LCD_DATA0,
+                                                                EXAMPLE_LCD_H_RES * 80 * sizeof(uint16_t));
     ESP_ERROR_CHECK(spi_bus_initialize(EXAMPLE_LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     ESP_LOGI(TAG, "Install panel IO");

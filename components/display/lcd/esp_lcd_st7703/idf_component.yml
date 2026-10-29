@@ -1,4 +1,4 @@
-version: "1.0.3"
+version: "2.0.2"
 targets:
   - esp32p4
 description: ESP LCD ST7703(MIPI-DSI)
@@ -6,7 +6,7 @@ url: https://github.com/espressif/esp-iot-solution/tree/master/components/displa
 repository: https://github.com/espressif/esp-iot-solution.git
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
-  idf: ">=5.3"
+  idf: ">=5.4"
   cmake_utilities: "0.*"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

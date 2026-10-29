@@ -1,130 +1,125 @@
 /*
- * SPDX-FileCopyrightText: 2024-2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 #pragma once
-#include <stdio.h>
+
+#include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
-#include "touch_sensor_lowlevel.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * @brief Touch slider event
+ * @brief Touch slider event.
  */
 typedef enum {
-    TOUCH_SLIDER_EVENT_NONE,        /*!< Touch slider is stationary */
-    TOUCH_SLIDER_EVENT_RIGHT_SWIPE, /*!< Touch slider is swiped right (from 0 to position_range) */
-    TOUCH_SLIDER_EVENT_LEFT_SWIPE,  /*!< Touch slider is swiped left (from position_range to 0) */
-    TOUCH_SLIDER_EVENT_RELEASE,     /*!< Touch slider is released */
-    TOUCH_SLIDER_EVENT_POSITION,    /*!< Touch slider position is calculated */
+    TOUCH_SLIDER_EVENT_NONE,        /*!< Touch slider is stationary. */
+    TOUCH_SLIDER_EVENT_RIGHT_SWIPE, /*!< Slider was swiped toward position_range. */
+    TOUCH_SLIDER_EVENT_LEFT_SWIPE,  /*!< Slider was swiped toward position zero. */
+    TOUCH_SLIDER_EVENT_RELEASE,     /*!< All slider channels were released. */
+    TOUCH_SLIDER_EVENT_POSITION,    /*!< A new slider position was calculated. */
 } touch_slider_event_t;
 
 /**
- * @brief Configuration structure for touch slider sensor
+ * @brief Configuration for a touch slider sensor.
+ *
+ * `thresholds` are absolute normalized fused-count values in the FSM decision
+ * domain. They are not physical raw counts and are not ratios relative to a
+ * presumed baseline of 5000. The array values are copied by create().
  */
 typedef struct {
-    uint32_t channel_num;         /*!< Number of touch slider sensor channels */
-    uint32_t *channel_list;       /*!< Touch channel list */
-    float *channel_threshold;     /*!< Threshold for touch detection for each channel */
-    uint32_t *channel_gold_value; /*!< (Optional) Reference values for touch channels */
-    uint32_t debounce_times;      /*!< Number of consecutive readings needed to confirm state change */
-    uint32_t filter_reset_times;  /*!< Number of consecutive readings to reset position filter */
-    uint32_t position_range;       /*!< The right region of touch slider position range, [0, position_range (less than or equal to 255)] */
-    float swipe_threshold;        /*!< The speed threshold for identifying swiping */
-    float swipe_hysterisis;       /*!< The speed hysterisis for identifying swiping */
-    float swipe_alpha;            /*!< Filter parameter for estimating speed */
-    bool skip_lowlevel_init;      /*!< Skip low level initialization when working with existing touch driver */
+    uint32_t channel_num;          /*!< Number of slider channels; must be at least two. */
+    uint32_t *channel_list;        /*!< Channel IDs, with channel_num entries. */
+    uint32_t *thresholds;          /*!< Per-channel normalized press thresholds. */
+    uint32_t sample_period_ms;     /*!< Low-level sampling period; zero selects its default. */
+    uint32_t sample_cfg_num;       /*!< Frequency samples per frame; zero selects its default. */
+    uint32_t debounce_active;      /*!< Consecutive active frames; zero selects the FSM default. */
+    uint32_t debounce_inactive;    /*!< Consecutive inactive frames; zero selects the FSM default. */
+    uint32_t filter_reset_times;   /*!< Inactive event cycles before resetting the position filter. */
+    uint32_t position_range;       /*!< Maximum position; output is in [0, position_range]. */
+    uint8_t calculate_window;      /*!< Adjacent channels used for position; zero selects a default. */
+    float swipe_threshold;         /*!< Speed threshold for identifying a swipe. */
+    float swipe_hysterisis;        /*!< Hysteresis around the swipe speed threshold. */
+    float swipe_alpha;             /*!< IIR coefficient for speed estimation, in [0, 1]. */
+    bool skip_lowlevel_init;       /*!< Reuse an existing low-level instance when true. */
 } touch_slider_config_t;
 
 typedef struct touch_slider_sensor_t *touch_slider_handle_t;
 
 /**
- * @brief Touch slider sensor event callback function type
+ * @brief Touch slider event callback.
  *
- * @param handle    Touch slider sensor handle
- * @param event     Touch slider event
- * @param data      Touch slider data. Position if event == TOUCH_SLIDER_EVENT_POSITION, displacement if event == TOUCH_SLIDER_EVENT_RELEASE
- * @param cb_arg    User data passed to the callback
+ * @param[in] handle Touch slider sensor handle.
+ * @param[in] event Event type.
+ * @param[in] data Position for POSITION, or signed displacement for RELEASE.
+ * @param[in] cb_arg User data supplied at create().
  */
-typedef void (*touch_slider_event_cb_t)(touch_slider_handle_t handle, touch_slider_event_t event, int32_t data, void *cb_arg);
+typedef void (*touch_slider_event_cb_t)(touch_slider_handle_t handle,
+                                        touch_slider_event_t event,
+                                        int32_t data, void *cb_arg);
 
 /**
- * @brief Create a touch slider sensor instance
+ * @brief Create a touch slider sensor instance.
  *
- * This function initializes the touch sensor hardware (unless skip_lowlevel_init is true),
- * sets up FSM instances for touch detection, and registers callbacks for touch events.
+ * The low-level driver is started before callbacks are registered, so startup
+ * calibration samples cannot enter the FSM. One FSM receives complete frames
+ * and performs all configured frequency fusion.
  *
- * @param config   Touch slider sensor configuration
- * @param handle   Pointer to receive the created touch slider sensor handle
- * @param cb       Callback function for touch slider events
- * @param cb_arg   User data to pass to callback function
- *
- * @return
- *     - ESP_OK on success
- *     - ESP_ERR_INVALID_ARG if config, handle, or required config fields are NULL
- *     - ESP_ERR_NO_MEM if memory allocation fails
- *     - ESP_FAIL if touch sensor or FSM initialization fails
+ * @param[in]  config Slider configuration.
+ * @param[out] handle Receives the created sensor handle.
+ * @param[in]  cb Event callback, or NULL.
+ * @param[in]  cb_arg User data passed to the callback.
+ * @return ESP_OK on success, or an error from allocation, low-level, or FSM setup.
  */
-esp_err_t touch_slider_sensor_create(touch_slider_config_t *config, touch_slider_handle_t *handle, touch_slider_event_cb_t cb, void *cb_arg);
+esp_err_t touch_slider_sensor_create(const touch_slider_config_t *config,
+                                     touch_slider_handle_t *handle,
+                                     touch_slider_event_cb_t cb, void *cb_arg);
 
 /**
- * @brief Delete a touch slider sensor instance
+ * @brief Delete a touch slider sensor instance.
  *
- * Stops all FSMs, unregisters callbacks, frees resources, and optionally
- * deinitializes the touch sensor hardware.
- *
- * @param handle   Touch slider sensor handle to delete
- *
- * @return
- *     - ESP_OK on success (or if handle is NULL)
- *     - ESP_ERR_INVALID_STATE if sensor state is invalid
+ * @param[in] handle Handle returned by touch_slider_sensor_create(), or NULL.
+ * @return ESP_OK on success, or the first stop/delete error.
  */
 esp_err_t touch_slider_sensor_delete(touch_slider_handle_t handle);
 
 /**
- * @brief Get touch sensor data for a specific channel and frequency
+ * @brief Get the normalized fused filtered amplitude for one channel.
  *
- * Retrieves the smoothed touch sensor reading from the specified channel
- * and frequency instance.
+ * The returned value is the positive part of `fused_filtered`; frequency
+ * fusion and smoothing are performed by the FSM.
  *
- * @param handle        Touch slider sensor handle
- * @param channel       Touch channel number
- * @param channel_alt   Frequency instance index (0 to SOC_TOUCH_SAMPLE_CFG_NUM-1)
- * @param data         Pointer to store the smoothed touch sensor data
- *
- * @return
- *     - ESP_OK on success
- *     - ESP_ERR_INVALID_ARG if handle or data is NULL
- *     - ESP_ERR_INVALID_STATE if sensor not initialized
- *     - ESP_ERR_NOT_FOUND if channel not configured
+ * @param[in]  handle Slider sensor handle.
+ * @param[in]  channel Configured channel number.
+ * @param[out] data Receives the nonnegative normalized amplitude.
+ * @return ESP_OK, ESP_ERR_INVALID_ARG, ESP_ERR_INVALID_STATE, or ESP_ERR_NOT_FOUND.
  */
-esp_err_t touch_slider_sensor_get_data(touch_slider_handle_t handle, uint32_t channel, uint32_t channel_alt, uint32_t *data);
+esp_err_t touch_slider_sensor_get_data(touch_slider_handle_t handle,
+                                       uint32_t channel, uint32_t *data);
 
 /**
- * @brief Get touch sensor data for a specific channel and frequency
+ * @brief Get the current slider state.
  *
- * Retrieves the smoothed touch sensor reading from the specified channel
- * and frequency instance.
- *
- * @param handle        Touch slider sensor handle
- * @param pressed       Touch slider is pressed or not
- * @param pos           Touch slider speed
- * @param speed         Touch slider speed
- *
+ * @param[in]  handle Slider sensor handle.
+ * @param[out] pressed True when any channel is active.
+ * @param[out] pos Current filtered position.
+ * @param[out] speed Current filtered position speed.
  */
-void touch_slider_sensor_get_state(touch_slider_handle_t handle, bool *pressed, uint32_t *pos, float *speed);
+void touch_slider_sensor_get_state(touch_slider_handle_t handle, bool *pressed,
+                                   uint32_t *pos, float *speed);
 
 /**
- * @brief Handle pending touch sensor events
+ * @brief Process pending touch slider frames and emit events.
  *
- * Processes events from all FSM instances. This function should be called
- * periodically to update touch states and trigger callbacks.
- *
- * @param handle    Touch slider sensor handle
- *
- * @return
- *     - ESP_OK on success
- *     - ESP_ERR_INVALID_ARG if handle is NULL
- *     - ESP_ERR_INVALID_STATE if sensor not initialized
+ * @param[in] handle Slider sensor handle.
+ * @return ESP_OK on success, or an FSM processing error.
  */
 esp_err_t touch_slider_sensor_handle_events(touch_slider_handle_t handle);
+
+#ifdef __cplusplus
+}
+#endif

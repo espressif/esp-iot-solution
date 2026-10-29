@@ -1,5 +1,5 @@
 variables:
-  ESP_IDF_DOC_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.2:1-1"
+  ESP_IDF_DOC_ENV_IMAGE: "$CI_DOCKER_REGISTRY/esp-idf-doc-env-v5.5:1-1"
 
 .build_docs_template:
   image: $ESP_IDF_DOC_ENV_IMAGE

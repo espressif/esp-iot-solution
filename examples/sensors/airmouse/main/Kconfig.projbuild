@@ -1,0 +1,566 @@
+menu "IMU Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    choice AIRMOUSE_BOARD_PRESET
+        prompt "AirMouse board preset"
+        default AIRMOUSE_BOARD_PRESET_ESP_HOSTED_P4_FUNC_BOARD if ESP_HOSTED_P4_DEV_BOARD_FUNC_BOARD
+        default AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE if IDF_TARGET_ESP32C5
+        default AIRMOUSE_BOARD_PRESET_CUSTOM
+        help
+            Select a known board preset to apply hardware-pin defaults and
+            allow the boot path to skip the initial Wi-Fi + HTTP hardware
+            configuration gate when the preset already provides the required
+            pin mapping.
+
+        config AIRMOUSE_BOARD_PRESET_CUSTOM
+            bool "Custom / no preset"
+
+        config AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+            bool "ESP-SPOT-C5"
+            depends on IDF_TARGET_ESP32C5
+            help
+                Use the known ESP-SPOT-C5 AirMouse hardware pin defaults.
+
+        config AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+            bool "SensairShuttle"
+            depends on IDF_TARGET_ESP32C5
+            help
+                Use the SensairShuttle default hardware pin mapping that was
+                previously implied by the generic ESP32C5 target defaults.
+
+        config AIRMOUSE_BOARD_PRESET_ESP_HOSTED_P4_FUNC_BOARD
+            bool "ESP-Hosted P4 Function Board"
+            depends on ESP_HOSTED_P4_DEV_BOARD_FUNC_BOARD
+            help
+                Use the ESP_HOSTED_P4_DEV_BOARD_FUNC_BOARD AirMouse board
+                selection entry. Hardware pins still need to be provided
+                through runtime configuration.
+
+    endchoice
+
+    config AIRMOUSE_BOARD_PRESET_SKIP_INITIAL_HTTP_CONFIG
+        bool
+        default y if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+        default y if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+        default n
+
+    config IMU_I2C_SCL
+        int "Imu I2C SCL"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 26 if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+        default 3 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+        help
+            Used to connect to IMU SCL pin.
+
+    config IMU_I2C_SDA
+        int "Imu I2C SDA"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 25 if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+        default 2 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+        help
+            Used to connect to IMU SDA pin.
+
+    config IMU_SDO_GPIO_CONTROL
+        bool "Control IMU SDO by GPIO"
+        default n if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+        default y if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+        default y
+        help
+            Enable this only when the board routes the BMI270 SDO pin to an
+            MCU GPIO and software must drive the I2C address select level.
+            Some boards still route SDO to the MCU even if a pull-down is
+            present on the PCB, so keep this enabled unless SDO is truly not
+            connected to a controllable GPIO.
+
+    config IMU_SDO_PIN
+        int "Imu SDO PIN"
+        depends on IMU_SDO_GPIO_CONTROL
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 9 if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+        default 9 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+        help
+            I2C Address bit-0 select in I2C Mode.
+
+    config AIRMOUSE_ENABLE_BMM350
+        bool "Enable BMM350 magnetometer"
+        default n
+        help
+            Enable BMM350 magnetometer initialization and polling read
+            support for airmouse attitude initialization.
+
+    if AIRMOUSE_ENABLE_BMM350
+
+        config MAG_I2C_SCL
+            int "Magnetometer I2C SCL"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+            default 3 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+            default IMU_I2C_SCL
+            help
+                SCL pin for the BMM350 magnetometer. Set this equal to
+                IMU_I2C_SCL to reuse the BMI270 I2C bus, or choose a
+                different free pin pair to place the magnetometer on its
+                own I2C controller.
+
+        config MAG_I2C_SDA
+            int "Magnetometer I2C SDA"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+            default 2 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+            default IMU_I2C_SDA
+            help
+                SDA pin for the BMM350 magnetometer. Set this equal to
+                IMU_I2C_SDA to reuse the BMI270 I2C bus, or choose a
+                different free pin pair to place the magnetometer on its
+                own I2C controller.
+
+    endif
+
+    config RESET_BUTTON
+            int "Reset Button"
+            default 28 if AIRMOUSE_BOARD_PRESET_ESP_SPOT_C5
+            default 28 if AIRMOUSE_BOARD_PRESET_SENSAIR_SHUTTLE
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+            help
+                Used for manually triggering data acquisition or function switching.
+
+    config AIRMOUSE_IMU_SAMPLE_INTERVAL_MS
+            int "Airmouse IMU sample interval (ms)"
+            range 1 1000
+            default 10
+            help
+                Sampling interval of IMU update loop in milliseconds.
+
+    config AIRMOUSE_BLE_CCCD_RESTORE_DELAY_MS
+            int "BLE CCCD restore delay (ms)"
+            range 0 60000
+            default 10000
+            help
+                Grace period after BLE auth complete before attempting
+                bonded per-peer CCCD restore from NVS. This gives the
+                host time to rewrite CCCD values in the current
+                connection before history-based restore is considered.
+
+    config AIRMOUSE_WIFI_SSID
+            string "AirMouse Wi-Fi SSID"
+            default "espressif"
+            help
+                Wi-Fi SSID used by the AirMouse HTTP configuration flow.
+
+    config AIRMOUSE_WIFI_PASS
+            string "AirMouse Wi-Fi password"
+            default "123456"
+            help
+                Wi-Fi password used by the AirMouse HTTP configuration flow.
+
+    menu "Gesture Control"
+
+        menu "Knob Detector"
+
+            config AIRMOUSE_GESTURE_KNOB_AXIS
+                int "Knob primary axis"
+                range 0 2
+                default 0
+                help
+                    Primary gyro axis used by the knob detector.
+                    0 = X, 1 = Y, 2 = Z.
+
+            config AIRMOUSE_GESTURE_KNOB_CW_SIGN
+                int "Knob clockwise sign"
+                range -1 1
+                default 1
+                help
+                    Sign applied to the primary knob axis.
+                    Use -1 or 1.
+
+            config AIRMOUSE_GESTURE_KNOB_TRIGGER_ANGLE_DEG_MILLI
+                int "Knob trigger angle (x1000 deg)"
+                range 0 360000
+                default 30000
+                help
+                    Trigger angle threshold in degree, scaled by 1000.
+                    Example: 30000 means 30.000 deg.
+
+            config AIRMOUSE_GESTURE_KNOB_ENTER_DPS_MILLI
+                int "Knob enter threshold (x1000 deg/s)"
+                range 0 1000000
+                default 60000
+
+            config AIRMOUSE_GESTURE_KNOB_NON_AXIS_REJECT_DPS_MILLI
+                int "Knob non-axis reject threshold (x1000 deg/s)"
+                range 0 1000000
+                default 250000
+
+            config AIRMOUSE_GESTURE_KNOB_AXIS_RATIO_LIMIT_MILLI
+                int "Knob axis ratio limit (x1000)"
+                range 0 1000
+                default 400
+                help
+                    Example: 400 means 0.400.
+
+            config AIRMOUSE_GESTURE_KNOB_STABLE_DPS_MILLI
+                int "Knob slow-down threshold (x1000 deg/s)"
+                range 0 1000000
+                default 30000
+
+            config AIRMOUSE_GESTURE_KNOB_CANDIDATE_TIMEOUT_MS
+                int "Knob candidate timeout (ms)"
+                range 0 60000
+                default 1000
+
+            config AIRMOUSE_GESTURE_KNOB_REPEAT_MS
+                int "Knob repeat interval (ms)"
+                range 0 60000
+                default 100
+
+            config AIRMOUSE_GESTURE_KNOB_SAMPLE_QUEUE_LEN
+                int "Knob sample queue length"
+                range 1 256
+                default 16
+
+        endmenu
+
+        menu "Page Switch Detector"
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_HORIZONTAL_AXIS
+                int "Page switch horizontal axis"
+                range 0 2
+                default 2
+                help
+                    0 = X, 1 = Y, 2 = Z.
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_LEFT_SIGN
+                int "Page switch left sign"
+                range -1 1
+                default 1
+                help
+                    Use -1 or 1.
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_VERTICAL_AXIS
+                int "Page switch vertical axis"
+                range 0 2
+                default 1
+                help
+                    0 = X, 1 = Y, 2 = Z.
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_UP_SIGN
+                int "Page switch up sign"
+                range -1 1
+                default 1
+                help
+                    Use -1 or 1.
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_TRIGGER_DPS_MILLI
+                int "Page switch trigger threshold (x1000 deg/s)"
+                range 0 1000000
+                default 250000
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_RELEASE_DPS_MILLI
+                int "Page switch release threshold (x1000 deg/s)"
+                range 0 1000000
+                default 80000
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_AXIS_RATIO_LIMIT_MILLI
+                int "Page switch axis ratio limit (x1000)"
+                range 0 1000
+                default 500
+                help
+                    Example: 500 means 0.500.
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_COOLDOWN_MS
+                int "Page switch cooldown (ms)"
+                range 0 60000
+                default 300
+
+            config AIRMOUSE_GESTURE_SPACE_SWITCH_SAMPLE_QUEUE_LEN
+                int "Page switch sample queue length"
+                range 1 256
+                default 16
+
+        endmenu
+
+        menu "Inference"
+
+            config AIRMOUSE_GESTURE_INFER_ENABLE
+                bool "Enable gesture inference"
+                default y
+                help
+                    Enable gesture inference in the gesture control task.
+
+            if AIRMOUSE_GESTURE_INFER_ENABLE
+
+                config AIRMOUSE_GESTURE_SAMPLE_COUNT
+                    int "Gesture inference sample count"
+                    range 1 400
+                    default 150
+                    help
+                        Number of IMU samples in one gesture inference window.
+                        The current simple gesture model is exported with 150 samples.
+
+                config AIRMOUSE_GESTURE_SAMPLE_INTERVAL_MS
+                    int "Gesture inference sample interval (ms)"
+                    range 1 1000
+                    default 10
+                    help
+                        Sample interval expected by the gesture inference model.
+
+                config AIRMOUSE_GESTURE_AXES_PER_SAMPLE
+                    int "Gesture inference axes per sample"
+                    range 1 12
+                    default 3
+                    help
+                        Number of float axes per IMU sample in the inference input.
+                        The current simple gesture model consumes 3 axes.
+
+                config AIRMOUSE_GESTURE_LABEL_COUNT
+                    int "Gesture inference label count"
+                    range 1 16
+                    default 5
+                    help
+                        Number of output labels produced by the gesture model.
+                        The current simple gesture model outputs 5 labels.
+
+                config AIRMOUSE_GESTURE_SCORE_THRESHOLD_MILLI
+                    int "Gesture inference score threshold (x1000)"
+                    range 0 1000
+                    default 850
+                    help
+                        Minimum top-label score required before a gesture result participates
+                        in the confirm/reset logic. Value is scaled by 1000.
+                        Example: 850 means 0.850.
+
+                config AIRMOUSE_GESTURE_WINDOW_STEP
+                    int "Gesture inference sliding window step"
+                    range 1 AIRMOUSE_GESTURE_SAMPLE_COUNT
+                    default 10
+                    help
+                        Number of IMU samples to slide forward after each gesture inference window.
+
+                config AIRMOUSE_GESTURE_CONFIRM_COUNT
+                    int "Gesture inference consecutive confirm count"
+                    range 1 100
+                    default 5
+                    help
+                        Number of consecutive same-label inference results required before reporting a gesture.
+
+                config AIRMOUSE_GESTURE_RESET_COUNT
+                    int "Gesture inference consecutive reset count"
+                    range AIRMOUSE_GESTURE_CONFIRM_COUNT 100
+                    default 12
+                    help
+                        Number of consecutive same-label inference results after which the detection state is reset.
+
+            endif
+
+        endmenu
+
+        config AIRMOUSE_GESTURE_SPACE_SWITCH_WINDOW_MS
+            int "Gesture space switch business window (ms)"
+            range 300 10000
+            default 3000
+            help
+                Time window after the multi-click trigger during which
+                detected runtime space-switch events are allowed to map
+                to airmouse business actions.
+
+    endmenu
+
+    menu "Pose Mapping Configuration"
+
+        menu "Cursor Output"
+
+                choice AIRMOUSE_POSE_CURSOR_MODE
+                    prompt "Airmouse pose cursor output mode"
+                    default AIRMOUSE_POSE_CURSOR_MODE_ABSOLUTE
+
+                    config AIRMOUSE_POSE_CURSOR_MODE_RELATIVE
+                        bool "Relative mouse dx/dy output"
+
+                    config AIRMOUSE_POSE_CURSOR_MODE_ABSOLUTE
+                        bool "Absolute mouse x/y output"
+
+                endchoice
+
+                choice AIRMOUSE_POSE_CURSOR_MAPPING
+                    prompt "Airmouse pose cursor geometric mapping"
+                    default AIRMOUSE_POSE_CURSOR_MAPPING_ANGLE_VECTOR
+
+                    config AIRMOUSE_POSE_CURSOR_MAPPING_RAY_PROJECTION
+                        bool "Ray projection mapping"
+                        help
+                            Use the existing ray-to-screen-plane projection:
+                            u = dist * side_x / depth, v = dist * side_y / depth.
+                            This keeps the current AirMouse behavior but may amplify movement
+                            and jitter near the projection edge.
+
+                    config AIRMOUSE_POSE_CURSOR_MAPPING_ANGLE_VECTOR
+                        bool "Angle vector mapping"
+                        help
+                            Use angular displacement from the forward axis:
+                            angle_x = atan2(side_x, depth),
+                            angle_y = atan2(side_y, depth).
+                            This avoids the 1/depth amplification of ray projection and is
+                            better suited to joystick-like absolute control.
+
+                endchoice
+
+                config AIRMOUSE_POSE_RANGE_X_DEG
+                    int "Pose cursor range X (deg)"
+                    range 1 89
+                    default 60
+                    help
+                        Maximum horizontal angular displacement mapped to normalized
+                        cursor coordinate u = +/-1.
+
+                        This range is shared by both ray projection and angle-vector
+                        mapping. In ray projection mode, u is computed as:
+                        tan(angle_x) / tan(range_x). In angle-vector mode, u is
+                        computed as: angle_x / range_x.
+
+                config AIRMOUSE_POSE_RANGE_Y_DEG
+                    int "Pose cursor range Y (deg)"
+                    range 1 89
+                    default 50
+                    help
+                        Maximum vertical angular displacement mapped to normalized
+                        cursor coordinate v = +/-1.
+
+                        This range is shared by both ray projection and angle-vector
+                        mapping. In ray projection mode, v is computed as:
+                        tan(angle_y) / tan(range_y). In angle-vector mode, v is
+                        computed as: angle_y / range_y.
+
+                config AIRMOUSE_POSE_SPHERICAL_DEADZONE
+                    int "Forward-vector spherical dead zone"
+                    range 0 1000
+                    default 50
+                    help
+                        Dead zone applied directly to the current world-frame forward
+                        vector before cursor projection.
+
+                        The value is scaled by 1/10000 in code. For example, 8 means
+                        a vector-distance threshold of 0.0008.
+
+                        This is a low-level pose stability filter. It suppresses tiny
+                        quaternion/forward-vector jitter by skipping cursor output while
+                        the current forward vector remains close to the last stable
+                        forward vector.
+
+                        This is different from the X/Y cursor dead zone below:
+                        - Spherical dead zone works on the 3D forward vector before
+                          ray or angle projection.
+                        - X/Y cursor dead zones work on normalized u/v or du/dv after
+                          projection.
+
+                        This is also different from pose cursor range:
+                        - Pose cursor range defines the angle that maps to normalized
+                          u/v = +/-1.
+                        - Spherical dead zone only suppresses small motion around the
+                          last stable forward vector.
+
+                config AIRMOUSE_POSE_DEAD_ZONE_X_MILLI
+                    int "Shared cursor dead zone X (x1000)"
+                    range 0 1000
+                    default 50
+                    help
+                        Shared X-axis dead zone for quaternion cursor output.
+                        This applies after geometric mapping, so it is used by
+                        both ray-projection and angle-vector modes.
+                        Value is scaled by 1000. Example: 50 means 0.050.
+
+                config AIRMOUSE_POSE_DEAD_ZONE_Y_MILLI
+                    int "Shared cursor dead zone Y (x1000)"
+                    range 0 1000
+                    default 50
+                    help
+                        Shared Y-axis dead zone for quaternion cursor output.
+                        This applies after geometric mapping, so it is used by
+                        both ray-projection and angle-vector modes.
+                        Value is scaled by 1000. Example: 50 means 0.050.
+
+                config AIRMOUSE_POSE_GAIN_X_CENTI
+                    int "Shared cursor gain X (x100)"
+                    range 0 2000
+                    default 100
+                    help
+                        Shared X-axis cursor gain for quaternion cursor mapping.
+                        It scales the mapped u/v coordinate in both relative and
+                        absolute output modes. Ray-projection mode usually needs
+                        a much larger gain than angle-vector mode because the ray
+                        mapping no longer uses a separate screen-distance factor.
+                        Value is scaled by 100. Example: 1200 means 12.00.
+
+                config AIRMOUSE_POSE_GAIN_Y_CENTI
+                    int "Shared cursor gain Y (x100)"
+                    range 0 2000
+                    default 100
+                    help
+                        Shared Y-axis cursor gain for quaternion cursor mapping.
+                        It scales the mapped u/v coordinate in both relative and
+                        absolute output modes. Ray-projection mode usually needs
+                        a much larger gain than angle-vector mode because the ray
+                        mapping no longer uses a separate screen-distance factor.
+                        Value is scaled by 100. Example: 1200 means 12.00.
+
+            endmenu
+
+            menu "Quaternion Solver"
+
+                config AIRMOUSE_POSE_FEEDBACK_GAIN_MILLI
+                    int "Pose solver feedback gain (x1000)"
+                    range 0 100000
+                    default 500
+                    help
+                        Steady-state accelerometer feedback gain for quaternion pose solving.
+                        Example: 500 means 0.500.
+
+                config AIRMOUSE_POSE_ENABLE_GYRO_OVERLIMIT_RESET
+                    bool "Enable pose solver gyro over-limit reset"
+                    default y
+                    help
+                        When enabled, the quaternion solver watches for sustained
+                        gyro over-limit motion and rebuilds pose state after the
+                        motion recovers.
+
+                if AIRMOUSE_POSE_ENABLE_GYRO_OVERLIMIT_RESET
+
+                    config AIRMOUSE_POSE_GYRO_LIMIT_DPS
+                        int "Pose solver gyro limit (dps)"
+                        range 1 10000
+                        default 250
+                        help
+                            Gyroscope limit threshold in degrees per second. Exceeding it
+                            contributes to arming the pose-state rebuild logic.
+
+                    config AIRMOUSE_POSE_GYRO_RECOVER_DPS
+                        int "Pose solver gyro recover threshold (dps)"
+                        range 0 AIRMOUSE_POSE_GYRO_LIMIT_DPS
+                        default 60
+                        help
+                            Gyroscope threshold used to declare recovery after an over-limit
+                            window. This should usually be lower than the over-limit threshold
+                            to provide hysteresis and avoid threshold chatter.
+
+                    config AIRMOUSE_POSE_GYRO_REINIT_WINDOW_MS
+                        int "Pose solver gyro reinit window (ms)"
+                        range 0 10000
+                        default 50
+                        help
+                            Continuous over-limit gyroscope duration that arms a pose-state
+                            reinitialization. When angular rate later falls back below the
+                            limit, the pose state is rebuilt and that frame outputs no motion.
+
+                    config AIRMOUSE_POSE_GYRO_RECOVER_WINDOW_MS
+                        int "Pose solver gyro recover window (ms)"
+                        range 0 10000
+                        default 200
+                        help
+                            Continuous in-threshold recovery duration required before a
+                            reinit-armed pose state is actually rebuilt.
+
+                endif
+
+            endmenu
+
+    endmenu
+
+endmenu

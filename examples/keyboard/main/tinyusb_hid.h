@@ -11,7 +11,7 @@ extern "C" {
 
 #include <stdint.h>
 #include "tusb.h"
-#include "btn_progress.h"
+#include "hid_report_types.h"
 
 /**
  * @brief Initialize tinyusb HID device.

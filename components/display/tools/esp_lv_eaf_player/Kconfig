@@ -1,0 +1,14 @@
+menu "ESP LV EAF Player"
+
+    config ESP_LV_EAF_ENABLE_SW_JPEG
+        bool "Enable Software JPEG Decoding"
+        default y
+        help
+            Enable software JPEG decoder for EAF files with JPEG-encoded blocks.
+            Disabling this option saves ~19KB DRAM but JPEG blocks will fail to
+            decode with a runtime warning.
+
+            If your EAF files only use RLE/Huffman encoding (no JPEG blocks),
+            you can disable this to reduce memory usage.
+
+endmenu

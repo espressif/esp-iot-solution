@@ -25,7 +25,11 @@
  */
 
 #pragma once
+#include "esp_err.h"
 #include "tusb.h"
+#include "sdkconfig.h"
+
+esp_err_t usb_descriptors_init(uint16_t width, uint16_t height);
 
 enum {
     REPORT_ID_TOUCH = 1,
@@ -38,10 +42,14 @@ enum {
 #if CFG_TUD_HID
     ITF_NUM_HID,
 #endif
-#if CFG_TUD_AUDIO
+#if CONFIG_UAC_AUDIO_ENABLE
     ITF_NUM_AUDIO_CONTROL,
+#if CONFIG_UAC_SPEAKER_CHANNEL_NUM > 0
     ITF_NUM_AUDIO_STREAMING_SPK,
+#endif
+#if CONFIG_UAC_MIC_CHANNEL_NUM > 0
     ITF_NUM_AUDIO_STREAMING_MIC,
+#endif
 #endif
     ITF_NUM_TOTAL,
 };
@@ -52,7 +60,7 @@ enum {
 #if CFG_TUD_HID
     EPNUM_HID_DATA,
 #endif
-#if CFG_TUD_AUDIO
+#if CONFIG_UAC_AUDIO_ENABLE
     EPNUM_AUDIO_OUT,
     EPNUM_AUDIO_IN,
     EPNUM_AUDIO_FB,

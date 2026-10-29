@@ -1,0 +1,5 @@
+# Name,   Type, SubType, Offset,   Size, Flags
+# Client: factory app + SPIFFS for firmware management
+nvs,      data, nvs,     ,        0x6000,
+factory,  app,  factory, ,        0x100000,
+storage,  data, spiffs,  ,        0x200000,

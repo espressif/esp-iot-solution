@@ -1,10 +1,187 @@
 # ChangeLog
 
+## v1.3.3 - 2026.10.28
+
+### Enhancements:
+
+- Post `conn_handle` with `ESP_BLE_CONN_EVENT_DISC_COMPLETE`
+- Add `esp_ble_conn_get_peer_chr_handle()` to resolve a discovered peer characteristic value handle
+
+### Bug Fixes:
+
+- Isolate discovered GATT services, characteristics, descriptors, and read caches by connection; peer-handle lookup and synchronous disconnect cleanup no longer reuse or remove another link's data
+- Fix central reconnection stalling forever after a connect attempt reported through `BLE_GAP_EVENT_DISCONNECT`, which leaked the pending connect context. Scan start remains application-owned; Peripheral/Both still resume advertising unless PAwR or a periodic sync holds the instance
+- Log unknown notify/indicate attribute handles, "already advertising" and "scan start while connecting" at debug level instead of error
+
+## v1.3.2 - 2026.09.10
+
+### Bug Fixes:
+
+- Preserve the public GATT Read compatibility path: `esp_ble_conn_read()` and `esp_ble_conn_read_by_handle()` accept `data == NULL` and return a borrowed pointer to the internal read cache (caller must not `free()` it). Caller-owned buffers continue to receive a bounded/truncated copy under the connection lock.
+- `esp_ble_conn_pawr_subev_data_set()`: skip idle subevents; use an empty mbuf for zero-length payloads that still listen for responses.
+- Honor `include_service_uuid` / `adv_uuid16` on extended advertising.
+- `ESP_BLE_CONN_EVENT_DISC_COMPLETE` now posts `uint16_t conn_handle`.
+- Do not auto-restart advertising while PAwR owns the instance or a periodic sync is held (avoids `ble_gap_*` `rc=15` / starved `AUX_CONNECT_REQ`).
+- `esp_ble_conn_connect_with_synced()`: cancel GAP discovery first (`BLE_HS_EBUSY` while scan is active).
+- Do not cache the `DATA_RECEIVE` payload pointer (handler `free()` caused a double-free).
+- Handle PAwR PAST via `BLE_GAP_EVENT_PERIODIC_TRANSFER_V2`.
+- `esp_ble_conn_l2cap_coc_send()`: do not free an SDU NimBLE already owns.
+- Serialize GATT procedures per link; give the per-link semaphore on ATT errors instead of waiting out `WAIT_DURATION`.
+- Key the attribute cache by connection; local GATT server values use `BLE_CONN_ATTR_LOCAL_CONN` (defined even when L2CAP CoC is off).
+- ROLE_BOTH: skip GATT client discovery on incoming (peripheral) connections.
+- Log expected races at debug (`ESP_ERR_NOT_FOUND`, MTU `EALREADY`, rediscovery).
+- Central connect: 2 s supervision timeout, 1M+2M initiator PHY, ATT MTU exchange, and `esp_ble_conn_connect_cancel()` aborts in-flight `ble_gap_ext_connect`.
+
+### Enhancements:
+
+- `esp_ble_conn_connect_with_synced()`: initiate a PAwR `AUX_CONNECT_REQ` to a synchronized peer (needed for OTS after PAST).
+
+## v1.3.1 - 2026.09.09
+
+### Enhancements:
+
+- Add `esp_ble_conn_get_chr_handle()` to resolve a local characteristic value handle by service UUID, characteristic UUID, and instance
+- Add `esp_ble_conn_notify_by_attr_handle()` and `esp_ble_conn_indicate_by_attr_handle()` to send by characteristic value handle; existing UUID-based notify/read/write APIs are unchanged
+
+## v1.3.0 - 2026.09.02
+
+### Enhancements:
+
+- PAwR (`BLE_CONN_MGR_PERIODIC_ADV_WITH_RESP`, chip-gated by `SOC_BLE_PERIODIC_ADV_WITH_RESPONSE`):
+  - APIs: `esp_ble_conn_pawr_params_set()`, `esp_ble_conn_pawr_subev_data_set()`,
+    `esp_ble_conn_pawr_sync_subev()`, `esp_ble_conn_pawr_response_data_set()`
+  - Events: `ESP_BLE_CONN_EVENT_PER_SUBEV_DATA_REQ`, `ESP_BLE_CONN_EVENT_PER_SUBEV_RESP`
+  - Extended `esp_ble_conn_periodic_sync_t` / `esp_ble_conn_periodic_report_t` with PAwR fields
+  - `esp_ble_conn_pawr_subev_data_set()` transfers mbuf ownership to NimBLE
+- PAST (`BLE_CONN_MGR_PERIODIC_SYNC_TRANSFER`):
+  - APIs: `esp_ble_conn_periodic_sync_set_info()`, `esp_ble_conn_periodic_sync_transfer()`,
+    `esp_ble_conn_periodic_sync_receive()`
+  - Event: `ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER`
+- Explicit periodic sync helpers (when Periodic Sync and/or PAST is enabled):
+  `esp_ble_conn_periodic_sync_create()`, `esp_ble_conn_periodic_sync_terminate()`,
+  `esp_ble_conn_periodic_sync_reporting()`
+- Add `esp_ble_conn_get_sec_state()` to query link encrypted / authenticated / bonded state
+- `esp_ble_conn_set_pairing_allowed(false)` rejects new pairing; `esp_ble_conn_security_initiate()` still allows LTK restore
+- Empty characteristic writes are delivered to `uuid_fn` callbacks
+
+## v1.2.2 - 2026-08-26
+
+### Bug Fixes:
+
+- Skip extended advertising restart on `BLE_GAP_EVENT_ADV_COMPLETE` with reason 0 (connection established), so connectable advertising is not restarted while the connection slot is taken.
+- On `BLE_HS_EBUSY` from `ble_gap_ext_adv_configure()`, stop the active instance and retry; report a failed stop instead of only the subsequent configure error.
+
+### Enhancements:
+
+- Add `esp_ble_conn_adv_params_get()` and `esp_ble_conn_adv_is_active()` so applications can read back configured advertising parameters and whether advertising is currently active. Document that `esp_ble_conn_adv_params_set()` takes effect on the next start, unlike `esp_ble_conn_adv_data_set()`.
+
+## v1.2.1 - 2026-08-04
+
+### Enhancements:
+
+- Post `ESP_BLE_CONN_EVENT_STARTED` when the NimBLE host syncs and the stack is ready (after address resolution and advertising/scanning have begun), so applications can react without polling `ble_hs_synced()`.
+- Add `esp_ble_conn_whitelist_sync_bonds()` to rebuild the controller whitelist from bonded peers (`ble_store_util_bonded_peers` → `ble_gap_wl_set`), for bonded-only advertising/scanning with `filter_policy = ESP_BLE_CONN_SCAN_FILT_USE_WL`. Call after a bond is added or removed; RPA resolution remains handled by NimBLE privacy (`CONFIG_BT_NIMBLE_HS_PVCY`).
+
+## v1.2.0 - 2026-05-12
+
+### Enhancements:
+
+- NimBLE stack path (`esp_nimble.c`): internally use extended GAP only (`ble_gap_ext_*`, extended scan/connect) so advertising, scanning, and connection setup stay on the BLE 5 HCI path. Public `esp_ble_conn_*` usage is unchanged for typical applications.
+- Periodic advertising sync: more reliable state handling and configuration (`BLE_CONN_MGR_PERIODIC_SYNC_AUTO_SID`).
+- Extended scanning / discovery: scan results and periodic-sync paths behave more predictably together; small GAP robustness improvements (null checks, scan timing limits, malformed report guards).
+- Periodic advertising reports: application-visible payload is delivered safely; see `esp_ble_conn_periodic_report_t` for buffer ownership.
+- Device rename: `esp_ble_conn_device_name_set()` and `ESP_BLE_CONN_EVENT_DEVICE_NAME_CHANGED` (including GAP name GATT writes when `CONFIG_BT_NIMBLE_SVC_GAP_NAME_WRITE` is enabled) update GAP, auto-built legacy advertising, and restart active advertising.
+- Advertising data updates: `esp_ble_conn_adv_data_set()` / `esp_ble_conn_scan_rsp_data_set()` now reapply data while advertising is active.
+
+## v1.1.0 - 2026-04-17
+
+### Enhancements:
+
+- Support SMP out-of-band (OOB) pairing.
+- Add optional auto GATT Service Changed trigger based on configurable schema version (`BLE_CONN_MGR_GATT_CHANGED_AUTO`, default disabled).
+
+## v1.0.1 - 2026-04-09
+
+### Bug Fixes:
+
+- Fix missing `ESP_BLE_CONN_EVENT_DATA_RECEIVE` on peripheral GATT writes when `uuid_fn` is NULL.
+
+## v1.0.0 - 2026-03-05
+
+### Enhancements:
+
+- **Multi-Connections Support**: BLE connection manager now supports managing multiple concurrent BLE connections.
+  - **Kconfig**: Added `BLE_CONN_MGR_MAX_CONNECTIONS` to set the maximum number of concurrent connections (default: 2; must not exceed the underlying BLE stack limit).
+  - **Connection handle semantics**:
+    - Valid range: `0x0000`–`0x0EFF`. Use `BLE_CONN_HANDLE_INVALID` (0xFFFF) to denote no connection or invalid handle.
+    - Added macros: `BLE_CONN_HANDLE_INVALID`, `BLE_CONN_HANDLE_MAX`.
+  - **Connection & discovery APIs**:
+    - `esp_ble_conn_connect_to_addr()`: Initiate connection to a peer by address (Central role).
+    - `esp_ble_conn_disconnect_by_handle()`: Disconnect by connection handle.
+    - `esp_ble_conn_get_conn_handle()`: Get current (default) connection handle; returns `BLE_CONN_HANDLE_INVALID` when not connected.
+    - `esp_ble_conn_get_conn_handle_by_addr()`: Get connection handle by peer address.
+    - `esp_ble_conn_find_conn_handle_by_peer_addr()`: Find connection handle by peer address.
+    - `esp_ble_conn_get_mtu_by_handle()`: Query MTU by connection handle.
+    - `esp_ble_conn_get_peer_addr_by_handle()`: Get peer address by connection handle. Replaces deprecated `esp_ble_conn_find_peer_addr_by_conn_handle()` (available in v0.1.x); migrate by calling `esp_ble_conn_get_peer_addr_by_handle(conn_handle, out_addr, NULL)` instead.
+    - `esp_ble_conn_get_disconnect_reason_by_handle()`: Get disconnect reason by connection handle.
+  - **Per-connection GATT APIs** (accept valid `conn_handle` in range 0x0000–0x0EFF):
+    - `esp_ble_conn_notify_by_handle()`, `esp_ble_conn_read_by_handle()`, `esp_ble_conn_write_by_handle()`, `esp_ble_conn_subscribe_by_handle()`.
+  - **Per-connection GAP/Security** (APIs now take `conn_handle`):
+    - `esp_ble_conn_update_params()`, `esp_ble_conn_mtu_update()`, `esp_ble_conn_security_initiate()`, `esp_ble_conn_passkey_reply()`, `esp_ble_conn_numcmp_reply()`.
+  - **Advertising / scan data APIs**:
+    - `esp_ble_conn_adv_data_set()`: Set raw advertising data (legacy or extended).
+    - `esp_ble_conn_scan_rsp_data_set()`: Set raw scan response data (legacy or extended).
+    - `esp_ble_conn_periodic_adv_data_set()`: Set periodic advertising data (when periodic adv is enabled).
+  - **LE PHY APIs**:
+    - `esp_ble_conn_get_phy()`: Get current TX/RX LE PHY for a connection.
+    - `esp_ble_conn_set_preferred_phy()`: Set preferred LE PHY for a connection (tx/rx mask and coded options).
+    - Added PHY mask constants: `ESP_BLE_CONN_PHY_MASK_1M`, `_2M`, `_CODED`, `_ALL` (0x07).
+    - Added Coded PHY options: `ESP_BLE_CONN_PHY_CODED_OPT_ANY`, `_S2`, `_S8`.
+  - **Common BLE enums and types**: Added enums and types for advertising/scan/address/PHY so applications can use a unified API: `esp_ble_conn_adv_conn_mode_t`, `esp_ble_conn_adv_disc_mode_t`, `esp_ble_conn_addr_type_t`, `esp_ble_conn_phy_t`, `esp_ble_conn_scan_filt_policy_t`.
+  - **Events**: Event data structures now include `conn_handle` for multi-connection events (connected, disconnected, mtu_update, conn_param_update, enc_change, passkey_action).
+
+## v0.1.6 - 2026-02-11
+
+### Bug Fixes:
+
+- Fix automatic addition of CUD (0x2901)
+- Fix characteristic flag field truncation by widening from uint8_t to uint16_t to support extended properties. ([#662](https://github.com/espressif/esp-iot-solution/pull/662)) by [@acouvreur](https://github.com/acouvreur)
+- Fix incorrect SM bitfield assignment that prevented security settings from taking effect. ([#661](https://github.com/espressif/esp-iot-solution/pull/661)) by [@acouvreur](https://github.com/acouvreur)
+
+## v0.1.5 - 2026-01-27
+
+### Enhancements:
+
+- Added `esp_ble_conn_l2cap_coc_mem_init()` API to initialize L2CAP CoC SDU memory pool.
+- Added `esp_ble_conn_l2cap_coc_mem_release()` API to release L2CAP CoC SDU memory pool.
+- Added `esp_ble_conn_l2cap_coc_create_server()` API to create an L2CAP CoC server.
+- Added `esp_ble_conn_l2cap_coc_connect()` API to initiate an L2CAP CoC connection.
+- Added `esp_ble_conn_l2cap_coc_send()` API to send an SDU over an L2CAP CoC channel.
+- Added `esp_ble_conn_l2cap_coc_recv_ready()` API to provide a receive buffer for an L2CAP CoC channel.
+- Added `esp_ble_conn_l2cap_coc_accept()` API to accept an incoming L2CAP CoC connection.
+- Added `esp_ble_conn_l2cap_coc_disconnect()` API to disconnect an L2CAP CoC channel.
+- Added `esp_ble_conn_l2cap_coc_get_chan_info()` API to get L2CAP CoC channel information.
+- Added `esp_ble_conn_get_peer_addr()` API to get current peer address.
+- Added `esp_ble_conn_get_disconnect_reason()` API to get last disconnect reason.
+- Added `esp_ble_conn_register_scan_callback()` API to register scan callback for BLE central role.
+- Added `esp_ble_conn_scan_stop()` API to stop ongoing BLE scan.
+- Added `esp_ble_conn_parse_adv_data()` API to parse AD type data from raw advertising data.
+
+## v0.1.4 - 2026-01-06
+
+### Enhancements:
+
+- Enhanced advertising configuration to support 128-bit UUIDs.
+- Added `ESP_BLE_CONN_EVENT_CCCD_UPDATE` event to report CCCD write status.
+- Added `esp_ble_conn_get_conn_handle()` API to query current connection handle.
+- Added `esp_ble_conn_get_mtu()` API to query current negotiated MTU.
+- Added `esp_ble_conn_update_params()` API to update connection parameters.
+
 ## v0.1.3 - 2024-12-09
 
 ### Enhancements:
 
-* Support Config UUID Information in BLE broadcasting.
+- Support Config UUID Information in BLE broadcasting.
 
 ## v0.1.2 - 2024-5-22
 

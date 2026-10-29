@@ -11,6 +11,7 @@
 #include "freertos/queue.h"
 #include "ble_hci.h"
 #include "bt_hci_common.h"
+
 static const char *TAG = "ble_hci";
 #define SCAN_RESULT_LEN_MAX  25
 #define CMD_WAIT_TIME (100/portTICK_PERIOD_MS)

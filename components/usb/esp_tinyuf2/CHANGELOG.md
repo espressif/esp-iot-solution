@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.2.0 - 2026-07-10
+
+* Replace `leeebo/tinyusb_src` with `espressif/tinyusb`.
+* Support ESP32-S31.
+* Fix UF2 generation compatibility with newer ESP-IDF versions.
+
 ## v1.1.1 - 2025-1-20
 
 * Fix the issue of crashes and reboots caused by reinstalling the USB PHY.

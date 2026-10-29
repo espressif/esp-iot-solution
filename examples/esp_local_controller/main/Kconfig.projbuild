@@ -1,0 +1,68 @@
+menu "ESP Local Controller Example"
+
+    config EXAMPLE_SUPPORT_HTTP
+        bool "Build HTTP transport"
+        default y
+        depends on ESP_WIFI_ENABLED
+        help
+            Connect STA to the same Wi-Fi as the device, then talk over HTTP.
+
+    config EXAMPLE_SUPPORT_BLE
+        bool "Build BLE transport"
+        default y
+        depends on BT_NIMBLE_ENABLED && BT_NIMBLE_ROLE_CENTRAL && BT_NIMBLE_ROLE_OBSERVER
+        help
+            Control properties over BLE (NimBLE central + observer).
+
+    config EXAMPLE_SUPPORT_CONSOLE
+        bool "Build UART console transport"
+        default n
+        help
+            Debug transport using protocomm_ext console pipe. Device side needs
+            a matching protocomm_console server (not in stock esp_local_ctrl).
+
+    config EXAMPLE_WIFI_SSID
+        string "Wi-Fi SSID (HTTP mode STA)"
+        default "myssid"
+        depends on EXAMPLE_SUPPORT_HTTP
+
+    config EXAMPLE_WIFI_PASSWORD
+        string "Wi-Fi password (HTTP mode STA)"
+        default "mypassword"
+        depends on EXAMPLE_SUPPORT_HTTP
+
+    config EXAMPLE_HTTP_URL
+        string "Device local-ctrl HTTP base URL"
+        default "http://192.168.1.100:80"
+        depends on EXAMPLE_SUPPORT_HTTP
+        help
+            Host part used by protocomm_ext HTTP client. Paths are appended
+            as /esp_local_ctrl/{version,session,control}.
+
+    config EXAMPLE_CTRL_POP
+        string "Default Proof of Possession (Sec1, TEST ONLY)"
+        default "abcd1234"
+        help
+            Test-only default when peer sec_ver=1 and the console prompt is left empty.
+
+    config EXAMPLE_CTRL_SEC2_USERNAME
+        string "Default Sec2 username (TEST ONLY)"
+        default "wifiprov"
+        help
+            Align with IDF esp_local_ctrl example Sec2 DEV mode.
+
+    config EXAMPLE_CTRL_SEC2_PASSWORD
+        string "Default Sec2 password (TEST ONLY)"
+        default "abcd1234"
+        help
+            Align with IDF esp_local_ctrl example Sec2 DEV mode.
+
+    config EXAMPLE_BLE_NAME_PREFIX
+        string "Device BLE name filter prefix"
+        default "my_esp_ctrl"
+        depends on EXAMPLE_SUPPORT_BLE
+        help
+            IDF example default device name is my_esp_ctrl_device. Matching names
+            are marked in the scan menu; selection is interactive.
+
+endmenu

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v2.0.0 - 2025-08-08
+
+* Add i2c_bus support
+
 ## v1.0.0 - 2024-08-09
 
 * Update README

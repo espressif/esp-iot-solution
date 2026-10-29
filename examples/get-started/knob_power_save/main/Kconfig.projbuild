@@ -65,10 +65,10 @@ menu "Example Configuration"
     config EXAMPLE_MIN_CPU_FREQ_MHZ
         int
         default 40 if EXAMPLE_MIN_CPU_FREQ_40M
-        default 20 if EXAMPLE_MIN_CPU_FREQ_20M
-        default 10 if EXAMPLE_MIN_CPU_FREQ_10M
-        default 26 if EXAMPLE_MIN_CPU_FREQ_26M
-        default 13 if EXAMPLE_MIN_CPU_FREQ_13M
         default 32 if EXAMPLE_MIN_CPU_FREQ_32M
+        default 26 if EXAMPLE_MIN_CPU_FREQ_26M
+        default 20 if EXAMPLE_MIN_CPU_FREQ_20M
+        default 13 if EXAMPLE_MIN_CPU_FREQ_13M
+        default 10 if EXAMPLE_MIN_CPU_FREQ_10M
 
 endmenu

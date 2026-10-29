@@ -207,7 +207,7 @@ TEST_CASE("test st77922_spi to rotate", "[st77922_spi][rotate]")
 
         TEST_ASSERT_NOT_EQUAL(esp_lcd_panel_mirror(panel_handle, i & 2, i & 1), ESP_FAIL);
         ret = esp_lcd_panel_swap_xy(panel_handle, i & 4);
-        TEST_ASSERT_NOT_EQUAL(ret, ESP_FAIL);
+        TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, ret);
 
         ESP_LOGI(TAG, "Rotation: %d", i);
         t = esp_timer_get_time();
@@ -258,7 +258,7 @@ TEST_CASE("test st77922_qspi to rotate", "[st77922_qspi][rotate]")
 
         TEST_ASSERT_NOT_EQUAL(esp_lcd_panel_mirror(panel_handle, i & 2, i & 1), ESP_FAIL);
         ret = esp_lcd_panel_swap_xy(panel_handle, i & 4);
-        TEST_ASSERT_NOT_EQUAL(ret, ESP_FAIL);
+        TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, ret);
 
         ESP_LOGI(TAG, "Rotation: %d", i);
         t = esp_timer_get_time();

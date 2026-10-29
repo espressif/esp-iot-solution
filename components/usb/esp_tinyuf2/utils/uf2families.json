@@ -160,6 +160,16 @@
         "description": "ESP32-S3"
     },
     {
+        "id": "0x3d308e94",
+        "short_name": "ESP32P4",
+        "description": "ESP32-P4"
+    },
+    {
+        "id": "0x3101f7c1",
+        "short_name": "ESP32S31",
+        "description": "ESP32-S31"
+    },
+    {
         "id": "0xd42ba06c",
         "short_name": "ESP32C3",
         "description": "ESP32-C3"

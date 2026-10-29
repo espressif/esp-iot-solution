@@ -2,12 +2,13 @@
 
 **Note:** This component is for developers testing only. It is not intended for production use.
 
-A component providing enhanced touch slider detection functionality for ESP32 series chips.
+A component providing touch slider detection functionality for ESP32 series chips.
 
 ## Features
 
-- FSM-based touch detection with configurable thresholds
-- Support for slider gesture detection
+- FSM-based touch detection with configurable normalized fused-count thresholds
+- Support for slider gesture detection with configurable position calculation window
+- Automatic default value selection for optimal performance
 - Callback-based event notification
 
 ## Dependencies
@@ -15,6 +16,24 @@ A component providing enhanced touch slider detection functionality for ESP32 se
 - [touch_sensor_fsm](https://components.espressif.com/components/espressif/touch_sensor_fsm)
 - [touch_sensor_lowlevel](https://components.espressif.com/components/espressif/touch_sensor_lowlevel)
 
+## Configuration Options
+
+### Calculate Window (`calculate_window`)
+
+The `calculate_window` parameter determines how many adjacent touch channels are used for position calculation. This affects the precision and noise immunity of the slider.
+
+**Default Values (when set to 0):**
+- **2 channels**: `calculate_window = 2` (uses all available channels)
+- **3+ channels**: `calculate_window = 3` (optimal balance between precision and noise immunity)
+
+**Manual Configuration:**
+- You can explicitly set any value from 1 to `channel_num`
+- Smaller values (1-2): Higher sensitivity but more susceptible to noise
+- Larger values (3+): Better noise immunity but potentially lower resolution
+- For high-precision applications: Recommended value is `min(3, channel_num)`
+
+Set `calculate_window = 0` for the automatic default. Explicit values from 1
+through `channel_num` are accepted.
 
 ## Example
 
@@ -26,7 +45,7 @@ A component providing enhanced touch slider detection functionality for ESP32 se
 #include "touch_slider_sensor.h"
 
 static uint32_t channel_list[] = {2, 4, 6, 12, 10, 8};
-static float threshold[] = {0.005f, 0.005f, 0.005f, 0.005f, 0.005f, 0.005f};
+static uint32_t thresholds[] = {25, 25, 25, 25, 25, 25};
 static int channel_num = 6;
 static int slider_range = 10000;
 
@@ -62,14 +81,17 @@ void app_main(void)
     touch_slider_config_t config = {
         .channel_num = channel_num,
         .channel_list = channel_list,
-        .channel_threshold = threshold,
+        .thresholds = thresholds,
+        .sample_period_ms = 0,
+        .sample_cfg_num = 0,
+        .debounce_active = 0,
+        .debounce_inactive = 0,
         .filter_reset_times = 5,
         .position_range = 10000,
         .swipe_alpha = 0.9,
         .swipe_threshold = 50,
         .swipe_hysterisis = 40,
-        .channel_gold_value = NULL,
-        .debounce_times = 0,
+        .calculate_window = 0,  // Use default value (auto-selected based on channel count)
         .skip_lowlevel_init = false
     };
 

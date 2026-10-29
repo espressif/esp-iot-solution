@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -7,8 +7,6 @@
 #include <string.h>
 
 #include "esp_log.h"
-
-#include "esp_flash_encrypt.h"
 
 #include "bootloader_common.h"
 
@@ -111,7 +109,7 @@ esp_err_t bootloader_custom_utility_updata_ota_data(const bootloader_state_t *bs
         otadata[next_otadata].ota_seq = (boot_index + 1) % ota_app_count + i * ota_app_count;
         otadata[next_otadata].ota_state = set_new_state_otadata();
         otadata[next_otadata].crc = bootloader_common_ota_select_crc(&otadata[next_otadata]);
-        bool write_encrypted = esp_flash_encryption_enabled();
+        bool write_encrypted = bootloader_custom_flash_encryption_enabled();
         ESP_LOGD(TAG, "next_otadata is %d and i=%" PRIu32 " and rewrite seq is %" PRIu32 "", next_otadata, i, otadata[next_otadata].ota_seq);
         return write_otadata(&otadata[next_otadata], bs->ota_info.offset + FLASH_SECTOR_SIZE * next_otadata, write_encrypted);
     } else {
@@ -120,7 +118,7 @@ esp_err_t bootloader_custom_utility_updata_ota_data(const bootloader_state_t *bs
         otadata[next_otadata].ota_seq = boot_index + 1;
         otadata[next_otadata].ota_state = set_new_state_otadata();
         otadata[next_otadata].crc = bootloader_common_ota_select_crc(&otadata[next_otadata]);
-        bool write_encrypted = esp_flash_encryption_enabled();
+        bool write_encrypted = bootloader_custom_flash_encryption_enabled();
         ESP_LOGD(TAG, "next_otadata is %d and rewrite seq is %" PRIu32 "", next_otadata, otadata[next_otadata].ota_seq);
         return write_otadata(&otadata[next_otadata], bs->ota_info.offset + FLASH_SECTOR_SIZE * next_otadata, write_encrypted);
     }

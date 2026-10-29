@@ -167,4 +167,3 @@ Each phase back EMF has situations where it changes from positive to negative an
      - Upper Close Lower Close
      - Upper Open Lower Close
      - Upper Close Lower Open
-

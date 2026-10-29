@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.4"
+  quickjs-ng:
+    version: ">=0.14.0"
+    override_path: "../../../components/quickjs-ng"

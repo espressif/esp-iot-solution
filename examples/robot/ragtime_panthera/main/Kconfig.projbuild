@@ -1,0 +1,42 @@
+menu "Ragtime Panthera Configuration"
+
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
+
+    config CONSOLE_CONTROL
+        bool "Direct control robot arm via console"
+        default y
+        help
+            When set to Y, you can forcibly perform basic operations on the robot arm through the terminal, including kinematics testing, joint movement, enabling, and other actions.
+
+    menu "Hardware Configuration"
+        config CAN_TX_NUM
+            int "CAN TX Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 21
+            help
+                TX Pin of the CAN Transceiver
+
+        config CAN_RX_NUM
+            int "CAN RX Pin"
+            range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+            default 22
+            help
+                RX Pin of the CAN Transceiver
+    endmenu
+
+    menu "Grasp Tuning"
+        config GRIPPER_HOLD_SQUEEZE
+            int "Hold squeeze past contact (x1000 radians)"
+            default 30
+            help
+                How far past the contact point the gripper squeezes to hold, in radians * 1000 (e.g. 30 = 0.030 rad).
+                Larger values grip harder but risk crushing soft objects.
+
+        config LIFT_M
+            int "Lift height after grasp (x1000 metres)"
+            default 100
+            help
+                How high the arm lifts straight up after closing the gripper, in metres * 1000 (e.g. 100 = 0.100 m).
+    endmenu
+
+endmenu

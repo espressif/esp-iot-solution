@@ -1,0 +1,3 @@
+# Unit matrix: compile without HTTP SSE
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_MCP_HTTP_SSE_ENABLE=n

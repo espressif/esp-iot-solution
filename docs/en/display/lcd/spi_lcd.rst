@@ -106,7 +106,7 @@ The SPI LCD driver process can be roughly divided into three parts: initializing
 Initialization Interface Device
 ----------------------------------
 
-Initializing the interface device involves first initializing the bus and then creating the interface device. The following is based on the `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/v5.1/examples/peripherals/lcd/spi_lcd_touch>`_ example from ESP-IDF release/v5.1, demonstrating how to initialize an SPI interface device.
+Initializing the interface device involves first initializing the bus and then creating the interface device. The following is based on the `spi_lcd_touch <https://github.com/espressif/esp-idf/tree/release/v6.0/examples/peripherals/lcd/spi_lcd_touch>`_ example from ESP-IDF release/v6.0, demonstrating how to initialize an SPI interface device.
 
 Initializing the Bus
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -135,7 +135,7 @@ If multiple devices are using the same SPI bus simultaneously, the bus only need
 The following are explanations for some configuration parameters:
 
   - If the LCD driver IC is configured in :ref:`Interface-I mode <spi_interface_I/II_mode>`, only set ``mosi_io_num`` as the data line IO, and set ``miso_io_num`` to -1.
-  - The `SPI driver <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/driver/spi/gpspi/spi_master.c#L775>`_ checks the size of the input data before transmitting data. If the number of bytes for a single transfer exceeds ``max_transfer_sz``, an error will be reported. However, the **maximum number of bytes allowed for a single DMA transfer** depends not only on ``max_transfer_sz`` but is also limited by `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/hal/esp32s3/include/hal/spi_ll.h#L43>`_ in ESP-IDF (different ESP series have different values), i.e., satisfying ``max_transfer_sz <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))``. Since the `esp_lcd driver <https://github.com/espressif/esp-idf/blob/cbce221e88d52665523093b2b6dd0ebe3f1243f1/components/esp_lcd/src/esp_lcd_panel_io_spi.c#L358>`_ checks in advance whether the input data size exceeds the limit and performs **packetization** if it does, controlling SPI for multiple transfers, **max_transfer_sz is usually set to the screen size**.
+  - The `SPI driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_driver_spi/src/gpspi/spi_master.c>`_ checks the size of the input data before transmitting data. If the number of bytes for a single transfer exceeds ``max_transfer_sz``, an error will be reported. However, the **maximum number of bytes allowed for a single DMA transfer** depends not only on ``max_transfer_sz`` but is also limited by `SPI_LL_DATA_MAX_BIT_LEN <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_hal_gpspi/esp32s3/include/hal/spi_ll.h>`_ in ESP-IDF (different ESP series have different values), i.e., satisfying ``max_transfer_sz <= MIN(max_transfer_sz, (SPI_LL_DATA_MAX_BIT_LEN / 8))``. Since the `esp_lcd driver <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/spi/esp_lcd_panel_io_spi.c>`_ checks in advance whether the input data size exceeds the limit and performs **packetization** if it does, controlling SPI for multiple transfers, **max_transfer_sz is usually set to the screen size**.
 
 Creating the Interface Device
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -179,9 +179,9 @@ Example Code:
 
 Once the SPI bus is initialized, you can create the corresponding interface device. Each interface device corresponds to an SPI master device.
 
-**Note:: For a more detailed explanation of the ``SPI`` interface configuration parameters**, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/peripherals/lcd.html#spi-interfaced-lcd>`_.
+**Note:: For a more detailed explanation of the ``SPI`` interface configuration parameters**, please refer to the `ESP-IDF Programming Guide <https://docs.espressif.com/projects/esp-idf/en/latest/esp32p4/api-reference/peripherals/lcd/spi_lcd.html>`_.
 
-By creating the interface device, you can obtain a handle of data type ``esp_lcd_panel_io_handle_t``, which allows you to use the following `General Interface APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_io.h>`_ to send **commands** and **image data** to the LCD driver IC:
+By creating the interface device, you can obtain a handle of data type ``esp_lcd_panel_io_handle_t``, which allows you to use the following `General Interface APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_io.h>`_ to send **commands** and **image data** to the LCD driver IC:
 
   #. ``esp_lcd_panel_io_tx_param()``: Used to send a single command and its associated parameters to the LCD. Internally, it uses the ``spi_device_polling_transmit()`` function for data transmission, and using this function will wait for the data transmission to complete before returning.
   #. ``esp_lcd_panel_io_tx_color()``: Used to send a single command and image data for LCD screen refreshing. Inside the function, it uses ``spi_device_polling_transmit()`` to send commands and a small amount of parameters, and then uses ``spi_device_queue_trans()`` to send large amounts of image data in packets. The size of each packet is limited by the **maximum number of bytes allowed for a single DMA transfer in SPI**. This function pushes relevant data, including the image buffer address, into the queue, and the depth of the queue is specified by the ``trans_queue_depth`` parameter. Once the data is successfully pushed into the queue, the function immediately returns. Therefore, if you plan to modify the same image buffer in subsequent operations, you need to register a callback function to determine whether the previous transfer has been completed. If you don't do this, modifying on an incomplete transfer may lead to display errors due to data corruption.
@@ -194,10 +194,10 @@ Porting Driver Components
 The basic principles of porting an SPI LCD driver component include the following three points:
 
   #. Sending specified format commands and parameters based on the interface device handle of data type ``esp_lcd_panel_io_handle_t``.
-  #. Implementing and creating an LCD device, then implementing various functions in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure through the registration of callback functions.
-  #. Implementing a function to provide an LCD device handle of data type ``esp_lcd_panel_handle_t``, enabling the application to use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
+  #. Implementing and creating an LCD device, then implementing various functions in the `esp_lcd_panel_t <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/interface/esp_lcd_panel_interface.h>`_ structure through the registration of callback functions.
+  #. Implementing a function to provide an LCD device handle of data type ``esp_lcd_panel_handle_t``, enabling the application to use `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to operate the LCD device.
 
-The following is an explanation of the implementation of various functions in ``esp_lcd_panel_handle_t`` and their corresponding relationships with `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
+The following is an explanation of the implementation of various functions in ``esp_lcd_panel_handle_t`` and their corresponding relationships with `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_:
 
 .. list-table::
     :widths: 10 20 70
@@ -290,7 +290,7 @@ The following is an example code explanation using `GC9A01 <https://components.e
     // ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel_handle, 0, 0));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel_handle, true));
 
-First, create an LCD device and obtain a handle of data type ``esp_lcd_panel_handle_t`` using the ported driver component. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v5.1/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
+First, create an LCD device and obtain a handle of data type ``esp_lcd_panel_handle_t`` using the ported driver component. Then, use the `LCD General APIs <https://github.com/espressif/esp-idf/blob/release/v6.0/components/esp_lcd/include/esp_lcd_panel_ops.h>`_ to initialize the LCD device.
 
 Here are some explanations regarding the use of the ``esp_lcd_panel_draw_bitmap()`` function to refresh images on an SPI LCD:
 
@@ -301,4 +301,4 @@ Here are some explanations regarding the use of the ``esp_lcd_panel_draw_bitmap(
 Related documentation
 --------------------------
 
-- `ST7789 Datasheet <https://docs.espressif.com/projects/esp-dev-kits/en/latest/_static/esp32-s3-lcd-ev-board/datasheets/2.4_320x240/ST7789V_SPEC_V1.0.pdf>`_
+- `ST7789 Datasheet <https://dl.espressif.com/dl/schematics/ST7789V_SPEC_V1.0.pdf>`_

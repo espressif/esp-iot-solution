@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v2.0.1 - 2025-12-10
+
+### Bugfix:
+
+* Fix draw_bitmap not propagating tx_color errors, preventing system deadlock on SPI transmission failures
+
+## v2.0.0 - 2025-10-29
+
+### Changes:
+
+* Compatible with ESP-IDF v6.0
+
 ## v1.0.0 - 2024-08-12
 
 ### Enhancements:

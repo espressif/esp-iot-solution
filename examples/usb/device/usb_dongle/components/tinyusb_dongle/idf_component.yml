@@ -1,10 +1,12 @@
-version: 0.1.0
+version: 0.3.1
 targets:
   - esp32s2
   - esp32s3
+  - esp32p4
+  - esp32s31
 dependencies:
   idf:
     version: '>=5.0'
   tinyusb:
     public: true
-    version: '>=0.15.0'
+    version: '^0.21.0~1'

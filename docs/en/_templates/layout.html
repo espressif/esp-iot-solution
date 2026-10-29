@@ -1,4 +1,10 @@
 {% extends '!layout.html' %}
 {% block comments %}
-<p style="text-align:center"><a href="https://www.espressif.com/en/company/documents/documentation_feedback?docId=5602&sections={{ title|striptags|e }} ({{ pagename }})&version={{ release }} ({{ version }})">Provide feedback about this document</a></p>
+{% set doc_id_mapping = {
+  "latest": "9063",
+  "release-v2.0": "9069",
+} %}
+{% set doc_release = feedback_doc_release|default(release) %}
+{% set docid = doc_id_mapping.get(doc_release, doc_id_mapping['latest']) %}
+<p style="text-align:center"><a href="https://www.espressif.com/en/company/documents/documentation_feedback?docId={{ docid }}&sections={{ title|striptags|e }} ({{ pagename }})&version={{ release }} ({{ version }})">Provide feedback about this document</a></p>
 {% endblock %}

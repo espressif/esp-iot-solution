@@ -1,0 +1,24 @@
+menu "Example Configuration"
+
+    choice DEVELOPMENT_BOARD_SELECTION
+        prompt "Select the development board you are using"
+        default ESP32_S3_GENERIC if IDF_TARGET_ESP32S3
+        default ESP32_S2_GENERIC if IDF_TARGET_ESP32S2
+        help
+            Select this option to choose the board for the example.
+
+        config ESP32_S3_USB_OTG
+            bool "ESP32 S3 USB OTG"
+            depends on IDF_TARGET_ESP32S3
+
+        config ESP32_S3_GENERIC
+            bool "ESP32 S3 GENERIC"
+            depends on IDF_TARGET_ESP32S3
+
+        config ESP32_S2_GENERIC
+            bool "ESP32 S2 GENERIC"
+            depends on IDF_TARGET_ESP32S2
+
+    endchoice
+
+endmenu

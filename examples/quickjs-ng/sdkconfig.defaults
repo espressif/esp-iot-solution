@@ -1,0 +1,2 @@
+# QuickJS + quickjs-libc can use a deep C stack; 8K is a safe default for the example
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

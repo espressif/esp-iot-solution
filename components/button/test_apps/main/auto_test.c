@@ -219,8 +219,8 @@ static void button_long_press_auto_check_cb(void *arg, void *data)
     uint32_t value = (uint32_t)data;
     uint16_t event = (0xffff0000 & value) >> 16;
     uint16_t time = 0xffff & value;
-    uint32_t ticks_time = iot_button_get_ticks_time(arg);
-    int32_t diff = ticks_time - time;
+    uint32_t pressed_time = iot_button_get_pressed_time(arg);
+    int32_t diff = pressed_time - time;
     if (status == value && abs(diff) <= TOLERANCE) {
         ESP_LOGI(TAG, "Auto check: button event: %s and time: %d pass", iot_button_get_event_str(event), time);
 

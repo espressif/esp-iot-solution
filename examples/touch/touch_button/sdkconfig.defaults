@@ -1,5 +1,2 @@
-# This file was generated using idf.py save-defconfig. It can be edited manually.
-# Espressif IoT Development Framework (ESP-IDF) 5.3.0 Project Minimal Configuration
-#
-CONFIG_TOUCH_BUTTON_SENSOR_MAX_P_X1000=0
-CONFIG_TOUCH_BUTTON_SENSOR_MIN_N_X1000=0
+# The example uses the defaults exposed by touch_button_sensor and has no
+# project-specific Kconfig overrides.

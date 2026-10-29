@@ -44,7 +44,6 @@ For a three-phase brushless motor with 14 pole pairs, the corresponding motor in
 
 **MOSFET Driver Control Parameters and Pins**
 
-
 -  ``pwm pin``: PWM output pin, which you need to set according to the actual MOSFET driver circuit.
 -  ``enable pin``: MOSFET driver enable pin. If your MOSFET driver needs manual enabling, fill in the corresponding GPIO manually. Defaults to `NOT_SET`.
 -  ``voltage_power_supply``: Power supply voltage for the MOSFET driver.
@@ -62,7 +61,6 @@ For a 3PWM mode 12V MOSFET driver, the corresponding driver initialization and p
 
 **Angle Sensor**
 
-
 You need to initialize the angle sensor according to the actual sensor you are using. Currently supported angle sensors are:
 
 -  ``as5048a``: Supports SPI interface for angle data reading.
@@ -78,7 +76,6 @@ For initializing the AS5600 angle sensor and binding it to the motor:
         motor.linkSensor(&as5600);
 
 **Controller**
-
 
 ``esp_simplefoc`` supports various control methods. You can choose based on the actual application requirements:
 

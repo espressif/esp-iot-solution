@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -87,13 +87,14 @@ esp_err_t esp_ble_hrp_get_location(uint8_t *location)
         return ESP_ERR_INVALID_ARG;
     }
 
+    uint8_t location_value = 0;
     esp_ble_conn_data_t inbuff = {
         .type = BLE_CONN_UUID_TYPE_16,
         .uuid = {
             .uuid16 = BLE_HRP_CHR_UUID16_BODY_SENSOR_LOC,
         },
-        .data = NULL,
-        .data_len = 0,
+        .data = &location_value,
+        .data_len = sizeof(location_value),
     };
 
     esp_err_t rc = esp_ble_conn_read(&inbuff);
@@ -102,7 +103,7 @@ esp_err_t esp_ble_hrp_get_location(uint8_t *location)
         return rc;
     }
 
-    *location = *inbuff.data;
+    *location = location_value;
 
     return ESP_OK;
 }

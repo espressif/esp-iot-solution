@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include <inttypes.h>
 #include "esp_timer.h"
 #include "esp_log.h"
 #include "esp_lcd_panel_ops.h"
@@ -347,7 +348,11 @@ IRAM_ATTR static bool qspi_lcd_on_trans_event(esp_lcd_panel_handle_t panel, cons
     }
 #elif LVGL_PORT_AVOID_TEAR_ENABLE
     // Notify that the current QSPI frame buffer has been transmitted
-    xTaskNotifyFromISR(lvgl_task_handle, ULONG_MAX, eNoAction, &need_yield);
+    if (lvgl_task_handle) {
+        xTaskNotifyFromISR(lvgl_task_handle, ULONG_MAX, eNoAction, &need_yield);
+    } else {
+        ESP_LOGE(TAG, "lvgl_task_handle is NULL");
+    }
 #endif
 
     return (need_yield == pdTRUE);
@@ -442,8 +447,6 @@ static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     esp_lcd_touch_handle_t tp = (esp_lcd_touch_handle_t)indev_drv->user_data;
     assert(tp);
 
-    uint16_t touchpad_x;
-    uint16_t touchpad_y;
     uint8_t touchpad_cnt = 0;
 
     /* Read data from touch controller into memory */
@@ -452,12 +455,13 @@ static void touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     }
 
     /* Read data from touch controller */
-    bool touchpad_pressed = esp_lcd_touch_get_coordinates(tp, &touchpad_x, &touchpad_y, NULL, &touchpad_cnt, 1);
-    if (touchpad_pressed && touchpad_cnt > 0) {
-        data->point.x = touchpad_x;
-        data->point.y = touchpad_y;
+    esp_lcd_touch_point_data_t touch_points[1] = {0};
+    esp_err_t ret = esp_lcd_touch_get_data(tp, touch_points, &touchpad_cnt, 1);
+    if (ret == ESP_OK && touchpad_cnt > 0) {
+        data->point.x = touch_points[0].x;
+        data->point.y = touch_points[0].y;
         data->state = LV_INDEV_STATE_PRESSED;
-        ESP_LOGD(TAG, "Touch position: %d,%d", touchpad_x, touchpad_y);
+        ESP_LOGD(TAG, "Touch position: %" PRIu16 ",%" PRIu16, touch_points[0].x, touch_points[0].y);
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }

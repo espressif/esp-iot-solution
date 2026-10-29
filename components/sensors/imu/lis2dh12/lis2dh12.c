@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -276,16 +276,13 @@ esp_err_t lis2dh12_get_acce(lis2dh12_handle_t sensor, lis2dh12_acce_value_t *acc
 /***sensors hal interface****/
 #ifdef CONFIG_SENSOR_INCLUDED_IMU
 
-static lis2dh12_handle_t lis2dh12 = NULL;
-static bool is_init = false;
-
-esp_err_t imu_lis2dh12_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
+esp_err_t imu_lis2dh12_init(void **sensor_ctx, i2c_bus_handle_t i2c_bus, uint8_t addr)
 {
-    if (is_init || !i2c_bus) {
+    if (!sensor_ctx || !i2c_bus) {
         return ESP_FAIL;
     }
 
-    lis2dh12 = lis2dh12_create(i2c_bus, addr);
+    lis2dh12_handle_t lis2dh12 = lis2dh12_create(i2c_bus, addr);
 
     if (!lis2dh12) {
         return ESP_FAIL;
@@ -305,40 +302,40 @@ esp_err_t imu_lis2dh12_init(i2c_bus_handle_t i2c_bus, uint8_t addr)
     lis2dh12_config.fs = LIS2DH12_FS_4G;
     ret = lis2dh12_set_config(lis2dh12, &lis2dh12_config);
 
-    if (ret == ESP_OK) {
-        is_init = true;
+    if (ret != ESP_OK) {
+        lis2dh12_delete(&lis2dh12);
+        return ret;
     }
 
-    return ret;
+    *sensor_ctx = lis2dh12;
+    return ESP_OK;
 }
 
-esp_err_t imu_lis2dh12_deinit(void)
+esp_err_t imu_lis2dh12_deinit(void *sensor_ctx)
 {
-    if (!is_init) {
+    lis2dh12_handle_t lis2dh12 = (lis2dh12_handle_t)sensor_ctx;
+
+    if (!lis2dh12) {
         return ESP_OK;
     }
 
-    esp_err_t ret = lis2dh12_delete(&lis2dh12);
-
-    if (ret == ESP_OK) {
-        is_init = false;
-    }
-
-    return ret;
+    return lis2dh12_delete(&lis2dh12);
 }
 
-esp_err_t imu_lis2dh12_test(void)
+esp_err_t imu_lis2dh12_test(void *sensor_ctx)
 {
-    if (!is_init) {
+    if (!sensor_ctx) {
         return ESP_FAIL;
     }
 
     return ESP_OK;
 }
 
-esp_err_t imu_lis2dh12_acquire_acce(float *acce_x, float *acce_y, float *acce_z)
+esp_err_t imu_lis2dh12_acquire_acce(void *sensor_ctx, float *acce_x, float *acce_y, float *acce_z)
 {
-    if (!is_init || !acce_x || !acce_y || !acce_z) {
+    lis2dh12_handle_t lis2dh12 = (lis2dh12_handle_t)sensor_ctx;
+
+    if (!lis2dh12 || !acce_x || !acce_y || !acce_z) {
         return ESP_FAIL;
     }
 
@@ -357,7 +354,7 @@ esp_err_t imu_lis2dh12_acquire_acce(float *acce_x, float *acce_y, float *acce_z)
     return ESP_FAIL;
 }
 
-static esp_err_t imu_lis2dh12_null_acquire_function(float *x, float *y, float *z)
+static esp_err_t imu_lis2dh12_null_acquire_function(void *sensor_ctx, float *x, float *y, float *z)
 {
     return ESP_ERR_NOT_SUPPORTED;
 }

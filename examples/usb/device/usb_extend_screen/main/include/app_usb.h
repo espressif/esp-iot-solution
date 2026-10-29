@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2024 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2024-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -14,12 +14,7 @@
 extern "C" {
 #endif
 
-// #if CONFIG_IDF_TARGET_ESP32P4
-// #define JPEG_BUFFER_SIZE (300*1024)
-// #elif CONFIG_IDF_TARGET_ESP32S3
-// #define JPEG_BUFFER_SIZE (100*1024)
-// #endif
-
+#if CONFIG_HID_TOUCH_ENABLE
 typedef struct {
     uint8_t press_down;
     uint8_t index;
@@ -39,6 +34,7 @@ typedef struct {
         uint8_t cnt;
     } touch_report;
 } __attribute__((packed)) hid_report_t;
+#endif
 
 /**
  * @brief Initialize tinyusb device.
@@ -49,7 +45,7 @@ typedef struct {
  */
 esp_err_t app_usb_init(void);
 
-#if CFG_TUD_HID
+#if CONFIG_HID_TOUCH_ENABLE
 /**
  * @brief Report key press in the keyboard, using array here
  *
@@ -64,7 +60,7 @@ esp_err_t app_hid_init(void);
 esp_err_t app_vendor_init(void);
 #endif
 
-#if CFG_TUD_AUDIO
+#if CONFIG_UAC_AUDIO_ENABLE
 esp_err_t app_uac_init(void);
 #endif
 

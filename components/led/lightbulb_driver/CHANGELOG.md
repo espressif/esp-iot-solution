@@ -1,5 +1,62 @@
 # ChangeLog
 
+## v2.0.2 - 2026-9-2
+
+### Enhancements:
+
+* Add opt-in PWM complementary output via the standalone `PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG` (`0x08`), without combining legacy RGB, CW or RGBCW flags. 
+* Preserve legacy fixed phase offsets, divided grayscale ranges and hardware-fade selection when the complementary flag is not set. Complementary output automatically uses software fade with multi-channel writes.
+
+## v2.0.1 - 2026-4-13
+
+### Refactor:
+
+* Use soc/spi_periph.h for spi_periph_signal and SPI register access instead of hal/spi_hal.h
+* Affected: ws2812 and sm16825e SPI helpers.
+
+## v2.0.0 - 2026-4-1
+
+### Refactor:
+
+* Implement multiple instances driver by lightbulb component
+* Modify lightbulb component structure to the factory pattern
+
+## v1.11.2 - 2026-03-26
+
+### Bug Fix:
+
+* Fixed some compatibility issues
+
+## v1.11.1 - 2025-11-14
+
+### Refactor:
+
+* Add heap and idf version dependency so that it can be compiled since idf v6.0
+
+## v1.11.0 - 2025-09-17
+
+### Refactor:
+
+* Clean up the component dependency, don't depend on the `driver` component directly
+
+## v1.10.1 - 2025-09-03
+
+### Bug Fix:
+
+* Modify the variable names associated with sm16825e to ensure consistency.
+
+## v1.10.0 - 2025-08-19
+
+### Improve:
+
+* Added new dimming driver SM16825E
+
+## v1.9.0 - 2025-08-11
+
+### Improve:
+
+- Add API for get power limit
+
 ## v1.8.3 - 2025-06-19
 
 ### Bug Fix:
@@ -55,7 +112,7 @@
 
 ### Enhancements:
 
-* Remove linear dimming, default to enabling curve dimming for all. 
+* Remove linear dimming, default to enabling curve dimming for all.
 
 ## v1.4.0 - 2024-11-15
 
@@ -145,7 +202,7 @@
 * The driver now supports setting white balance parameters for all channels. This means that you can adjust the white balance individually for each channel, allowing for precise control and customization of the lighting output.
 * Increased the power limit range from 100-300 to 100-500, facilitating power setting for RGBWW beads.
 * Introduced CCT output modes: standard mode (consistent with original scheme, mapping percentage to Kelvin values proportionally) and precise mode (setting individual percentages for each Kelvin value and predetermining current coefficients for each channel, scaling these coefficients proportionally during writing).
-* Some configuration changes: 
+* Some configuration changes:
   * Removed mode_mask from capability, now using led_beads to set the LED panel bead combination
   * Renamed enable_mix_cct to enable_hardware_cct, fades_ms to fade_time_ms, and enable_fades to enable_fade
   * Removed hardware_monitor_cb
@@ -188,6 +245,7 @@
 * Add a phase delay function to the PWM drive, and after enabling this function, all channel outputs will be in a complementary state.
 
 ## v0.4.1 - 2023-8-30
+
 ### Bug Fixes:
 
 * Fixed a thread safety issue.
@@ -341,8 +399,8 @@
 ### Enhancements:
 
 * Initial version
-
 * The following dimming solutions are supported
+
   * PWM
     * RGB + CW
     * RGB + CCT/Brightness
@@ -354,13 +412,14 @@
     * BP5758/BP5758D/BP5768D
   * Single Line
     * WS2812
-
 * Support for power limit
 * Support for color calibration
 * Support for effect
+
   * Blink
   * Breathe
 * Support for application layer capability configuration
+
   * Status memory
   * Fade
   * Mix CCT

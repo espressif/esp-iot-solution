@@ -1,0 +1,5 @@
+## IDF Component Manager Manifest File
+dependencies:
+  emotion_cls:
+    version: "*"
+    override_path: "../../../emotion_cls/"

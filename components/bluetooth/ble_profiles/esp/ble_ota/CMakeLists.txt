@@ -1,7 +1,11 @@
 set(srcs "")
 set(priv_include_dirs "")
 set(requires bt nvs_flash protocomm esp_netif protobuf-c)
-set(priv_requires json esp_timer)
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "6.0")
+    set(priv_requires cjson esp_timer)
+else()
+    set(priv_requires json esp_timer)
+endif()
 
 if(CONFIG_BT_NIMBLE_ENABLED)
     list(APPEND srcs "src/nimble_ota.c")
