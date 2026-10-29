@@ -645,7 +645,8 @@ static esp_err_t display_bridge_v8_blit_pipeline_frame(esp_lv_adapter_display_br
     return display_bridge_pipeline_blit(&impl->pipeline, impl->panel, &impl->runtime,
                                         &impl->disp_fb, publish_pending ? &impl->pending_fb : NULL,
                                         frame_buffer,
-                                        impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB);
+                                        impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB,
+                                        NULL);
 }
 
 static TaskHandle_t display_bridge_v8_get_notify_task(esp_lv_adapter_display_bridge_v8_t *impl)
@@ -1658,7 +1659,7 @@ static esp_err_t display_bridge_v8_dummy_publish_triple_pending(esp_lv_adapter_d
         return ret;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
     impl->notify_task = prev_notify;
 
     if (!next) {
@@ -1681,7 +1682,7 @@ static esp_err_t display_bridge_v8_dummy_publish_pipeline(esp_lv_adapter_display
         return ret;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
     impl->notify_task = prev_notify;
 
     if (!next) {
@@ -2571,7 +2572,7 @@ static void display_bridge_v8_flush_triple_full(esp_lv_adapter_display_bridge_v8
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
     } else {
-        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
         if (!next) {
             display_manager_flush_ready(drv);
             return;
@@ -2757,7 +2758,7 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
 
-            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
             if (!next) {
                 display_manager_flush_ready(drv);
                 return;
@@ -2802,7 +2803,7 @@ static void display_bridge_v8_flush_direct_rotate(esp_lv_adapter_display_bridge_
         return;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
     if (!next) {
         display_manager_flush_ready(drv);
         return;
@@ -2844,7 +2845,7 @@ static void display_bridge_v8_flush_full_rotate(esp_lv_adapter_display_bridge_v8
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
     } else {
-        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
         if (next) {
             impl->disp_fb = impl->draw_fb;
             impl->draw_fb = next->buffer;
@@ -2897,7 +2898,7 @@ static void display_bridge_v8_flush_partial_rotate(esp_lv_adapter_display_bridge
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
 
-            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, NULL);
             if (!next) {
                 display_manager_flush_ready(drv);
                 return;

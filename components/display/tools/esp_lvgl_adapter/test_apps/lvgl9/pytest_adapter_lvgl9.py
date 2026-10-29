@@ -148,3 +148,29 @@ def test_adapter_esp32p4_eco4(dut: Dut) -> None:
 )
 def test_adapter_esp32p4_eco_default(dut: Dut) -> None:
     test_adapter_esp32p4_template(dut)
+
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco4')
+def test_adapter_flush_from_non_adapter_task(dut: Dut) -> None:
+    """Flush from a dedicated task must not block on frame-complete notification."""
+    dut.expect('ESP LVGL Adapter Feature Test Suite', timeout=30)
+    dut.expect_exact('Press ENTER to see the list of tests.', timeout=5)
+    dut.write('[flush]')
+    dut.expect('Running non-adapter-task flush test', timeout=10)
+    dut.expect('Non-adapter flush task completed', timeout=15)
+    # Completion log is before tearDown; require Unity's final result so leak
+    # failures in tearDown still fail this pytest case.
+    dut.expect_exact('adapter flush from non-adapter task:PASS', timeout=10)
+
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco4')
+def test_adapter_dummy_draw_concurrent_with_flush(dut: Dut) -> None:
+    """Dummy draw and LVGL flush must not steal each other's pipeline wakeup."""
+    dut.expect('ESP LVGL Adapter Feature Test Suite', timeout=30)
+    dut.expect_exact('Press ENTER to see the list of tests.', timeout=5)
+    dut.write('[concurrent]')
+    dut.expect('Running dummy-draw/flush concurrency test', timeout=10)
+    dut.expect('Dummy-draw/flush concurrency test completed', timeout=15)
+    dut.expect_exact('adapter dummy draw concurrent with flush:PASS', timeout=10)
