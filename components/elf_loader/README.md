@@ -61,6 +61,96 @@ Add API calls in your project as follows:
     esp_elf_deinit(&elf);
 ```
 
+#### Streaming ELF relocation
+
+For ELF images larger than available DRAM, use `esp_elf_relocate_source()` with a file-backed `elf_source_t`. The loader reads headers, sections and relocation tables on demand through the source, so the whole image never has to be resident at once:
+
+```c
+#include "esp_elf.h"
+#include <errno.h>
+#include <limits.h>
+#include <stdio.h>
+
+typedef struct {
+    FILE *file;
+    size_t size;
+} elf_file_source_t;
+
+/* File-backed byte source. The caller owns the FILE* and the loader closes
+ * the source exactly once on every return path. */
+static size_t elf_file_size(void *ctx)
+{
+    const elf_file_source_t *source = ctx;
+    return source->size;
+}
+
+static int elf_file_read(void *ctx, size_t off, void *buf, size_t len)
+{
+    elf_file_source_t *source = ctx;
+    if (off > LONG_MAX) {
+        return -EOVERFLOW;
+    }
+    if (fseek(source->file, (long)off, SEEK_SET) != 0) {
+        return -EIO;
+    }
+    size_t got = fread(buf, 1, len, source->file);
+    return got == len ? 0 : -EIO;
+}
+
+static void elf_file_close(void *ctx)
+{
+    elf_file_source_t *source = ctx;
+    if (source->file) {
+        fclose(source->file);
+        source->file = NULL;
+    }
+}
+
+void load_elf_from_sd(const char *path)
+{
+    elf_file_source_t file = {0};
+
+    file.file = fopen(path, "rb");
+    if (!file.file) {
+        return;
+    }
+    if (fseek(file.file, 0, SEEK_END) != 0) {
+        fclose(file.file);
+        return;
+    }
+    long size = ftell(file.file);
+    if (size <= 0) {
+        fclose(file.file);
+        return;
+    }
+    file.size = (size_t)size;
+    if (fseek(file.file, 0, SEEK_SET) != 0) {
+        fclose(file.file);
+        return;
+    }
+
+    elf_source_t src = {
+        .size  = elf_file_size,
+        .read  = elf_file_read,
+        .close = elf_file_close,
+        .ctx   = &file,
+    };
+
+    esp_elf_t elf;
+    esp_elf_init(&elf);
+    if (esp_elf_relocate_source(&elf, &src) == 0) {
+        esp_elf_request(&elf, 0, 0, NULL);
+    }
+    esp_elf_deinit(&elf);
+
+    /* Do not close file.file yourself: the loader already called src->close(). */
+}
+```
+
+The source `read` must support random access by offset and return the same bytes on every call: the image is validated first and then read again during relocation. Do not close the source yourself as the loader calls `close` exactly once before returning, whether it succeeds or fails.
+
+Temporary buffers for large tables (e.g. `.symtab`, `.rela.*`) may still be megabytes; a buffered source (e.g. `setvbuf()` on the `FILE*`) is strongly recommended for SD card filesystems.
+
 The third argument to `esp_elf_relocate()` is the exact accessible length of the
 ELF image. Callers using `esp_elf_open()` should pass `file.size`; embedded ELF
 images can use the difference between the `_binary_*_end` and `_binary_*_start`
