@@ -15,6 +15,9 @@ CONFIG_LV_USE_CLIB_SPRINTF=y
 CONFIG_LV_DEF_REFR_PERIOD=15
 CONFIG_LV_DPI_DEF=60
 CONFIG_LV_OS_FREERTOS=y
+# Draw threads must not use notification index 0. The flush regression posts
+# one on the caller and requires it to survive lv_refr_now.
+CONFIG_LV_USE_FREERTOS_TASK_NOTIFY=n
 CONFIG_LV_DRAW_LAYER_SIMPLE_BUF_SIZE=48000
 CONFIG_LV_DRAW_THREAD_PRIO=4
 CONFIG_LV_DRAW_SW_SHADOW_CACHE_SIZE=4

@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS "test_esp_lvgl_adapter_features.c"
     INCLUDE_DIRS "."
-    REQUIRES hw_init unity
+    REQUIRES hw_init unity esp_timer
 )
 
 # Get target platform

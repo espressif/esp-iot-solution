@@ -6,9 +6,13 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "esp_check.h"
+#include "esp_system.h"
+#include "esp_timer.h"
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -85,9 +89,20 @@ static esp_lv_adapter_rotation_t get_configured_rotation(void)
 #endif
 }
 
+/*
+ * When set, select_tear_avoid_mode() returns TRIPLE_PARTIAL so the flush
+ * regression exercises display_bridge_pipeline_wait_free_buf() rather than
+ * DOUBLE_FULL's double_wait_sem path.
+ */
+static bool s_force_pipeline_tear_mode;
+
 static esp_lv_adapter_tear_avoid_mode_t select_tear_avoid_mode(void)
 {
+    if (s_force_pipeline_tear_mode) {
+        return ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL;
+    }
 #if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
+    /* eco4 / P4 defaults: DEFAULT_MIPI_DSI expands to TRIPLE_PARTIAL. */
     return ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
     return ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB;
@@ -209,6 +224,8 @@ static void test_init_display(void)
                                                          panel, io, HW_LCD_H_RES, HW_LCD_V_RES, rotation);
 #endif
 
+    /* Keep the default display profile; only override the selected tear mode. */
+    display_config.tear_avoid_mode = tear_avoid_mode;
     s_disp = esp_lv_adapter_register_display(&display_config);
     TEST_ASSERT_NOT_NULL(s_disp);
 
@@ -264,6 +281,7 @@ void setUp(void)
 
 void tearDown(void)
 {
+    s_force_pipeline_tear_mode = false;
     test_deinit_display();
     size_t after_free_8bit = heap_caps_get_free_size(MALLOC_CAP_8BIT);
     size_t after_free_32bit = heap_caps_get_free_size(MALLOC_CAP_32BIT);
@@ -441,6 +459,215 @@ TEST_CASE("adapter freetype font", "[adapter][freetype]")
     ESP_LOGI(TAG, "FreeType font test completed");
 }
 #endif
+
+/*
+ * Minimal regression for the flush pipeline notification target.
+ *
+ * LVGL may call the display flush from a task that is not the adapter task.
+ * The pipeline waits on a bridge semaphore.  The ISR gives that semaphore
+ * and does not clear or increment this task's notification index 0.
+ * The test app disables LV_USE_FREERTOS_TASK_NOTIFY so LVGL's draw-thread
+ * sync does not consume that same index.
+ *
+ * This task posts one index-0 notification, then performs a synchronous
+ * refresh.  The notification must still be readable afterwards, including
+ * when a free buffer is already available and the wait returns without
+ * blocking.  A missed wakeup still stalls after the pipeline buffers are busy.
+ *
+ * Tear mode must be a wait_free_buf() path (TRIPLE_PARTIAL / DOUBLE_PARTIAL /
+ * TRIPLE_FULL).  DOUBLE_FULL waits on double_wait_sem instead.  eco4's
+ * DEFAULT_MIPI_DSI already expands to TRIPLE_PARTIAL; the test forces that
+ * mode explicitly.
+ */
+static SemaphoreHandle_t s_flush_done;
+static volatile bool s_flush_ok;
+static esp_timer_handle_t s_flush_watchdog;
+
+static void flush_watchdog_cb(void *arg)
+{
+    (void)arg;
+    ESP_LOGE(TAG, "flush task watchdog expired; resetting");
+    esp_restart();
+}
+
+static void non_adapter_flush_task(void *arg)
+{
+    (void)arg;
+    bool ok = true;
+
+    for (int i = 0; i < 8; i++) {
+        (void)xTaskNotifyGive(xTaskGetCurrentTaskHandle());
+
+        esp_err_t err = esp_lv_adapter_lock(LVGL_LOCK_TIMEOUT_MS);
+        if (err != ESP_OK) {
+            ok = false;
+            break;
+        }
+
+        lv_obj_t *scr = lv_display_get_screen_active(s_disp);
+        if (scr == NULL) {
+            esp_lv_adapter_unlock();
+            ok = false;
+            break;
+        }
+
+        /* Force a full drawable region, then flush synchronously from this task. */
+        lv_obj_invalidate(scr);
+        lv_refr_now(s_disp);
+        esp_lv_adapter_unlock();
+
+        if (ulTaskNotifyTake(pdTRUE, 0) == 0) {
+            ok = false;
+            break;
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+
+    s_flush_ok = ok;
+    xSemaphoreGive(s_flush_done);
+    /* Stay parked until the test task deletes us. Self-delete would defer
+     * TCB/stack reclaim to the idle task and race tearDown leak checks. */
+    for (;;) {
+        vTaskDelay(portMAX_DELAY);
+    }
+}
+
+static SemaphoreHandle_t s_dummy_done;
+static volatile bool s_dummy_ok;
+
+static void dummy_draw_concurrent_task(void *arg)
+{
+    (void)arg;
+    bool ok = true;
+    const size_t fb_bytes = (size_t)HW_LCD_H_RES * HW_LCD_V_RES * sizeof(uint16_t);
+
+    for (int i = 0; i < 8; i++) {
+        void *fb = esp_lv_adapter_dummy_draw_get_free_buf(s_disp);
+        if (fb == NULL) {
+            ok = false;
+            break;
+        }
+        memset(fb, (i & 1) ? 0x1F : 0xF8, fb_bytes);
+        esp_err_t err = esp_lv_adapter_dummy_draw_flush_buf(s_disp, fb);
+        if (err != ESP_OK) {
+            ok = false;
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+
+    s_dummy_ok = ok;
+    xSemaphoreGive(s_dummy_done);
+    for (;;) {
+        vTaskDelay(portMAX_DELAY);
+    }
+}
+
+TEST_CASE("adapter dummy draw concurrent with flush", "[concurrent]")
+{
+    ESP_LOGI(TAG, "Running dummy-draw/flush concurrency test");
+
+#if !CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI && !CONFIG_EXAMPLE_LCD_INTERFACE_RGB
+    TEST_IGNORE_MESSAGE("concurrency regression needs MIPI/RGB pipeline tear mode");
+#endif
+
+    test_deinit_display();
+    s_force_pipeline_tear_mode = true;
+    test_init_display();
+    TEST_ESP_OK(esp_lv_adapter_set_dummy_draw(s_disp, true));
+
+    s_flush_done = xSemaphoreCreateBinary();
+    s_dummy_done = xSemaphoreCreateBinary();
+    TEST_ASSERT_NOT_NULL(s_flush_done);
+    TEST_ASSERT_NOT_NULL(s_dummy_done);
+    s_flush_ok = false;
+    s_dummy_ok = false;
+
+    const esp_timer_create_args_t watchdog_args = {
+        .callback = flush_watchdog_cb,
+        .name = "flush_wd",
+    };
+    TEST_ESP_OK(esp_timer_create(&watchdog_args, &s_flush_watchdog));
+    TEST_ESP_OK(esp_timer_start_once(s_flush_watchdog, 8000000));
+
+    TaskHandle_t flush_task = NULL;
+    TaskHandle_t dummy_task = NULL;
+    TEST_ASSERT_EQUAL(pdPASS, xTaskCreate(non_adapter_flush_task, "flush_task",
+                                          16384, NULL, 5, &flush_task));
+    TEST_ASSERT_EQUAL(pdPASS, xTaskCreate(dummy_draw_concurrent_task, "dummy_task",
+                                          16384, NULL, 5, &dummy_task));
+    TEST_ASSERT_NOT_NULL(flush_task);
+    TEST_ASSERT_NOT_NULL(dummy_task);
+
+    const bool flush_done = xSemaphoreTake(s_flush_done, pdMS_TO_TICKS(10000)) == pdTRUE;
+    const bool dummy_done = xSemaphoreTake(s_dummy_done, pdMS_TO_TICKS(10000)) == pdTRUE;
+    TEST_ESP_OK(esp_timer_stop(s_flush_watchdog));
+    TEST_ESP_OK(esp_timer_delete(s_flush_watchdog));
+    s_flush_watchdog = NULL;
+    vTaskDelete(flush_task);
+    vTaskDelete(dummy_task);
+
+    TEST_ASSERT_TRUE_MESSAGE(flush_done, "flush blocked during dummy draw");
+    TEST_ASSERT_TRUE_MESSAGE(dummy_done, "dummy draw blocked during flush");
+    TEST_ASSERT_TRUE_MESSAGE(s_flush_ok, "flush task failed");
+    TEST_ASSERT_TRUE_MESSAGE(s_dummy_ok, "dummy draw task failed");
+
+    vSemaphoreDelete(s_flush_done);
+    vSemaphoreDelete(s_dummy_done);
+    s_flush_done = NULL;
+    s_dummy_done = NULL;
+    s_force_pipeline_tear_mode = false;
+    ESP_LOGI(TAG, "Dummy-draw/flush concurrency test completed");
+}
+
+TEST_CASE("adapter flush from non-adapter task", "[flush]")
+{
+    ESP_LOGI(TAG, "Running non-adapter-task flush test");
+
+#if !CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI && !CONFIG_EXAMPLE_LCD_INTERFACE_RGB
+    TEST_IGNORE_MESSAGE("flush notify regression needs MIPI/RGB wait_free_buf tear mode");
+#endif
+
+    /* Re-init with an explicit pipeline tear mode (keep sync lv_refr_now). */
+    test_deinit_display();
+    s_force_pipeline_tear_mode = true;
+    test_init_display();
+    TEST_ASSERT_EQUAL(ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL, select_tear_avoid_mode());
+
+    s_flush_done = xSemaphoreCreateBinary();
+    TEST_ASSERT_NOT_NULL(s_flush_done);
+    s_flush_ok = false;
+
+    const esp_timer_create_args_t watchdog_args = {
+        .callback = flush_watchdog_cb,
+        .name = "flush_wd",
+    };
+    TEST_ESP_OK(esp_timer_create(&watchdog_args, &s_flush_watchdog));
+    /* Reset the test app if the bug is present; deleting a task that owns
+     * the LVGL mutex would leave teardown deadlocked. */
+    TEST_ESP_OK(esp_timer_start_once(s_flush_watchdog, 8000000));
+
+    TaskHandle_t task = NULL;
+    TEST_ASSERT_EQUAL(pdPASS, xTaskCreate(non_adapter_flush_task, "flush_task",
+                                          16384, NULL, 5, &task));
+    TEST_ASSERT_NOT_NULL(task);
+
+    const bool completed = xSemaphoreTake(s_flush_done, pdMS_TO_TICKS(10000)) == pdTRUE;
+    TEST_ESP_OK(esp_timer_stop(s_flush_watchdog));
+    TEST_ESP_OK(esp_timer_delete(s_flush_watchdog));
+    s_flush_watchdog = NULL;
+    vTaskDelete(task);
+    task = NULL;
+
+    TEST_ASSERT_TRUE_MESSAGE(completed, "flush task blocked waiting for frame completion");
+    TEST_ASSERT_TRUE_MESSAGE(s_flush_ok, "flush task failed");
+
+    vSemaphoreDelete(s_flush_done);
+    s_flush_done = NULL;
+    s_force_pipeline_tear_mode = false;
+    ESP_LOGI(TAG, "Non-adapter flush task completed");
+}
 
 void app_main(void)
 {
