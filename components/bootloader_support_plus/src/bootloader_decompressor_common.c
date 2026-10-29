@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022-2023 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2022-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,20 +19,39 @@ static bootloader_custom_ota_engine_t **custom_ota_engines;
 
 static const char *TAG = "boot_com";
 
+/*
+ * When flash encryption is off, read through the ROM SPI path (allow_decrypt
+ * = false). The cache-mapped path shares a single MMU window with the
+ * destination RMW in bootloader_storage_flash_write; on ESP32-P4 that
+ * interleaving can return stale data mid-stream and surface as
+ * "XZ-compressed data is corrupt" even though the MD5 check passed.
+ */
 int bootloader_decompressor_read(void *buf, unsigned int size)
 {
     uint32_t len = (custom_ota_header->length - custom_ota_config->src_offset > size) ? \
                    size : custom_ota_header->length - custom_ota_config->src_offset;
     uint32_t header_len = sizeof(bootloader_custom_ota_header_t);
+    bool allow_decrypt = bootloader_custom_flash_encryption_enabled();
 
     if (len > 0) {
         uint32_t src_addr = custom_ota_config->src_addr + header_len + custom_ota_config->src_offset;
         ESP_LOGD(TAG, "read from %" PRIx32 ", len %" PRIu32 "", src_addr, len);
-        bootloader_flash_read(src_addr, buf, len, true);
+
+        if (((src_addr | len | (uintptr_t)buf) & 3U) != 0) {
+            ESP_LOGE(TAG, "unaligned flash read addr=%" PRIx32 " len=%" PRIu32 " buf=%p",
+                     src_addr, len, buf);
+            return -1;
+        }
+        bootloader_custom_sync_int_cache();
+        if (bootloader_flash_read(src_addr, buf, len, allow_decrypt) != ESP_OK) {
+            ESP_LOGE(TAG, "flash read failed at %" PRIx32, src_addr);
+            return -1;
+        }
+
         custom_ota_config->src_offset += len;
     }
 
-    return len;
+    return (int)len;
 }
 
 int bootloader_decompressor_write(void *buf, unsigned int size)
