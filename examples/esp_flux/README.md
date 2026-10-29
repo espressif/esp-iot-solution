@@ -1,6 +1,6 @@
 # BLE SPP Example
 
-This example demonstrates how to combine the `ble_session_manager` component (connection management + GATT discovery) with the `esp_flux` component's `gatt_session` (reliable, fragmented data transfer) to implement a BLE Serial Port Profile (SPP)-like application.
+This example demonstrates how to combine the `ble_conn_mgr` component (connection management + GATT discovery) with the `esp_flux` component's `gatt_session` (reliable, fragmented data transfer) to implement a BLE Serial Port Profile (SPP)-like application.
 
 ## Overview
 
@@ -10,10 +10,10 @@ The BLE SPP example consists of two applications:
 2. **ble_spp_client** - BLE SPP client (central) that scans for SPP servers and connects to them
 
 Both applications demonstrate:
-- Multi-connection management (`ble_session_manager` / `ble_manager`)
-- GATT service discovery (`ble_session_manager` / `gatt_discovery`, client only — the server already knows its own handles)
+- Multi-connection management (`ble_conn_mgr`)
+- GATT service discovery (`ble_conn_mgr`, client only — the server already knows its own handles)
 - Reliable data transmission with automatic fragmentation, SACK, and reassembly (`esp_flux` / `gatt_session`)
-- Auto-reconnect functionality
+- Auto-reconnect via an example FreeRTOS timer (server: re-advertise every 2 s; client: every 5 s, while a connection slot is free, `scan_stop` then `scan_start`)
 
 Once connected (and once connection parameters are negotiated), both the client and the server continuously send a fixed-size test buffer to each other whenever their send session is idle.
 
@@ -97,14 +97,15 @@ gatt_session_fragment_send(session, send_buffer, SPP_TEST_TRANSFER_SIZE, 0xFF, 8
 
 ### Component Configuration
 
-You can configure the `ble_session_manager` component via `menuconfig`:
+You can configure the `ble_conn_mgr` component via `menuconfig`:
 
 ```bash
 idf.py menuconfig
 ```
 
-Navigate to `Component config` → `BLE Session Manager Configuration` to configure:
-- `BLE_MANAGER_MAX_CONNECTIONS` - Maximum number of simultaneous BLE connections
+Navigate to `Component config` → `BLE Connection Management` to configure:
+- `BLE_CONN_MGR_ROLE` - Peripheral (server) or Central (client)
+- `BLE_CONN_MGR_MAX_CONNECTIONS` - Maximum number of simultaneous BLE connections
 
 `esp_flux` has no Kconfig options; its protocol parameters (window size defaults, fragment timeout, retransmission, etc.) are compile-time constants in `components/esp_flux/include/esp_flux_transport.h` — see the [esp_flux README](../../components/esp_flux/README.md#configuration).
 
@@ -114,12 +115,9 @@ Navigate to `Component config` → `BLE Session Manager Configuration` to config
 
 ```
 I (1234) spp server: Starting BLE Component Test Example
-I (1235) spp server: BLE Host Task Started
-I (1236) spp server: BLE Host Synced
-I (1237) spp server: GATT characteristic handle initialized: 0x0015
-I (1238) spp server: Connected successfully to device XX:XX:XX:XX:XX:XX (conn_handle=1, first time)
-I (1239) spp server: Auto reconnect enabled for device XX:XX:XX:XX:XX:XX
-I (1240) spp server: GATT session created for conn_handle=1, val_handle=0x0015, mtu=23
+I (1235) spp server: GATT characteristic handle initialized: 0x0015
+I (1236) spp server: Connected successfully to device XX:XX:XX:XX:XX:XX (conn_handle=1)
+I (1237) spp server: GATT session created for conn_handle=1, val_handle=0x0015, mtu=23
 W (2000) spp server: Session 1 stream 0 received data, Data Size: 4411 bytes (4.31 KB)
 I (3000) spp server: Started send to conn_handle=1 (4411 bytes)
 ```
@@ -128,11 +126,8 @@ I (3000) spp server: Started send to conn_handle=1 (4411 bytes)
 
 ```
 I (1234) spp client: Starting BLE Component Test Example
-I (1235) spp client: BLE Host Task Started
-I (1236) spp client: BLE Host Synced
-I (1237) spp client: Connected successfully to device XX:XX:XX:XX:XX:XX (first time)
-I (1238) spp client: Auto reconnect enabled for device XX:XX:XX:XX:XX:XX
-I (1239) spp client: Service discovery completed for connection 1
+I (1235) spp client: Connected successfully to device XX:XX:XX:XX:XX:XX (conn_handle=1)
+I (1236) spp client: Service discovery completed for connection 1
 I (1240) spp client: Started send to conn_handle=1 (4411 bytes)
 I (1241) spp client: Session conn_handle: 1 progress: 25% (1102/4411 bytes)
 I (1242) spp client: Session conn_handle: 1 progress: 50% (2205/4411 bytes)
@@ -154,9 +149,9 @@ ble_spp_server/
 ```
 
 Key functions:
-- `ble_spp_server_advertise()` - Start advertising SPP service
-- `gatt_svr_init()` - Initialize GATT server with SPP service
-- `ble_manager_connect_cb()` - Handle client connections, create the GATT session
+- `esp_ble_conn_add_svc()` / `esp_ble_conn_start()` - Register the SPP service and start advertising
+- `app_ble_conn_event_handler()` - Handle connect / disconnect / RX, create the GATT session
+- `spp_reconnect_timer_cb()` - Re-start advertising after disconnect
 - `gatt_data_received_cb()` - Handle received data
 - `gatt_session_complete_cb()` - Handle send completion
 
@@ -172,9 +167,9 @@ ble_spp_client/
 ```
 
 Key functions:
-- `ble_manager_scan_cb()` - Handle scan results, connect on matching SPP UUID
-- `ble_manager_connect_cb()` - Handle connection events, start GATT discovery
-- `gatt_discovery_complete_cb()` - Handle discovery completion, create the GATT session
+- `spp_scan_cb()` - Filter scan results and connect on matching SPP UUID
+- `app_ble_conn_event_handler()` - Handle connect / disconnect / discovery, create the GATT session
+- `spp_reconnect_timer_cb()` - Every 5 s, while the connected count is below `BLE_CONN_MGR_MAX_CONNECTIONS`, call `esp_ble_conn_scan_stop()` then `esp_ble_conn_scan_start()`. No peer address is saved, and there is no retry limit
 - `gatt_data_received_cb()` - Handle received data
 - `gatt_session_complete_cb()` - Handle send completion
 
@@ -197,7 +192,7 @@ Key functions:
 ### Memory Issues
 
 - Reduce `SPP_TEST_TRANSFER_SIZE` in `main/main.c` if running out of memory
-- Reduce `BLE_MANAGER_MAX_CONNECTIONS` (via `menuconfig`) if needed
+- Reduce `BLE_CONN_MGR_MAX_CONNECTIONS` (via `menuconfig`) if needed
 - Monitor free heap size in logs
 
 ## Performance Tips
@@ -210,14 +205,13 @@ Key functions:
 ## API Reference
 
 For detailed API documentation, please refer to:
-- [ble_manager.h](common_components/ble_session_manager/include/ble_manager.h) - Connection management
-- [gatt_discovery.h](common_components/ble_session_manager/include/gatt_discovery.h) - GATT service discovery
+- [esp_ble_conn_mgr.h](../../components/bluetooth/ble_conn_mgr/include/esp_ble_conn_mgr.h) - Connection management
 - [esp_flux_transport.h](../../components/esp_flux/include/esp_flux_transport.h) - Transport-agnostic protocol engine
 - [flux_gatt_session.h](../../components/esp_flux/include/flux_gatt_session.h) - BLE GATT session (reliable transfer)
 
 ## See Also
 
-- [BLE Session Manager Component README](common_components/ble_session_manager/README.md)
+- [BLE Connection Management Component README](../../components/bluetooth/ble_conn_mgr/README.md)
 - [ESP Flux Component README](../../components/esp_flux/README.md)
 
 ## License

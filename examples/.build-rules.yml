@@ -157,6 +157,14 @@ examples/bluetooth/ble_remote_control:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
 
+examples/esp_flux/ble_spp_client:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/esp_flux/ble_spp_server:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
 examples/esp_gmp/gmp_ota/ble_gmp_ota_client:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
