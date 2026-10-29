@@ -766,7 +766,7 @@ typedef struct {
             uint8_t peer_addr_type;                      /*!< Peer address type: esp_ble_conn_addr_type_t */
         } connected;                                     /*!< ESP_BLE_CONN_EVENT_CONNECTED */
         struct {
-            int status;                                   /*!< GAP connect failure status */
+            int status;                                   /*!< GAP status or synchronous host error for a failed outgoing connection */
             uint8_t peer_addr[6];                         /*!< Pending peer address */
             uint8_t peer_addr_type;                       /*!< Pending peer address type */
         } connect_failed;                                /*!< ESP_BLE_CONN_EVENT_CONNECT_FAILED */
