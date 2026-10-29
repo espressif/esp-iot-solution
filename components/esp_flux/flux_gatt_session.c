@@ -760,6 +760,48 @@ esp_err_t gatt_session_set_mtu(gatt_session_t *session, uint16_t mtu)
     return ret;
 }
 
+esp_err_t gatt_session_set_mtu_by_handle(uint16_t conn_handle, uint16_t mtu)
+{
+    gatt_session_t *session = gatt_session_find_by_handle_pinned(conn_handle);
+    if (!session) {
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    esp_err_t err = gatt_session_set_mtu(session, mtu);
+    gatt_session_callback_leave(session);
+    return err;
+}
+
+esp_err_t gatt_session_feed_data_by_handle(uint16_t conn_handle,
+                                           const uint8_t *data, uint16_t data_len)
+{
+    gatt_session_t *session;
+    esp_err_t err;
+
+    if (!data && data_len != 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (data_len == 0) {
+        return ESP_OK;
+    }
+
+    session = gatt_session_find_by_handle_pinned(conn_handle);
+    if (!session) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    if (!session->flux_session) {
+        err = ESP_ERR_INVALID_STATE;
+    } else {
+        err = flux_session_feed_data(session->flux_session, data, data_len);
+        if (err != ESP_OK && session->callbacks.error_cb) {
+            session->callbacks.error_cb(session, err);
+        }
+    }
+
+    gatt_session_callback_leave(session);
+    return err;
+}
+
 /* ────────────────────── Send / recv API (delegates to flux_session) ────────────────────── */
 esp_err_t gatt_session_send(gatt_session_t *session, const uint8_t *data,
                             uint32_t size, uint8_t window_size, uint8_t window_threshold_percent)

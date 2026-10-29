@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.2.0 - 2026-10-29
+
+### Enhancements:
+
+* Add connection-handle-based feed and MTU helpers that pin GATT sessions for the duration of each operation
+
 ## v0.1.0 - 2026-10-28
 
 ### Feature:

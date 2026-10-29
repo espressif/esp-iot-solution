@@ -99,6 +99,13 @@ esp_err_t gatt_session_destroy(gatt_session_t *session);
 esp_err_t gatt_session_schedule_destroy(gatt_session_t *session);
 esp_err_t gatt_session_set_mtu(gatt_session_t *session, uint16_t mtu);
 
+/** Update MTU for a live connection while pinning its session lifecycle. */
+esp_err_t gatt_session_set_mtu_by_handle(uint16_t conn_handle, uint16_t mtu);
+
+/** Feed received transport data while pinning the session located by connection handle. */
+esp_err_t gatt_session_feed_data_by_handle(uint16_t conn_handle,
+                                           const uint8_t *data, uint16_t data_len);
+
 /** Underlying flux protocol session (may be NULL if not yet created / destroyed). */
 flux_session_t *gatt_session_get_flux(const gatt_session_t *session);
 
