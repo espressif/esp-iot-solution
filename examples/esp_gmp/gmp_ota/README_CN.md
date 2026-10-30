@@ -7,6 +7,11 @@ GMP over Flux 的完整 OTA 演示：
 - **Server（设备）**：收到固件后 **直写 OTA 分区** 并重启（框架内无 SPIFFS）
 - **Client（主机）**：用 **SPIFFS 管理待升级固件**，连接后推送给 Server
 
+BLE 连接管理（扫描、广播、GATT 服务注册、服务发现与重连）由 `ble_conn_mgr`
+组件负责：client 以 central 角色运行（`CONFIG_BLE_CONN_MGR_ROLE_CENTRAL`），
+server 以 peripheral 角色运行（`CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL`）并在扫描
+可连接广播包中携带 GMP 服务 UUID。Server 升级重启或链路断开后，client 会自动重新建链。
+
 ## 目录
 
 ```text

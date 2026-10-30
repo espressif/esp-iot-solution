@@ -3,7 +3,7 @@ Place the firmware to upload here as `ota_image.bin`, then rebuild and flash the
 Example:
 
 ```bash
-cp ../ble_gmp_ota_server/build/ble_gmp_ota_server.bin ota_image.bin
+cp ../../ble_gmp_ota_server/build/ble_gmp_ota_server.bin ota_image.bin
 cd .. && idf.py build flash monitor
 ```
 

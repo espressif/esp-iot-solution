@@ -6,10 +6,10 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <inttypes.h>
 #include <stdlib.h>
 
+#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -17,14 +17,10 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
-#include "host/ble_hs.h"
-#include "host/util/util.h"
-#include "services/gap/ble_svc_gap.h"
-#include "services/gatt/ble_svc_gatt.h"
+#include "host/ble_att.h"
 
-#include "ble_manager.h"
+#include "esp_ble_conn_mgr.h"
+#include "esp_flux_transport.h"
 #include "flux_gatt_session.h"
 #include "esp_gmp.h"
 #include "esp_gmp_flux.h"
@@ -36,19 +32,47 @@
 
 static const char *TAG = "gmp_ota_srv";
 
-#define MAX_CONNECTIONS CONFIG_BLE_MANAGER_MAX_CONNECTIONS
+#define MAX_CONNECTIONS CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS
 
-static ble_manager_t *g_ble_manager;
 static gatt_session_t *g_sessions[MAX_CONNECTIONS];
+static bool g_notify_enabled[MAX_CONNECTIONS];
 static gatt_session_t *g_teardown_pending[MAX_CONNECTIONS];
 static portMUX_TYPE g_sessions_lock = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE g_teardown_lock = portMUX_INITIALIZER_UNLOCKED;
 static uint16_t g_chr_rx_handle;
 static uint16_t g_chr_tx_handle;
 
-static const ble_uuid128_t gmp_svc_uuid = GMP_BLE_UUID_SVC;
-static const ble_uuid128_t gmp_chr_rx_uuid = GMP_BLE_UUID_CHR_RX;
-static const ble_uuid128_t gmp_chr_tx_uuid = GMP_BLE_UUID_CHR_TX;
+static esp_ble_conn_character_t gmp_chrs[] = {
+    {
+        .name = "gmp_rx",
+        .type = BLE_CONN_UUID_TYPE_128,
+        .flag = BLE_CONN_GATT_CHR_WRITE | BLE_CONN_GATT_CHR_WRITE_NO_RSP,
+        .uuid = { .uuid128 = { GMP_BLE_UUID_CHR_RX_BYTES } },
+        .uuid_fn = NULL,
+    },
+    {
+        .name = "gmp_tx",
+        .type = BLE_CONN_UUID_TYPE_128,
+        .flag = BLE_CONN_GATT_CHR_NOTIFY,
+        .uuid = { .uuid128 = { GMP_BLE_UUID_CHR_TX_BYTES } },
+        .uuid_fn = NULL,
+    },
+};
+
+static const esp_ble_conn_svc_t gmp_svc = {
+    .type = BLE_CONN_UUID_TYPE_128,
+    .uuid = { .uuid128 = { GMP_BLE_UUID_SVC_BYTES } },
+    .nu_lookup_count = sizeof(gmp_chrs) / sizeof(gmp_chrs[0]),
+    .nu_lookup = gmp_chrs,
+};
+
+/* Keep the GMP UUID in the connectable advertisement. A scan response is not
+ * connectable, so the central must not initiate a connection from it. */
+static const uint8_t gmp_adv_data[] = {
+    0x02, ESP_BLE_CONN_ADV_TYPE_FLAGS, 0x06,
+    BLE_UUID128_VAL_LEN + 1, ESP_BLE_CONN_ADV_TYPE_UUID128_COMPLETE,
+    GMP_BLE_UUID_SVC_BYTES,
+};
 
 static int find_session_idx(uint16_t conn_handle)
 {
@@ -66,6 +90,7 @@ static void clear_session_slot(gatt_session_t *session)
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (g_sessions[i] == session) {
             g_sessions[i] = NULL;
+            g_notify_enabled[i] = false;
             break;
         }
     }
@@ -85,6 +110,21 @@ static bool session_slot_active(gatt_session_t *session)
     }
     portEXIT_CRITICAL(&g_sessions_lock);
     return active;
+}
+
+static bool session_notify_enabled(gatt_session_t *session)
+{
+    bool enabled = false;
+
+    portENTER_CRITICAL(&g_sessions_lock);
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_sessions[i] == session) {
+            enabled = g_notify_enabled[i];
+            break;
+        }
+    }
+    portEXIT_CRITICAL(&g_sessions_lock);
+    return enabled;
 }
 
 static esp_err_t setup_gmp_callbacks(gatt_session_t *session)
@@ -172,6 +212,7 @@ static void activate_session_task(void *arg)
     gatt_session_t *session = (gatt_session_t *)arg;
     const uint16_t need_mtu = 185;
     uint16_t mtu = BLE_ATT_MTU_DFLT;
+    bool notify_enabled = false;
     uint16_t conn_handle;
 
     if (!session) {
@@ -188,6 +229,7 @@ static void activate_session_task(void *arg)
             for (int j = 0; j < MAX_CONNECTIONS; j++) {
                 if (g_sessions[j] == session) {
                     g_sessions[j] = NULL;
+                    g_notify_enabled[j] = false;
                     owned = true;
                     break;
                 }
@@ -195,19 +237,23 @@ static void activate_session_task(void *arg)
             portEXIT_CRITICAL(&g_sessions_lock);
             if (owned) {
                 gatt_session_schedule_destroy(session);
-                ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+                (void)esp_ble_conn_disconnect_by_handle(conn_handle);
             }
             vTaskDelete(NULL);
             return;
         }
-        if (ble_manager_get_mtu_by_conn(g_ble_manager, conn_handle, &mtu) == ESP_OK &&
-                mtu >= need_mtu) {
+        notify_enabled = session_notify_enabled(session);
+        if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) == ESP_OK &&
+                mtu >= need_mtu && notify_enabled) {
             break;
         }
         vTaskDelay(pdMS_TO_TICKS(50));
     }
     if (mtu < need_mtu) {
         ESP_LOGW(TAG, "MTU still low (%u); activating anyway", (unsigned)mtu);
+    }
+    if (!notify_enabled) {
+        ESP_LOGW(TAG, "Peer has not subscribed yet; activating anyway");
     }
     if (mtu < BLE_ATT_MTU_DFLT) {
         mtu = BLE_ATT_MTU_DFLT;
@@ -220,6 +266,7 @@ static void activate_session_task(void *arg)
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
             if (g_sessions[i] == session) {
                 g_sessions[i] = NULL;
+                g_notify_enabled[i] = false;
                 owned = true;
                 break;
             }
@@ -227,7 +274,7 @@ static void activate_session_task(void *arg)
         portEXIT_CRITICAL(&g_sessions_lock);
         if (owned) {
             gatt_session_schedule_destroy(session);
-            ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+            (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         }
         vTaskDelete(NULL);
         return;
@@ -242,6 +289,7 @@ static void activate_session_task(void *arg)
         for (int i = 0; i < MAX_CONNECTIONS; i++) {
             if (g_sessions[i] == session) {
                 g_sessions[i] = NULL;
+                g_notify_enabled[i] = false;
                 owned = true;
                 break;
             }
@@ -249,7 +297,7 @@ static void activate_session_task(void *arg)
         portEXIT_CRITICAL(&g_sessions_lock);
         if (owned) {
             gatt_session_schedule_destroy(session);
-            ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+            (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         }
         vTaskDelete(NULL);
         return;
@@ -270,7 +318,7 @@ static void activate_session_task(void *arg)
             }
             portEXIT_CRITICAL(&g_sessions_lock);
         }
-        ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         vTaskDelete(NULL);
         return;
     }
@@ -289,7 +337,7 @@ static void activate_session_task(void *arg)
             }
             portEXIT_CRITICAL(&g_sessions_lock);
         }
-        ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         vTaskDelete(NULL);
         return;
     }
@@ -309,7 +357,7 @@ static void activate_session_task(void *arg)
             }
             portEXIT_CRITICAL(&g_sessions_lock);
         }
-        ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         vTaskDelete(NULL);
         return;
     }
@@ -329,7 +377,7 @@ static void activate_session_task(void *arg)
             }
             portEXIT_CRITICAL(&g_sessions_lock);
         }
-        ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         vTaskDelete(NULL);
         return;
     }
@@ -338,28 +386,43 @@ static void activate_session_task(void *arg)
     vTaskDelete(NULL);
 }
 
-static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_connection_t *conn, int status, void *arg)
+static void cache_local_chr_handles(void)
 {
-    (void)manager;
-    (void)status;
-    (void)arg;
+    esp_ble_conn_uuid_t svc_uuid = { .uuid128 = { GMP_BLE_UUID_SVC_BYTES } };
+    esp_ble_conn_uuid_t rx_uuid = { .uuid128 = { GMP_BLE_UUID_CHR_RX_BYTES } };
+    esp_ble_conn_uuid_t tx_uuid = { .uuid128 = { GMP_BLE_UUID_CHR_TX_BYTES } };
+    uint16_t rx_handle = 0;
+    uint16_t tx_handle = 0;
 
-    if (type != BLE_EVENT_TYPE_CONNECT_COMPLETE && type != BLE_EVENT_TYPE_RECONNECT_COMPLETE) {
+    if (esp_ble_conn_get_chr_handle(BLE_CONN_UUID_TYPE_128, svc_uuid,
+                                    BLE_CONN_UUID_TYPE_128, rx_uuid,
+                                    0, &rx_handle) != ESP_OK ||
+            esp_ble_conn_get_chr_handle(BLE_CONN_UUID_TYPE_128, svc_uuid,
+                                        BLE_CONN_UUID_TYPE_128, tx_uuid,
+                                        0, &tx_handle) != ESP_OK) {
+        ESP_LOGE(TAG, "GMP GATT handles are not available");
         return;
     }
 
+    g_chr_rx_handle = rx_handle;
+    g_chr_tx_handle = tx_handle;
+    ESP_LOGI(TAG, "GMP GATT ready rx=0x%04X tx=0x%04X", rx_handle, tx_handle);
+}
+
+static void on_connected(uint16_t conn_handle)
+{
     if (g_chr_rx_handle == 0 || g_chr_tx_handle == 0) {
         ESP_LOGW(TAG, "GATT handles not ready");
         return;
     }
 
     uint16_t mtu = BLE_ATT_MTU_DFLT;
-    if (ble_manager_get_mtu_by_conn(g_ble_manager, conn->conn_handle, &mtu) != ESP_OK ||
+    if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) != ESP_OK ||
             mtu < BLE_ATT_MTU_DFLT) {
         mtu = BLE_ATT_MTU_DFLT;
     }
 
-    gatt_session_t *session = gatt_session_create(conn->conn_handle, NULL,
+    gatt_session_t *session = gatt_session_create(conn_handle, NULL,
                                                   g_chr_tx_handle, g_chr_rx_handle,
                                                   mtu, GATT_SESSION_ROLE_SLAVE);
     if (!session) {
@@ -372,6 +435,7 @@ static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_con
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (!g_sessions[i]) {
             g_sessions[i] = session;
+            g_notify_enabled[i] = false;
             slot = i;
             break;
         }
@@ -379,9 +443,9 @@ static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_con
     portEXIT_CRITICAL(&g_sessions_lock);
     if (slot < 0) {
         ESP_LOGW(TAG, "max connections (%d) reached, rejecting conn=%d",
-                 MAX_CONNECTIONS, conn->conn_handle);
+                 MAX_CONNECTIONS, conn_handle);
         gatt_session_schedule_destroy(session);
-        ble_gap_terminate(conn->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
@@ -390,23 +454,20 @@ static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_con
         ESP_LOGE(TAG, "Failed to schedule session activation");
         clear_session_slot(session);
         gatt_session_schedule_destroy(session);
-        ble_gap_terminate(conn->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
     }
 }
 
-static void ble_manager_disconnect_cb(ble_manager_t *manager, ble_connection_t *conn, int status, void *arg)
+static void on_disconnected(uint16_t conn_handle)
 {
-    (void)manager;
-    (void)status;
-    (void)arg;
-
     gatt_session_t *session = NULL;
 
     portENTER_CRITICAL(&g_sessions_lock);
-    int idx = find_session_idx(conn->conn_handle);
+    int idx = find_session_idx(conn_handle);
     if (idx >= 0) {
         session = g_sessions[idx];
         g_sessions[idx] = NULL;
+        g_notify_enabled[idx] = false;
     }
     portEXIT_CRITICAL(&g_sessions_lock);
     if (!session) {
@@ -414,126 +475,98 @@ static void ble_manager_disconnect_cb(ble_manager_t *manager, ble_connection_t *
     }
     if (xTaskCreate(teardown_session_task, "gmp_srv_teardown", 4096, session, 4, NULL) != pdPASS &&
             !teardown_pending_push(session)) {
-        ESP_LOGE(TAG, "failed to schedule teardown for conn=%d", conn->conn_handle);
+        ESP_LOGE(TAG, "failed to schedule teardown for conn=%d", conn_handle);
     }
-    ESP_LOGI(TAG, "Disconnected conn=%d", conn->conn_handle);
+    ESP_LOGI(TAG, "Disconnected conn=%d", conn_handle);
 }
 
-static void start_advertising(void)
+static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base,
+                                       int32_t id, void *event_data)
 {
-    struct ble_gap_adv_params adv_params;
-    struct ble_hs_adv_fields adv_fields;
-    struct ble_hs_adv_fields rsp_fields;
-    const char *name = ble_svc_gap_device_name();
-    int rc;
+    (void)handler_args;
 
-    memset(&adv_fields, 0, sizeof(adv_fields));
-    adv_fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    adv_fields.tx_pwr_lvl_is_present = 1;
-    adv_fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
-    adv_fields.name = (uint8_t *)name;
-    adv_fields.name_len = strlen(name);
-    adv_fields.name_is_complete = 1;
-
-    rc = ble_gap_adv_set_fields(&adv_fields);
-    if (rc != 0) {
-        ESP_LOGE(TAG, "adv_set_fields rc=%d", rc);
+    if (base != BLE_CONN_MGR_EVENTS) {
         return;
     }
 
-    memset(&rsp_fields, 0, sizeof(rsp_fields));
-    rsp_fields.uuids128 = (ble_uuid128_t *)&gmp_svc_uuid;
-    rsp_fields.num_uuids128 = 1;
-    rsp_fields.uuids128_is_complete = 1;
+    switch (id) {
+    case ESP_BLE_CONN_EVENT_STARTED:
+        cache_local_chr_handles();
+        break;
+    case ESP_BLE_CONN_EVENT_CONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
 
-    rc = ble_gap_adv_rsp_set_fields(&rsp_fields);
-    if (rc != 0) {
-        ESP_LOGE(TAG, "adv_rsp_set_fields rc=%d", rc);
-        return;
+        if (!evt) {
+            break;
+        }
+        on_connected(evt->connected.conn_handle);
+        break;
     }
+    case ESP_BLE_CONN_EVENT_DISCONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
 
-    memset(&adv_params, 0, sizeof(adv_params));
-    adv_params.conn_mode = BLE_GAP_CONN_MODE_UND;
-    adv_params.disc_mode = BLE_GAP_DISC_MODE_GEN;
-
-    esp_err_t ret = ble_manager_start_advertising(g_ble_manager, &adv_params, 0);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "start_advertising failed: %s", esp_err_to_name(ret));
+        if (!evt) {
+            break;
+        }
+        on_disconnected(evt->disconnected.conn_handle);
+        break;
     }
-}
+    case ESP_BLE_CONN_EVENT_DATA_RECEIVE: {
+        esp_ble_conn_data_t *conn_data = event_data;
 
-static const struct ble_gatt_svc_def gmp_gatt_svcs[] = {
-    {
-        .type = BLE_GATT_SVC_TYPE_PRIMARY,
-        .uuid = &gmp_svc_uuid.u,
-        .characteristics = (struct ble_gatt_chr_def[])
-        {
-            {
-                .uuid = &gmp_chr_rx_uuid.u,
-                .access_cb = gatt_session_gatt_handler,
-                .val_handle = &g_chr_rx_handle,
-                .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_WRITE_NO_RSP,
-            }, {
-                .uuid = &gmp_chr_tx_uuid.u,
-                .access_cb = gatt_session_gatt_handler,
-                .val_handle = &g_chr_tx_handle,
-                .flags = BLE_GATT_CHR_F_NOTIFY,
-            },
-            { 0 },
-        },
-    },
-    { 0 },
-};
-
-static int gatt_svr_init(void)
-{
-    int rc;
-
-    ble_svc_gap_init();
-    ble_svc_gatt_init();
-
-    rc = ble_gatts_count_cfg(gmp_gatt_svcs);
-    if (rc != 0) {
-        return rc;
+        if (!conn_data) {
+            break;
+        }
+        if (conn_data->data && conn_data->data_len) {
+            (void)gatt_session_feed_data_by_handle(conn_data->write_conn_id,
+                                                   conn_data->data,
+                                                   conn_data->data_len);
+        }
+        free(conn_data->data);
+        conn_data->data = NULL;
+        break;
     }
+    case ESP_BLE_CONN_EVENT_MTU: {
+        esp_ble_conn_event_data_t *evt = event_data;
 
-    rc = ble_gatts_add_svcs(gmp_gatt_svcs);
-    if (rc != 0) {
-        return rc;
+        if (!evt) {
+            break;
+        }
+        (void)gatt_session_set_mtu_by_handle(evt->mtu_update.conn_handle,
+                                             evt->mtu_update.mtu);
+        break;
     }
+    case ESP_BLE_CONN_EVENT_CCCD_UPDATE: {
+        esp_ble_conn_cccd_update_t *cccd = event_data;
+        const uint8_t tx_uuid[BLE_UUID128_VAL_LEN] = { GMP_BLE_UUID_CHR_TX_BYTES };
 
-    return 0;
-}
-
-static void nimble_host_task(void *param)
-{
-    (void)param;
-    nimble_port_run();
-    nimble_port_freertos_deinit();
-}
-
-void ble_store_config_init(void);
-
-static void nimble_host_on_sync(void)
-{
-    int rc = ble_hs_util_ensure_addr(0);
-    assert(rc == 0);
-}
-
-static void nimble_host_config(void)
-{
-    ble_hs_cfg.reset_cb = NULL;
-    ble_hs_cfg.sync_cb = nimble_host_on_sync;
-    ble_hs_cfg.store_status_cb = NULL;
-    ble_store_config_init();
+        if (!cccd || cccd->uuid_type != BLE_CONN_UUID_TYPE_128 ||
+                memcmp(cccd->uuid.uuid128, tx_uuid, sizeof(tx_uuid)) != 0) {
+            break;
+        }
+        portENTER_CRITICAL(&g_sessions_lock);
+        int idx = find_session_idx(cccd->conn_handle);
+        if (idx >= 0) {
+            g_notify_enabled[idx] = cccd->notify_enable;
+        }
+        portEXIT_CRITICAL(&g_sessions_lock);
+        ESP_LOGI(TAG, "CCCD notify=%d conn=%d", cccd->notify_enable, cccd->conn_handle);
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void app_main(void)
 {
     esp_err_t ret;
+    esp_ble_conn_config_t config = {
+        .device_name = GMP_BLE_DEVICE_NAME,
+    };
 
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
-    esp_log_level_set("ble_manager", ESP_LOG_WARN);
+    esp_log_level_set("blecm_nimble", ESP_LOG_WARN);
     esp_log_level_set("gatt_session", ESP_LOG_WARN);
     esp_log_level_set("esp_flux", ESP_LOG_WARN);
 
@@ -548,37 +581,18 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_gmp_os_init());
     ESP_ERROR_CHECK(esp_gmp_ota_init(NULL));
 
-    ESP_ERROR_CHECK(nimble_port_init());
-    nimble_host_config();
-
-    ble_svc_gap_device_name_set(GMP_BLE_DEVICE_NAME);
-
-    int rc = gatt_svr_init();
-    if (rc != 0) {
-        ESP_LOGE(TAG, "gatt_svr_init rc=%d", rc);
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID,
+                                               app_ble_conn_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(esp_ble_conn_adv_data_set(gmp_adv_data, sizeof(gmp_adv_data)));
+    ESP_ERROR_CHECK(esp_ble_conn_add_svc(&gmp_svc));
+    if (esp_ble_conn_start() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start BLE connection manager");
+        esp_ble_conn_stop();
+        esp_ble_conn_deinit();
         return;
     }
-
-    nimble_port_freertos_init(nimble_host_task);
-
-    ble_manager_callbacks_t mgr_cbs = {
-        .ble_adv_cb = NULL,
-        .ble_scan_cb = NULL,
-        .ble_connect_cb = ble_manager_connect_cb,
-        .ble_disconnect_cb = ble_manager_disconnect_cb,
-        .ble_conn_update_cb = NULL,
-        .arg = NULL,
-    };
-    g_ble_manager = ble_manager_init(&mgr_cbs);
-    if (!g_ble_manager) {
-        ESP_LOGE(TAG, "ble_manager_init failed");
-        return;
-    }
-
-    while (!ble_hs_synced()) {
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    start_advertising();
 
     ESP_LOGI(TAG, "GMP OTA server ready (%s)", GMP_BLE_DEVICE_NAME);
 
