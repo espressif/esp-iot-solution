@@ -9,7 +9,7 @@ The `esp_flux` component consists of two layers:
 1. **Flux Transport** (`flux_transport`) - The protocol engine: fragmentation/reassembly, selective acknowledgment (SACK), sliding-window flow control, and retransmission. It only depends on a small `flux_transport_ops_t` interface (`send` + `get_mtu`), so it can run over any unreliable, MTU-bound transport (BLE GATT, Wi-Fi, UART, ...).
 2. **GATT Session** (`gatt_session`) - A thin BLE (NimBLE) adapter that implements `flux_transport_ops_t` on top of GATT write/notify/indicate, and bridges GAP/GATT RX events back into the protocol engine.
 
-Connection management (scanning, advertising, auto-reconnect) and GATT service discovery are **not** part of this component — see the `ble_session_manager` component used by the examples in `examples/esp_flux/`.
+Connection management (scanning, advertising, auto-reconnect) and GATT service discovery are **not** part of this component — the examples in `examples/esp_flux/` use the `ble_conn_mgr` component for these responsibilities.
 
 ## Features
 
@@ -148,7 +148,7 @@ idf_component_register(
 
 ## Quick Start
 
-This example assumes a GATT connection already exists (`conn_handle`, characteristic value handles, and negotiated MTU) — see `ble_session_manager` / `gatt_discovery` in `examples/esp_flux/` for connection setup and service discovery.
+This example assumes a GATT connection already exists (`conn_handle`, characteristic value handles, and negotiated MTU) — see the `ble_conn_mgr` integration in the `ble_spp_client` and `ble_spp_server` examples under `examples/esp_flux/` for connection setup and service discovery.
 
 ### 1. Create a GATT Session
 
