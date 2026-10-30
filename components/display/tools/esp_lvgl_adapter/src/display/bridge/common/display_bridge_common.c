@@ -1459,11 +1459,29 @@ static bool pipeline_buffer_is_queued(esp_lv_adapter_display_pipeline_t *p, void
     return false;
 }
 
+void display_bridge_waiter_drain(SemaphoreHandle_t wake)
+{
+    if (wake) {
+        (void)xSemaphoreTake(wake, 0);
+    } else {
+        ulTaskNotifyValueClear(NULL, ULONG_MAX);
+    }
+}
+
+void display_bridge_waiter_take(SemaphoreHandle_t wake)
+{
+    if (wake) {
+        (void)xSemaphoreTake(wake, portMAX_DELAY);
+    } else {
+        (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    }
+}
+
 esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
                                        esp_lcd_panel_handle_t panel,
                                        const esp_lv_adapter_display_runtime_info_t *runtime,
                                        void **front, void **pending, void *buffer,
-                                       bool rgb)
+                                       bool rgb, SemaphoreHandle_t wake)
 {
     if (!p || !p->elems || !front || !*front || !buffer || *front == buffer) {
         return ESP_ERR_INVALID_ARG;
@@ -1472,14 +1490,14 @@ esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
     /* RGB and a single pending slot must retire before the next switch. */
     if (rgb || pending != NULL) {
         for (;;) {
-            ulTaskNotifyValueClear(NULL, ULONG_MAX);
+            display_bridge_waiter_drain(wake);
             portENTER_CRITICAL(&p->lock);
             bool busy = !STAILQ_EMPTY(&p->busy_list);
             portEXIT_CRITICAL(&p->lock);
             if (!busy) {
                 break;
             }
-            ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+            display_bridge_waiter_take(wake);
         }
     }
 
@@ -1577,18 +1595,20 @@ struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapte
     return next;
 }
 
-struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p)
+struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p,
+                                                                   SemaphoreHandle_t wake)
 {
     if (!p) {
         return NULL;
     }
 
-    /* Clear any stale notification BEFORE checking the list,
-     * so that an ISR firing after this point will not be lost. */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
+    /* Drop a stale wakeup BEFORE checking the list, so an ISR that runs
+     * after this point cannot be lost. A semaphore wakeup does not touch
+     * the caller's task notifications. */
+    display_bridge_waiter_drain(wake);
     struct display_pipeline_buf *next = display_bridge_pipeline_take_free_buf(p);
     while (!next) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        display_bridge_waiter_take(wake);
         next = display_bridge_pipeline_take_free_buf(p);
         if (!next) {
             ESP_LOGW(TAG, "without free buffer");

@@ -1771,6 +1771,8 @@
     - <<: *if-dev-push
       changes: *patterns-components_esp_flux
     - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
+    - <<: *if-dev-push
       changes: *patterns-example_esp_flux_ble_spp_client
 
 .rules:build:example_esp_flux_ble_spp_server:
@@ -1781,6 +1783,8 @@
       changes: *patterns-build_system
     - <<: *if-dev-push
       changes: *patterns-components_esp_flux
+    - <<: *if-dev-push
+      changes: *patterns-components_bluetooth_ble_conn_mgr
     - <<: *if-dev-push
       changes: *patterns-example_esp_flux_ble_spp_server
 

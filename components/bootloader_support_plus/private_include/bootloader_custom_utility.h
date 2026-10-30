@@ -15,6 +15,10 @@
 #endif
 #include "bootloader_utility.h"
 #include "bootloader_custom_ota.h"
+#include "soc/soc_caps.h"
+#if defined(SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE) && SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+#include "hal/cache_ll.h"
+#endif
 
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
 #include "hal/wdt_hal.h"
@@ -33,6 +37,23 @@ extern "C" {
 
 #define ESP_ERR_CUSTOM_OTA_BASE        0x2100
 #define CUSTOM_OTA_IMAGE_TYPE_INVALID (ESP_ERR_CUSTOM_OTA_BASE + 1)
+
+/*
+ * ESP32-P4 caches internal SRAM in L1 and external flash in L2. The ROM
+ * flash helpers disable L2. If L1 still holds a dirty dictionary, that
+ * writeback goes into a disabled L2 and the next LZMA symbol fails with
+ * XZ_DATA_ERROR. Write the data cache back first.
+ *
+ * Do not disable L1 DCache here. Cache_Disable_L1_DCache also drops the
+ * L1 ICache tags, and the bootloader fetches instructions through that
+ * cache, so the CPU stops before the next log line.
+ */
+static inline void bootloader_custom_sync_int_cache(void)
+{
+#if defined(SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE) && SOC_CACHE_INTERNAL_MEM_VIA_L1CACHE
+    cache_ll_writeback_all(CACHE_LL_LEVEL_INT_MEM, CACHE_TYPE_DATA, CACHE_LL_ID_ALL);
+#endif
+}
 
 static inline bool bootloader_custom_flash_encryption_enabled(void)
 {

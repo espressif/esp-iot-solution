@@ -129,7 +129,11 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     bool double_wait_active;
     bool frame_buf_submit_pending;
     SemaphoreHandle_t double_wait_sem;
+    portMUX_TYPE notify_lock;
+    SemaphoreHandle_t flush_wait_sem;
+    SemaphoreHandle_t dummy_wait_sem;
     TaskHandle_t notify_task;
+    TaskHandle_t flush_notify_task;
     display_bridge_dummy_transfer_t dummy_transfer;
     uint8_t *te_stage_buf;
     size_t te_stage_capacity;
@@ -631,7 +635,8 @@ static esp_err_t display_bridge_v9_blit_full_frame(esp_lv_adapter_display_bridge
 
 static esp_err_t display_bridge_v9_blit_pipeline_frame(esp_lv_adapter_display_bridge_v9_t *impl,
                                                        void *frame_buffer,
-                                                       bool record_flush_post)
+                                                       bool record_flush_post,
+                                                       SemaphoreHandle_t wake)
 {
     if (record_flush_post) {
         display_bridge_vsync_record_flush_post(&impl->vsync_timing);
@@ -641,21 +646,61 @@ static esp_err_t display_bridge_v9_blit_pipeline_frame(esp_lv_adapter_display_br
     return display_bridge_pipeline_blit(&impl->pipeline, impl->panel, &impl->runtime,
                                         &impl->disp_fb, publish_pending ? &impl->pending_fb : NULL,
                                         frame_buffer,
-                                        impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB);
+                                        impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB,
+                                        wake);
 }
 
-static TaskHandle_t display_bridge_v9_get_notify_task(esp_lv_adapter_display_bridge_v9_t *impl)
+static BaseType_t IRAM_ATTR display_bridge_v9_notify_waiters(esp_lv_adapter_display_bridge_v9_t *impl,
+                                                             BaseType_t need_yield)
 {
     if (!impl) {
-        return NULL;
+        return need_yield;
     }
 
-    if (impl->notify_task) {
-        return impl->notify_task;
+    /* Wake bridge semaphores while the waiter is still registered. Do not
+     * give the caller's task notification: pipeline waits no longer use it.
+     * With no waiter, or when the waiter is the adapter task, keep the
+     * existing VSYNC kick on the adapter task. */
+    portENTER_CRITICAL_ISR(&impl->notify_lock);
+    TaskHandle_t dummy_task = impl->notify_task;
+    TaskHandle_t flush_task = impl->flush_notify_task;
+    if (dummy_task && impl->dummy_wait_sem) {
+        xSemaphoreGiveFromISR(impl->dummy_wait_sem, &need_yield);
     }
-
+    if (flush_task && impl->flush_wait_sem) {
+        xSemaphoreGiveFromISR(impl->flush_wait_sem, &need_yield);
+    }
     esp_lv_adapter_context_t *ctx = esp_lv_adapter_get_context();
-    return ctx ? ctx->task : NULL;
+    TaskHandle_t adapter_task = (ctx != NULL) ? ctx->task : NULL;
+    if (adapter_task != NULL &&
+            ((dummy_task == NULL && flush_task == NULL) ||
+             adapter_task == dummy_task || adapter_task == flush_task)) {
+        vTaskNotifyGiveFromISR(adapter_task, &need_yield);
+    }
+    portEXIT_CRITICAL_ISR(&impl->notify_lock);
+
+    return need_yield;
+}
+
+static void display_bridge_v9_free_wait_sems(esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    if (!impl) {
+        return;
+    }
+
+    portENTER_CRITICAL(&impl->notify_lock);
+    SemaphoreHandle_t flush_sem = impl->flush_wait_sem;
+    SemaphoreHandle_t dummy_sem = impl->dummy_wait_sem;
+    impl->flush_wait_sem = NULL;
+    impl->dummy_wait_sem = NULL;
+    portEXIT_CRITICAL(&impl->notify_lock);
+
+    if (flush_sem) {
+        vSemaphoreDeleteWithCaps(flush_sem);
+    }
+    if (dummy_sem) {
+        vSemaphoreDeleteWithCaps(dummy_sem);
+    }
 }
 
 static esp_err_t display_bridge_v9_configure_double_wait_resource(esp_lv_adapter_display_bridge_v9_t *impl)
@@ -1142,7 +1187,19 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
         free(impl);
         return NULL;
     }
+    impl->notify_lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
     impl->notify_task = NULL;
+    impl->flush_notify_task = NULL;
+    impl->flush_wait_sem = xSemaphoreCreateBinaryWithCaps(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    impl->dummy_wait_sem = xSemaphoreCreateBinaryWithCaps(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (!impl->flush_wait_sem || !impl->dummy_wait_sem) {
+        display_bridge_v9_free_wait_sems(impl);
+        if (impl->double_wait_sem) {
+            vSemaphoreDeleteWithCaps(impl->double_wait_sem);
+        }
+        free(impl);
+        return NULL;
+    }
     impl->idf_callback_registration_enabled = cfg->idf_callback_registration_enabled;
     impl->cache_line_size = display_bridge_get_cache_line_size();
     display_bridge_get_block_sizes(&impl->block_size_small, &impl->block_size_large);
@@ -1158,6 +1215,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
 
     /* Use common function for runtime info initialization */
     if (display_bridge_init_runtime_info(&impl->runtime, cfg) != ESP_OK) {
+        display_bridge_v9_free_wait_sems(impl);
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
@@ -1168,6 +1226,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     if (esp_lv_adapter_te_sync_is_async(cfg->te_ctx)) {
         if (!cfg->draw_buf_secondary || !cfg->draw_buf_pixels || !impl->runtime.color_bytes) {
             ESP_LOGE(TAG, "Async TE pipeline requires a full-size staging buffer");
+            display_bridge_v9_free_wait_sems(impl);
             if (impl->double_wait_sem) {
                 vSemaphoreDeleteWithCaps(impl->double_wait_sem);
             }
@@ -1198,6 +1257,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
                                                              &impl->disp_fb, &impl->draw_fb);
     if (pipeline_ret == -1) {
         ESP_LOGE(TAG, "pipeline init failed");
+        display_bridge_v9_free_wait_sems(impl);
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
@@ -1224,6 +1284,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
         if (impl->pipeline.elems) {
             free(impl->pipeline.elems);
         }
+        display_bridge_v9_free_wait_sems(impl);
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
@@ -1234,6 +1295,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
 
     if (display_bridge_v9_register_vsync(impl) != ESP_OK) {
         free(impl->pipeline.elems);
+        display_bridge_v9_free_wait_sems(impl);
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
@@ -1278,6 +1340,7 @@ static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
             impl->double_wait_sem = NULL;
         }
+        display_bridge_v9_free_wait_sems(impl);
     }
 
     /* Use unified destroy implementation for v8/v9 compatibility */
@@ -1378,10 +1441,10 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
 /**
  * @brief Main flush entry point
  */
-static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridge,
-                                          void *disp_ref,
-                                          const lv_area_t *area,
-                                          uint8_t *color_map)
+static void display_bridge_v9_flush_entry_inner(esp_lv_adapter_display_bridge_t *bridge,
+                                                void *disp_ref,
+                                                const lv_area_t *area,
+                                                uint8_t *color_map)
 {
     esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
     lv_display_t *disp = (lv_display_t *)disp_ref;
@@ -1502,6 +1565,39 @@ static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridg
     default:
         display_bridge_v9_flush_default(impl, disp, flush_area, color_map);
         break;
+    }
+}
+
+/**
+ * @brief LVGL v9 flush entry.
+ *
+ * Pipeline waits block on flush_wait_sem. The frame-complete ISR gives that
+ * semaphore and does not clear or increment the calling task's notification
+ * index 0. Dummy draw returns before any pipeline wait, so it does not
+ * register a flush waiter. notify_lock covers registration and the ISR give.
+ */
+static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridge,
+                                          void *disp_ref,
+                                          const lv_area_t *area,
+                                          uint8_t *color_map)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl = (esp_lv_adapter_display_bridge_v9_t *)bridge;
+    TaskHandle_t prev_flush_notify = NULL;
+    const bool arm_flush_notify = (impl != NULL && !impl->dummy_draw);
+
+    if (arm_flush_notify) {
+        portENTER_CRITICAL(&impl->notify_lock);
+        prev_flush_notify = impl->flush_notify_task;
+        impl->flush_notify_task = xTaskGetCurrentTaskHandle();
+        portEXIT_CRITICAL(&impl->notify_lock);
+    }
+
+    display_bridge_v9_flush_entry_inner(bridge, disp_ref, area, color_map);
+
+    if (arm_flush_notify) {
+        portENTER_CRITICAL(&impl->notify_lock);
+        impl->flush_notify_task = prev_flush_notify;
+        portEXIT_CRITICAL(&impl->notify_lock);
     }
 }
 
@@ -1653,17 +1749,26 @@ static esp_err_t display_bridge_v9_dummy_publish_double_wait(esp_lv_adapter_disp
 static esp_err_t display_bridge_v9_dummy_publish_triple_pending(esp_lv_adapter_display_bridge_v9_t *impl,
                                                                 void *frame_buffer)
 {
-    TaskHandle_t prev_notify = impl->notify_task;
-    impl->notify_task = xTaskGetCurrentTaskHandle();
+    TaskHandle_t prev_notify;
 
-    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, frame_buffer, true);
+    portENTER_CRITICAL(&impl->notify_lock);
+    prev_notify = impl->notify_task;
+    impl->notify_task = xTaskGetCurrentTaskHandle();
+    portEXIT_CRITICAL(&impl->notify_lock);
+
+    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, frame_buffer, true, impl->dummy_wait_sem);
     if (ret != ESP_OK) {
+        portENTER_CRITICAL(&impl->notify_lock);
         impl->notify_task = prev_notify;
+        portEXIT_CRITICAL(&impl->notify_lock);
         return ret;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline,
+                                                                              impl->dummy_wait_sem);
+    portENTER_CRITICAL(&impl->notify_lock);
     impl->notify_task = prev_notify;
+    portEXIT_CRITICAL(&impl->notify_lock);
 
     if (!next) {
         return ESP_ERR_NOT_FOUND;
@@ -1676,17 +1781,26 @@ static esp_err_t display_bridge_v9_dummy_publish_triple_pending(esp_lv_adapter_d
 static esp_err_t display_bridge_v9_dummy_publish_pipeline(esp_lv_adapter_display_bridge_v9_t *impl,
                                                           void *frame_buffer)
 {
-    TaskHandle_t prev_notify = impl->notify_task;
-    impl->notify_task = xTaskGetCurrentTaskHandle();
+    TaskHandle_t prev_notify;
 
-    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, frame_buffer, true);
+    portENTER_CRITICAL(&impl->notify_lock);
+    prev_notify = impl->notify_task;
+    impl->notify_task = xTaskGetCurrentTaskHandle();
+    portEXIT_CRITICAL(&impl->notify_lock);
+
+    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, frame_buffer, true, impl->dummy_wait_sem);
     if (ret != ESP_OK) {
+        portENTER_CRITICAL(&impl->notify_lock);
         impl->notify_task = prev_notify;
+        portEXIT_CRITICAL(&impl->notify_lock);
         return ret;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline,
+                                                                              impl->dummy_wait_sem);
+    portENTER_CRITICAL(&impl->notify_lock);
     impl->notify_task = prev_notify;
+    portEXIT_CRITICAL(&impl->notify_lock);
 
     if (!next) {
         return ESP_ERR_NOT_FOUND;
@@ -1840,11 +1954,11 @@ static void display_bridge_v9_wait_for_buf_switch(esp_lv_adapter_display_bridge_
     }
 
     for (;;) {
-        ulTaskNotifyValueClear(NULL, ULONG_MAX);
+        display_bridge_waiter_drain(impl->flush_wait_sem);
         if (!display_bridge_v9_has_pending_submit(impl)) {
             break;
         }
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        display_bridge_waiter_take(impl->flush_wait_sem);
     }
 }
 
@@ -1909,10 +2023,7 @@ display_bridge_v9_handle_frame_buf_complete(esp_lv_adapter_display_bridge_v9_t *
                                                      publish_pending ? &impl->pending_fb : NULL)) {
             return (need_yield == pdTRUE);
         }
-        TaskHandle_t notify_task = display_bridge_v9_get_notify_task(impl);
-        if (notify_task) {
-            vTaskNotifyGiveFromISR(notify_task, &need_yield);
-        }
+        need_yield = display_bridge_v9_notify_waiters(impl, need_yield);
     } else if (display_bridge_v9_consume_frame_buf_submit_isr(impl)) {
         portENTER_CRITICAL_ISR(&impl->double_sync_lock);
         ++impl->switch_seq;
@@ -2088,10 +2199,7 @@ static bool IRAM_ATTR display_bridge_v9_on_io_color_trans_done(esp_lcd_panel_io_
             display_bridge_v9_complete_dummy_transfer(impl, &need_yield);
             return te_worker || (need_yield == pdTRUE);
         }
-        TaskHandle_t notify_task = display_bridge_v9_get_notify_task(impl);
-        if (notify_task) {
-            vTaskNotifyGiveFromISR(notify_task, &need_yield);
-        }
+        need_yield = display_bridge_v9_notify_waiters(impl, need_yield);
         display_bridge_v9_complete_dummy_transfer(impl, &need_yield);
         return (need_yield == pdTRUE);
     }
@@ -2601,8 +2709,8 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
         esp_lv_adapter_te_sync_record_tx_start(impl->cfg.te_ctx);
     }
 
-    /* Clear stale completion notifications before kicking off a new transfer. */
-    ulTaskNotifyValueClear(NULL, ULONG_MAX);
+    /* Drop a stale completion wakeup before kicking off a new transfer. */
+    display_bridge_waiter_drain(impl->flush_wait_sem);
     esp_err_t ret = esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, color_map);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(ret));
@@ -2614,7 +2722,7 @@ static void display_bridge_v9_flush_gpio_te(esp_lv_adapter_display_bridge_v9_t *
     }
 
     /* Wait for transmission to complete */
-    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    display_bridge_waiter_take(impl->flush_wait_sem);
     if (impl->cfg.te_ctx) {
         esp_lv_adapter_te_sync_record_tx_done(impl->cfg.te_ctx);
     }
@@ -2654,11 +2762,11 @@ static void display_bridge_v9_flush_triple_full(esp_lv_adapter_display_bridge_v9
     /* DPI has one cur_fb_index: only one pending switch at a time. */
     display_bridge_v9_wait_for_buf_switch(impl);
 
-    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, color_map, false);
+    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, color_map, false, impl->flush_wait_sem);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
     } else {
-        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, impl->flush_wait_sem);
         if (!next) {
             display_manager_flush_ready(disp);
             return;
@@ -2846,11 +2954,11 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
         display_cache_msync_invalidate_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
 #endif
 
-        esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, true);
+        esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, true, impl->flush_wait_sem);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
-            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, impl->flush_wait_sem);
             if (!next) {
                 display_manager_flush_ready(disp);
                 return;
@@ -2890,14 +2998,14 @@ static void display_bridge_v9_flush_direct_rotate(esp_lv_adapter_display_bridge_
     flush_dirty_save(&impl->dirty);
     flush_dirty_copy(impl, impl->draw_fb, color_map, &impl->dirty);
 
-    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, false);
+    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, false, impl->flush_wait_sem);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         display_manager_flush_ready(disp);
         return;
     }
 
-    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+    struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, impl->flush_wait_sem);
     if (!next) {
         display_manager_flush_ready(disp);
         return;
@@ -2937,11 +3045,11 @@ static void display_bridge_v9_flush_full_rotate(esp_lv_adapter_display_bridge_v9
                        logical_w, logical_h, physical_w, physical_h,
                        bridge_rotation(impl), color_bytes);
 
-    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, false);
+    esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, false, impl->flush_wait_sem);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
     } else {
-        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+        struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, impl->flush_wait_sem);
         if (next) {
             impl->disp_fb = impl->draw_fb;
             impl->draw_fb = next->buffer;
@@ -3001,11 +3109,11 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
         display_cache_msync_invalidate_framebuffer(impl->draw_fb, impl->runtime.frame_buffer_size);
 #endif
 
-        esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, true);
+        esp_err_t ret = display_bridge_v9_blit_pipeline_frame(impl, impl->draw_fb, true, impl->flush_wait_sem);
         if (ret != ESP_OK) {
             ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
         } else {
-            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline);
+            struct display_pipeline_buf *next = display_bridge_pipeline_wait_free_buf(&impl->pipeline, impl->flush_wait_sem);
             if (!next) {
                 display_manager_flush_ready(disp);
                 return;

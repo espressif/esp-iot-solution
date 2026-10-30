@@ -61,7 +61,7 @@ Application endpoints use `network_provisioner_add_endpoint()` and `network_prov
 
 ```yaml
 dependencies:
-  espressif/network_provisioner: "^2.0.0"
+  espressif/network_provisioner: "^2.0.1"
 ```
 
 Or develop in-tree with `protocomm_ext` via `override_path`.

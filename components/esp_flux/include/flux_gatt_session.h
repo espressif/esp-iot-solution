@@ -40,7 +40,9 @@ typedef void (*session_complete_cb)(gatt_session_t *session, uint8_t stream_id, 
 // delivered the message (lets the caller order concurrent receives). Ownership of data is
 // transferred to the application; caller must free((void *)data) after processing.
 typedef void (*data_received_cb)(gatt_session_t *session, uint8_t stream_id, const uint8_t *data, uint32_t size);
-typedef void (*progress_cb)(gatt_session_t *session, uint32_t transferred, uint32_t total);
+// Progress for one in-flight stream. stream_id matches the send/receive slot;
+// transferred and total are byte counts for that stream.
+typedef void (*progress_cb)(gatt_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total);
 typedef void (*error_cb)(gatt_session_t *session, esp_err_t error);
 typedef void (*mtu_changed_cb)(gatt_session_t *session, uint16_t mtu);
 

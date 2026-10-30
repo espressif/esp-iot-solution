@@ -157,6 +157,14 @@ examples/bluetooth/ble_remote_control:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
 
+examples/esp_flux/ble_spp_client:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/esp_flux/ble_spp_server:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
 examples/esp_gmp/gmp_ota/ble_gmp_ota_client:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
@@ -390,6 +398,8 @@ examples/motor/servo_control:
 examples/ota/simple_ota_example:
   enable:
     - if: IDF_TARGET in ["esp32c2", "esp32c3", "esp32c5", "esp32c6", "esp32c61", "esp32", "esp32s3", "esp32h2"]
+    - if: IDF_TARGET == "esp32p4" and IDF_VERSION >= "5.5.5"
+    - if: IDF_TARGET == "esp32s31" and IDF_VERSION >= "6.1"
 
 examples/sensors/airmouse:
   enable:

@@ -66,13 +66,15 @@ Typical Flow
     protocomm_ext_close_session(pc);
     protocomm_ext_delete(pc);
 
+**Sessions:** one instance is one peer. HTTP keeps that instance's connection, TCP keepalive, and cookie. Create one instance per device. BLE remains a single connection and needs the NimBLE central, observer, and GATT client roles.
+
 Add Dependency
 --------------
 
 .. code:: yaml
 
     dependencies:
-      espressif/protocomm_ext: "^1.0.0"
+      espressif/protocomm_ext: "^1.1.0"
 
 API Reference
 -------------

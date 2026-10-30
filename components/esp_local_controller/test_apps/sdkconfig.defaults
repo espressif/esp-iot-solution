@@ -1,3 +1,11 @@
+# Unity's menu polls the ROM UART and never yields, so the idle task
+# trips the task watchdog while the prompt is waiting for a selection.
+CONFIG_ESP_TASK_WDT_EN=n
+CONFIG_ESP_TASK_WDT=n
+
+CONFIG_LWIP_NETIF_LOOPBACK=y
+# IDF 6 defaults this off, which hides protocomm_security1. The loopback peer needs it.
+CONFIG_ESP_PROTOCOMM_SUPPORT_SECURITY_VERSION_1=y
 CONFIG_UNITY_ENABLE_FLOAT=y
 CONFIG_ESP_PROTOCOMM_EXT_SUPPORT_SECURITY_VERSION_0=y
 CONFIG_ESP_PROTOCOMM_EXT_SUPPORT_SECURITY_VERSION_1=y

@@ -9,17 +9,15 @@
 #include <inttypes.h>
 #include "esp_system.h"
 #include "esp_log.h"
+#include "esp_mac.h"
+#include "esp_event.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "freertos/timers.h"
 #include "nvs_flash.h"
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
-#include "host/ble_hs.h"
-#include "host/util/util.h"
-#include "services/gap/ble_svc_gap.h"
-#include "ble_manager.h"
-#include "gatt_discovery.h"
+#include "host/ble_att.h"
+#include "esp_ble_conn_mgr.h"
 #include "flux_gatt_session.h"
 
 static const char *TAG = "spp client";
@@ -29,18 +27,22 @@ static const char *TAG = "spp client";
 /* 16 Bit SPP Service Characteristic UUID */
 #define BLE_SVC_SPP_CHR_UUID16  0xABF1
 
-#define LL_PACKET_TIME      2120 // 2120 microseconds (2120 * 1.25ms = 2650ms)
-#define LL_PACKET_LENGTH    251  // 251 bytes (251 * 8 = 2008 bits)  (251 * 1.25ms = 313.75ms)
-#define OPTIMAL_MTU_SIZE    498  // Optimal MTU size for LL_PACKET_LENGTH 251 bytes
+#define LL_PACKET_TIME      2120
+#define LL_PACKET_LENGTH    251
+#define OPTIMAL_MTU_SIZE    498
 
-#define MAX_CONNECTIONS CONFIG_BLE_MANAGER_MAX_CONNECTIONS
+#define MAX_CONNECTIONS CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS
 
 #define SPP_TEST_TRANSFER_SIZE  (482 + 491 * 8) // 482 + 491 * 8 = 482 + 3928 = 4411
 
-static ble_manager_t *g_ble_manager = NULL;
+#define SPP_RECONNECT_INTERVAL_MS  5000
+
 static gatt_session_t *g_session_instances[MAX_CONNECTIONS] = {0};
 static bool g_conn_params_ready[MAX_CONNECTIONS] = {0};
+static uint16_t g_connected_handles[MAX_CONNECTIONS] = {0};
+static bool g_connected_handle_valid[MAX_CONNECTIONS] = {0};
 static SemaphoreHandle_t g_sessions_mutex = NULL;
+static TimerHandle_t s_reconnect_timer = NULL;
 
 static inline void sessions_lock(void)
 {
@@ -67,6 +69,71 @@ static int spp_find_session_idx_by_conn(uint16_t conn_handle)
     }
     sessions_unlock();
     return -1;
+}
+
+static int spp_active_session_count(void)
+{
+    int n = 0;
+
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_session_instances[i]) {
+            n++;
+        }
+    }
+    sessions_unlock();
+    return n;
+}
+
+static int spp_connected_count(void)
+{
+    int n = 0;
+
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_connected_handle_valid[i]) {
+            n++;
+        }
+    }
+    sessions_unlock();
+    return n;
+}
+
+static void spp_track_connected(uint16_t conn_handle)
+{
+    int free_idx = -1;
+
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_connected_handle_valid[i] && g_connected_handles[i] == conn_handle) {
+            sessions_unlock();
+            return;
+        }
+        if (!g_connected_handle_valid[i] && free_idx < 0) {
+            free_idx = i;
+        }
+    }
+    if (free_idx >= 0) {
+        g_connected_handles[free_idx] = conn_handle;
+        g_connected_handle_valid[free_idx] = true;
+    }
+    sessions_unlock();
+
+    if (free_idx < 0) {
+        ESP_LOGW(TAG, "No connection tracking slot for conn_handle=%d", conn_handle);
+    }
+}
+
+static void spp_track_disconnected(uint16_t conn_handle)
+{
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_connected_handle_valid[i] && g_connected_handles[i] == conn_handle) {
+            g_connected_handle_valid[i] = false;
+            break;
+        }
+    }
+    sessions_unlock();
 }
 
 static void spp_fill_test_buffer(uint8_t *buf, size_t size)
@@ -106,7 +173,7 @@ static void gatt_data_received_cb(gatt_session_t *session, uint8_t stream_id, co
     free((void *)data);
 }
 
-static void gatt_progress_cb(gatt_session_t *session, uint32_t transferred, uint32_t total)
+static void gatt_progress_cb(gatt_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     // Prevent division by zero
     if (total == 0) {
@@ -117,278 +184,321 @@ static void gatt_progress_cb(gatt_session_t *session, uint32_t transferred, uint
     ESP_LOGI(TAG, "Session conn_handle: %d progress: %u%% (%" PRIu32 "/%" PRIu32 " bytes)", session->conn_handle, progress, transferred, total);
 }
 
-static esp_err_t gatt_enable_notification(gatt_discovery_t *discovery)
+static void spp_tune_connection(uint16_t conn_handle)
 {
-    gatt_descriptor_t *dsc = gatt_discovery_find_descriptor_by_uuid(discovery, BLE_UUID16_DECLARE(BLE_SVC_SPP_UUID16),
-                                                                    BLE_UUID16_DECLARE(BLE_SVC_SPP_CHR_UUID16), BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
-    if (!dsc) {
-        ESP_LOGE(TAG, "CCCD not found, cannot enable notifications for conn_handle=%d", discovery->conn_handle);
-        return ESP_ERR_NOT_FOUND;
+    esp_err_t rc;
+
+    rc = esp_ble_conn_set_data_len(conn_handle, LL_PACKET_LENGTH, LL_PACKET_TIME);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Set data length failed; rc=%d", rc);
+    }
+    rc = esp_ble_conn_mtu_update(conn_handle, OPTIMAL_MTU_SIZE);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Set MTU failed; rc=%d", rc);
+    }
+    rc = esp_ble_conn_set_preferred_phy(conn_handle, ESP_BLE_CONN_PHY_MASK_2M, ESP_BLE_CONN_PHY_MASK_2M, 0);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Set preferred phy failed; rc=%d", rc);
     }
 
-    uint8_t value[2] = {1, 0};
-    int rc = ble_gattc_write_flat(discovery->conn_handle, dsc->dsc.handle, value, sizeof(value), NULL, NULL);
-    if (rc != 0) {
-        ESP_LOGE(TAG, "Error: Failed to subscribe to characteristic; rc=%d\n", rc);
-        return ESP_FAIL;
-    }
-    return ESP_OK;
-}
-
-static void gatt_discovery_complete_cb(gatt_discovery_t *discovery, int status, void *arg)
-{
-    if (status == ESP_OK) {
-        ESP_LOGI(TAG, "Service discovery completed for connection %d", discovery->conn_handle);
-
-        gatt_characteristic_t *chr = gatt_discovery_find_characteristic_by_uuid(discovery, BLE_UUID16_DECLARE(BLE_SVC_SPP_UUID16),
-                                                                                BLE_UUID16_DECLARE(BLE_SVC_SPP_CHR_UUID16));
-        if (!chr) {
-            ESP_LOGW(TAG, "SPP characteristic not found after discovery, conn_handle=%d", discovery->conn_handle);
-        }
-        if (chr) {
-            // Notification enable
-            esp_err_t notify_err = gatt_enable_notification(discovery);
-            if (notify_err != ESP_OK) {
-                ESP_LOGW(TAG, "Skip session creation due to notification setup failure, conn_handle=%d err=%d",
-                         discovery->conn_handle, notify_err);
-                gatt_discovery_destroy(discovery);
-                return;
-            }
-
-            ble_session_callbacks_t callbacks = {
-                .session_complete_cb = gatt_session_complete_cb,
-                .data_received_cb = gatt_data_received_cb,
-                .progress_cb = gatt_progress_cb,
-                .error_cb = NULL
-            };
-            // Use MASTER role as client
-            uint16_t mtu = BLE_ATT_MTU_DFLT; // Default MTU
-            ble_manager_get_mtu_by_conn(g_ble_manager, discovery->conn_handle, &mtu);
-            if (mtu < BLE_ATT_MTU_DFLT) {
-                mtu = BLE_ATT_MTU_DFLT;
-            }
-            gatt_session_t *session = gatt_session_create(discovery->conn_handle, &callbacks, chr->chr.val_handle,
-                                                          chr->chr.val_handle, mtu, GATT_SESSION_ROLE_MASTER);
-            if (session) {
-                int session_idx = -1;
-                sessions_lock();
-                for (int i = 0; i < MAX_CONNECTIONS; i++) {
-                    if (!g_session_instances[i]) {
-                        g_session_instances[i] = session;
-                        session_idx = i;
-                        break;
-                    }
-                }
-                sessions_unlock();
-
-                if (session_idx >= 0) {
-                    // conn_update may have fired before async discovery finished.
-                    struct ble_gap_conn_desc desc;
-                    if (ble_gap_conn_find(discovery->conn_handle, &desc) == 0) {
-                        g_conn_params_ready[session_idx] = true;
-                        ESP_LOGW(TAG, "GATT session ready for conn_handle=%d (interval=%.2fms)",
-                                 session->conn_handle, desc.conn_itvl * 1.25f);
-                    } else {
-                        g_conn_params_ready[session_idx] = false;
-                        ESP_LOGW(TAG, "GATT session ready for conn_handle=%d, waiting for connection parameter update",
-                                 session->conn_handle);
-                    }
-                }
-
-                // if (ble_manager_get_total_connections(g_ble_manager) < 2) {
-                //     // Restart scan, connect to next device
-                //     ble_manager_start_scan(g_ble_manager, 100000);
-                // }
-            }
-        }
-    } else {
-        ESP_LOGE(TAG, "Service discovery failed for connection %d: %d", discovery->conn_handle, status);
-    }
-
-    // Free discovery
-    gatt_discovery_destroy(discovery);
-}
-
-static void gatt_service_found_cb(gatt_discovery_t *discovery, uint16_t conn_handle, const struct ble_gatt_svc *service, void *arg)
-{
-    // char uuid_str[37];
-    // ESP_LOGI(TAG, "Service found: %s, handle: (0x%04X-0x%04X)", ble_uuid_to_str(&service->uuid.u, uuid_str), service->start_handle, service->end_handle);
-}
-
-static void gatt_characteristic_found_cb(gatt_discovery_t *discovery, uint16_t conn_handle, const struct ble_gatt_chr *characteristic, void *arg)
-{
-    // char uuid_str[37];
-    // ESP_LOGI(TAG, "Characteristic found: %s, def_handle: 0x%04X, val_handle: 0x%04X",
-    //     ble_uuid_to_str(&characteristic->uuid.u, uuid_str), characteristic->def_handle, characteristic->val_handle);
-}
-
-static void gatt_descriptor_found_cb(gatt_discovery_t *discovery, uint16_t conn_handle, const struct ble_gatt_dsc *descriptor, void *arg)
-{
-    // char uuid_str[37];
-    // ESP_LOGI(TAG, "Descriptor found: %s, handle: (0x%04X)", ble_uuid_to_str(&descriptor->uuid.u, uuid_str), descriptor->handle);
-}
-
-static void ble_manager_scan_cb(ble_manager_t *manager, uint8_t type, const struct ble_gap_disc_desc *result, void *arg)
-{
-    switch (type) {
-    case BLE_GAP_EVENT_DISC_COMPLETE:
-        /* code */
-        break;
-
-    case BLE_GAP_EVENT_DISC: {
-        // ESP_LOG_BUFFER_HEX_LEVEL(TAG, result->data, result->length_data, ESP_LOG_INFO);
-
-        /* Try to connect to the device */
-        struct ble_hs_adv_fields fields;
-        int rc = ble_hs_adv_parse_fields(&fields, result->data, result->length_data);
-        if (rc != 0) {
-            ESP_LOGE(TAG, "Failed to parse advertisement data: %d", rc);
-            break;
-        }
-
-        for (uint8_t i = 0; i < fields.num_uuids16; i++) {
-            if (ble_uuid_u16(&fields.uuids16[i].u) == BLE_SVC_SPP_UUID16) {
-                // for max throughput:
-                // min_interval: 6 + (ble_manager_get_total_connections(g_ble_manager)) * 5
-                // max_interval: 6 + (ble_manager_get_total_connections(g_ble_manager)) * 5
-                // should change here if 0x0212(BLE_ERR_INV_HCI_CMD_PARMS) error happens
-                // ble_manager_connect(g_ble_manager, &result->addr, 6 + (ble_manager_get_total_connections(g_ble_manager)) * 5,
-                //                     6 + (ble_manager_get_total_connections(g_ble_manager)) * 5, 0, 300);
-                ble_manager_connect(g_ble_manager, &result->addr, 24, 24, 0, 300);
-            }
-        }
-        break;
-    }
-
-    default:
-        break;
+    esp_ble_conn_params_t params = {
+        .itvl_min = 24,
+        .itvl_max = 24,
+        .latency = 0,
+        .supervision_timeout = 300,
+        .min_ce_len = 0,
+        .max_ce_len = 0,
+    };
+    rc = esp_ble_conn_update_params(conn_handle, &params);
+    if (rc != ESP_OK) {
+        ESP_LOGW(TAG, "Update connection params failed; rc=%d", rc);
     }
 }
 
-static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_connection_t *conn, int status, void *arg)
+static void spp_destroy_session(uint16_t conn_handle)
 {
-    switch (type) {
-    case BLE_EVENT_TYPE_CONNECT_COMPLETE:
-    case BLE_EVENT_TYPE_RECONNECT_COMPLETE: {
-        if (type == BLE_EVENT_TYPE_RECONNECT_COMPLETE) {
-            ESP_LOGI(TAG, "Reconnected successfully to device %s", addr_str(conn->peer_addr.val));
-        } else {
-            ESP_LOGI(TAG, "Connected successfully to device %s (first time)", addr_str(conn->peer_addr.val));
-
-            // On first connection, auto-reconnect can be enabled
-            // Example: reconnect every 5 seconds, maximum 3 reconnections (0 means unlimited reconnection)
-            esp_err_t ret = ble_manager_enable_auto_reconnect(g_ble_manager, conn->conn_handle, 5000, 3);
-            if (ret == ESP_OK) {
-                ESP_LOGI(TAG, "Auto reconnect enabled for device %s", addr_str(conn->peer_addr.val));
-            }
-        }
-
-        // Start service discovery
-        ble_discovery_callbacks_t callbacks = {
-            .discovery_complete_cb = gatt_discovery_complete_cb,
-            .service_found_cb = gatt_service_found_cb,
-            .characteristic_found_cb = gatt_characteristic_found_cb,
-            .descriptor_found_cb = gatt_descriptor_found_cb,
-            .arg = NULL
-        };
-        gatt_discovery_t *discovery = gatt_discovery_start(conn->conn_handle, &callbacks);
-        if (discovery) {
-            gatt_discovery_discover_service_by_uuid(discovery, BLE_UUID16_DECLARE(BLE_SVC_SPP_UUID16));
-        } else {
-            ESP_LOGE(TAG, "Failed to start service discovery");
-        }
-        break;
-    }
-    default:
-        break;
-    }
-}
-
-static void ble_manager_conn_update_cb(ble_manager_t *manager, ble_connection_t *conn, void *arg)
-{
-    int idx = spp_find_session_idx_by_conn(conn->conn_handle);
-    if (idx < 0) {
-        return;
-    }
-
-    g_conn_params_ready[idx] = true;
-    ESP_LOGW(TAG, "Connection parameters ready for conn_handle=%d (interval=%.2fms)",
-             conn->conn_handle, conn->conn_interval * 1.25f);
-}
-
-static void ble_manager_disconnect_cb(ble_manager_t *manager, ble_connection_t *conn, int status, void *arg)
-{
-    ESP_LOGI(TAG, "Disconnected from device %s (conn_handle=%d)", addr_str(conn->peer_addr.val), conn->conn_handle);
-
-    // Clean up session instance
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         gatt_session_t *session_to_destroy = NULL;
         sessions_lock();
-        if (g_session_instances[i] && g_session_instances[i]->conn_handle == conn->conn_handle) {
+        if (g_session_instances[i] && g_session_instances[i]->conn_handle == conn_handle) {
             session_to_destroy = g_session_instances[i];
             g_session_instances[i] = NULL;
             g_conn_params_ready[i] = false;
         }
         sessions_unlock();
         if (session_to_destroy) {
-            gatt_session_destroy(session_to_destroy);
-            ESP_LOGI(TAG, "GATT session destroyed for conn_handle=%d", conn->conn_handle);
+            gatt_session_schedule_destroy(session_to_destroy);
+            ESP_LOGI(TAG, "GATT session destroyed for conn_handle=%d", conn_handle);
         }
     }
 }
 
-static void nimble_host_task(void *param)
+static void spp_disconnect_failed_setup(uint16_t conn_handle, const char *reason)
 {
-    ESP_LOGI(TAG, "BLE Host Task Started");
+    esp_err_t rc;
 
-    /* This function will return only when nimble_port_stop() is executed */
-    nimble_port_run();
-
-    nimble_port_freertos_deinit();
+    ESP_LOGW(TAG, "%s, disconnecting conn_handle=%d for retry", reason, conn_handle);
+    rc = esp_ble_conn_disconnect_by_handle(conn_handle);
+    if (rc != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to disconnect unusable peer, conn_handle=%d rc=%d", conn_handle, rc);
+    }
 }
 
-static void nimble_host_on_reset(int reason)
+static void spp_on_disc_complete(uint16_t conn_handle)
 {
-    ESP_LOGI(TAG, "BLE Host Resetting state; reason=%d\n", reason);
+    uint16_t val_handle = 0;
+    uint16_t mtu = BLE_ATT_MTU_DFLT;
+    uint8_t notify_en[2] = {1, 0};
+    esp_ble_conn_uuid_t svc_uuid = { .uuid16 = BLE_SVC_SPP_UUID16 };
+    esp_ble_conn_uuid_t chr_uuid = { .uuid16 = BLE_SVC_SPP_CHR_UUID16 };
+    esp_ble_conn_data_t sub = {
+        .type = BLE_CONN_UUID_TYPE_16,
+        .uuid = { .uuid16 = BLE_SVC_SPP_CHR_UUID16 },
+        .data = notify_en,
+        .data_len = sizeof(notify_en),
+    };
+    ble_session_callbacks_t callbacks = {
+        .session_complete_cb = gatt_session_complete_cb,
+        .data_received_cb = gatt_data_received_cb,
+        .progress_cb = gatt_progress_cb,
+        .error_cb = NULL
+    };
+
+    ESP_LOGI(TAG, "Service discovery completed for connection %d", conn_handle);
+
+    if (spp_find_session_idx_by_conn(conn_handle) >= 0) {
+        return;
+    }
+
+    if (esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub) != ESP_OK) {
+        spp_disconnect_failed_setup(conn_handle, "Notification setup failed");
+        return;
+    }
+
+    if (esp_ble_conn_get_peer_chr_handle(conn_handle,
+                                         BLE_CONN_UUID_TYPE_16, svc_uuid,
+                                         BLE_CONN_UUID_TYPE_16, chr_uuid,
+                                         &val_handle) != ESP_OK) {
+        spp_disconnect_failed_setup(conn_handle, "SPP characteristic not found after discovery");
+        return;
+    }
+
+    if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) != ESP_OK || mtu < BLE_ATT_MTU_DFLT) {
+        mtu = BLE_ATT_MTU_DFLT;
+    }
+
+    gatt_session_t *session = gatt_session_create(conn_handle, &callbacks, val_handle, val_handle,
+                                                  mtu, GATT_SESSION_ROLE_MASTER);
+    if (!session) {
+        spp_disconnect_failed_setup(conn_handle, "Failed to create GATT session");
+        return;
+    }
+
+    int session_idx = -1;
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (!g_session_instances[i]) {
+            g_session_instances[i] = session;
+            session_idx = i;
+            break;
+        }
+    }
+    sessions_unlock();
+
+    if (session_idx < 0) {
+        gatt_session_schedule_destroy(session);
+        spp_disconnect_failed_setup(conn_handle, "No GATT session slot available");
+        return;
+    }
+
+    g_conn_params_ready[session_idx] = true;
+    ESP_LOGW(TAG, "GATT session ready for conn_handle=%d", session->conn_handle);
 }
 
-static void nimble_host_on_sync(void)
+static bool spp_adv_has_uuid16(const esp_ble_conn_scan_result_t *result, uint16_t uuid16)
 {
-    ESP_LOGI(TAG, "BLE Host Synced");
-    int rc;
+    const uint8_t ad_types[] = {
+        ESP_BLE_CONN_ADV_TYPE_UUID16_INCOMP,
+        ESP_BLE_CONN_ADV_TYPE_UUID16_COMPLETE,
+    };
 
-    /* Make sure we have proper identity address set (public preferred) */
-    rc = ble_hs_util_ensure_addr(0);
-    assert(rc == 0);
+    for (size_t t = 0; t < sizeof(ad_types); t++) {
+        const uint8_t *p = NULL;
+        uint8_t len = 0;
+
+        if (esp_ble_conn_parse_adv_data(result->adv_data, result->adv_data_len, ad_types[t], &p, &len) != ESP_OK) {
+            continue;
+        }
+        for (uint8_t i = 0; i + 1 < len; i += 2) {
+            uint16_t uuid = (uint16_t)p[i] | ((uint16_t)p[i + 1] << 8);
+            if (uuid == uuid16) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-void ble_store_config_init(void);
-static void nimble_host_config(void)
+static bool spp_scan_cb(const esp_ble_conn_scan_result_t *result, void *arg)
 {
-    ESP_LOGI(TAG, "BLE Host config");
+    (void)arg;
 
-    /* Configure the nimble host. */
-    ble_hs_cfg.reset_cb = nimble_host_on_reset;
-    ble_hs_cfg.sync_cb = nimble_host_on_sync;
-    ble_hs_cfg.gatts_register_cb = NULL;
-    ble_hs_cfg.store_status_cb = NULL;
+    if (!result || !spp_adv_has_uuid16(result, BLE_SVC_SPP_UUID16)) {
+        return false;
+    }
 
-    /* Configure the nimble store.*/
-    ble_store_config_init();
+    ESP_LOGI(TAG, "Found SPP server " MACSTR " rssi=%d", MAC2STR(result->addr), result->rssi);
+    return true;
+}
+
+static void spp_scan_for_available_slot(bool restart)
+{
+    esp_err_t rc;
+
+    if (spp_connected_count() >= MAX_CONNECTIONS) {
+        return;
+    }
+
+    if (restart) {
+        /* Recover from a stalled scan while preserving established links. */
+        (void)esp_ble_conn_scan_stop();
+    }
+    rc = esp_ble_conn_scan_start();
+    if (rc != ESP_OK && rc != ESP_ERR_INVALID_STATE) {
+        ESP_LOGW(TAG, "Start scan failed: %d", rc);
+    }
+}
+
+static void spp_update_reconnect_timer(void)
+{
+    if (!s_reconnect_timer) {
+        return;
+    }
+    if (spp_connected_count() < MAX_CONNECTIONS) {
+        xTimerStart(s_reconnect_timer, 0);
+    } else {
+        xTimerStop(s_reconnect_timer, 0);
+    }
+}
+
+static void spp_reconnect_timer_cb(TimerHandle_t t)
+{
+    (void)t;
+    spp_scan_for_available_slot(true);
+}
+
+static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
+{
+    (void)handler_args;
+
+    if (base != BLE_CONN_MGR_EVENTS) {
+        return;
+    }
+
+    switch (id) {
+    case ESP_BLE_CONN_EVENT_STARTED:
+        spp_update_reconnect_timer();
+        break;
+    case ESP_BLE_CONN_EVENT_CONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
+        uint16_t conn_handle;
+
+        if (!evt) {
+            break;
+        }
+        conn_handle = evt->connected.conn_handle;
+        spp_track_connected(conn_handle);
+        spp_update_reconnect_timer();
+        ESP_LOGI(TAG, "Connected successfully to device " MACSTR " (conn_handle=%d)",
+                 MAC2STR(evt->connected.peer_addr), conn_handle);
+        spp_tune_connection(conn_handle);
+        spp_scan_for_available_slot(false);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DISCONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
+        uint16_t conn_handle = evt ? evt->disconnected.conn_handle : BLE_CONN_HANDLE_INVALID;
+
+        if (evt) {
+            ESP_LOGI(TAG, "Disconnected from device " MACSTR " (conn_handle=%d)",
+                     MAC2STR(evt->disconnected.peer_addr), conn_handle);
+        } else {
+            ESP_LOGI(TAG, "Disconnected (conn_handle=%d)", conn_handle);
+        }
+        spp_track_disconnected(conn_handle);
+        spp_destroy_session(conn_handle);
+        spp_update_reconnect_timer();
+        spp_scan_for_available_slot(false);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DISC_COMPLETE: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        spp_on_disc_complete(evt->disc_complete.conn_handle);
+        spp_update_reconnect_timer();
+        spp_scan_for_available_slot(false);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DATA_RECEIVE:
+        /* Central notifications are also consumed by gatt_session's GAP listener.
+         * This event owns its copy as documented by esp_ble_conn_data_t. */
+        if (event_data) {
+            esp_ble_conn_event_data_t *evt = event_data;
+            free(evt->data_receive.data);
+            evt->data_receive.data = NULL;
+        }
+        break;
+    case ESP_BLE_CONN_EVENT_MTU: {
+        esp_ble_conn_event_data_t *evt = event_data;
+        gatt_session_t *session;
+
+        if (!evt) {
+            break;
+        }
+        session = gatt_session_find_by_handle(evt->mtu_update.conn_handle);
+        if (session) {
+            gatt_session_set_mtu(session, evt->mtu_update.mtu);
+        }
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE: {
+        esp_ble_conn_event_data_t *evt = event_data;
+        int idx;
+
+        if (!evt) {
+            break;
+        }
+        idx = spp_find_session_idx_by_conn(evt->conn_param_update.conn_handle);
+        if (idx < 0) {
+            break;
+        }
+        g_conn_params_ready[idx] = true;
+        ESP_LOGW(TAG, "Connection parameters ready for conn_handle=%d (interval=%.2fms)",
+                 evt->conn_param_update.conn_handle, evt->conn_param_update.params.itvl_min * 1.25f);
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void app_main(void)
 {
     esp_err_t ret;
+    esp_ble_conn_config_t config = {
+        .device_name = "ble-spp-client",
+    };
 
     ESP_LOGI(TAG, "Starting BLE Component Test Example");
-    esp_log_level_set("ble_manager", ESP_LOG_WARN);
-    esp_log_level_set("gatt_discovery", ESP_LOG_WARN);
     esp_log_level_set("gatt_session", ESP_LOG_WARN);
     esp_log_level_set("esp_flux", ESP_LOG_WARN);
     esp_log_level_set("spp server", ESP_LOG_WARN);
     esp_log_level_set("spp client", ESP_LOG_WARN);
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
+    esp_log_level_set("blecm_nimble", ESP_LOG_WARN);
 
     ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -397,42 +507,40 @@ void app_main(void)
     }
     ESP_ERROR_CHECK(ret);
 
-    ret = nimble_port_init();
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize nimble: %d", ret);
-        return;
-    }
-
-    nimble_host_config();
-
-    ble_svc_gap_device_name_set("ble-spp-client");
-
-    nimble_port_freertos_init(nimble_host_task);
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
-    ESP_LOGW(TAG, "Free Heap: %" PRIu32 " bytes", esp_get_free_heap_size());
-
-    ble_manager_callbacks_t manager_callbacks = {
-        .ble_adv_cb = NULL,
-        .ble_scan_cb = ble_manager_scan_cb,
-        .ble_connect_cb = ble_manager_connect_cb,
-        .ble_disconnect_cb = ble_manager_disconnect_cb,
-        .ble_conn_update_cb = ble_manager_conn_update_cb,
-        .arg = NULL
-    };
-    g_ble_manager = ble_manager_init(&manager_callbacks);
-    if (!g_ble_manager) {
-        ESP_LOGE(TAG, "Failed to initialize BLE manager");
-        return;
-    }
     g_sessions_mutex = xSemaphoreCreateMutex();
     if (!g_sessions_mutex) {
         ESP_LOGE(TAG, "Failed to create sessions mutex");
         return;
     }
 
-    /* Start scanning for 10 seconds */
-    ble_manager_start_scan(g_ble_manager, 100000);
+    s_reconnect_timer = xTimerCreate("spp_reconn", pdMS_TO_TICKS(SPP_RECONNECT_INTERVAL_MS),
+                                     pdTRUE, NULL, spp_reconnect_timer_cb);
+    if (!s_reconnect_timer) {
+        ESP_LOGE(TAG, "Failed to create reconnect timer");
+        return;
+    }
+
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID, app_ble_conn_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    {
+        esp_ble_conn_scan_params_t scan_params = {
+            .itvl = 0x50,
+            .window = 0x30,
+            .passive = false,
+            .filter_duplicates = false,
+        };
+        ESP_ERROR_CHECK(esp_ble_conn_scan_params_set(&scan_params));
+    }
+    ESP_ERROR_CHECK(esp_ble_conn_register_scan_callback(spp_scan_cb, NULL));
+    if (esp_ble_conn_start() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start BLE connection manager");
+        esp_ble_conn_stop();
+        esp_ble_conn_deinit();
+        return;
+    }
+
+    ESP_LOGW(TAG, "Free Heap: %" PRIu32 " bytes", esp_get_free_heap_size());
 
     uint32_t heap_log_counter = 0;
 
@@ -469,7 +577,7 @@ void app_main(void)
         if (++heap_log_counter >= 50) {
             heap_log_counter = 0;
             ESP_LOGW(TAG, "Free Heap: %" PRIu32 " bytes, active connections: %d/%d",
-                     esp_get_free_heap_size(), ble_manager_get_active_connections(g_ble_manager), MAX_CONNECTIONS);
+                     esp_get_free_heap_size(), spp_active_session_count(), MAX_CONNECTIONS);
         }
     }
 }

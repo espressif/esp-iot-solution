@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.1.0 - 2026-10-28
+
+### Feature:
+
+* `flux_callbacks_t.progress_cb` and `ble_session_callbacks_t.progress_cb` take `stream_id` before the byte counts: `(session, stream_id, transferred, total)`. A callback still declared as `(session, transferred, total)` is a different function type. If it is compiled anyway, `stream_id` is read as `transferred` and `transferred` is read as `total`. Update the callback; there is no source-compatible wrapper, because concurrent streams need the id. `gmp_flux_progress()` and `gmp_flux_gatt_progress()` in `esp_gmp` already forward `stream_id`.
+
 ## v0.0.3~2 - 2026-10-28
 
 ### Examples:

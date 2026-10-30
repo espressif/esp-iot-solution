@@ -325,7 +325,7 @@ static void flux_on_data_received_bridge(flux_session_t *flux_session, uint8_t s
     }
 }
 
-static void flux_on_progress_bridge(flux_session_t *flux_session, uint32_t transferred, uint32_t total)
+static void flux_on_progress_bridge(flux_session_t *flux_session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     gatt_session_t *target = NULL;
     progress_cb cb = NULL;
@@ -345,7 +345,7 @@ static void flux_on_progress_bridge(flux_session_t *flux_session, uint32_t trans
         xSemaphoreGive(g_gatt_sessions_mutex);
     }
     if (target && cb) {
-        cb(target, transferred, total);
+        cb(target, stream_id, transferred, total);
         gatt_session_callback_leave(target);
     }
 }

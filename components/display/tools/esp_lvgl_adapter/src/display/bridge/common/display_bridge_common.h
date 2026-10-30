@@ -386,12 +386,24 @@ int display_bridge_pipeline_init_from_cfg(esp_lv_adapter_display_pipeline_t *pip
                                           esp_lv_adapter_display_runtime_config_t *cfg,
                                           void **out_disp_fb, void **out_draw_fb);
 
-/* Submit and publish ownership together; RGB preserves an early switch event. */
+/**
+ * @brief Drop a stale pipeline wakeup before re-checking the buffer lists.
+ *
+ * wake == NULL clears the current task's notification index 0. A bridge-owned
+ * binary semaphore is drained instead, leaving the caller's notifications intact.
+ */
+void display_bridge_waiter_drain(SemaphoreHandle_t wake);
+
+/** Block until the next pipeline wakeup. See display_bridge_waiter_drain(). */
+void display_bridge_waiter_take(SemaphoreHandle_t wake);
+
+/* Submit and publish ownership together; RGB preserves an early switch event.
+ * wake selects the task notification (NULL) or a bridge semaphore. */
 esp_err_t display_bridge_pipeline_blit(esp_lv_adapter_display_pipeline_t *p,
                                        esp_lcd_panel_handle_t panel,
                                        const esp_lv_adapter_display_runtime_info_t *runtime,
                                        void **front, void **pending, void *buffer,
-                                       bool rgb);
+                                       bool rgb, SemaphoreHandle_t wake);
 
 void display_bridge_pipeline_color_done(esp_lv_adapter_display_pipeline_t *p);
 
@@ -409,13 +421,15 @@ bool display_bridge_pipeline_release_buf_isr(esp_lv_adapter_display_pipeline_t *
 struct display_pipeline_buf *display_bridge_pipeline_take_free_buf(esp_lv_adapter_display_pipeline_t *p);
 
 /**
- * @brief Wait for a free buffer from the pipeline (uses ulTaskNotifyTake)
+ * @brief Wait for a free buffer from the pipeline.
  *
- * Blocks the current task until a buffer is moved to the empty list. The task is
- * woken by the same notification sent after display_bridge_pipeline_release_buf_isr()
- * in the VSync (or equivalent) ISR via vTaskNotifyGiveFromISR(adapter_task).
+ * Blocks until a buffer is moved to the empty list. wake == NULL waits on the
+ * current task's notification index 0. A non-NULL binary semaphore is used
+ * instead, so this wait does not clear or add caller task notifications.
+ * The ISR must give that same semaphore after display_bridge_pipeline_release_buf_isr().
  */
-struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p);
+struct display_pipeline_buf *display_bridge_pipeline_wait_free_buf(esp_lv_adapter_display_pipeline_t *p,
+                                                                   SemaphoreHandle_t wake);
 
 /**
  * @brief Initialize runtime information from configuration

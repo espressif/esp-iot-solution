@@ -48,7 +48,9 @@ protocomm_ext_delete(pc);
 If the peer security scheme is **already known**, call `protocomm_ext_set_security()`
 first, then `esp_local_controller_start_session()` (fetch_version + establish_security).
 
-**Thread safety:** APIs on one instance are not thread-safe; serialize from a single task.
+**Sessions:** one `esp_local_controller` instance is one device. Create one per peer to keep several HTTP sessions open; using another peer does not close the rest. One device still accepts only one HTTP client.
+
+**Thread safety:** APIs on one instance are not thread-safe; serialize from a single task. Different instances may be used one after another from that task.
 
 ## Dependency
 
@@ -57,7 +59,7 @@ This component requires **`protocomm_ext`** from the same `esp-iot-solution` tre
 
 ```yaml
 dependencies:
-  espressif/esp_local_controller: "^1.0.0"
+  espressif/esp_local_controller: "^1.1.0"
 ```
 
 When both components are published to the Component Registry, the `protocomm_ext`

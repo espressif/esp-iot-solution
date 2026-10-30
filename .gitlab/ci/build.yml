@@ -148,15 +148,21 @@
       - IMAGE: espressif/idf:release-v6.0
       - IMAGE: espressif/idf:release-v6.1
 
-# Compressed OTA bootloader placement changed on IDF 6.x. Keep the active 5.x
-# matrix, cover release-v6.0/6.1, and pin v6.0.1 for the legacy bootloader.ld
-# layout that predates bootloader.sections.ld (introduced in 6.0.2).
+# Compressed OTA bootloader placement:
+#   IDF < 6.0, non-P4: linker.lf / iram_loader1_seg
+#   IDF 5.5.5+ ESP32-P4: inject into static bootloader.rev3.ld
+#   IDF 6.0/6.0.1: inject into bootloader.ld or bootloader.rev3.ld
+#   IDF 6.0.2+: inject into bootloader.sections.ld
+# Pin v5.5.5 and v6.0.1 so those layouts are not only covered by floating
+# release branches. ESP32-P4 is built only when IDF_VERSION >= 5.5.5.
+# ESP32-S31 is built only when IDF_VERSION >= 6.1 (release-v6.1 in this matrix).
 .build_idf_active_release_version_with_idf6_ota:
   parallel:
     matrix:
       - IMAGE: espressif/idf:release-v5.2
       - IMAGE: espressif/idf:release-v5.3
       - IMAGE: espressif/idf:release-v5.4
+      - IMAGE: espressif/idf:v5.5.5
       - IMAGE: espressif/idf:release-v5.5
       - IMAGE: espressif/idf:v6.0.1
       - IMAGE: espressif/idf:release-v6.0
@@ -985,8 +991,14 @@ build_example_ota_simple_ota_example:
   variables:
     EXAMPLE_DIR: examples/ota/simple_ota_example
     WARNING_STR: "1/2 app partitions are too small"
-  # Override script so the IDF 6.x map check is a normal script step. GitLab
+  # Override script so the map check is a normal script step. GitLab
   # after_script failures do not change the job exit status.
+  # Run where P4 / injection layouts exist (IDF >= 5.5.5 and all 6.x).
+  # IDF 6.x: --expected-injection so a missing PRE_LINK inject fails CI.
+  # IDF 5.5.x: --idf-version 5.5.5 so only ESP32-P4 maps require injection;
+  # non-P4 linker.lf maps are skipped. IDF 5.2/5.3/5.4 do not run the checker.
+  # -t all only covers idf_build_apps SUPPORTED_TARGETS. ESP32-S31 is a
+  # preview target on IDF 6.1 and is built by the dedicated job below.
   script:
     - pip install idf_build_apps ${EXAMPLE_PYTHON_DEPS}
     - |
@@ -1000,12 +1012,40 @@ build_example_ota_simple_ota_example:
     - |
       case "${IMAGE}" in
         *[:/]v6.*|*[:/]release-v6.*)
-          python tools/check_bootloader_xz_iram.py "${EXAMPLE_DIR}"
+          python tools/check_bootloader_xz_iram.py "${EXAMPLE_DIR}" --expected-injection
+          ;;
+        *[:/]v5.5.5*|*[:/]release-v5.5*)
+          python tools/check_bootloader_xz_iram.py "${EXAMPLE_DIR}" --idf-version 5.5.5
           ;;
         *)
-          echo "Skip IDF 6.x bootloader XZ IRAM check for ${IMAGE}"
+          echo "Skip bootloader XZ IRAM check for ${IMAGE}"
           ;;
       esac
+
+# ESP32-S31 is preview on IDF 6.1 and is not in -t all. Build it explicitly
+# so compressed-OTA compile and iram_loader injection stay gated in CI.
+build_example_ota_simple_ota_example_esp32s31:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_ota_simple_ota_example
+  parallel:
+    matrix:
+      - IMAGE: espressif/idf:release-v6.1
+  variables:
+    EXAMPLE_DIR: examples/ota/simple_ota_example
+    WARNING_STR: "1/2 app partitions are too small"
+    IDF_TARGET: esp32s31
+  script:
+    - pip install idf_build_apps ${EXAMPLE_PYTHON_DEPS}
+    - |
+      python tools/build_apps.py ${EXAMPLE_DIR} \
+              --config ${EXAMPLE_CONFIG} \
+              -t esp32s31 \
+              -r ${BUILD_RECURSIVE} \
+              -vv \
+              --board ${EXAMPLE_BOARD} \
+              ${EXAMPLE_APPEND_ARGS}
+    - python tools/check_bootloader_xz_iram.py "${EXAMPLE_DIR}" --expected-injection
 
 build_example_sensors_airmouse:
   extends:

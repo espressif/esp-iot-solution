@@ -191,11 +191,11 @@ static void gmp_flux_session_complete(flux_session_t *session, uint8_t stream_id
     }
 }
 
-static void gmp_flux_progress(flux_session_t *session, uint32_t transferred, uint32_t total)
+static void gmp_flux_progress(flux_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     gmp_flux_hook_t *hook = hook_find_by_flux(session);
     if (hook && hook->user_cbs.progress_cb) {
-        hook->user_cbs.progress_cb(session, transferred, total);
+        hook->user_cbs.progress_cb(session, stream_id, transferred, total);
     }
 }
 
@@ -283,11 +283,11 @@ static void gmp_flux_gatt_session_complete(gatt_session_t *session, uint8_t stre
     }
 }
 
-static void gmp_flux_gatt_progress(gatt_session_t *session, uint32_t transferred, uint32_t total)
+static void gmp_flux_gatt_progress(gatt_session_t *session, uint8_t stream_id, uint32_t transferred, uint32_t total)
 {
     gmp_flux_hook_t *hook = hook_find((esp_gmp_link_t)session);
     if (hook && hook->user_gatt_cbs.progress_cb) {
-        hook->user_gatt_cbs.progress_cb(session, transferred, total);
+        hook->user_gatt_cbs.progress_cb(session, stream_id, transferred, total);
     }
 }
 

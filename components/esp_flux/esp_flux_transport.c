@@ -1142,6 +1142,9 @@ static esp_err_t flux_fragment_recv_handle(flux_session_t *session, flux_fragmen
                 flux_recv_state_reset(recv_state);
             }
         } else {
+            if (owned_stream_id) {
+                *owned_stream_id = recv_state->stream_id;
+            }
             if (progress_transferred) {
                 *progress_transferred = recv_state->received_size;
             }
@@ -1370,6 +1373,9 @@ static esp_err_t flux_fragment_recv_handle(flux_session_t *session, flux_fragmen
                 flux_recv_state_reset(recv_state);
             }
         } else {
+            if (owned_stream_id) {
+                *owned_stream_id = recv_state->stream_id;
+            }
             if (progress_transferred) {
                 *progress_transferred = recv_state->received_size;
             }
@@ -1574,7 +1580,7 @@ void flux_transmit_task(void *pvParameters)
             }
 
             if (reserve_progress_cb && flux_session_callback_begin_reserved(session)) {
-                session->callbacks.progress_cb(session, cb_progress_transferred, cb_progress_total);
+                session->callbacks.progress_cb(session, cb_stream_id, cb_progress_transferred, cb_progress_total);
                 flux_session_callback_leave(session);
             }
         }
@@ -1598,6 +1604,7 @@ void flux_transmit_task(void *pvParameters)
         } flux_error_event_t;
         typedef struct {
             flux_session_t *session;
+            uint8_t stream_id;
             uint32_t transferred;
             uint32_t total;
         } flux_progress_event_t;
@@ -1706,6 +1713,7 @@ void flux_transmit_task(void *pvParameters)
                         progress_event_count < (int)(sizeof(progress_events) / sizeof(progress_events[0]))) {
                     session->callback_pending++;
                     progress_events[progress_event_count].session = session;
+                    progress_events[progress_event_count].stream_id = send_state->stream_id;
                     progress_events[progress_event_count].transferred = send_state->sent_size;
                     progress_events[progress_event_count].total = send_state->total_size;
                     progress_event_count++;
@@ -1841,7 +1849,7 @@ void flux_transmit_task(void *pvParameters)
             flux_progress_event_t *event = &progress_events[i];
             if (event->session->callbacks.progress_cb &&
                     flux_session_callback_begin_reserved(event->session)) {
-                event->session->callbacks.progress_cb(event->session, event->transferred, event->total);
+                event->session->callbacks.progress_cb(event->session, event->stream_id, event->transferred, event->total);
                 flux_session_callback_leave(event->session);
             }
         }

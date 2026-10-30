@@ -43,7 +43,7 @@ BLE 控制器可以不直接创建传输，改用 `network_provisioner_create_bl
 
 ```yaml
 dependencies:
-  espressif/network_provisioner: "^2.0.0"
+  espressif/network_provisioner: "^2.0.1"
 ```
 
 ## 测试 / 示例

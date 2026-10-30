@@ -195,7 +195,7 @@ class relink_c:
         flash_done = False
         flash_text = '(.stub)'
 
-        if espidf_version == '5.0':
+        if espidf_version == '5.0' or espidf_version == '5.1':
             flash_text = '(.stub .gnu.warning'
 
         new_lines = []
@@ -333,7 +333,7 @@ class relink2_c:
         iram_text = '*(.iram1 .iram1.*)'
         if espidf_version == '5.3' and target == 'esp32c2':
             iram_text = '_iram_text_start = ABSOLUTE(.);'
-        elif espidf_version == '5.0':
+        elif espidf_version == '5.0' or espidf_version == '5.1':
             flash_text = '*(.stub .gnu.warning'
 
         for line in lines:

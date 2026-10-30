@@ -13,7 +13,9 @@
 #include "unity_test_utils_memory.h"
 
 #include "esp_err.h"
+#include "esp_event.h"
 #include "esp_http_client.h"
+#include "esp_netif.h"
 
 #include "esp_local_ctrl.pb-c.h"
 #include "esp_local_controller.h"
@@ -22,6 +24,13 @@
 #include "protocomm_ext_security.h"
 
 #define LEAKS_THRESHOLD_BYTES (400)
+
+static int s_leak_threshold = LEAKS_THRESHOLD_BYTES;
+
+void esp_local_controller_test_set_leak_threshold(int bytes)
+{
+    s_leak_threshold = bytes;
+}
 
 TEST_CASE("esp_local_controller_create: NULL pc returns NULL", "[esp_local_controller]")
 {
@@ -129,6 +138,55 @@ TEST_CASE("esp_local_controller wraps http protocomm_ext", "[esp_local_controlle
     protocomm_ext_delete(pc);
 }
 
+/* Object isolation only. Sec1, cookies, and property reads are covered by
+ * "two HTTP peers round-trip properties on loopback". */
+TEST_CASE("two controllers stay alive together", "[esp_local_controller]")
+{
+    static const esp_http_client_config_t cfg_a = {
+        .url = "http://192.0.2.1",
+        .timeout_ms = 50,
+    };
+    static const esp_http_client_config_t cfg_b = {
+        .url = "http://192.0.2.2",
+        .timeout_ms = 50,
+    };
+    protocomm_ext_config_data_t cfg = {
+        .transport_method = PROTOCOMM_EXT_TRANSPORT_METHOD_HTTP,
+        .security_method = PROTOCOMM_EXT_SECURITY_METHOD_NONE,
+        .transport_data = (void *) &cfg_a,
+        .security_data = NULL,
+    };
+    protocomm_ext_t *pc_a = protocomm_ext_new(&cfg);
+    cfg.transport_data = (void *) &cfg_b;
+    protocomm_ext_t *pc_b = protocomm_ext_new(&cfg);
+    TEST_ASSERT_NOT_NULL(pc_a);
+    TEST_ASSERT_NOT_NULL(pc_b);
+
+    esp_local_controller_t *ctrl_a = esp_local_controller_create(pc_a);
+    esp_local_controller_t *ctrl_b = esp_local_controller_create(pc_b);
+    TEST_ASSERT_NOT_NULL(ctrl_a);
+    TEST_ASSERT_NOT_NULL(ctrl_b);
+    TEST_ASSERT_NOT_EQUAL(ctrl_a, ctrl_b);
+    TEST_ASSERT_EQUAL_PTR(pc_a, esp_local_controller_get_protocomm(ctrl_a));
+    TEST_ASSERT_EQUAL_PTR(pc_b, esp_local_controller_get_protocomm(ctrl_b));
+    TEST_ASSERT_NOT_EQUAL(protocomm_ext_get_transport_handle(pc_a),
+                          protocomm_ext_get_transport_handle(pc_b));
+
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_open_session(pc_a, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_open_session(pc_b, NULL));
+
+    esp_local_controller_version_t ver = {0};
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, esp_local_controller_get_version(ctrl_a, &ver));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, esp_local_controller_get_version(ctrl_b, &ver));
+
+    esp_local_controller_delete(ctrl_a);
+    protocomm_ext_delete(pc_a);
+    TEST_ASSERT_EQUAL_PTR(pc_b, esp_local_controller_get_protocomm(ctrl_b));
+    TEST_ASSERT_EQUAL(ESP_OK, protocomm_ext_close_session(pc_b));
+    esp_local_controller_delete(ctrl_b);
+    protocomm_ext_delete(pc_b);
+}
+
 void setUp(void)
 {
     unity_utils_record_free_mem();
@@ -136,11 +194,15 @@ void setUp(void)
 
 void tearDown(void)
 {
-    unity_utils_evaluate_leaks_direct(LEAKS_THRESHOLD_BYTES);
+    unity_utils_evaluate_leaks_direct(s_leak_threshold);
+    s_leak_threshold = LEAKS_THRESHOLD_BYTES;
 }
 
 void app_main(void)
 {
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
     printf("Press ENTER to see the list of tests.\n");
     unity_run_menu();
 }

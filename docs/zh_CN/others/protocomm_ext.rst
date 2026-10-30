@@ -70,13 +70,15 @@
     protocomm_ext_close_session(pc);
     protocomm_ext_delete(pc);
 
+**会话：** 一个实例对应一台设备。HTTP 会保住该实例自己的连接、TCP keepalive 和 Cookie。每台设备各建一个实例。BLE 仍是单连接，并且需要 NimBLE 的 central、observer 与 GATT client 角色。
+
 添加依赖
 --------
 
 .. code:: yaml
 
     dependencies:
-      espressif/protocomm_ext: "^1.0.0"
+      espressif/protocomm_ext: "^1.1.0"
 
 API 参考
 --------
