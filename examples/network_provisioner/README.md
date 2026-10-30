@@ -11,7 +11,7 @@ Serial console menu — one or more of (depending on chip / Kconfig):
 | # | Mode | Notes |
 |---|------|--------|
 | 1 | SoftAP (HTTP) + Wi-Fi | STA joins device SoftAP first |
-| 2 | BLE + Wi-Fi | needs NimBLE central + observer |
+| 2 | BLE + Wi-Fi | needs NimBLE central, observer, and GATT client |
 | 3 | BLE + Thread | needs NimBLE (peer needs IEEE 802.15.4) |
 
 In menuconfig you can **independently** enable/disable `EXAMPLE_SUPPORT_SOFTAP_WIFI` /

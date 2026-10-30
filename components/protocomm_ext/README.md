@@ -70,8 +70,8 @@ protocomm_ext_delete(pc);
 
 ### Transport notes
 
-- **HTTP**: pass `esp_http_client_config_t *` as `transport_data`. Session cookie from SoftAP `protocomm_httpd` is retained automatically.
-- **BLE**: enable `CONFIG_BT_NIMBLE_ENABLED`. Use `esp_protocomm_ext_nimble_start_scan()` / `open_session(pc, &ble_addr)`.
+- **HTTP**: pass `esp_http_client_config_t *` as `transport_data`. Each instance keeps its own connection, TCP keepalive, and session cookie. Create one instance per device to talk to several peers without disconnecting the others. A device accepts one HTTP client; a second client to that same device replaces the first.
+- **BLE**: enable `CONFIG_BT_NIMBLE_ENABLED` plus the central role, the observer role, and GATT client. Use `esp_protocomm_ext_nimble_start_scan()` / `open_session(pc, &ble_addr)`. BLE is one connection, not a session pool. With GATT client off, the HTTP and console transports still build.
 - **Console**: pass `protocomm_ext_console_config_t *`. Speaks the same UART text protocol as IDF `protocomm_console` (`<ep> <sid> <hex>\r`).
 
 ### Security notes
@@ -83,7 +83,7 @@ protocomm_ext_delete(pc);
 
 ```yaml
 dependencies:
-  espressif/protocomm_ext: "^1.0.0"
+  espressif/protocomm_ext: "^1.1.0"
 ```
 
 ## Tests

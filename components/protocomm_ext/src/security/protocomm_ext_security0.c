@@ -20,22 +20,24 @@
 
 static const char* TAG = "security0";
 
-/* Lightweight non-NULL sentinel so core can treat Sec0 like other security objects. */
-static int s_sec0_handle;
-
 static esp_err_t sec0_init(protocomm_ext_security_handle_t *handle, const void *sec_params)
 {
     (void)sec_params;
     if (!handle) {
         return ESP_ERR_INVALID_ARG;
     }
-    *handle = &s_sec0_handle;
+    /* One sentinel per instance. A shared static would alias every Sec0 peer. */
+    int *sentinel = calloc(1, sizeof(*sentinel));
+    if (!sentinel) {
+        return ESP_ERR_NO_MEM;
+    }
+    *handle = sentinel;
     return ESP_OK;
 }
 
 static esp_err_t sec0_cleanup(protocomm_ext_security_handle_t handle)
 {
-    (void)handle;
+    free(handle);
     return ESP_OK;
 }
 

@@ -1,4 +1,4 @@
-version: "2.0.0"
+version: "2.0.1"
 targets:
   - esp32
   - esp32s3
@@ -19,11 +19,11 @@ dependencies:
   idf:
     version: ">=5.3"
   cmake_utilities: "0.*"
-  # BLE helpers call protocomm_ext_get_transport_method(), added in 1.0.1.
-  # ^1.0.0 would still accept 1.0.0 and fail at compile for Registry users.
+  # 1.0.x compiles NimBLE central sources whenever NimBLE is on, so a
+  # GATT-client-off build still links ble_gattc_*. 1.1.0 gates those sources.
   # override_path wins for in-tree builds; version is used when consuming from registry.
   protocomm_ext:
-    version: "^1.0.1"
+    version: "^1.1.0"
     override_path: "../protocomm_ext"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

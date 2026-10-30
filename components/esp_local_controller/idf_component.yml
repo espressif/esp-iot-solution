@@ -1,4 +1,4 @@
-version: "1.0.1"
+version: "1.1.0"
 targets:
   - esp32
   - esp32s3
@@ -19,10 +19,10 @@ dependencies:
   idf:
     version: ">=5.3"
   cmake_utilities: "0.*"
-  # Same-repo sibling until protocomm_ext is published to the Component Registry.
-  # override_path wins for in-tree builds; version is used when consuming from registry.
+  # override_path wins for in-tree builds. ^1.1.0 is the registry floor:
+  # 1.0.x shares one Sec0 sentinel and does not keep a per-peer HTTP connection.
   protocomm_ext:
-    version: "^1.0.0"
+    version: "^1.1.0"
     override_path: "../protocomm_ext"
 sbom:
   supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'

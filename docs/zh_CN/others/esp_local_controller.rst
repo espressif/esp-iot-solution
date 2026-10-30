@@ -62,7 +62,9 @@
 若安全方案已知，可先 ``protocomm_ext_set_security()``，再调用
 ``esp_local_controller_start_session()``。
 
-**线程安全：** 同一实例的 API 非线程安全，请在单任务中串行调用。
+**会话：** 一个实例对应一台设备。每台设备各建一个实例，即可同时保持多条 HTTP 会话。同一台设备仍然只接受一个 HTTP 客户端。
+
+**线程安全：** 同一实例的 API 非线程安全，请在单任务中串行调用。不同实例可以在这个任务里轮流使用。
 
 添加依赖
 --------
@@ -70,7 +72,7 @@
 .. code:: yaml
 
     dependencies:
-      espressif/esp_local_controller: "^1.0.0"
+      espressif/esp_local_controller: "^1.1.0"
 
 示例
 ----
