@@ -1,5 +1,19 @@
 menu "Example Configuration"
 
+    config EXAMPLE_DIFF_OTA
+        bool "Support differential compressed OTA"
+        default n
+        depends on !ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+        select BOOTLOADER_COMPRESSED_ENABLED
+        select BOOTLOADER_DIFF_DDELTA
+        help
+            Use partition_for_diff_ota.csv and apply an xz-compressed ddelta
+            patch in the bootloader. The patch is stored in ota_2.
+            Leave this off for a pure compressed update, which keeps
+            partition_for_compressed_ota.csv. Selecting this option enables
+            the bootloader ddelta engine; switch the partition table itself
+            by building with sdkconfig.defaults.diff_ota (see README).
+
     config EXAMPLE_FIRMWARE_UPGRADE_URL
         string "firmware upgrade url endpoint"
         default "https://192.168.0.3:8070/hello_world.bin"

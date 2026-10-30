@@ -17,6 +17,43 @@ menu "Bootloader config (Custom)"
 
     endchoice
 
+    config BOOTLOADER_DIFF_DDELTA
+        bool "Enable ddelta patch apply"
+        depends on BOOTLOADER_COMPRESSED_ENABLED && !ENABLE_LEGACY_ESP_BOOTLOADER_PLUS_V2_SUPPORT
+        default n
+        help
+            Apply an xz-compressed ddelta patch in the bootloader.
+            The patch is stored in the last app partition. The new firmware
+            is written to the app slot that is neither the base firmware nor
+            that last partition, so the table needs at least three app slots.
+            Legacy esp-bootloader-plus v2 mode does not support ddelta.
+
+    config SKIP_VALIDATE_FULL_BASE_IMAGE
+        bool "Skip full base image validation in ddelta OTA"
+        depends on BOOTLOADER_DIFF_DDELTA
+        default y
+        help
+            The patch header carries a CRC32 of the whole base firmware file.
+            A mismatch rejects the patch before the destination slot is erased.
+            Set this option to n to also run esp_image_verify() on the base
+            app before the patch is applied. That checks image structure and,
+            with secure boot, the signature. The file CRC still runs. Leave
+            this y to keep the file CRC only.
+
+    config SKIP_VALIDATE_FULL_NEW_IMAGE
+        bool "Skip full new image validation in ddelta OTA"
+        depends on BOOTLOADER_DIFF_DDELTA
+        default y
+        help
+            After a ddelta patch is applied, the bootloader updates otadata and
+            then boots. The next load validates the new app. A failed image is
+            rejected there and another bootable app is started.
+            Set this option to n to run esp_image_verify() on the rebuilt app
+            before otadata is switched. A failed check restores otadata to the
+            previously running slot. Flash encryption and secure boot verify
+            the signature again at load time, so this extra pass lengthens boot.
+            Leave it y to skip that pass.
+
     config BOOTLOADER_CUSTOM_DEBUG_ON
         bool "Turn on debug log in custom bootloader"
         default n
@@ -37,4 +74,5 @@ menu "Bootloader config (Custom)"
             This option is reserved to support devices already using esp-bootloader-plus scheme.
             The triggering decompression mechanism in esp-bootloader-plus scheme and bootloader-support-plus scheme is different,
             so they are not compatible. Please make sure you only enable this option when you need the support of esp-bootloader-plus scheme.
+            ddelta differential OTA is not supported in this mode.
 endmenu

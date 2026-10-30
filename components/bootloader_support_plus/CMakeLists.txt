@@ -18,7 +18,11 @@ endif()
 if(BOOTLOADER_BUILD)
     list(APPEND srcs "src/bootloader_custom_malloc.c"
                      "src/bootloader_decompressor_common.c"
-                     "src/bootloader_storage_flash.c")
+                     "src/bootloader_storage_flash.c"
+                     "src/bootloader_diff_none.c")
+    if(CONFIG_BOOTLOADER_DIFF_DDELTA)
+        list(APPEND srcs "src/bootloader_diff_ddelta.c")
+    endif()
 else()
     list(APPEND requires "app_update" "esp_partition")
 endif()

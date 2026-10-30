@@ -1,5 +1,22 @@
 # ChangeLog
 
+## v0.8.0 - 2026-11-11
+
+- The ddelta v3 header CRC covers the whole base firmware file (`base_len` plus `base_crc32`). A mismatch is rejected before the other app slot is erased. Patches packed by cmake_utilities before 1.4.1 still record a 4KB length and only check that prefix. Require `cmake_utilities` >=1.4.1.
+- While checking that CRC, the bootloader feeds the watchdog so a large base does not reset the chip.
+- A failed destination erase or a failed patch apply now restores otadata to the previously running slot. If that restore write fails, the first sector of the patch partition is erased so the next boot does not erase the destination again. The erase starts at the partition offset. A type-2 image (--add_app_header) stores the custom header 0x120 bytes later, which is not sector-aligned, so erasing from that address is rejected.
+- Add `SKIP_VALIDATE_FULL_BASE_IMAGE` (default y). Set it to n, with ddelta enabled, to run `esp_image_verify()` on the base app before applying the patch. The file CRC still runs. With secure boot this is an extra signature check.
+- Add `SKIP_VALIDATE_FULL_NEW_IMAGE` (default y). Set it to n to run `esp_image_verify()` on the rebuilt app before switching otadata. A failed check restores the previously running slot. Flash encryption and secure boot make this an extra signature check.
+
+## v0.7.0 - 2026-11-04
+
+- Apply an xz-compressed ddelta patch in the bootloader. The patch stays in the last app partition. The new image is written to the other app slot, after checking the base-firmware prefix CRC stored in the v3 header. Enable `BOOTLOADER_DIFF_DDELTA`. Pure compressed OTA is unchanged.
+- Require `cmake_utilities` >=1.4.0. `gen_diff_ota` and `esp_ddelta` in that release pack the v3 ddelta image this bootloader applies.
+- Legacy esp-bootloader-plus v2 cannot be enabled together with ddelta. That mode still uses the v2 header and does not apply a differential patch.
+- Reject a ddelta header whose `new_file_size` exceeds the destination partition. `bootloader_storage_flash_input` now allows a write that fills the partition exactly and returns an error on overflow instead of discarding the tail and reporting success.
+- On a failed package check, restore otadata to the previously running app slot from OTA state instead of always falling back to `ota_0`.
+- After xz finishes, require the ddelta zero terminator and `bytes_written == new_file_size`. A truncated patch that still forms a valid xz stream no longer updates otadata.
+
 ## v0.6.0 - 2026-10-28
 
 - Add ESP32-P4 support for chip revision >= 3 on IDF v5.5.5 and newer. P4 does not use `linker.lf` (that region overlaps `iram_loader_seg`). IDF 5.5.x copies `bootloader.rev3.ld` into the build directory and injects the same `.iram_loader.text` rules. `CONFIG_ESP32P4_SELECTS_REV_LESS_V3` is a configure error.
