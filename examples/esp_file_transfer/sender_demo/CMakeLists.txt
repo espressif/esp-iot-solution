@@ -6,7 +6,7 @@ set(ENV{IDF_COMPONENT_MANAGER} "0")
 set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../../components/esp_flux"
     "${CMAKE_CURRENT_LIST_DIR}/../../../components/esp_gmp"
-    "${CMAKE_CURRENT_LIST_DIR}/../../esp_flux/common_components/ble_session_manager"
+    "${CMAKE_CURRENT_LIST_DIR}/../../../components/bluetooth/ble_conn_mgr"
     "${CMAKE_CURRENT_LIST_DIR}/../../../tools/cmake_utilities"
 )
 

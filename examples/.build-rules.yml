@@ -173,6 +173,14 @@ examples/esp_gmp/gmp_ota/ble_gmp_ota_server:
   enable:
     - if: SOC_BLE_SUPPORTED == 1
 
+examples/esp_file_transfer/sender_demo:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
+examples/esp_file_transfer/receiver_demo:
+  enable:
+    - if: SOC_BLE_SUPPORTED == 1
+
 examples/esp_local_controller:
   enable:
     - if: IDF_TARGET in ["esp32","esp32s3","esp32c2","esp32c3","esp32c5","esp32c6","esp32c61"] and IDF_VERSION >= "5.3"
