@@ -518,6 +518,9 @@ static int elf_validate_impl(const elf_reader_t *r)
     for (size_t i = 0; i < ehdr.phnum; ++i) {
         elf32_phdr_t phdr;
         if (elf_segment(r, &ehdr, i, &phdr)) {
+            if (loaded_ranges != inline_ranges) {
+                free(loaded_ranges);
+            }
             free(names);
             return -EINVAL;
         }
@@ -552,8 +555,8 @@ static int elf_validate_impl(const elf_reader_t *r)
     for (size_t i = 0; i < ehdr.shnum; ++i) {
         elf32_shdr_t sec;
         if (elf_section(r, &ehdr, i, &sec)) {
-            free(names);
-            return -EINVAL;
+            result = -EINVAL;
+            goto cleanup_loaded_ranges;
         }
         if (sec.type != SHT_SYNSYM) {
             continue;
@@ -577,8 +580,8 @@ static int elf_validate_impl(const elf_reader_t *r)
     for (size_t i = 0; i < ehdr.shnum; ++i) {
         elf32_shdr_t rela_sec;
         if (elf_section(r, &ehdr, i, &rela_sec)) {
-            free(names);
-            return -EINVAL;
+            result = -EINVAL;
+            goto cleanup_loaded_ranges;
         }
         if (rela_sec.type != SHT_RELA) {
             continue;
@@ -593,8 +596,8 @@ static int elf_validate_impl(const elf_reader_t *r)
         }
         elf32_shdr_t symtab;
         if (elf_section(r, &ehdr, rela_sec.link, &symtab)) {
-            free(names);
-            return -EINVAL;
+            result = -EINVAL;
+            goto cleanup_loaded_ranges;
         }
         if (symtab.type != SHT_SYMTAB && symtab.type != SHT_SYNSYM) {
             result = -EINVAL;
@@ -616,8 +619,8 @@ static int elf_validate_impl(const elf_reader_t *r)
         }
     }
 
-#if !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
 cleanup_loaded_ranges:
+#if !CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
     if (loaded_ranges != inline_ranges) {
         free(loaded_ranges);
     }

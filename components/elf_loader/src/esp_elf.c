@@ -573,9 +573,20 @@ static int esp_elf_load_section(esp_elf_t *elf, const elf_source_t *src,
     return 0;
 
 err_free_text_data:
+#ifdef CONFIG_ELF_LOADER_SET_MMU
+    /* The MMU mapping was installed before the data load, so a failed read
+     * here leaves the I-bus pointing at memory we are about to release. */
+    if (elf->mmu_num) {
+        esp_elf_arch_deinit_mmu(elf);
+        elf->mmu_num = 0;
+        elf->mmu_off = 0;
+        elf->text_off = 0;
+    }
+#endif
+    /* fall through: free both buffers */
+err_free_text:
     esp_elf_free(elf->pdata);
     elf->pdata = NULL;
-err_free_text:
     esp_elf_free(elf->ptext);
     elf->ptext = NULL;
     return ret;
@@ -693,6 +704,10 @@ static int esp_elf_load_segment(esp_elf_t *elf, const elf_source_t *src,
                                   elf->psegment + offset, phdr[i].filesz);
             if (ret) {
                 esp_elf_free(phdr);
+                esp_elf_free(elf->psegment);
+                elf->psegment = NULL;
+                elf->segment_size = 0;
+                elf->svaddr = 0;
                 return ret;
             }
             ESP_LOGD(TAG, "Copy segment[%d], mem_addr: %p, size: 0x%08x",
@@ -1270,7 +1285,16 @@ int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size)
  */
 int esp_elf_relocate_source(esp_elf_t *elf, const elf_source_t *src)
 {
-    if (!elf || !src || !src->read) {
+    if (!src || !src->read) {
+        return -EINVAL;
+    }
+    if (!elf) {
+        /* The source is valid but there is no ELF handle to own it.
+         * Close it here so the caller does not leak their file handle or
+         * context on failure. */
+        if (src->close) {
+            src->close(src->ctx);
+        }
         return -EINVAL;
     }
 

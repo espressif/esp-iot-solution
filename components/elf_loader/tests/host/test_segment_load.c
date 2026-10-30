@@ -6,6 +6,7 @@
 
 /* Exercise the actual segment loader with a nonzero first PT_LOAD virtual base. */
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -45,6 +46,23 @@ static int test_mem_source_read(void *ctx, size_t offset, void *buf, size_t len)
     return 0;
 }
 
+typedef struct {
+    const uint8_t *buffer;
+    size_t fail_offset;
+} test_failing_source_t;
+
+static int test_mem_source_read_fail(void *ctx, size_t offset, void *buf, size_t len)
+{
+    test_failing_source_t *source = ctx;
+    if (offset == source->fail_offset) {
+        (void)buf;
+        (void)len;
+        return -EIO;
+    }
+    memcpy(buf, source->buffer + offset, len);
+    return 0;
+}
+
 static int call_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
 {
     const uint8_t *ptr = pbuf;
@@ -53,6 +71,22 @@ static int call_load_segment(esp_elf_t *elf, const uint8_t *pbuf)
         .read = test_mem_source_read,
         .close = NULL,
         .ctx = &ptr,
+    };
+    const elf32_hdr_t *ehdr = (const elf32_hdr_t *)pbuf;
+    return esp_elf_load_segment(elf, &src, ehdr);
+}
+
+static int call_load_segment_fail_on_offset(esp_elf_t *elf, const uint8_t *pbuf, size_t fail_offset)
+{
+    test_failing_source_t source = {
+        .buffer = pbuf,
+        .fail_offset = fail_offset,
+    };
+    elf_source_t src = {
+        .size = test_mem_source_size,
+        .read = test_mem_source_read_fail,
+        .close = NULL,
+        .ctx = &source,
     };
     const elf32_hdr_t *ehdr = (const elf32_hdr_t *)pbuf;
     return esp_elf_load_segment(elf, &src, ehdr);
@@ -109,6 +143,17 @@ int main(void)
     assert(esp_elf_map_sym(&elf, 0x0fff) == 0);
     assert(esp_elf_map_sym(&elf, 0x102c) == 0);
     esp_elf_free(elf.psegment);
+
+    /* A PT_LOAD read failure must release the segment allocation before
+     * returning, so a failed relocation does not keep partial ownership. */
+    esp_elf_t failed = {0};
+    size_t before_failed_read_free = freed_allocations;
+    assert(call_load_segment_fail_on_offset(&failed, (const uint8_t *)&image,
+                                            image.phdr[1].offset) == -EIO);
+    assert(freed_allocations == before_failed_read_free + 2); /* phdr + psegment */
+    assert(failed.psegment == NULL);
+    assert(failed.segment_size == 0);
+    assert(failed.svaddr == 0);
 
     /* High virtual addresses must be rebased before forming any host pointer. */
     image.ehdr.entry = 0xfffff020;
