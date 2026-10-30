@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
 #include "esp_crt_bundle.h"
@@ -38,47 +40,67 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         ESP_LOGD(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         // Clean the buffer in case of a new request
         if (output_len == 0 && evt->user_data) {
-            // we are just starting to copy the output data into the use
             memset(evt->user_data, 0, MAX_HTTP_OUTPUT_BUFFER);
         }
-        /*
-         *  Check for chunked encoding is added as the URL for chunked encoding used in this example returns binary data.
-         *  However, event handler can also be used in case chunked encoding is used.
-         */
-        if (!esp_http_client_is_chunked_response(evt->client)) {
-            // If user_data buffer is configured, copy the response into the buffer
-            int copy_len = 0;
-            if (evt->user_data) {
-                // The last byte in evt->user_data is kept for the NULL character in case of out-of-bound access.
-                copy_len = MIN(evt->data_len, (MAX_HTTP_OUTPUT_BUFFER - output_len));
-                if (copy_len) {
-                    memcpy(evt->user_data + output_len, evt->data, copy_len);
-                }
-            } else {
-                int content_len = esp_http_client_get_content_length(evt->client);
-                if (output_buffer == NULL) {
-                    // We initialize output_buffer with 0 because it is used by strlen() and similar functions therefore should be null terminated.
-                    output_buffer = (char *) calloc(content_len + 1, sizeof(char));
-                    output_len = 0;
-                    if (output_buffer == NULL) {
-                        ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
-                        return ESP_FAIL;
-                    }
-                }
-                copy_len = MIN(evt->data_len, (content_len - output_len));
-                if (copy_len) {
-                    memcpy(output_buffer + output_len, evt->data, copy_len);
-                }
+        int copy_len = 0;
+        if (evt->user_data) {
+            char *user_buffer = (char *)evt->user_data;
+            /*
+             * Reserve one byte for the NUL terminator.  Returning an error
+             * on overflow prevents truncated JSON from being parsed.
+             */
+            if (output_len < 0 || output_len >= MAX_HTTP_OUTPUT_BUFFER) {
+                ESP_LOGE(TAG, "HTTP response buffer state is invalid");
+                return ESP_ERR_NO_MEM;
+            }
+            int available = MAX_HTTP_OUTPUT_BUFFER - 1 - output_len;
+            if (available < 0) {
+                available = 0;
+            }
+            copy_len = evt->data_len < available ? evt->data_len : available;
+            if (copy_len > 0) {
+                memcpy(user_buffer + output_len, evt->data, copy_len);
             }
             output_len += copy_len;
+            user_buffer[output_len] = '\0';
+            if (copy_len != evt->data_len) {
+                ESP_LOGE(TAG, "HTTP response exceeds the configured buffer");
+                return ESP_ERR_NO_MEM;
+            }
+        } else {
+            int content_len = esp_http_client_get_content_length(evt->client);
+            if (content_len < 0 || content_len > MAX_HTTP_OUTPUT_BUFFER - 1) {
+                ESP_LOGE(TAG, "HTTP response length is invalid or too large");
+                return ESP_ERR_NO_MEM;
+            }
+            if (output_buffer == NULL) {
+                output_buffer = (char *)calloc((size_t)content_len + 1, sizeof(char));
+                output_len = 0;
+                if (output_buffer == NULL) {
+                    ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
+                    return ESP_ERR_NO_MEM;
+                }
+            }
+            if (output_len < 0 || output_len > content_len) {
+                ESP_LOGE(TAG, "HTTP response buffer state is invalid");
+                return ESP_ERR_NO_MEM;
+            }
+            int available = content_len - output_len;
+            copy_len = evt->data_len < available ? evt->data_len : available;
+            if (copy_len > 0) {
+                memcpy(output_buffer + output_len, evt->data, copy_len);
+            }
+            output_len += copy_len;
+            output_buffer[output_len] = '\0';
+            if (copy_len != evt->data_len) {
+                ESP_LOGE(TAG, "HTTP response exceeds the configured buffer");
+                return ESP_ERR_NO_MEM;
+            }
         }
-
         break;
     case HTTP_EVENT_ON_FINISH:
         ESP_LOGD(TAG, "HTTP_EVENT_ON_FINISH");
         if (output_buffer != NULL) {
-            // Response is accumulated in output_buffer. Uncomment the below line to print the accumulated response
-            // ESP_LOG_BUFFER_HEX(TAG, output_buffer, output_len);
             free(output_buffer);
             output_buffer = NULL;
         }
@@ -108,67 +130,172 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
+static esp_err_t copy_json_string(char *destination, size_t destination_size, const cJSON *item)
+{
+    if (!cJSON_IsString(item) || item->valuestring == NULL) {
+        return ESP_FAIL;
+    }
+    if (strlen(item->valuestring) >= destination_size) {
+        return ESP_ERR_NO_MEM;
+    }
+    memcpy(destination, item->valuestring, strlen(item->valuestring) + 1);
+    return ESP_OK;
+}
+
 esp_err_t get_http_weather_data_with_url(http_weather_data_t *weather_data)
 {
     esp_err_t ret = ESP_OK;
-    char local_response_buffer[MAX_HTTP_OUTPUT_BUFFER] = {0};
-    char weather_http_url[120] = {0};
-    snprintf(weather_data->district_id, sizeof(weather_data->district_id), "%s", CONFIG_CITY_DISTRICT_ID);
+    char *local_response_buffer = NULL;
+    char weather_http_url[256] = {0};
+    http_weather_data_t parsed_weather = {0};
+    esp_http_client_handle_t client = NULL;
+    cJSON *root = NULL;
+
+    if (weather_data == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    local_response_buffer = calloc(MAX_HTTP_OUTPUT_BUFFER + 1, sizeof(*local_response_buffer));
+    if (local_response_buffer == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    int district_len = snprintf(parsed_weather.district_id, sizeof(parsed_weather.district_id), "%s",
+                                CONFIG_CITY_DISTRICT_ID);
+    if (district_len < 0 || district_len >= (int)sizeof(parsed_weather.district_id)) {
+        ret = ESP_ERR_INVALID_SIZE;
+        goto cleanup;
+    }
 #ifdef CONFIG_REGION_INTERNATIONAL
-    strcat(weather_http_url, "https://api.map.baidu.com/weather_abroad/v1/?district_id=");
-    strcat(weather_http_url, weather_data->district_id);
-    strcat(weather_http_url, "&data_type=all&language=en&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
+    int url_len = snprintf(weather_http_url, sizeof(weather_http_url),
+                           "https://api.map.baidu.com/weather_abroad/v1/?district_id=%s"
+                           "&data_type=all&language=en&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT",
+                           parsed_weather.district_id);
 #elif CONFIG_REGION_CHINA
-    strcat(weather_http_url, "https://api.map.baidu.com/weather/v1/?district_id=");
-    strcat(weather_http_url, weather_data->district_id);
-    strcat(weather_http_url, "&data_type=all&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT");
+    int url_len = snprintf(weather_http_url, sizeof(weather_http_url),
+                           "https://api.map.baidu.com/weather/v1/?district_id=%s"
+                           "&data_type=all&ak=uKBj61fKPRDbXzv5w3ecFaVove3ZqwlT",
+                           parsed_weather.district_id);
+#else
+    int url_len = -1;
 #endif
+    if (url_len < 0 || url_len >= (int)sizeof(weather_http_url)) {
+        ret = ESP_ERR_INVALID_ARG;
+        goto cleanup;
+    }
+
     esp_http_client_config_t config = {
         .url = weather_http_url,
         .event_handler = _http_event_handler,
-        .user_data = local_response_buffer,        // Pass address of local buffer to get response
+        .user_data = local_response_buffer,
+        .crt_bundle_attach = esp_crt_bundle_attach,
         .disable_auto_redirect = true,
+        .timeout_ms = 15000,
     };
-    esp_http_client_handle_t client = esp_http_client_init(&config);
+    client = esp_http_client_init(&config);
+    if (client == NULL) {
+        ret = ESP_ERR_NO_MEM;
+        goto cleanup;
+    }
 
     ret = esp_http_client_perform(client);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "HTTP GET request failed: %s", esp_err_to_name(ret));
-        return ret;
+        goto cleanup;
+    }
+    if (esp_http_client_get_status_code(client) != 200) {
+        ESP_LOGE(TAG, "HTTP GET request returned status %d",
+                 esp_http_client_get_status_code(client));
+        ret = ESP_FAIL;
+        goto cleanup;
     }
 
-    cJSON *root = cJSON_Parse(local_response_buffer);
+    root = cJSON_Parse(local_response_buffer);
+    if (!cJSON_IsObject(root)) {
+        ret = ESP_ERR_INVALID_RESPONSE;
+        goto cleanup;
+    }
+    cJSON *status = cJSON_GetObjectItem(root, "status");
+    if (!cJSON_IsNumber(status) || status->valueint != 0) {
+        ret = ESP_ERR_INVALID_RESPONSE;
+        goto cleanup;
+    }
     cJSON *result = cJSON_GetObjectItem(root, "result");
+    if (!cJSON_IsObject(result)) {
+        ret = ESP_FAIL;
+        goto cleanup;
+    }
     cJSON *location = cJSON_GetObjectItem(result, "location");
     cJSON *now = cJSON_GetObjectItem(result, "now");
     cJSON *forecasts = cJSON_GetObjectItem(result, "forecasts");
-    cJSON *first_forecast = cJSON_GetArrayItem(forecasts, 0);
-
-    char *pre_city = cJSON_GetObjectItem(location, "city")->valuestring;
-    char *pre_name = cJSON_GetObjectItem(location, "name")->valuestring;
-    char *pre_text = cJSON_GetObjectItem(now, "text")->valuestring;
-    char *pre_wind_class = cJSON_GetObjectItem(now, "wind_class")->valuestring;
-    char *pre_wind_dir = cJSON_GetObjectItem(now, "wind_dir")->valuestring;
-    char *pre_uptime = cJSON_GetObjectItem(now, "uptime")->valuestring;
-    char *pre_week = cJSON_GetObjectItem(first_forecast, "week")->valuestring;
-    int pre_high = cJSON_GetObjectItem(first_forecast, "high")->valueint;
-    int pre_low = cJSON_GetObjectItem(first_forecast, "low")->valueint;
-
-    snprintf(weather_data->city_name, sizeof(weather_data->city_name), "%s", pre_city);
-    snprintf(weather_data->district_name, sizeof(weather_data->district_name), "%s", pre_name);
-    snprintf(weather_data->text, sizeof(weather_data->text), "%s", pre_text);
-    snprintf(weather_data->wind_class, sizeof(weather_data->wind_class), "%s", pre_wind_class);
-    snprintf(weather_data->wind_dir, sizeof(weather_data->wind_dir), "%s", pre_wind_dir);
-    snprintf(weather_data->uptime, sizeof(weather_data->uptime), "%s", pre_uptime);
-    snprintf(weather_data->week, sizeof(weather_data->week), "%s", pre_week);
-    weather_data->temp_high = pre_high;
-    weather_data->temp_low = pre_low;
-
-    cJSON_Delete(root);
-    ret = esp_http_client_cleanup(client);
-    if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "HTTP cleanup failed: %s", esp_err_to_name(ret));
-        return ret;
+    if (!cJSON_IsObject(location) || !cJSON_IsObject(now) || !cJSON_IsArray(forecasts) ||
+        cJSON_GetArraySize(forecasts) < 1) {
+        ret = ESP_FAIL;
+        goto cleanup;
     }
-    return ESP_OK;
+    cJSON *first_forecast = cJSON_GetArrayItem(forecasts, 0);
+    if (!cJSON_IsObject(first_forecast)) {
+        ret = ESP_FAIL;
+        goto cleanup;
+    }
+
+    ret = copy_json_string(parsed_weather.city_name, sizeof(parsed_weather.city_name),
+                           cJSON_GetObjectItem(location, "city"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.district_name, sizeof(parsed_weather.district_name),
+                           cJSON_GetObjectItem(location, "name"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.text, sizeof(parsed_weather.text),
+                           cJSON_GetObjectItem(now, "text"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.wind_class, sizeof(parsed_weather.wind_class),
+                           cJSON_GetObjectItem(now, "wind_class"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.wind_dir, sizeof(parsed_weather.wind_dir),
+                           cJSON_GetObjectItem(now, "wind_dir"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.uptime, sizeof(parsed_weather.uptime),
+                           cJSON_GetObjectItem(now, "uptime"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+    ret = copy_json_string(parsed_weather.week, sizeof(parsed_weather.week),
+                           cJSON_GetObjectItem(first_forecast, "week"));
+    if (ret != ESP_OK) {
+        goto cleanup;
+    }
+
+    cJSON *high = cJSON_GetObjectItem(first_forecast, "high");
+    cJSON *low = cJSON_GetObjectItem(first_forecast, "low");
+    if (!cJSON_IsNumber(high) || !cJSON_IsNumber(low)) {
+        ret = ESP_FAIL;
+        goto cleanup;
+    }
+    parsed_weather.temp_high = high->valueint;
+    parsed_weather.temp_low = low->valueint;
+
+cleanup:
+    if (root != NULL) {
+        cJSON_Delete(root);
+    }
+    if (client != NULL) {
+        esp_err_t cleanup_ret = esp_http_client_cleanup(client);
+        if (ret == ESP_OK && cleanup_ret != ESP_OK) {
+            ESP_LOGE(TAG, "HTTP cleanup failed: %s", esp_err_to_name(cleanup_ret));
+            ret = cleanup_ret;
+        }
+    }
+    free(local_response_buffer);
+    if (ret == ESP_OK) {
+        *weather_data = parsed_weather;
+    }
+    return ret;
 }
