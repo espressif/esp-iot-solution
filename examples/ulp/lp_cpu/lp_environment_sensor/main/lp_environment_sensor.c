@@ -80,6 +80,7 @@ typedef struct {
     float temp;
     float hum;
     bool enable_http;
+    bool first_boot;
 } esp_ths_data_type_t;
 
 static void lp_core_init(void)
@@ -172,7 +173,7 @@ static void rmaker_task(void *pvParameters)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    if (data->hum == 0) {
+    if (data->first_boot) {
         app_first_time_wifi_init();
     } else {
         app_second_time_wifi_init();
@@ -197,7 +198,7 @@ static void rmaker_task(void *pvParameters)
 
     esp_rmaker_start();
 
-    if (data->hum == 0) {
+    if (data->first_boot) {
         if (app_first_time_wifi_start(POP_TYPE_RANDOM) == ESP_OK) {
             xEventGroupSetBits(esp_ths_event_group, WIFI_CONNECT_SUCCESS_BIT);
         } else {
@@ -359,6 +360,7 @@ void app_main(void)
             .temp = 0,
             .hum = 0,
             .enable_http = true,
+            .first_boot = true,
         };
 #ifdef CONFIG_REPORT_THS_DATA
         xTaskCreate(rmaker_task, "rmaker_task", 1024 * 8, (void *)&sensor_data, 5, NULL);
@@ -415,7 +417,8 @@ void app_main(void)
         const esp_ths_data_type_t sensor_data = {
             .temp = *temp,
             .hum = *hum,
-            .enable_http = weather_data_report
+            .enable_http = weather_data_report,
+            .first_boot = false,
         };
         ESP_LOGI(TAG, "temperature: %f, humidity: %f", sensor_data.temp, sensor_data.hum);
 #if CONFIG_UPDATE_WEATHER_DATA
@@ -428,11 +431,6 @@ void app_main(void)
         xTaskCreate(rmaker_task, "rmaker_task", 1024 * 8, (void *)&sensor_data, 5, NULL);
 #endif
         xTaskCreate(epaper_task, "epaper_task", 1024 * 8, (void *)&sensor_data, 8, NULL);
-#ifdef CONFIG_REPORT_THS_DATA
-        esp_rmaker_param_update_and_report(
-            esp_rmaker_device_get_param_by_type(temp_sensor_device, ESP_RMAKER_PARAM_TEMPERATURE),
-            esp_rmaker_float(roundf((*temp) * 10.0) / 10.0));
-#endif
         /* Wait for the e-paper refresh to be completed. */
         EventBits_t bits = xEventGroupWaitBits(esp_ths_event_group,
                                                EPAPER_REFRESH_BIT,
