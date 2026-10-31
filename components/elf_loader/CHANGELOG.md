@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Pass the cache map to the ESP32-P4 ROM functions when flushing ELF code loaded
+  to PSRAM, so the L1 D-cache / L2 cache is written back and the I-cache invalidated (#814).
 * Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
   partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
   without PSRAM (#686).
