@@ -35,6 +35,7 @@ static esp_err_t panel_sh8601_mirror(esp_lcd_panel_t *panel, bool mirror_x, bool
 static esp_err_t panel_sh8601_swap_xy(esp_lcd_panel_t *panel, bool swap_axes);
 static esp_err_t panel_sh8601_set_gap(esp_lcd_panel_t *panel, int x_gap, int y_gap);
 static esp_err_t panel_sh8601_disp_on_off(esp_lcd_panel_t *panel, bool off);
+static esp_err_t panel_sh8601_set_brightness(esp_lcd_panel_t *panel, int brightness);
 
 typedef struct {
     esp_lcd_panel_t base;
@@ -121,6 +122,7 @@ esp_err_t esp_lcd_new_panel_sh8601(const esp_lcd_panel_io_handle_t io, const esp
     sh8601->base.mirror = panel_sh8601_mirror;
     sh8601->base.swap_xy = panel_sh8601_swap_xy;
     sh8601->base.disp_on_off = panel_sh8601_disp_on_off;
+    sh8601->base.set_brightness = panel_sh8601_set_brightness;
     *ret_panel = &(sh8601->base);
     ESP_LOGD(TAG, "new sh8601 panel @%p", sh8601);
 
@@ -344,4 +346,15 @@ static esp_err_t panel_sh8601_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
     }
     ESP_RETURN_ON_ERROR(tx_param(sh8601, io, command, NULL, 0), TAG, "send command failed");
     return ESP_OK;
+}
+
+static esp_err_t panel_sh8601_set_brightness(esp_lcd_panel_t *panel, int brightness)
+{
+    sh8601_panel_t *sh8601 = __containerof(panel, sh8601_panel_t, base);
+    esp_lcd_panel_io_handle_t io = sh8601->io;
+
+    // Clamp brightness to 0-1023 range (10-bit)
+    uint16_t brightness_val = (brightness < 0) ? 0 : (brightness > 1023) ? 1023 : (uint16_t)brightness;
+    // Send as 2 bytes: MSB and LSB
+    return tx_param(sh8601, io, LCD_CMD_WRDISBV, (uint8_t[]) { (brightness_val >> 8) & 0xFF, brightness_val & 0xFF }, 2);
 }
