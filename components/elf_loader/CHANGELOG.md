@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,
+  so C++ vtables referenced at their address point (`_ZTV... + 8`) resolve correctly (#813).
 * Add streaming ELF relocation via `elf_source_t` and `esp_elf_relocate_source()`,
   so ELF images larger than available DRAM can be checked and relocated without
   loading the whole file into memory (e.g. apps streamed from an SD card).
