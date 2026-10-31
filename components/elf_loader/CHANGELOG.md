@@ -4,6 +4,8 @@
 
 * Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,
   so C++ vtables referenced at their address point (`_ZTV... + 8`) resolve correctly (#813).
+* Pass the cache map to the ESP32-P4 ROM functions when flushing ELF code loaded
+  to PSRAM, so the L1 D-cache / L2 cache is written back and the I-cache invalidated (#814).
 * Add streaming ELF relocation via `elf_source_t` and `esp_elf_relocate_source()`,
   so ELF images larger than available DRAM can be checked and relocated without
   loading the whole file into memory (e.g. apps streamed from an SD card).
