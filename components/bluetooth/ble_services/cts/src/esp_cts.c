@@ -239,9 +239,22 @@ static esp_err_t cts_cur_time_cb(const uint8_t *inbuf, uint16_t inlen,
     return ESP_OK;
 }
 
+/* BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC is NimBLE's BLE_GATT_CHR_F_NOTIFY_INDICATE_ENC.
+ * Defined here too so this builds against a ble_conn_mgr that predates it; there
+ * it still gates subscribing, and ble_conn_mgr gates the send once it has it. */
+#ifndef BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC
+#define BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC 0x8000
+#endif
+
+#ifdef CONFIG_BLE_CTS_DEFAULT_PERM_RW_ENCRYPT
+#define CTS_PERM (BLE_CONN_GATT_CHR_READ_ENC | BLE_CONN_GATT_CHR_WRITE_ENC | BLE_CONN_GATT_CHR_NOTIFY_INDICATE_ENC)
+#else
+#define CTS_PERM 0
+#endif
+
 static const esp_ble_conn_character_t nu_lookup_table[] = {
     {
-        "Current Time", BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | BLE_CONN_GATT_CHR_NOTIFY
+        "Current Time", BLE_CONN_UUID_TYPE_16,  BLE_CONN_GATT_CHR_READ | CTS_PERM | BLE_CONN_GATT_CHR_NOTIFY
 #ifdef CONFIG_BLE_CTS_CURRENT_TIME_WRITE_ENABLE
         | BLE_CONN_GATT_CHR_WRITE
 #endif
@@ -249,7 +262,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
     },
 #ifdef CONFIG_BLE_CTS_LOCAL_TIME_CHAR_ENABLE
     {
-        "Local Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ
+        "Local Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ | CTS_PERM
 #ifdef CONFIG_BLE_CTS_LOCAL_TIME_WRITE_ENABLE
         | BLE_CONN_GATT_CHR_WRITE
 #endif
@@ -258,7 +271,7 @@ static const esp_ble_conn_character_t nu_lookup_table[] = {
 #endif
 #ifdef CONFIG_BLE_CTS_REF_TIME_CHAR_ENABLE
     {
-        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ
+        "Reference Time", BLE_CONN_UUID_TYPE_16, BLE_CONN_GATT_CHR_READ | CTS_PERM
         , { BLE_CTS_CHR_UUID16_REFERENCE_TIME }, cts_ref_time_cb
     },
 #endif
