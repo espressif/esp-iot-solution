@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,
+  so C++ vtables referenced at their address point (`_ZTV... + 8`) resolve correctly (#813).
 * Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
   partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
   without PSRAM (#686).
