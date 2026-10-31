@@ -112,10 +112,11 @@ int esp_elf_arch_relocate(esp_elf_t *elf, const elf32_rela_t *rela,
         break;
     case R_XTENSA_GLOB_DAT:
     case R_XTENSA_JMP_SLOT:
+        /* S + A: e.g. a C++ vtable is referenced at its address point, _ZTV... + 8 */
 #ifdef CONFIG_ELF_LOADER_CACHE_OFFSET
-        *where = elf_remap_text(elf, addr);
+        *where = elf_remap_text(elf, addr + rela->addend);
 #else
-        *where = addr;
+        *where = addr + rela->addend;
 #endif
         break;
     default:
