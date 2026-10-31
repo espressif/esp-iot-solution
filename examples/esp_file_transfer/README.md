@@ -16,6 +16,15 @@ The example integration layer uses BLE GATT with
 `esp_gmp -> GMP Flux adapter -> esp_flux`. The File Transfer profile itself
 remains independent of BLE and Flux.
 
+BLE connection management (scanning, advertising, GATT service registration,
+service discovery and reconnection) is handled by the `ble_conn_mgr` component.
+The sender runs as central (`CONFIG_BLE_CONN_MGR_ROLE_CENTRAL`) and connects to
+the receiver, which runs as peripheral
+(`CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL`) and publishes the file transfer service
+UUID in its connectable advertising data. The sender connects only when that
+UUID is present. Either side re-establishes the link automatically
+after a reset or a link loss.
+
 **Scope:** demos and the profile worker are validated for a single active BLE
 link. `sessions[]` is preparatory plumbing only — concurrent multi-link file
 transfer is not supported in this release.

@@ -386,6 +386,7 @@ typedef struct esp_ble_conn_session_t {
     esp_ble_conn_scan_params_t   scan_params_cfg;
     bool                         adv_params_set;
     bool                         scan_params_set;
+    bool                         nimble_initialized;
     bool                         adv_data_auto_built;   /* Legacy auto-built adv_data_buf includes Local Name */
     bool                         adv_data_auto_include_uuid;
     esp_ble_conn_uuid_type_t     adv_data_auto_uuid_type;
@@ -1683,6 +1684,21 @@ static esp_err_t esp_ble_conn_scan(esp_ble_conn_session_t *conn_session)
     return ESP_FAIL;
 }
 
+static void esp_ble_conn_post_connect_failed(const ble_addr_t *addr, int status)
+{
+    if (!addr) {
+        return;
+    }
+
+    blecm_evt_connect_failed_t event = {
+        .status = status,
+        .peer_addr_type = addr->type,
+    };
+    memcpy(event.peer_addr, addr->val, sizeof(event.peer_addr));
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONNECT_FAILED,
+                   &event, sizeof(event), portMAX_DELAY);
+}
+
 static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
 {
     esp_ble_conn_link_t *exist_link = NULL;
@@ -1741,6 +1757,7 @@ static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
     rc = esp_ble_conn_pending_add(addr);
     if (rc != ESP_OK) {
         ESP_LOGW(TAG, "Failed to add pending connect context");
+        esp_ble_conn_post_connect_failed(addr, rc);
         return rc;
     }
 
@@ -1757,6 +1774,7 @@ static esp_err_t esp_ble_conn_do_connect(const ble_addr_t *addr)
     if (rc) {
         esp_ble_conn_pending_remove(addr);
         ESP_LOGE(TAG, "Error: Failed to connect to device; addr_type=%d, addr="MACSTR", rc=%d", addr->type, MAC2STR(addr->val), rc);
+        esp_ble_conn_post_connect_failed(addr, rc);
         return ESP_FAIL;
     }
 
@@ -4480,6 +4498,7 @@ esp_err_t esp_ble_conn_start(void)
     ESP_ERROR_CHECK(esp_nimble_hci_and_controller_init());
 #endif
     nimble_port_init();
+    conn_session->nimble_initialized = true;
 
     /* Initialize the NimBLE host configuration. */
     ble_hs_cfg.reset_cb = esp_ble_conn_on_reset;
@@ -4570,6 +4589,7 @@ esp_err_t esp_ble_conn_stop(void)
         ret = nimble_port_stop();
         if (ret == ESP_OK) {
             nimble_port_deinit();
+            conn_session->nimble_initialized = false;
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 0, 0)
             esp_nimble_hci_and_controller_deinit();
 #endif
@@ -4732,7 +4752,7 @@ static esp_err_t esp_ble_conn_device_name_apply(esp_ble_conn_session_t *conn_ses
         return ESP_ERR_NO_MEM;
     }
 
-    if (update_gap) {
+    if (update_gap && conn_session->nimble_initialized) {
         int rc = ble_svc_gap_device_name_set(name);
         if (rc != 0) {
             free(new_name);
@@ -4793,7 +4813,7 @@ static esp_err_t esp_ble_conn_refresh_adv_if_active(esp_ble_conn_session_t *conn
 #if defined(CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL) || defined(CONFIG_BLE_CONN_MGR_ROLE_BOTH)
     int rc;
 
-    if (!ble_hs_is_enabled()) {
+    if (!conn_session->nimble_initialized || !ble_hs_is_enabled()) {
         return ESP_OK;
     }
 
@@ -4829,7 +4849,7 @@ static esp_err_t esp_ble_conn_periodic_adv_data_apply_if_active(esp_ble_conn_ses
     if (!conn_session) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (!ble_hs_is_enabled()) {
+    if (!conn_session->nimble_initialized || !ble_hs_is_enabled()) {
         return ESP_OK;
     }
     if (!ble_gap_ext_adv_active(conn_session->ext_adv_handle)) {

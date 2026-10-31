@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.3.4 - 2026.10.29
+
+### Bug Fixes:
+
+- Post `ESP_BLE_CONN_EVENT_CONNECT_FAILED` when a central connection attempt fails synchronously after stopping discovery, allowing applications to resume scanning
+- Allow setting device name, advertising data, scan response data, and periodic advertising data before the NimBLE host starts without calling NimBLE GAP APIs prematurely
+
 ## v1.3.3 - 2026.10.28
 
 ### Enhancements:

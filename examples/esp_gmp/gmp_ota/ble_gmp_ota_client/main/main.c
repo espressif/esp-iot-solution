@@ -3,32 +3,27 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  *
- * NimBLE central: discover ESP-GMP-OTA peripheral and push firmware from SPIFFS.
+ * BLE central: discover ESP-GMP-OTA peripheral and push firmware from SPIFFS.
  */
 
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 
+#include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_spiffs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
-#include "host/ble_hs.h"
-#include "host/ble_gatt.h"
-#include "host/util/util.h"
-#include "services/gap/ble_svc_gap.h"
+#include "host/ble_att.h"
 
-#include "ble_manager.h"
-#include "gatt_discovery.h"
+#include "esp_ble_conn_mgr.h"
 #include "flux_gatt_session.h"
 #include "esp_gmp.h"
 #include "esp_gmp_flux.h"
@@ -40,10 +35,13 @@
 
 static const char *TAG = "gmp_ota_cli";
 
-#define MAX_CONNECTIONS CONFIG_BLE_MANAGER_MAX_CONNECTIONS
+#define MAX_CONNECTIONS CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS
 #define GMP_OTA_FIRMWARE_PATH "/spiffs/ota_image.bin"
 
-static ble_manager_t *g_ble_manager;
+#define LL_PACKET_TIME      2120
+#define LL_PACKET_LENGTH    251
+#define OPTIMAL_MTU_SIZE    517
+
 static gatt_session_t *g_session;
 static bool g_conn_params_ready;
 static bool g_notify_enabled;
@@ -57,14 +55,6 @@ typedef struct {
     uint32_t generation;
 } conn_ready_fallback_arg_t;
 
-typedef struct {
-    gatt_session_t *session;
-    uint32_t generation;
-} tx_notify_write_ctx_t;
-
-static const ble_uuid128_t gmp_svc_uuid = GMP_BLE_UUID_SVC;
-static const ble_uuid128_t gmp_chr_rx_uuid = GMP_BLE_UUID_CHR_RX;
-static const ble_uuid128_t gmp_chr_tx_uuid = GMP_BLE_UUID_CHR_TX;
 static void maybe_start_ota(gatt_session_t *session);
 
 static esp_err_t setup_gmp_callbacks(gatt_session_t *session)
@@ -147,77 +137,17 @@ static gatt_session_t *teardown_pending_pop(void)
     return session;
 }
 
-static int tx_notify_write_cb(uint16_t conn_handle, const struct ble_gatt_error *error, struct ble_gatt_attr *attr, void *arg)
+static esp_err_t enable_tx_notify(uint16_t conn_handle)
 {
-    tx_notify_write_ctx_t *ctx = (tx_notify_write_ctx_t *)arg;
-    bool should_start = false;
-    bool valid_session = false;
-    int status = error ? error->status : BLE_HS_EUNKNOWN;
+    uint8_t value[2] = { 1, 0 };
+    esp_ble_conn_data_t sub = {
+        .type = BLE_CONN_UUID_TYPE_128,
+        .uuid = { .uuid128 = { GMP_BLE_UUID_CHR_TX_BYTES } },
+        .data = value,
+        .data_len = sizeof(value),
+    };
 
-    (void)attr;
-    if (!ctx) {
-        return 0;
-    }
-
-    portENTER_CRITICAL(&g_state_lock);
-    if (g_session == ctx->session &&
-            g_conn_generation == ctx->generation &&
-            g_session &&
-            g_session->conn_handle == conn_handle) {
-        valid_session = true;
-        if (status == 0) {
-            g_notify_enabled = true;
-            should_start = g_conn_params_ready;
-        }
-    }
-    portEXIT_CRITICAL(&g_state_lock);
-
-    if (!valid_session) {
-        free(ctx);
-        return 0;
-    }
-
-    if (status != 0) {
-        ESP_LOGE(TAG, "CCCD write callback failed conn=%d status=%d", conn_handle, status);
-        ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        free(ctx);
-        return 0;
-    }
-
-    if (should_start) {
-        maybe_start_ota(ctx->session);
-    }
-    free(ctx);
-    return 0;
-}
-
-static esp_err_t enable_tx_notify(gatt_discovery_t *discovery, uint16_t tx_val_handle, gatt_session_t *session, uint32_t generation)
-{
-    (void)tx_val_handle;
-    gatt_descriptor_t *dsc = gatt_discovery_find_descriptor_by_uuid(
-                                 discovery, &gmp_svc_uuid.u, &gmp_chr_tx_uuid.u,
-                                 BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
-    if (!dsc) {
-        ESP_LOGE(TAG, "CCCD not found for TX");
-        return ESP_ERR_NOT_FOUND;
-    }
-
-    tx_notify_write_ctx_t *ctx = calloc(1, sizeof(*ctx));
-    if (!ctx) {
-        ESP_LOGE(TAG, "no memory for CCCD write callback context");
-        return ESP_ERR_NO_MEM;
-    }
-    ctx->session = session;
-    ctx->generation = generation;
-
-    uint8_t value[2] = {1, 0};
-    int rc = ble_gattc_write_flat(discovery->conn_handle, dsc->dsc.handle, value, sizeof(value), tx_notify_write_cb, ctx);
-    if (rc != 0) {
-        free(ctx);
-        ESP_LOGE(TAG, "CCCD write failed rc=%d", rc);
-        return ESP_FAIL;
-    }
-    return ESP_OK;
+    return esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
 }
 
 static esp_err_t spiffs_firmware_read(void *ctx, size_t offset, uint8_t *buf, size_t len, size_t *out_len)
@@ -383,55 +313,93 @@ static void process_pending_teardowns(void)
     }
 }
 
-static void gatt_discovery_complete_cb(gatt_discovery_t *discovery, int status, void *arg)
+static void start_scan(void)
 {
-    (void)arg;
+    esp_err_t err = esp_ble_conn_scan_start();
 
-    if (status != ESP_OK) {
-        ESP_LOGE(TAG, "discovery failed conn=%d status=%d", discovery->conn_handle, status);
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
-        return;
+    /* ESP_ERR_INVALID_STATE means a scan or connect procedure is already running. */
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "Failed to start scan: %s", esp_err_to_name(err));
     }
+}
 
-    gatt_characteristic_t *chr_rx = gatt_discovery_find_characteristic_by_uuid(
-                                        discovery, &gmp_svc_uuid.u, &gmp_chr_rx_uuid.u);
-    gatt_characteristic_t *chr_tx = gatt_discovery_find_characteristic_by_uuid(
-                                        discovery, &gmp_svc_uuid.u, &gmp_chr_tx_uuid.u);
+static void tune_connection(uint16_t conn_handle)
+{
+    esp_ble_conn_params_t params = {
+        .itvl_min = 24,
+        .itvl_max = 24,
+        .latency = 0,
+        .supervision_timeout = 300,
+        .min_ce_len = 0,
+        .max_ce_len = 0,
+    };
+    esp_err_t err;
 
-    if (!chr_rx || !chr_tx) {
+    err = esp_ble_conn_set_data_len(conn_handle, LL_PACKET_LENGTH, LL_PACKET_TIME);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set data length failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_mtu_update(conn_handle, OPTIMAL_MTU_SIZE);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set MTU failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_set_preferred_phy(conn_handle, ESP_BLE_CONN_PHY_MASK_2M,
+                                         ESP_BLE_CONN_PHY_MASK_2M, 0);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set preferred phy failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_update_params(conn_handle, &params);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Update connection params failed: %s", esp_err_to_name(err));
+    }
+}
+
+static void on_disc_complete(uint16_t conn_handle)
+{
+    esp_ble_conn_uuid_t svc_uuid = { .uuid128 = { GMP_BLE_UUID_SVC_BYTES } };
+    esp_ble_conn_uuid_t rx_uuid = { .uuid128 = { GMP_BLE_UUID_CHR_RX_BYTES } };
+    esp_ble_conn_uuid_t tx_uuid = { .uuid128 = { GMP_BLE_UUID_CHR_TX_BYTES } };
+    uint16_t rx_handle = 0;
+    uint16_t tx_handle = 0;
+
+    if (esp_ble_conn_get_peer_chr_handle(conn_handle,
+                                         BLE_CONN_UUID_TYPE_128, svc_uuid,
+                                         BLE_CONN_UUID_TYPE_128, rx_uuid,
+                                         &rx_handle) != ESP_OK ||
+            esp_ble_conn_get_peer_chr_handle(conn_handle,
+                                             BLE_CONN_UUID_TYPE_128, svc_uuid,
+                                             BLE_CONN_UUID_TYPE_128, tx_uuid,
+                                             &tx_handle) != ESP_OK) {
         ESP_LOGE(TAG, "GMP RX/TX characteristics not found");
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
     uint16_t mtu = BLE_ATT_MTU_DFLT;
-    ble_manager_get_mtu_by_conn(g_ble_manager, discovery->conn_handle, &mtu);
+    if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) != ESP_OK || mtu < BLE_ATT_MTU_DFLT) {
+        mtu = BLE_ATT_MTU_DFLT;
+    }
 
-    gatt_session_t *session = gatt_session_create(discovery->conn_handle, NULL,
-                                                  chr_rx->chr.val_handle, chr_tx->chr.val_handle,
+    gatt_session_t *session = gatt_session_create(conn_handle, NULL,
+                                                  rx_handle, tx_handle,
                                                   mtu, GATT_SESSION_ROLE_MASTER);
     if (!session) {
         ESP_LOGE(TAG, "gatt_session_create failed");
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
     if (setup_gmp_callbacks(session) != ESP_OK) {
         ESP_LOGE(TAG, "setup GMP callbacks failed");
-        gatt_session_destroy(session);
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
+        gatt_session_schedule_destroy(session);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
     if (setup_gmp_session(session) != ESP_OK) {
         ESP_LOGE(TAG, "GMP Flux registration failed");
-        gatt_session_destroy(session);
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
+        gatt_session_schedule_destroy(session);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
@@ -443,21 +411,36 @@ static void gatt_discovery_complete_cb(gatt_discovery_t *discovery, int status, 
     g_conn_generation++;
     generation = g_conn_generation;
     portEXIT_CRITICAL(&g_state_lock);
-    ESP_LOGI(TAG, "GMP client session conn=%d mtu=%u", discovery->conn_handle, (unsigned)mtu);
+    ESP_LOGI(TAG, "GMP client session conn=%d mtu=%u", conn_handle, (unsigned)mtu);
 
-    if (enable_tx_notify(discovery, chr_tx->chr.val_handle, session, generation) != ESP_OK) {
-        portENTER_CRITICAL(&g_state_lock);
-        if (g_session == session && g_conn_generation == generation) {
+    esp_err_t err = enable_tx_notify(conn_handle);
+    bool should_start = false;
+    bool current = false;
+    portENTER_CRITICAL(&g_state_lock);
+    if (g_session == session && g_conn_generation == generation) {
+        current = true;
+        if (err == ESP_OK) {
+            g_notify_enabled = true;
+            should_start = g_conn_params_ready;
+        } else {
             g_session = NULL;
             g_conn_params_ready = false;
             g_notify_enabled = false;
             g_conn_generation++;
         }
-        portEXIT_CRITICAL(&g_state_lock);
-        teardown_gmp_session(session);
-        gatt_session_destroy(session);
-        ble_gap_terminate(discovery->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        gatt_discovery_destroy(discovery);
+    }
+    portEXIT_CRITICAL(&g_state_lock);
+
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "CCCD write failed conn=%d: %s", conn_handle, esp_err_to_name(err));
+        if (current) {
+            teardown_gmp_session(session);
+            gatt_session_schedule_destroy(session);
+        }
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        return;
+    }
+    if (!current) {
         return;
     }
 
@@ -470,17 +453,17 @@ static void gatt_discovery_complete_cb(gatt_discovery_t *discovery, int status, 
         }
     }
 
-    gatt_discovery_destroy(discovery);
+    if (should_start) {
+        maybe_start_ota(session);
+    }
 }
 
-static void ble_manager_conn_update_cb(ble_manager_t *manager, ble_connection_t *conn, void *arg)
+static void on_conn_params_updated(uint16_t conn_handle, uint16_t itvl)
 {
-    (void)manager;
-    (void)arg;
-
     gatt_session_t *session = NULL;
+
     portENTER_CRITICAL(&g_state_lock);
-    if (g_session && g_session->conn_handle == conn->conn_handle) {
+    if (g_session && g_session->conn_handle == conn_handle) {
         session = g_session;
         g_conn_params_ready = true;
     }
@@ -490,84 +473,16 @@ static void ble_manager_conn_update_cb(ble_manager_t *manager, ble_connection_t 
         return;
     }
 
-    ESP_LOGI(TAG, "Connection params ready (interval=%.2f ms)", conn->conn_interval * 1.25f);
+    ESP_LOGI(TAG, "Connection params ready (interval=%.2f ms)", itvl * 1.25f);
     maybe_start_ota(session);
 }
 
-static void ble_manager_scan_cb(ble_manager_t *manager, uint8_t type, const struct ble_gap_disc_desc *result, void *arg)
+static void on_disconnected(uint16_t conn_handle)
 {
-    (void)manager;
-    (void)arg;
-
-    if (type != BLE_GAP_EVENT_DISC) {
-        return;
-    }
-
-    struct ble_hs_adv_fields fields;
-    if (ble_hs_adv_parse_fields(&fields, result->data, result->length_data) != 0) {
-        return;
-    }
-
-    bool match = false;
-
-    if (fields.name && fields.name_len > 0) {
-        if (fields.name_len == strlen(GMP_BLE_DEVICE_NAME) &&
-                memcmp(fields.name, GMP_BLE_DEVICE_NAME, fields.name_len) == 0) {
-            match = true;
-        }
-    }
-
-    for (uint8_t i = 0; i < fields.num_uuids128 && !match; i++) {
-        if (gmp_ble_uuid128_eq(&fields.uuids128[i], &gmp_svc_uuid)) {
-            match = true;
-        }
-    }
-
-    if (!match) {
-        return;
-    }
-
-    ESP_LOGI(TAG, "Found GMP OTA device, connecting...");
-    ble_manager_connect(g_ble_manager, &result->addr, 24, 24, 0, 300);
-}
-
-static void ble_manager_connect_cb(ble_manager_t *manager, uint8_t type, ble_connection_t *conn, int status, void *arg)
-{
-    (void)manager;
-    (void)status;
-    (void)arg;
-
-    if (type != BLE_EVENT_TYPE_CONNECT_COMPLETE && type != BLE_EVENT_TYPE_RECONNECT_COMPLETE) {
-        return;
-    }
-
-    ble_discovery_callbacks_t dcb = {
-        .discovery_complete_cb = gatt_discovery_complete_cb,
-        .service_found_cb = NULL,
-        .characteristic_found_cb = NULL,
-        .descriptor_found_cb = NULL,
-        .arg = NULL,
-    };
-
-    gatt_discovery_t *discovery = gatt_discovery_start(conn->conn_handle, &dcb);
-    if (!discovery) {
-        ESP_LOGE(TAG, "gatt_discovery_start failed");
-        ble_gap_terminate(conn->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
-        return;
-    }
-
-    gatt_discovery_discover_service_by_uuid(discovery, &gmp_svc_uuid.u);
-}
-
-static void ble_manager_disconnect_cb(ble_manager_t *manager, ble_connection_t *conn, int status, void *arg)
-{
-    (void)manager;
-    (void)status;
-    (void)arg;
-
     gatt_session_t *session = NULL;
+
     portENTER_CRITICAL(&g_state_lock);
-    if (g_session && g_session->conn_handle == conn->conn_handle) {
+    if (g_session && g_session->conn_handle == conn_handle) {
         session = g_session;
         g_session = NULL;
         g_conn_params_ready = false;
@@ -580,43 +495,164 @@ static void ble_manager_disconnect_cb(ble_manager_t *manager, ble_connection_t *
         esp_gmp_ota_host_cancel();
         if (xTaskCreate(teardown_session_task, "gmp_teardown", 4096, session, 4, NULL) != pdPASS) {
             if (!teardown_pending_push(session)) {
-                ESP_LOGE(TAG, "failed to schedule teardown for conn=%d", conn->conn_handle);
+                ESP_LOGE(TAG, "failed to schedule teardown for conn=%d", conn_handle);
             }
         }
     }
+    ESP_LOGI(TAG, "Disconnected conn=%d", conn_handle);
 
-    ble_manager_start_scan(g_ble_manager, 0);
+    start_scan();
 }
 
-static void nimble_host_task(void *param)
+static bool adv_has_service_uuid(const esp_ble_conn_scan_result_t *result)
 {
-    (void)param;
-    nimble_port_run();
-    nimble_port_freertos_deinit();
+    const uint8_t uuid[BLE_UUID128_VAL_LEN] = { GMP_BLE_UUID_SVC_BYTES };
+    const uint8_t ad_types[] = {
+        ESP_BLE_CONN_ADV_TYPE_UUID128_INCOMP,
+        ESP_BLE_CONN_ADV_TYPE_UUID128_COMPLETE,
+    };
+
+    for (size_t t = 0; t < sizeof(ad_types); t++) {
+        const uint8_t *p = NULL;
+        uint8_t len = 0;
+
+        if (esp_ble_conn_parse_adv_data(result->adv_data, result->adv_data_len,
+                                        ad_types[t], &p, &len) != ESP_OK) {
+            continue;
+        }
+        for (uint8_t i = 0; i + BLE_UUID128_VAL_LEN <= len; i += BLE_UUID128_VAL_LEN) {
+            if (memcmp(&p[i], uuid, sizeof(uuid)) == 0) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-void ble_store_config_init(void);
-
-static void nimble_host_on_sync(void)
+static bool scan_cb(const esp_ble_conn_scan_result_t *result, void *arg)
 {
-    int rc = ble_hs_util_ensure_addr(0);
-    assert(rc == 0);
+    (void)arg;
+
+    /* Match the service UUID, not the advertised name: another device may use
+     * the same name. Active scanning lets NimBLE report the scan response,
+     * where the server publishes this UUID. */
+    if (!result || !adv_has_service_uuid(result)) {
+        return false;
+    }
+    if (!session_is_current(NULL)) {
+        /* Already linked to a GMP OTA device. */
+        return false;
+    }
+
+    ESP_LOGI(TAG, "Found GMP OTA device " MACSTR ", connecting...", MAC2STR(result->addr));
+    return true;
 }
 
-static void nimble_host_config(void)
+static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base,
+                                       int32_t id, void *event_data)
 {
-    ble_hs_cfg.reset_cb = NULL;
-    ble_hs_cfg.sync_cb = nimble_host_on_sync;
-    ble_hs_cfg.store_status_cb = NULL;
-    ble_store_config_init();
+    (void)handler_args;
+
+    if (base != BLE_CONN_MGR_EVENTS) {
+        return;
+    }
+
+    switch (id) {
+    case ESP_BLE_CONN_EVENT_STARTED:
+        start_scan();
+        break;
+    case ESP_BLE_CONN_EVENT_CONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        ESP_LOGI(TAG, "Connected to " MACSTR " (conn=%d)",
+                 MAC2STR(evt->connected.peer_addr), evt->connected.conn_handle);
+        tune_connection(evt->connected.conn_handle);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_CONNECT_FAILED: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        ESP_LOGW(TAG, "Connection to " MACSTR " failed (status=%d); resuming scan",
+                 MAC2STR(evt->connect_failed.peer_addr), evt->connect_failed.status);
+        if (session_is_current(NULL)) {
+            start_scan();
+        }
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DISCONNECTED: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        on_disconnected(evt->disconnected.conn_handle);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DISC_COMPLETE: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        on_disc_complete(evt->disc_complete.conn_handle);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        on_conn_params_updated(evt->conn_param_update.conn_handle,
+                               evt->conn_param_update.params.itvl_min);
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_DATA_RECEIVE: {
+        /* gatt_session feeds Flux directly from the GAP event. This separate
+         * ble_conn_mgr event owns a copied buffer that the application must free. */
+        esp_ble_conn_data_t *conn_data = event_data;
+        if (conn_data) {
+            free(conn_data->data);
+            conn_data->data = NULL;
+        }
+        break;
+    }
+    case ESP_BLE_CONN_EVENT_MTU: {
+        esp_ble_conn_event_data_t *evt = event_data;
+
+        if (!evt) {
+            break;
+        }
+        (void)gatt_session_set_mtu_by_handle(evt->mtu_update.conn_handle,
+                                             evt->mtu_update.mtu);
+        break;
+    }
+    default:
+        break;
+    }
 }
 
 void app_main(void)
 {
     esp_err_t ret;
+    esp_ble_conn_config_t config = {
+        .device_name = "gmp-ota-client",
+    };
+    /* The server advertises its service UUID in the connectable advertisement. */
+    esp_ble_conn_scan_params_t scan_params = {
+        .own_addr_type = ESP_BLE_CONN_ADDR_PUBLIC,
+        .passive = true,
+        .filter_duplicates = true,
+    };
 
     esp_log_level_set("NimBLE", ESP_LOG_WARN);
-    esp_log_level_set("ble_manager", ESP_LOG_WARN);
+    esp_log_level_set("blecm_nimble", ESP_LOG_WARN);
     esp_log_level_set("gatt_session", ESP_LOG_WARN);
     esp_log_level_set("esp_flux", ESP_LOG_WARN);
 
@@ -633,28 +669,19 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_gmp_os_init());
     ESP_ERROR_CHECK(esp_gmp_ota_host_init(NULL));
 
-    ESP_ERROR_CHECK(nimble_port_init());
-    nimble_host_config();
-
-    ble_svc_gap_device_name_set("gmp-ota-client");
-
-    nimble_port_freertos_init(nimble_host_task);
-
-    ble_manager_callbacks_t mgr_cbs = {
-        .ble_adv_cb = NULL,
-        .ble_scan_cb = ble_manager_scan_cb,
-        .ble_connect_cb = ble_manager_connect_cb,
-        .ble_disconnect_cb = ble_manager_disconnect_cb,
-        .ble_conn_update_cb = ble_manager_conn_update_cb,
-        .arg = NULL,
-    };
-    g_ble_manager = ble_manager_init(&mgr_cbs);
-    if (!g_ble_manager) {
-        ESP_LOGE(TAG, "ble_manager_init failed");
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID,
+                                               app_ble_conn_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(esp_ble_conn_scan_params_set(&scan_params));
+    ESP_ERROR_CHECK(esp_ble_conn_register_scan_callback(scan_cb, NULL));
+    if (esp_ble_conn_start() != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start BLE connection manager");
+        esp_ble_conn_stop();
+        esp_ble_conn_deinit();
         return;
     }
 
-    ble_manager_start_scan(g_ble_manager, 0);
     ESP_LOGI(TAG, "Scanning for %s ...", GMP_BLE_DEVICE_NAME);
 
     while (1) {

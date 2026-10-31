@@ -7,6 +7,13 @@ End-to-end OTA demo over GMP-on-Flux:
 - **Server (device)**: writes received firmware **directly to an OTA partition** and reboots (no SPIFFS inside the OTA handler)
 - **Client (host)**: **manages the upgrade image in SPIFFS**, then connects and uploads it to the server
 
+BLE connection management (scanning, advertising, GATT service registration,
+service discovery and reconnection) is handled by the `ble_conn_mgr` component.
+The client runs as central (`CONFIG_BLE_CONN_MGR_ROLE_CENTRAL`) and connects to
+the server, which runs as peripheral (`CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL`) and
+publishes the GMP service UUID in its connectable advertisement. The client reconnects
+automatically after the server reboots into the new image or after a link loss.
+
 ## Layout
 
 ```text
