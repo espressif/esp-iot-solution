@@ -69,7 +69,6 @@ esp_err_t aht20_read_temperature_humidity(aht20_dev_handle_t handle,
     ESP_RETURN_ON_ERROR(aht20_read_reg(handle, &status, 1), TAG, "I2C read error");
 
     if ((status & BIT(AT581X_STATUS_Calibration_Enable)) &&
-            (status & BIT(AT581X_STATUS_CRC_FLAG)) &&
             ((status & BIT(AT581X_STATUS_BUSY_INDICATION)) == 0)) {
         ESP_RETURN_ON_ERROR(aht20_read_reg(handle, buf, 7), TAG, "I2C read error");
         ESP_RETURN_ON_ERROR((aht20_calc_crc(buf, 6) != buf[6]), TAG, "crc is error");

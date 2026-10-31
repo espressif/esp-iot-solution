@@ -1,4 +1,4 @@
-version: 2.0.0
+version: 2.0.1
 description: I2C driver for AHT20 humidity and temperature sensor
 issues: https://github.com/espressif/esp-iot-solution/issues
 repository: git://github.com/espressif/esp-iot-solution.git
