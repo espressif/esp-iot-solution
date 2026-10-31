@@ -182,6 +182,18 @@ static esp_err_t debug_operation_inject(void *args)
     return ESP_OK;
 }
 
+TEST_CASE("0. bldc control NULL argument checks", "[null args]")
+{
+    bldc_control_handle_t handle = NULL;
+    bldc_control_config_t config = {0};
+
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, bldc_control_init(NULL, &config));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, bldc_control_init(&handle, NULL));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, bldc_control_start(NULL, 100));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, bldc_control_stop(NULL));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, bldc_control_deinit(NULL));
+}
+
 TEST_CASE("1. bldc test inject ", "[inject]")
 {
     /*!< Please enable INJECT_ENABLE first */
