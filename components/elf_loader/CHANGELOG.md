@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Add streaming ELF relocation via `elf_source_t` and `esp_elf_relocate_source()`,
+  so ELF images larger than available DRAM can be checked and relocated without
+  loading the whole file into memory (e.g. apps streamed from an SD card).
+  `esp_elf_relocate()` is unchanged and now shares the same relocation core.
 * Copy Xtensa internal executable IRAM with aligned 32-bit stores (including
   partial .text and .got.loc words), avoiding S3 LoadStoreError on boards
   without PSRAM (#686).
