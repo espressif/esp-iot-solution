@@ -1,6 +1,6 @@
 # ChangeLog
 
-## Unreleased
+## v2.1.0 - 2026-11-02
 
 * Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,
   so C++ vtables referenced at their address point (`_ZTV... + 8`) resolve correctly (#813).
