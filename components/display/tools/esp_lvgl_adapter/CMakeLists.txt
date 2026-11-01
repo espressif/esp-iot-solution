@@ -88,6 +88,15 @@ else()
     list(APPEND ADAPTER_PRIV_INCLUDES "src/display/bridge/v9")
 endif()
 
+# Rotation drawn in the panel's orientation (lv_draw_ortho), LVGL v9 only.
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND NOT lvgl_ver VERSION_LESS "9.0.0")
+    list(APPEND ADAPTER_SRCS "src/display/rotate_in_draw/lv_draw_ortho.c")
+    list(APPEND ADAPTER_PRIV_INCLUDES "src/display/rotate_in_draw")
+    if(${target} STREQUAL "esp32p4" OR ${target} STREQUAL "esp32s31")
+        list(APPEND ADAPTER_SRCS "src/display/rotate_in_draw/lv_draw_ortho_ppa.c")
+    endif()
+endif()
+
 set(ADAPTER_REQ esp_lcd ${lvgl_name})
 
 idf_component_register(

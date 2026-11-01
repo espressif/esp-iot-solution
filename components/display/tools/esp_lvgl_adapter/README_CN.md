@@ -246,6 +246,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **帧缓冲数量规则**：
 - 非 0° 旋转（`DOUBLE_PARTIAL` 除外）或三缓冲模式：需要 **3** 个帧缓冲
+- 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9）的 `DOUBLE_DIRECT`：无论是否旋转均需要 **2** 个帧缓冲
 - 未旋转的双缓冲模式以及 `DOUBLE_PARTIAL`：需要 **2** 个帧缓冲
 - 单缓冲模式：需要 **1** 个帧缓冲
 
@@ -675,6 +676,7 @@ static void panel_wake_cb(void *user_data)
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9：以面板原生方向绘制旋转后的 `DOUBLE_DIRECT` 显示（见旋转限制） |
 
 **默认任务栈大小**：
 - LVGL 适配器任务栈：8KB
@@ -694,6 +696,7 @@ static void panel_wake_cb(void *user_data)
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
+  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的两个帧缓冲中：不再先正向绘制再旋转拷贝，并少用一个帧缓冲。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。Dummy draw 的帧按面板存储方向显示，不做旋转
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射

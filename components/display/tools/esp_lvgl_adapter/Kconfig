@@ -8,6 +8,28 @@ config ESP_LVGL_ADAPTER_ENABLE_DECODER
     bool "Enable esp_lv_decoder integration"
     default n
 
+config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
+    bool "Draw a rotated DOUBLE_DIRECT display in the panel's orientation (LVGL v9)"
+    default n
+    help
+        With rotation 90, 180 or 270 and ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT,
+        LVGL draws straight into the panel's two frame buffers in the panel's own
+        orientation, through LVGL's matrix rotation, and the flush only switches
+        buffers. Nothing is drawn upright and copied turned afterwards, and one
+        frame buffer fewer is needed (2 instead of 3).
+
+        Widgets are drawn by LVGL's software renderer into a small upright tile in
+        internal RAM; on chips with a PPA, the PPA turns each tile into the frame
+        buffer while the CPU draws the next, and fills plain rectangles. Every PPA
+        wait is bounded; a PPA that stops answering falls back to the CPU.
+
+        Requirements:
+        - LVGL v9 with CONFIG_LV_USE_MATRIX and CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX
+        - RGB or MIPI DSI panel, ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT
+
+        Other modes, rotation 0 and LVGL v8 are unchanged. Under this option,
+        dummy-draw frames are shown as the panel stores them (not rotated).
+
 config ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
     bool "Set LVGL image cache to max (partial tear-avoid modes)"
     default n

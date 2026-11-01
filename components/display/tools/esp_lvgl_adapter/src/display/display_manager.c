@@ -35,6 +35,18 @@
 #include "display_te_sync.h"
 #include "display_manager.h"
 
+/* A rotated DOUBLE_DIRECT display drawn in the panel's orientation (see the
+ * ESP_LVGL_ADAPTER_ROTATE_IN_DRAW Kconfig option). */
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && LVGL_VERSION_MAJOR >= 9
+#define ESP_LV_ADAPTER_ROTATE_IN_DRAW 1
+#include "lv_draw_ortho.h"
+#if SOC_PPA_SUPPORTED
+#include "lv_draw_ortho_ppa.h"
+#endif
+#else
+#define ESP_LV_ADAPTER_ROTATE_IN_DRAW 0
+#endif
+
 /*********************
  *      TYPEDEFS
  *********************/
@@ -864,6 +876,61 @@ static void display_manager_flush_cb_v8(lv_disp_drv_t *drv,
  *   INTERNAL NODE MANAGEMENT
  **********************/
 
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+static bool display_manager_rotates_in_draw(const esp_lv_adapter_display_config_t *pub)
+{
+    return pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT &&
+           pub->profile.rotation != ESP_LV_ADAPTER_ROTATE_0 &&
+           pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
+           (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+            pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
+}
+
+/* The adapter turns clockwise and LVGL counter-clockwise: the adapter's 90 is
+ * LVGL's 270, as the PPA angles of the rotating flush paths already show. */
+static lv_display_rotation_t display_manager_lvgl_rotation(esp_lv_adapter_rotation_t rotation)
+{
+    switch (rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        return LV_DISPLAY_ROTATION_270;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        return LV_DISPLAY_ROTATION_180;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        return LV_DISPLAY_ROTATION_90;
+    default:
+        return LV_DISPLAY_ROTATION_0;
+    }
+}
+
+/**
+ * @brief Let LVGL draw the display in the panel's orientation
+ *
+ * LVGL hands each draw task a matrix for the rotation, and lv_draw_ortho draws
+ * through it: widgets go through LVGL's software renderer into an upright tile
+ * in internal RAM, and the tile is turned into the frame buffer (by the PPA
+ * where there is one). The display itself keeps the panel's size; LVGL swaps
+ * the logical resolution, and syncs the two buffers in the panel's
+ * orientation (refr_sync_areas).
+ */
+static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adapter_rotation_t rotation)
+{
+    static bool unit_ready = false;
+    if (!unit_ready) {
+        lv_draw_ortho_init();
+#if SOC_PPA_SUPPORTED
+        esp_err_t err = lv_draw_ortho_ppa_init();
+        if (err != ESP_OK) {
+            ESP_LOGW(TAG, "rotate in draw: no PPA client (%s), the CPU turns the tiles", esp_err_to_name(err));
+        }
+#endif
+        unit_ready = true;
+    }
+    lv_display_set_rotation(disp, display_manager_lvgl_rotation(rotation));
+    lv_display_set_matrix_rotation(disp, true);
+    ESP_LOGI(TAG, "rotation %d drawn in the panel's orientation", (int)rotation);
+}
+#endif
+
 /**
  * @brief Initialize a display node with LVGL and bridge setup
  */
@@ -876,6 +943,16 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     cfg->mono_layout = pub->profile.mono_layout;
     cfg->mono_buf = NULL;
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    /* The panel pipeline below is then the unrotated DOUBLE_DIRECT one; LVGL is
+     * given the rotation once the display exists. */
+    const esp_lv_adapter_rotation_t draw_rotation =
+        display_manager_rotates_in_draw(pub) ? pub->profile.rotation : ESP_LV_ADAPTER_ROTATE_0;
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        cfg->base.profile.rotation = ESP_LV_ADAPTER_ROTATE_0;
+    }
+#endif
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
     /* Initialize FPS statistics */
@@ -974,6 +1051,12 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        display_manager_setup_rotate_in_draw(disp, draw_rotation);
+    }
+#endif
 
     if (mono_enabled && !display_manager_alloc_mono_buffer(cfg, &pub->profile)) {
         display_manager_free_draw_buffers(node);
@@ -1688,6 +1771,14 @@ uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mo
     if (tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
         return 1;
     }
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    /* Drawn in the panel's orientation, a rotated DOUBLE_DIRECT display is the
+     * unrotated one: LVGL draws into the two scanout buffers directly. */
+    if (tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT) {
+        return 2;
+    }
+#endif
 
     /* Any non-zero rotation requires 3 buffers for rotation processing.
      * DOUBLE_PARTIAL has its own drawing buffers and is out of scope here.

@@ -250,6 +250,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **Frame Buffer Count Rules**:
 - Non-zero rotation (except `DOUBLE_PARTIAL`) or triple-buffer modes: **3** frame buffers
+- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): **2** frame buffers, rotated or not
 - Double-buffer modes without rotation, and `DOUBLE_PARTIAL`: **2** frame buffers
 - Single-buffer mode: **1** frame buffer
 
@@ -681,6 +682,7 @@ Configure via `idf.py menuconfig`:
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9: draw a rotated `DOUBLE_DIRECT` display in the panel's orientation (see Rotation Limitations) |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB
@@ -700,6 +702,7 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
+  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's two frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards, and one frame buffer fewer is needed. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). Dummy-draw frames are shown as the panel stores them, not rotated
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
