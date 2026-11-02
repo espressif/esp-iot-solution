@@ -38,6 +38,16 @@ int main(void)
     assert(esp_elf_arch_relocate(&elf, &rela, NULL, 0x12345678) == 0);
     assert(text[1] == 0x12345678);
 
+    /* GLOB_DAT with an addend, e.g. a C++ vtable referenced at its address point (_ZTV... + 8) */
+    elf32_rela_t glob_dat = {
+        .offset = 0x2008,
+        .info = ELF_R_INFO(0, 3), /* R_XTENSA_GLOB_DAT */
+        .addend = 8,
+    };
+    assert(esp_elf_arch_relocate(&elf, &glob_dat, NULL, 0x3f800000) == 0);
+    assert(text[2] == 0x3f800008);
+    text[2] = 0;
+
     /* Aligned offset, but only 2 bytes remain in the loaded section. */
     elf.sec[ELF_SEC_TEXT].size = 6;
     assert(esp_elf_arch_relocate(&elf, &rela, NULL, 0) < 0);
