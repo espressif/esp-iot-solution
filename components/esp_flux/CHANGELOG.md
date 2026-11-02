@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v0.2.0~1 - 2026-11-02
+
+### Change
+
+* Update the minimum version number used in the example.
+
+### Enhancements:
+
 ## v0.2.0 - 2026-10-29
 
 ### Enhancements:
