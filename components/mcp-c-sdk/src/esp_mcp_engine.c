@@ -838,6 +838,24 @@ static bool esp_mcp_task_visible_to_request_session(const esp_mcp_t *mcp, const 
     return strcmp(origin_session_id, mcp->request_session_id) == 0;
 }
 
+static void esp_mcp_forget_request_ids_for_session(esp_mcp_t *mcp, const char *session_id)
+{
+    if (!mcp || !session_id) {
+        return;
+    }
+    for (size_t i = 0; i < (sizeof(mcp->recent_request_ids) / sizeof(mcp->recent_request_ids[0])); ++i) {
+        if (!mcp->recent_request_ids[i].used) {
+            continue;
+        }
+        if (strcmp(mcp->recent_request_ids[i].session_id, session_id) != 0) {
+            continue;
+        }
+        mcp->recent_request_ids[i].used = false;
+        mcp->recent_request_ids[i].session_id[0] = '\0';
+        mcp->recent_request_ids[i].request_id[0] = '\0';
+    }
+}
+
 static bool esp_mcp_is_duplicate_request_id(esp_mcp_t *mcp, const char *session_id, const char *request_id)
 {
     if (!mcp || !session_id || !request_id) {
@@ -3811,19 +3829,23 @@ esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id)
     }
     esp_mcp_resource_sub_unlock(mcp);
     esp_mcp_req_id_lock(mcp);
-    for (size_t i = 0; i < (sizeof(mcp->recent_request_ids) / sizeof(mcp->recent_request_ids[0])); ++i) {
-        if (mcp->recent_request_ids[i].used &&
-                strcmp(mcp->recent_request_ids[i].session_id, session_id) == 0) {
-            mcp->recent_request_ids[i].used = false;
-            mcp->recent_request_ids[i].session_id[0] = '\0';
-            mcp->recent_request_ids[i].request_id[0] = '\0';
-        }
-    }
+    esp_mcp_forget_request_ids_for_session(mcp, session_id);
     esp_mcp_req_id_unlock(mcp);
     esp_mcp_session_state_t *state = esp_mcp_session_state_find(mcp, session_id);
     if (state) {
         memset(state, 0, sizeof(*state));
     }
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_clear_recent_request_ids(esp_mcp_t *mcp, const char *session_id)
+{
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid mcp");
+    /* NULL clears ids recorded when no session id was set. */
+    const char *key = (session_id && session_id[0]) ? session_id : "__default";
+    esp_mcp_req_id_lock(mcp);
+    esp_mcp_forget_request_ids_for_session(mcp, key);
+    esp_mcp_req_id_unlock(mcp);
     return ESP_OK;
 }
 
@@ -3997,7 +4019,12 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         return ESP_ERR_INVALID_ARG;
     }
     const char *request_session = esp_mcp_request_session_or_default(mcp);
-    if (esp_mcp_is_duplicate_request_id(mcp, request_session, request_id_str)) {
+    /*
+     * A repeated initialize must reach esp_mcp_handle_initialize(), which
+     * clears this cache. Rejecting it here leaves every later reused id stuck.
+     */
+    if (strcmp(method_str, "initialize") != 0 &&
+            esp_mcp_is_duplicate_request_id(mcp, request_session, request_id_str)) {
         esp_mcp_reply_invalid_request_with_reason(mcp, id, method_str, "duplicate request id in session");
         return ESP_ERR_INVALID_STATE;
     }

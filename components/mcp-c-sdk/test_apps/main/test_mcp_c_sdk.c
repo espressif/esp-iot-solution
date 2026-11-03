@@ -6749,6 +6749,104 @@ TEST_CASE("test_protocol_duplicate_request_id_per_session", "[mcp][protocol][ses
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
 }
 
+TEST_CASE("test_default_session_request_ids_can_be_reused", "[mcp][protocol][session]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,"
+        "\"params\":{\"protocolVersion\":\"2025-11-25\","
+        "\"clientInfo\":{\"name\":\"test_client\",\"version\":\"1.0\"},"
+        "\"capabilities\":{}}}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_set_request_context(handle, NULL, NULL, true));
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)init_msg, strlen(init_msg),
+                                               &outbuf, &outlen));
+    TEST_ASSERT_NOT_NULL(outbuf);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    const char *initialized_msg =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}";
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)initialized_msg, strlen(initialized_msg),
+                                               &outbuf, &outlen));
+    TEST_ASSERT_NULL(outbuf);
+
+    const char *list_msg = "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/list\",\"params\":{}}";
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)list_msg, strlen(list_msg),
+                                               &outbuf, &outlen));
+    cJSON *first = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(first);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(first, "error"));
+    cJSON_Delete(first);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)list_msg, strlen(list_msg),
+                                               &outbuf, &outlen));
+    cJSON *dup = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(dup);
+    TEST_ASSERT_NOT_NULL(cJSON_GetObjectItem(dup, "error"));
+    cJSON_Delete(dup);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_clear_recent_request_ids(handle, NULL));
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)list_msg, strlen(list_msg),
+                                               &outbuf, &outlen));
+    cJSON *after_clear = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(after_clear);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(after_clear, "error"));
+    cJSON_Delete(after_clear);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)init_msg, strlen(init_msg),
+                                               &outbuf, &outlen));
+    cJSON *reinit = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(reinit);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(reinit, "error"));
+    cJSON_Delete(reinit);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)initialized_msg, strlen(initialized_msg),
+                                               &outbuf, &outlen));
+    TEST_ASSERT_NULL(outbuf);
+
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server",
+                                               (const uint8_t *)list_msg, strlen(list_msg),
+                                               &outbuf, &outlen));
+    cJSON *after_reinit = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(after_reinit);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(after_reinit, "error"));
+    cJSON_Delete(after_reinit);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
 TEST_CASE("test_mgr_emit_message_and_legacy_destroy_api", "[mcp][mgr]")
 {
     esp_mcp_t *mcp = NULL;

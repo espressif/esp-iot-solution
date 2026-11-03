@@ -298,6 +298,18 @@ const char *esp_mcp_get_request_session_id(const esp_mcp_t *mcp);
 esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id);
 
 /**
+ * @brief Forget remembered JSON-RPC request ids for one session
+ *
+ * Does not reset initialize lifecycle or other session state.
+ * A NULL or empty session_id clears ids recorded when no session id was set.
+ *
+ * @param[in] mcp MCP instance
+ * @param[in] session_id Target session id (nullable)
+ * @return ESP_OK on success
+ */
+esp_err_t esp_mcp_clear_recent_request_ids(esp_mcp_t *mcp, const char *session_id);
+
+/**
  * @brief Emit server-initiated roots/list request to one session
  *
  * @param[in] mcp MCP instance

@@ -404,6 +404,16 @@ static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat
         memcpy(xiaozhi_chat->session_id, session_id->valuestring, session_id_len);
         xiaozhi_chat->session_id[session_id_len] = '\0';
         ESP_LOGD(TAG, "Session established");
+        /*
+         * One MCP session stays initialized across audio dialogues, but the
+         * cloud restarts JSON-RPC ids. Drop only the remembered ids.
+         */
+        if (xiaozhi_chat->mcp_mgr_handle) {
+            esp_err_t clear_ret = esp_mcp_mgr_clear_recent_request_ids(xiaozhi_chat->mcp_mgr_handle, NULL);
+            if (clear_ret != ESP_OK) {
+                ESP_LOGW(TAG, "Failed to clear MCP request ids: %s", esp_err_to_name(clear_ret));
+            }
+        }
     }
 
     const cJSON *audio_params = cJSON_GetObjectItem(root, "audio_params");

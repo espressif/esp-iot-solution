@@ -37,8 +37,10 @@ esp_err_t esp_xiaozhi_chat_get_board_info(esp_xiaozhi_chat_board_info_t *board_i
     ret = esp_xiaozhi_chat_keystore_init(&xiaozhi_chat_keystore, "board", true);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to initialize keystore: %s", esp_err_to_name(ret));
 
+    board_info->uuid[0] = '\0';
     ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "uuid", "", board_info->uuid, sizeof(board_info->uuid));
-    if (ret) {
+    // A missing NVS key returns ESP_OK and the empty default.
+    if (ret != ESP_OK || board_info->uuid[0] == '\0') {
         uint8_t uuid[16] = {0};
 
         esp_fill_random(uuid, sizeof(uuid));
@@ -51,10 +53,20 @@ esp_err_t esp_xiaozhi_chat_get_board_info(esp_xiaozhi_chat_board_info_t *board_i
                  uuid[8], uuid[9], uuid[10], uuid[11],
                  uuid[12], uuid[13], uuid[14], uuid[15]);
 
-        esp_xiaozhi_chat_keystore_set_string(&xiaozhi_chat_keystore, "uuid", board_info->uuid);
+        ret = esp_xiaozhi_chat_keystore_set_string(&xiaozhi_chat_keystore, "uuid", board_info->uuid);
+        if (ret == ESP_OK) {
+            ret = esp_xiaozhi_chat_keystore_commit(&xiaozhi_chat_keystore);
+        }
+        if (ret != ESP_OK) {
+            /* Do not expose a UUID that was not stored. The next call would generate another one. */
+            ESP_LOGE(TAG, "Failed to save board UUID: %s", esp_err_to_name(ret));
+            board_info->uuid[0] = '\0';
+            board_info->initialized = false;
+            esp_xiaozhi_chat_keystore_deinit(&xiaozhi_chat_keystore);
+            return ret;
+        }
     }
 
-    esp_xiaozhi_chat_keystore_commit(&xiaozhi_chat_keystore);
     esp_xiaozhi_chat_keystore_deinit(&xiaozhi_chat_keystore);
 
     // Get MAC address string

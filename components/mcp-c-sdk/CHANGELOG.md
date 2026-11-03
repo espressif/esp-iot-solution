@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [v2.0.2]
+
+### Fixed
+
+- **Request id reuse**: `initialize` is no longer rejected as a duplicate request id, so a repeated initialize can clear the remembered ids. Added `esp_mcp_clear_recent_request_ids()` / `esp_mcp_mgr_clear_recent_request_ids()` to drop only that cache. A NULL session id clears ids recorded when no session id was set, and leaves initialize state in place.
+
 ## [v2.0.1~1] - 2026-10-22
 
 ### Bundled example updates
