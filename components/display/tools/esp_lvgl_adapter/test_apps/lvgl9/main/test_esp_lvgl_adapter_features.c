@@ -76,7 +76,10 @@ static size_t s_before_free_32bit;
 
 static esp_lv_adapter_rotation_t get_configured_rotation(void)
 {
-#if CONFIG_EXAMPLE_DISPLAY_ROTATION_0
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
+    /* The option only changes a rotated DOUBLE_DIRECT display: test one. */
+    return ESP_LV_ADAPTER_ROTATE_90;
+#elif CONFIG_EXAMPLE_DISPLAY_ROTATION_0
     return ESP_LV_ADAPTER_ROTATE_0;
 #elif CONFIG_EXAMPLE_DISPLAY_ROTATION_90
     return ESP_LV_ADAPTER_ROTATE_90;
@@ -101,7 +104,9 @@ static esp_lv_adapter_tear_avoid_mode_t select_tear_avoid_mode(void)
     if (s_force_pipeline_tear_mode) {
         return ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL;
     }
-#if CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
+    return ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT;
+#elif CONFIG_EXAMPLE_LCD_INTERFACE_MIPI_DSI
     /* eco4 / P4 defaults: DEFAULT_MIPI_DSI expands to TRIPLE_PARTIAL. */
     return ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_MIPI_DSI;
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
