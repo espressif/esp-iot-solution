@@ -159,10 +159,7 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
 #if CONFIG_SOC_PPA_SUPPORTED || CONFIG_SOC_DMA2D_SUPPORTED
 typedef struct display_bridge_v9_hw_resource {
     size_t data_cache_line_size;
-#if CONFIG_SOC_PPA_SUPPORTED
-    ppa_client_handle_t ppa_handle;
-#endif
-    /* DMA2D resources live in the shared singleton (display_bridge_get_hw_resource) */
+    /* DMA2D and PPA clients live in the shared hardware singleton. */
 } display_bridge_v9_hw_resource_t;
 #endif
 
@@ -1149,16 +1146,10 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
 #endif
 
 #if CONFIG_SOC_DMA2D_SUPPORTED
-    ESP_RETURN_ON_FALSE(display_bridge_get_hw_resource() != NULL, NULL, TAG, "Acquire DMA2D resource failed");
-#endif
-
-#if CONFIG_SOC_PPA_SUPPORTED
-    if (hw_resource.ppa_handle == NULL) {
-        ppa_client_config_t ppa_srm_config = {
-            .oper_type = PPA_OPERATION_SRM,
-            .max_pending_trans_num = LVGL_PORT_PPA_MAX_PENDING_TRANS,
-        };
-        ESP_ERROR_CHECK(ppa_register_client(&ppa_srm_config, &hw_resource.ppa_handle));
+    if (!display_bridge_get_hw_resource()) {
+        ESP_LOGE(TAG, "Acquire display hardware resource failed");
+        free(impl);
+        return NULL;
     }
 #endif
 
@@ -1184,7 +1175,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     impl->double_wait_sem = NULL;
     impl->frame_buf_submit_pending = false;
     if (display_bridge_v9_configure_double_wait_resource(impl) != ESP_OK) {
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
     impl->notify_lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
@@ -1197,7 +1188,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
     impl->idf_callback_registration_enabled = cfg->idf_callback_registration_enabled;
@@ -1219,7 +1210,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
         if (impl->double_wait_sem) {
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
 
@@ -1230,7 +1221,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
             if (impl->double_wait_sem) {
                 vSemaphoreDeleteWithCaps(impl->double_wait_sem);
             }
-            free(impl);
+            display_bridge_common_destroy(&impl->base);
             return NULL;
         }
         impl->te_stage_buf = cfg->draw_buf_secondary;
@@ -1262,7 +1253,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
         display_bridge_te_bounce_free(&impl->te_bounce);
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
 
@@ -1289,7 +1280,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
         display_bridge_te_bounce_free(&impl->te_bounce);
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
 
@@ -1300,7 +1291,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
             vSemaphoreDeleteWithCaps(impl->double_wait_sem);
         }
         display_bridge_te_bounce_free(&impl->te_bounce);
-        free(impl);
+        display_bridge_common_destroy(&impl->base);
         return NULL;
     }
 
@@ -3155,8 +3146,10 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
     uint8_t color_bytes = bridge_color_bytes(impl);
 
 #if CONFIG_SOC_PPA_SUPPORTED
+    const esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
+    ppa_client_handle_t ppa_handle = hw ? (ppa_client_handle_t)hw->ppa_handle : NULL;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
-    if (hw_resource.ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
+    if (ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
             !display_bridge_dma2d_buffer_needs_alignment(src) &&
             !display_bridge_dma2d_buffer_needs_alignment(dst_fb)) {
         const size_t rect_w = lv_x_end - lv_x_start + 1;
@@ -3226,7 +3219,7 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
                .byte_swap          = PPA_SWAP_DISABLED,
                .mode               = PPA_TRANS_MODE_BLOCKING,
         };
-        ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(hw_resource.ppa_handle, &oper_config));
+        ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_handle, &oper_config));
         return;
     }
 #endif /* CONFIG_SOC_PPA_SUPPORTED */
@@ -3260,8 +3253,10 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
                                          uint8_t color_bytes)
 {
 #if CONFIG_SOC_PPA_SUPPORTED
+    const esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
+    ppa_client_handle_t ppa_handle = hw ? (ppa_client_handle_t)hw->ppa_handle : NULL;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
-    if (hw_resource.ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
+    if (ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
             !display_bridge_dma2d_buffer_needs_alignment(from) &&
             !display_bridge_dma2d_buffer_needs_alignment(to)) {
         ppa_srm_rotation_angle_t ppa_rotation;
@@ -3327,7 +3322,7 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
                .byte_swap = 0,
                .mode = PPA_TRANS_MODE_BLOCKING,
         };
-        ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(hw_resource.ppa_handle, &oper_config));
+        ESP_ERROR_CHECK(ppa_do_scale_rotate_mirror(ppa_handle, &oper_config));
         return;
     }
 #endif /* CONFIG_SOC_PPA_SUPPORTED */

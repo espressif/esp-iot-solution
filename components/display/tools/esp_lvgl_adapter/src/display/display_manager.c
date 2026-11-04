@@ -720,6 +720,12 @@ static void display_manager_destroy_node(esp_lv_adapter_display_node_t *node)
         lv_disp_remove(node->lv_disp);
         node->lv_disp = NULL;
     }
+    /* LVGL v8 removes the display but leaves its driver-owned draw context. */
+    if (node->disp_drv.draw_ctx) {
+        node->disp_drv.draw_ctx_deinit(&node->disp_drv, node->disp_drv.draw_ctx);
+        lv_mem_free(node->disp_drv.draw_ctx);
+        node->disp_drv.draw_ctx = NULL;
+    }
 #endif
 
     /* Free draw buffers if they were allocated by us */
@@ -1062,6 +1068,14 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
         node->disp_drv.direct_mode = 1;
     }
 
+    /* LVGL creates the draw context during registration, so install its PPA
+     * callbacks before registering the driver. */
+#if CONFIG_SOC_PPA_SUPPORTED
+    if (pub->profile.enable_ppa_accel) {
+        lvgl_port_ppa_v8_init(&node->disp_drv);
+    }
+#endif
+
     lv_disp_t *disp = lv_disp_drv_register(&node->disp_drv);
     if (!disp) {
         return false;
@@ -1070,31 +1084,15 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     node->lv_disp = disp;
     cfg->lv_disp = disp;
     if (mono_enabled && !display_manager_alloc_mono_buffer(cfg, &pub->profile)) {
-        display_manager_free_draw_buffers(node);
-        lv_disp_remove(disp);
-        node->lv_disp = NULL;
         return false;
     }
     if (node->bridge && node->bridge->set_dummy_draw) {
         node->bridge->set_dummy_draw(node->bridge, node->cfg.dummy_draw_enabled);
     }
 
-#if CONFIG_SOC_PPA_SUPPORTED
-    if (pub->profile.enable_ppa_accel) {
-        /* PPA acceleration assumes draw unit count is forced to 1 via configuration. */
-        lvgl_port_ppa_v8_init(&node->disp_drv);
-#if defined(LV_DRAW_SW_DRAW_UNIT_CNT) && (LV_DRAW_SW_DRAW_UNIT_CNT > 1)
-        ESP_LOGW(TAG, "PPA acceleration requires LV_DRAW_SW_DRAW_UNIT_CNT == 1 (current=%d)",
-                 LV_DRAW_SW_DRAW_UNIT_CNT);
-#endif
-    }
-#endif
-
     /* Create display bridge for LVGL v8 */
     esp_lv_adapter_display_bridge_t *bridge = esp_lv_adapter_display_bridge_v8_create(cfg);
     if (!bridge) {
-        lv_disp_remove(disp);
-        node->lv_disp = NULL;
         return false;
     }
 

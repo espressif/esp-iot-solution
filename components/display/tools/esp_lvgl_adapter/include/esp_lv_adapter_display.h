@@ -147,7 +147,7 @@ typedef struct {
     uint16_t ver_res;                       /*!< Vertical resolution in pixels */
     uint16_t buffer_height;                 /*!< Draw buffer height in pixels */
     bool use_psram;                         /*!< Use PSRAM for buffers if available */
-    bool enable_ppa_accel;                  /*!< Enable PPA hardware acceleration */
+    bool enable_ppa_accel;                  /*!< Enable PPA drawing for this display; rotation is independent */
     bool require_double_buffer;             /*!< Require double buffering */
     esp_lv_adapter_mono_layout_t mono_layout;      /*!< Monochrome layout selection */
 } esp_lv_adapter_display_profile_t;
