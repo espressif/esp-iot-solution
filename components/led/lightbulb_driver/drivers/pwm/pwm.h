@@ -46,57 +46,68 @@ typedef enum {
     PWM_CHANNEL_MAX,
 } pwm_channel_t;
 
+/** Opaque PWM instance. Serialize operations on the same instance, including deletion. */
+typedef struct pwm_context_s *pwm_handle_t;
+
 /**
- * @brief Initialize pwm output
+ * @brief Initialize an independent PWM instance
  *
  * @param config Driver configuration
  * @param hook_func Hook function, which will be called inside the driver. e.g. to notify that config have been changed internally
  * @param user_data User data pointer passed to hook function
+ * @param out_handle Created instance; NULL on failure
+ * @note Instances share matching-frequency timers and allocate hardware channels automatically.
+ *       Do not configure this driver's LEDC resources through other drivers.
  * @return esp_err_t
  */
-esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *, void *), void *user_data);
+esp_err_t pwm_init(driver_pwm_t *config, void(*hook_func)(void *, void *), void *user_data, pwm_handle_t *out_handle);
 
 /**
  * @brief Register the pwm channel
  * @note Needs to correspond to the real hardware
  *
+ * @param pwm_handle PWM instance handle
  * @param channel Abstract channel
  * @param gpio_num Chip GPIO pin
  * @return esp_err_t
  */
-esp_err_t pwm_regist_channel(pwm_channel_t channel, gpio_num_t gpio_num);
+esp_err_t pwm_regist_channel(pwm_handle_t pwm_handle, pwm_channel_t channel, gpio_num_t gpio_num);
 
 /**
  * @brief Set any channel output
  *
+ * @param pwm_handle PWM instance handle
  * @param channel Abstract channel
  * @param value Output value
  * @return esp_err_t
  */
-esp_err_t pwm_set_channel(pwm_channel_t channel, uint16_t value);
+esp_err_t pwm_set_channel(pwm_handle_t pwm_handle, pwm_channel_t channel, uint16_t value);
 
 /**
  * @brief Set only rgb channel output
  *
+ * @param pwm_handle PWM instance handle
  * @param value_r Output red value
  * @param value_g Output green value
  * @param value_b Output blue value
  * @return esp_err_t
  */
-esp_err_t pwm_set_rgb_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b);
+esp_err_t pwm_set_rgb_channel(pwm_handle_t pwm_handle, uint16_t value_r, uint16_t value_g, uint16_t value_b);
 
 /**
  * @brief Set only cct/brightness or cold/warm channel output
  *
+ * @param pwm_handle PWM instance handle
  * @param value_cct_c Output cct or cold value
  * @param value_b_w Output brightness or warm value
  * @return esp_err_t
  */
-esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w);
+esp_err_t pwm_set_cctb_or_cw_channel(pwm_handle_t pwm_handle, uint16_t value_cct_c, uint16_t value_b_w);
 
 /**
  * @brief Set all channel outputs
  *
+ * @param pwm_handle PWM instance handle
  * @param value_r Output red value
  * @param value_g Output green value
  * @param value_b Output blue value
@@ -104,29 +115,32 @@ esp_err_t pwm_set_cctb_or_cw_channel(uint16_t value_cct_c, uint16_t value_b_w);
  * @param value_b_w Output brightness or warm value
  * @return esp_err_t
  */
-esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
+esp_err_t pwm_set_rgbcctb_or_rgbcw_channel(pwm_handle_t pwm_handle, uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
 
 /**
  * @brief Update every registered channel from a 5-tuple and commit once
  *
+ * @param pwm_handle PWM instance handle
  * @return
  *      - ESP_OK: Success
  *      - ESP_ERR_INVALID_STATE: Driver not initialized, or (legacy mode) a
  *        required channel is not registered
  *      - ESP_ERR_INVALID_ARG: Legacy mode only: a requested duty is out of range
  */
-esp_err_t pwm_apply_registered(uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
+esp_err_t pwm_apply_registered(pwm_handle_t pwm_handle, uint16_t value_r, uint16_t value_g, uint16_t value_b, uint16_t value_cct_c, uint16_t value_b_w);
 
 /**
  * @brief Stop all channel output
  *
+ * @param pwm_handle PWM instance handle
  * @return esp_err_t
  */
-esp_err_t pwm_set_shutdown(void);
+esp_err_t pwm_set_shutdown(pwm_handle_t pwm_handle);
 
 /**
  * @brief Set output with hardware fade
  *
+ * @param pwm_handle PWM instance handle
  * @param channel Abstract pin
  * @param value
  * @param fade_ms
@@ -136,19 +150,23 @@ esp_err_t pwm_set_shutdown(void);
  *      - ESP_ERR_INVALID_ARG: Duty out of range
  *      - ESP_ERR_NOT_SUPPORTED: Dynamic complementary output is enabled (hardware fade cannot update hpoint)
  */
-esp_err_t pwm_set_hw_fade(pwm_channel_t channel, uint16_t value, int fade_ms);
+esp_err_t pwm_set_hw_fade(pwm_handle_t pwm_handle, pwm_channel_t channel, uint16_t value, int fade_ms);
 
 /**
  * @brief Deinitialize pwm and release resources
+ * @note Detached GPIOs remain outputs at the inactive level to keep the light off.
  *
- * @return esp_err_t
+ * @param pwm_handle PWM instance handle
+ * @note The instance is released even if cleanup reports an error; do not reuse the handle.
+ * @return ESP_OK on success, otherwise the combined cleanup error status
  */
-esp_err_t pwm_deinit(void);
+esp_err_t pwm_deinit(pwm_handle_t pwm_handle);
 
 /**
  * @brief Enable/Disable sleep status
  *
+ * @param pwm_handle PWM instance handle
  * @param is_enable
  * @return esp_err_t
  */
-esp_err_t pwm_set_sleep(bool is_enable);
+esp_err_t pwm_set_sleep(pwm_handle_t pwm_handle, bool is_enable);

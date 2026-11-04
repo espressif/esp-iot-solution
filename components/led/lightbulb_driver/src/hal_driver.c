@@ -97,6 +97,9 @@ typedef struct {
 
 struct hal_context_s {
     fade_data_t fade_data[HAL_OUT_MAX_CHANNEL];
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    pwm_handle_t pwm;
+#endif
     hal_obj_t *interface;
     int s_err_count;
     bool deiniting;
@@ -130,14 +133,9 @@ static hal_obj_t *hal_create_pwm_driver(void)
     obj->driver_grayscale_level = (1 << 12);
     obj->channel_num = 5;
     obj->hardware_allow_max_input_value = (1 << 12);
-    obj->init = (x_init_t)pwm_init;
-    obj->set_channel = (x_set_channel_t)pwm_set_channel;
-    obj->regist_channel = (x_regist_channel_t)pwm_regist_channel;
-    obj->set_shutdown = (x_set_shutdown_t)pwm_set_shutdown;
-    obj->set_hw_fade = (x_set_hw_fade_t)pwm_set_hw_fade;
-    obj->deinit = (x_deinit_t)pwm_deinit;
-    obj->set_sleep_status = (x_set_sleep_t)pwm_set_sleep;
-    obj->set_rgbwy_or_rgbct_channel = (x_set_rgbwy_or_rgbct_channel_t)pwm_apply_registered;
+    /* The type of callback parameter no longer matches HAL's generic callback type.
+     * PWM calls below pass the per-instance handle directly.
+     */
 
     // Set unused function pointers to NULL
     obj->set_rgb_channel = NULL;
@@ -491,6 +489,12 @@ static void cleanup(hal_context_t hal_ctx)
         hal_ctx->fade_mutex = NULL;
     }
 
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (hal_ctx->pwm) {
+        pwm_deinit(hal_ctx->pwm);
+        hal_ctx->pwm = NULL;
+    }
+#endif
     if (hal_ctx->interface) {
         free(hal_ctx->interface);
         hal_ctx->interface = NULL;
@@ -500,6 +504,21 @@ static void cleanup(hal_context_t hal_ctx)
     }
 }
 
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+#define WRITE_TO_HW(HAL_CTX, CH, VALUE) do { \
+    if (!(HAL_CTX)->enable_multi_ch_write) { \
+        if ((HAL_CTX)->pwm) { \
+            err |= (HAL_CTX)->use_hw_fade ? \
+                   pwm_set_hw_fade((HAL_CTX)->pwm, CH, VALUE, HARDWARE_RETAIN_RATE_MS) : \
+                   pwm_set_channel((HAL_CTX)->pwm, CH, VALUE); \
+        } else if ((HAL_CTX)->use_hw_fade) { \
+            err |= (HAL_CTX)->interface->set_hw_fade(CH, VALUE, HARDWARE_RETAIN_RATE_MS); \
+        } else { \
+            err |= (HAL_CTX)->interface->set_channel(CH, VALUE); \
+        } \
+    } \
+} while (0)
+#else
 #define WRITE_TO_HW(HAL_CTX, CH, VALUE)                                                                                \
 {                                                                                                                   \
     if(!(HAL_CTX)->enable_multi_ch_write) {                                                                         \
@@ -510,6 +529,8 @@ static void cleanup(hal_context_t hal_ctx)
         }                                                                                                           \
    }                                                                                                                \
 }
+
+#endif
 
 /**
  * @brief fade processing logic
@@ -620,13 +641,18 @@ static void fade_cb(void *priv)
     }
 
     if (hal_ctx->enable_multi_ch_write) {
-        if (hal_ctx->interface->set_rgb_channel) {
-            hal_ctx->interface->set_rgb_channel(hal_ctx->fade_data[0].cur, hal_ctx->fade_data[1].cur, hal_ctx->fade_data[2].cur);
-        } else if (hal_ctx->interface->set_wy_or_ct_channel) {
-            hal_ctx->interface->set_wy_or_ct_channel(hal_ctx->fade_data[3].cur, hal_ctx->fade_data[4].cur);
-        } else if (hal_ctx->interface->set_rgbwy_or_rgbct_channel) {
-            hal_ctx->interface->set_rgbwy_or_rgbct_channel(hal_ctx->fade_data[0].cur, hal_ctx->fade_data[1].cur, hal_ctx->fade_data[2].cur, hal_ctx->fade_data[3].cur, hal_ctx->fade_data[4].cur);
-        }
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+        if (hal_ctx->pwm) {
+            err |= pwm_apply_registered(hal_ctx->pwm, hal_ctx->fade_data[0].cur, hal_ctx->fade_data[1].cur, hal_ctx->fade_data[2].cur, hal_ctx->fade_data[3].cur, hal_ctx->fade_data[4].cur);
+        } else
+#endif
+            if (hal_ctx->interface->set_rgb_channel) {
+                hal_ctx->interface->set_rgb_channel(hal_ctx->fade_data[0].cur, hal_ctx->fade_data[1].cur, hal_ctx->fade_data[2].cur);
+            } else if (hal_ctx->interface->set_wy_or_ct_channel) {
+                hal_ctx->interface->set_wy_or_ct_channel(hal_ctx->fade_data[3].cur, hal_ctx->fade_data[4].cur);
+            } else if (hal_ctx->interface->set_rgbwy_or_rgbct_channel) {
+                hal_ctx->interface->set_rgbwy_or_rgbct_channel(hal_ctx->fade_data[0].cur, hal_ctx->fade_data[1].cur, hal_ctx->fade_data[2].cur, hal_ctx->fade_data[3].cur, hal_ctx->fade_data[4].cur);
+            }
     }
 
 #ifdef FADE_TICKS_FROM_GPTIMER
@@ -682,7 +708,14 @@ static hal_context_t hal_output_init_common(hal_obj_t *interface, void *driver_c
 
     hal_ctx->interface = interface;
 
-    err = hal_ctx->interface->init(driver_config, driver_default_hook_func, hal_ctx);
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (interface->type == DRIVER_ESP_PWM) {
+        err = pwm_init(driver_config, driver_default_hook_func, hal_ctx, &hal_ctx->pwm);
+    } else
+#endif
+    {
+        err = hal_ctx->interface->init(driver_config, driver_default_hook_func, hal_ctx);
+    }
     LIGHTBULB_CHECK(err == ESP_OK, "driver init fail", goto EXIT);
 
     /**
@@ -878,11 +911,19 @@ esp_err_t hal_output_deinit(hal_context_t hal_ctx)
         xSemaphoreGive(hal_ctx->fade_mutex);
     }
 
-    if (hal_ctx->interface->set_shutdown) {
-        err |= hal_ctx->interface->set_shutdown();
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (hal_ctx->pwm) {
+        err |= pwm_set_shutdown(hal_ctx->pwm);
+        err |= pwm_deinit(hal_ctx->pwm);
+        hal_ctx->pwm = NULL;
+    } else
+#endif
+    {
+        if (hal_ctx->interface->set_shutdown) {
+            err |= hal_ctx->interface->set_shutdown();
+        }
+        err |= hal_ctx->interface->deinit();
     }
-
-    err |= hal_ctx->interface->deinit();
 
     cleanup(hal_ctx);
 
@@ -894,6 +935,11 @@ esp_err_t hal_regist_channel(hal_context_t hal_ctx, int channel, gpio_num_t gpio
     esp_err_t err = ESP_OK;
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (hal_ctx->pwm) {
+        return pwm_regist_channel(hal_ctx->pwm, channel, gpio_num);
+    }
+#endif
     if (hal_ctx->interface->regist_channel) {
         err = hal_ctx->interface->regist_channel(channel, gpio_num);
     }
@@ -1369,6 +1415,11 @@ esp_err_t hal_sleep_control(hal_context_t hal_ctx, bool enable_sleep)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
+#ifdef CONFIG_ENABLE_PWM_DRIVER
+    if (hal_ctx->pwm) {
+        return pwm_set_sleep(hal_ctx->pwm, enable_sleep);
+    }
+#endif
     if (hal_ctx->interface->set_sleep_status) {
         hal_ctx->interface->set_sleep_status(enable_sleep);
     } else {

@@ -14,6 +14,7 @@
 #include <esp_log.h>
 #include <driver/spi_master.h>
 #include <driver/ledc.h>
+#include <soc/gpio_sig_map.h>
 
 #include <lightbulb.h>
 
@@ -626,6 +627,7 @@ static void pwm_test_log_hw_cct(const char *stage)
 
 TEST_CASE("PWM legacy complementary output", "[Underlying Driver]")
 {
+    pwm_handle_t pwm = NULL;
     const uint32_t period = 4096;
     const gpio_num_t gpios[PWM_CHANNEL_MAX] = {
         TEST_PWM_GPIO_R, TEST_PWM_GPIO_G, TEST_PWM_GPIO_B, TEST_PWM_GPIO_C, TEST_PWM_GPIO_W
@@ -670,30 +672,30 @@ TEST_CASE("PWM legacy complementary output", "[Underlying Driver]")
         };
 
         s_pwm_hook_grayscale = 0;
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, pwm_test_grayscale_hook, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, pwm_test_grayscale_hook, NULL, &pwm));
         TEST_ASSERT_EQUAL(phase_step, s_pwm_hook_grayscale);
         for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(ch, gpios[ch]));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, ch, gpios[ch]));
         }
 
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
 
         if (cases[test].channel_count == 3) {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgb_channel(
-                                  cases[test].values[PWM_CHANNEL_R],
-                                  cases[test].values[PWM_CHANNEL_G],
-                                  cases[test].values[PWM_CHANNEL_B]));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgb_channel(pwm,
+                                                          cases[test].values[PWM_CHANNEL_R],
+                                                          cases[test].values[PWM_CHANNEL_G],
+                                                          cases[test].values[PWM_CHANNEL_B]));
         } else {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgbcctb_or_rgbcw_channel(
-                                  cases[test].values[PWM_CHANNEL_R],
-                                  cases[test].values[PWM_CHANNEL_G],
-                                  cases[test].values[PWM_CHANNEL_B],
-                                  cases[test].values[PWM_CHANNEL_CCT_COLD],
-                                  cases[test].values[PWM_CHANNEL_BRIGHTNESS_WARM]));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgbcctb_or_rgbcw_channel(pwm,
+                                                                       cases[test].values[PWM_CHANNEL_R],
+                                                                       cases[test].values[PWM_CHANNEL_G],
+                                                                       cases[test].values[PWM_CHANNEL_B],
+                                                                       cases[test].values[PWM_CHANNEL_CCT_COLD],
+                                                                       cases[test].values[PWM_CHANNEL_BRIGHTNESS_WARM]));
         }
         pwm_test_wait_ledc_update();
 
-        ESP_LOGI("pwm_legacy_compare", "%s: on for 3 seconds", cases[test].name);
+        ESP_LOGI("pwm_legacy_compare", "%s", cases[test].name);
         for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
             TEST_ASSERT_EQUAL(cases[test].values[ch],
                               ledc_get_duty(TEST_PWM_LEDC_MODE, ch));
@@ -702,17 +704,17 @@ TEST_CASE("PWM legacy complementary output", "[Underlying Driver]")
             TEST_ASSERT_EQUAL(expected_hpoint,
                               ledc_get_hpoint(TEST_PWM_LEDC_MODE, ch));
         }
-        vTaskDelay(pdMS_TO_TICKS(3000));
 
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
         pwm_test_wait_ledc_update();
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
         vTaskDelay(pdMS_TO_TICKS(300));
     }
 }
 
 TEST_CASE("PWM RGBCW complementary output", "[Underlying Driver]")
 {
+    pwm_handle_t pwm = NULL;
     const uint32_t period = 4096;
     const gpio_num_t gpios[PWM_CHANNEL_MAX] = {
         TEST_PWM_GPIO_R, TEST_PWM_GPIO_G, TEST_PWM_GPIO_B, TEST_PWM_GPIO_C, TEST_PWM_GPIO_W
@@ -722,12 +724,12 @@ TEST_CASE("PWM RGBCW complementary output", "[Underlying Driver]")
         .phase_delay.flag = PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG,
     };
     s_pwm_hook_grayscale = 0;
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, pwm_test_grayscale_hook, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, pwm_test_grayscale_hook, NULL, &pwm));
     TEST_ASSERT_EQUAL(period, s_pwm_hook_grayscale);
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(ch, gpios[ch]));
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, ch, gpios[ch]));
     }
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(period, period, period, period, period));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, period, period, period, period, period));
     pwm_test_wait_ledc_update();
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
         uint32_t duty = period / PWM_CHANNEL_MAX;
@@ -741,7 +743,7 @@ TEST_CASE("PWM RGBCW complementary output", "[Underlying Driver]")
     vTaskDelay(pdMS_TO_TICKS(3000));
 
     /* Unequal requests total 10029 > 4096; the two rounding ticks go to the largest channel (Red). */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(4096, 3000, 1700, 900, 333));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, 4096, 3000, 1700, 900, 333));
     pwm_test_wait_ledc_update();
     const uint32_t expected_duty[PWM_CHANNEL_MAX] = {1674, 1225, 694, 367, 136};
     const uint32_t expected_hpoint[PWM_CHANNEL_MAX] = {0, 1674, 2899, 3593, 3960};
@@ -756,7 +758,7 @@ TEST_CASE("PWM RGBCW complementary output", "[Underlying Driver]")
     vTaskDelay(pdMS_TO_TICKS(3000));
 
     /* A tiny non-zero request must survive compression instead of truncating to 0. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(period, period, 1, 0, 0));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, period, period, 1, 0, 0));
     pwm_test_wait_ledc_update();
     TEST_ASSERT_EQUAL(2047, ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_R));
     TEST_ASSERT_EQUAL(2048, ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_G));
@@ -765,36 +767,37 @@ TEST_CASE("PWM RGBCW complementary output", "[Underlying Driver]")
     vTaskDelay(pdMS_TO_TICKS(3000));
 
     /* One full-power channel must move its siblings and leave their duty at zero. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(0, 0, 0, 0, period));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, 0, 0, 0, 0, period));
     pwm_test_wait_ledc_update();
     TEST_ASSERT_EQUAL(period, ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM));
     TEST_ASSERT_EQUAL(0, ledc_get_hpoint(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM));
     vTaskDelay(pdMS_TO_TICKS(3000));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
     pwm_test_wait_ledc_update();
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
         TEST_ASSERT_EQUAL(0, ledc_get_duty(TEST_PWM_LEDC_MODE, ch));
         TEST_ASSERT_EQUAL(0, ledc_get_hpoint(TEST_PWM_LEDC_MODE, ch));
     }
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
 
     /* The same standalone flag uses only registered channels; no group is selected. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(PWM_CHANNEL_CCT_COLD, TEST_PWM_GPIO_C));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(PWM_CHANNEL_BRIGHTNESS_WARM, TEST_PWM_GPIO_W));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(period, period, period, 1000, 2000));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL, &pwm));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, PWM_CHANNEL_CCT_COLD, TEST_PWM_GPIO_C));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, PWM_CHANNEL_BRIGHTNESS_WARM, TEST_PWM_GPIO_W));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, period, period, period, 1000, 2000));
     pwm_test_wait_ledc_update();
     TEST_ASSERT_EQUAL(1000, ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_CCT_COLD));
     TEST_ASSERT_EQUAL(2000, ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM));
     TEST_ASSERT_EQUAL(1000, ledc_get_hpoint(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM));
     vTaskDelay(pdMS_TO_TICKS(3000));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
     pwm_test_wait_ledc_update();
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
 }
 
 TEST_CASE("PWM RGB complementary output color comparison", "[Underlying Driver]")
 {
+    pwm_handle_t pwm = NULL;
     const uint16_t value_r = 771;
     const uint16_t value_g = 2777;
     const uint16_t value_b = 771;
@@ -818,17 +821,17 @@ TEST_CASE("PWM RGB complementary output color comparison", "[Underlying Driver]"
              : PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG),
         };
 
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL, &pwm));
         for (int i = 0; i < 3; i++) {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(channels[i], gpios[i]));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, channels[i], gpios[i]));
         }
 
         if (mode == 2) {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(
-                                  value_r, value_g, value_b, 0, 0));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm,
+                                                           value_r, value_g, value_b, 0, 0));
         } else {
-            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgb_channel(
-                                  value_r, value_g, value_b));
+            TEST_ASSERT_EQUAL(ESP_OK, pwm_set_rgb_channel(pwm,
+                                                          value_r, value_g, value_b));
         }
 
         pwm_test_wait_ledc_update();
@@ -837,23 +840,17 @@ TEST_CASE("PWM RGB complementary output color comparison", "[Underlying Driver]"
                  mode_names[mode], value_r, value_g, value_b);
         vTaskDelay(pdMS_TO_TICKS(3000));
 
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
         pwm_test_wait_ledc_update();
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
         vTaskDelay(pdMS_TO_TICKS(300));
     }
 }
 
-TEST_CASE("PWM complementary duty cache readback after reinit", "[Underlying Driver]")
+TEST_CASE("PWM complementary shutdown and reinit", "[Underlying Driver]")
 {
-    /* After pwm_regist_channel, s_pwm->duty[ch] must reflect LEDC's actual duty.
-     * Without the readback, a soft-reset scenario leaves the cache at 0, and the
-     * first partial pwm_set_channel() call zeros every other channel via
-     * pwm_commit_dynamic().
-     *
-     * Simulate soft reset by deinit/re-init: LEDC hardware retains duty across
-     * the software restart, so the cache must be populated from ledc_get_duty().
-     */
+    pwm_handle_t pwm = NULL;
+    /* Deinit clears every channel; re-init must not restore the previous output. */
     const gpio_num_t gpios[PWM_CHANNEL_MAX] = {
         TEST_PWM_GPIO_R, TEST_PWM_GPIO_G, TEST_PWM_GPIO_B, TEST_PWM_GPIO_C, TEST_PWM_GPIO_W
     };
@@ -863,46 +860,45 @@ TEST_CASE("PWM complementary duty cache readback after reinit", "[Underlying Dri
     };
 
     /* Phase 1 — set non-zero duties on all channels */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL, &pwm));
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(ch, gpios[ch]));
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, ch, gpios[ch]));
     }
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(1000, 2000, 500, 800, 300));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_apply_registered(pwm, 1000, 2000, 500, 800, 300));
     pwm_test_wait_ledc_update();
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
         TEST_ASSERT_TRUE(ledc_get_duty(TEST_PWM_LEDC_MODE, ch) > 0);
     }
 
-    /* Phase 2 — deinit; LEDC hardware continues outputting */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+    /* Phase 2 — deinit clears all duties */
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
     vTaskDelay(pdMS_TO_TICKS(100));
-
-    /* Phase 3 — re-init and re-register. The fix reads ledc_get_duty() back
-     * into s_pwm->duty[] so the cache matches the hardware state. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(ch, gpios[ch]));
+        TEST_ASSERT_EQUAL_UINT32(0, ledc_get_duty(TEST_PWM_LEDC_MODE, ch));
     }
 
-    /* Phase 4 — update only one channel. Without the fix, channels 1-4 would
-     * be zeroed because s_pwm->duty[] was never populated. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_channel(PWM_CHANNEL_R, 500));
+    /* Phase 3 — re-init and re-register with all channels off */
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL, &pwm));
+    for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, ch, gpios[ch]));
+    }
+
+    /* Phase 4 — update only Red; every other channel must remain off */
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_channel(pwm, PWM_CHANNEL_R, 500));
     pwm_test_wait_ledc_update();
     for (int ch = 0; ch < PWM_CHANNEL_MAX; ch++) {
-        if (ch == PWM_CHANNEL_R) {
-            continue;
-        }
-        TEST_ASSERT_TRUE(ledc_get_duty(TEST_PWM_LEDC_MODE, ch) > 0);
+        TEST_ASSERT_EQUAL_UINT32(ch == PWM_CHANNEL_R ? 500 : 0, ledc_get_duty(TEST_PWM_LEDC_MODE, ch));
     }
 
     vTaskDelay(pdMS_TO_TICKS(1000));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
     pwm_test_wait_ledc_update();
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
 }
 
 TEST_CASE("PWM hardware CCT complementary no compression", "[Underlying Driver]")
 {
+    pwm_handle_t pwm = NULL;
     /* In hardware CCT + complementary mode, the CCT channel is an absolute
      * color-temperature position, not a brightness contribution. It must be
      * excluded from proportional compression so the color temperature stays
@@ -922,15 +918,15 @@ TEST_CASE("PWM hardware CCT complementary no compression", "[Underlying Driver]"
         .phase_delay.flag = PWM_CHANNEL_COMPLEMENTARY_OUTPUT_FLAG,
         .hw_cct = true,
     };
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&conf, NULL, NULL, &pwm));
     for (int i = 0; i < 2; i++) {
-        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(channels[i], gpios[i]));
+        TEST_ASSERT_EQUAL(ESP_OK, pwm_regist_channel(pwm, channels[i], gpios[i]));
     }
 
     /* CCT=70% → 2867, brightness=100% → 4096 */
     const uint32_t cct_val = 2867;
     const uint32_t brightness_val = 4096;
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_cctb_or_cw_channel(cct_val, brightness_val));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_cctb_or_cw_channel(pwm, cct_val, brightness_val));
     pwm_test_wait_ledc_update();
 
     uint32_t cct_duty = ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_CCT_COLD);
@@ -945,7 +941,7 @@ TEST_CASE("PWM hardware CCT complementary no compression", "[Underlying Driver]"
     TEST_ASSERT_EQUAL(0, ledc_get_hpoint(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM));
 
     /* Reduce brightness to 50% → 2048. CCT must still stay at 2867. */
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_cctb_or_cw_channel(cct_val, 2048));
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_cctb_or_cw_channel(pwm, cct_val, 2048));
     pwm_test_wait_ledc_update();
     cct_duty = ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_CCT_COLD);
     brightness_duty = ledc_get_duty(TEST_PWM_LEDC_MODE, PWM_CHANNEL_BRIGHTNESS_WARM);
@@ -953,9 +949,9 @@ TEST_CASE("PWM hardware CCT complementary no compression", "[Underlying Driver]"
     TEST_ASSERT_EQUAL(2048, brightness_duty);
 
     vTaskDelay(pdMS_TO_TICKS(2000));
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_set_shutdown(pwm));
     pwm_test_wait_ledc_update();
-    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit());
+    TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(pwm));
 }
 
 TEST_CASE("PWM legacy complementary output", "[Application Layer]")
@@ -1011,6 +1007,161 @@ TEST_CASE("PWM legacy complementary output", "[Application Layer]")
         TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_switch(handle, false));
         vTaskDelay(pdMS_TO_TICKS(300));
         TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(handle));
+    }
+}
+
+TEST_CASE("PWM multi-instance output and resource reuse", "[Application Layer]")
+{
+    /* This is ordinary PWM. Keep it independent of complementary-mode tests. */
+    lightbulb_config_t config = {
+        .driver_conf.pwm.freq_hz = 4000,
+        .driver_conf.pwm.phase_delay.flag = 0,
+        .capability.led_beads = LED_BEADS_3CH_RGB,
+        .capability.enable_fade = true,
+        .capability.fade_time_ms = 600,
+        .io_conf.pwm_io = {.red = TEST_PWM_GPIO_R, .green = TEST_PWM_GPIO_G, .blue = TEST_PWM_GPIO_B},
+        .init_status = {.mode = WORK_COLOR, .on = false, .saturation = 100, .value = 100},
+    };
+    lightbulb_handle_t first = lightbulb_new_pwm_device(&config);
+    TEST_ASSERT_NOT_NULL(first);
+    ESP_LOGI("pwm_multi", "A: R/G/B GPIO=%d/%d/%d -> LEDC=0/1/2; ordinary PWM, 4000 Hz",
+             config.io_conf.pwm_io.red, config.io_conf.pwm_io.green, config.io_conf.pwm_io.blue);
+    config.io_conf.pwm_io.red = TEST_PWM_GPIO_C;
+    config.io_conf.pwm_io.green = TEST_PWM_GPIO_W;
+#if CONFIG_IDF_TARGET_ESP32
+    config.io_conf.pwm_io.blue = 13;
+#else
+    config.io_conf.pwm_io.blue = 4;
+#endif
+    lightbulb_handle_t second = lightbulb_new_pwm_device(&config);
+    TEST_ASSERT_NOT_NULL(second);
+    ESP_LOGI("pwm_multi", "B: R/G/B GPIO=%d/%d/%d -> LEDC=3/4/5; both bulbs start off",
+             config.io_conf.pwm_io.red, config.io_conf.pwm_io.green, config.io_conf.pwm_io.blue);
+
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0))
+    const gpio_num_t gpios[6] = {
+        TEST_PWM_GPIO_R, TEST_PWM_GPIO_G, TEST_PWM_GPIO_B,
+        config.io_conf.pwm_io.red, config.io_conf.pwm_io.green, config.io_conf.pwm_io.blue,
+    };
+#endif
+    const struct {
+        const char *description;
+        uint32_t duty[6];
+    } stages[] = {
+        {"A red 50%, B green 80%",             {2048, 0, 0, 0, 3276, 0}},
+        {"Allocation failure leaves A/B intact", {2048, 0, 0, 0, 3276, 0}},
+        {"Delete fading A; B reaches green 40%", {0, 0, 0, 0, 1638, 0}},
+        {"A off, B blue 60%",                 {0, 0, 0, 0, 0, 2457}},
+        {"Recreate A red 50%; B stays blue",   {2048, 0, 0, 0, 0, 2457}},
+        {"Delete B; A stays red 50%",          {2048, 0, 0, 0, 0, 0}},
+        {"Delete A; all outputs off",          {0, 0, 0, 0, 0, 0}},
+    };
+    for (int stage = 0; stage < sizeof(stages) / sizeof(stages[0]); stage++) {
+        ESP_LOGI("pwm_multi", "Stage %d/%u: %s", stage + 1, (unsigned)(sizeof(stages) / sizeof(stages[0])),
+                 stages[stage].description);
+        switch (stage) {
+        case 0:
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(first, 0, 100, 50));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(second, 120, 100, 80));
+            vTaskDelay(pdMS_TO_TICKS(100));
+            /* Both outputs must advance beyond the synchronous first step. */
+            TEST_ASSERT_GREATER_THAN_UINT32(stages[stage].duty[0] / 12, ledc_get_duty(TEST_PWM_LEDC_MODE, 0));
+            TEST_ASSERT_LESS_THAN_UINT32(stages[stage].duty[0], ledc_get_duty(TEST_PWM_LEDC_MODE, 0));
+            TEST_ASSERT_GREATER_THAN_UINT32(stages[stage].duty[4] / 12, ledc_get_duty(TEST_PWM_LEDC_MODE, 4));
+            TEST_ASSERT_LESS_THAN_UINT32(stages[stage].duty[4], ledc_get_duty(TEST_PWM_LEDC_MODE, 4));
+            break;
+        case 1:
+            if (LEDC_CHANNEL_MAX == 6) {
+                /* All six channels are occupied. These GPIOs are distinct and unused. */
+                config.io_conf.pwm_io.red = 0;
+                config.io_conf.pwm_io.green = 2;
+                config.io_conf.pwm_io.blue = 10;
+                pwm_handle_t probe = NULL;
+                TEST_ASSERT_EQUAL(ESP_OK, pwm_init(&config.driver_conf.pwm, NULL, NULL, &probe));
+                TEST_ASSERT_EQUAL(ESP_ERR_NOT_FOUND, pwm_regist_channel(probe, PWM_CHANNEL_R, config.io_conf.pwm_io.red));
+                TEST_ASSERT_EQUAL(ESP_OK, pwm_deinit(probe));
+                ESP_LOGI("pwm_multi", "Expected failure next: third RGB bulb has no free LEDC channels");
+                lightbulb_handle_t overflow = lightbulb_new_pwm_device(&config);
+                TEST_ASSERT_NULL(overflow);
+            } else {
+                ESP_LOGI("pwm_multi", "Channel exhaustion check skipped: this target has %d channels", LEDC_CHANNEL_MAX);
+            }
+            break;
+        case 2:
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(first, 0, 100, 25));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(second, 120, 100, 40));
+            vTaskDelay(pdMS_TO_TICKS(100));
+            TEST_ASSERT_GREATER_THAN_UINT32(1024, ledc_get_duty(TEST_PWM_LEDC_MODE, 0));
+            TEST_ASSERT_LESS_THAN_UINT32(2048, ledc_get_duty(TEST_PWM_LEDC_MODE, 0));
+            TEST_ASSERT_GREATER_THAN_UINT32(stages[stage].duty[4], ledc_get_duty(TEST_PWM_LEDC_MODE, 4));
+            TEST_ASSERT_LESS_THAN_UINT32(stages[stage - 1].duty[4], ledc_get_duty(TEST_PWM_LEDC_MODE, 4));
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(first));
+            first = NULL;
+            break;
+        case 3:
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(second, 240, 100, 60));
+            break;
+        case 4:
+            config.io_conf.pwm_io.red = TEST_PWM_GPIO_R;
+            config.io_conf.pwm_io.green = TEST_PWM_GPIO_G;
+            config.io_conf.pwm_io.blue = TEST_PWM_GPIO_B;
+            first = lightbulb_new_pwm_device(&config);
+            TEST_ASSERT_NOT_NULL(first);
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_set_hsv(first, 0, 100, 50));
+            break;
+        case 5:
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(second));
+            second = NULL;
+            break;
+        case 6:
+            TEST_ASSERT_EQUAL(ESP_OK, lightbulb_deinit(first));
+            first = NULL;
+#if CONFIG_USE_GPTIMER_GENERATE_TICKS && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+            TEST_ASSERT_NULL(xTaskGetHandle("lightbulb_fade"));
+#endif
+            break;
+        }
+        /* Include the final idle tick and the HAL's short hardware fade. */
+        vTaskDelay(pdMS_TO_TICKS(config.capability.fade_time_ms + 100));
+        for (int ch = 0; ch < 6; ch++) {
+            uint32_t duty = ledc_get_duty(TEST_PWM_LEDC_MODE, ch);
+            uint32_t hpoint = ledc_get_hpoint(TEST_PWM_LEDC_MODE, ch);
+            ESP_LOGI("pwm_multi", "LEDC %d: duty=%u (expected %u), hpoint=%u",
+                     ch, (unsigned)duty, (unsigned)stages[stage].duty[ch], (unsigned)hpoint);
+            if (stages[stage].duty[ch]) {
+                TEST_ASSERT_UINT32_WITHIN_MESSAGE(1, stages[stage].duty[ch], duty, stages[stage].description);
+            } else {
+                TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, duty, stages[stage].description);
+            }
+            TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, hpoint, "Ordinary PWM must have zero hpoint");
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0))
+            if ((ch < 3 && !first) || (ch >= 3 && !second)) {
+                /* Inspect the pin as well as LEDC registers: reset/pull-up can relight the bulb. */
+                gpio_io_config_t io_config;
+                TEST_ASSERT_EQUAL(ESP_OK, gpio_get_io_config(gpios[ch], &io_config));
+                TEST_ASSERT_TRUE_MESSAGE(io_config.oe, "Deleted bulb GPIO must remain an output");
+                TEST_ASSERT_FALSE(io_config.pu);
+                TEST_ASSERT_FALSE(io_config.pd);
+                TEST_ASSERT_EQUAL_UINT32(SIG_GPIO_OUT_IDX, io_config.sig_out);
+                TEST_ASSERT_EQUAL(ESP_OK, gpio_input_enable(gpios[ch]));
+                ESP_LOGI("pwm_multi", "Deleted bulb GPIO %d: level=%d (expected 0)", gpios[ch], gpio_get_level(gpios[ch]));
+                TEST_ASSERT_EQUAL_MESSAGE(0, gpio_get_level(gpios[ch]), "Deleted bulb pin must stay low");
+                TEST_ASSERT_EQUAL(ESP_OK, gpio_set_direction(gpios[ch], GPIO_MODE_OUTPUT));
+            }
+#endif
+#if CONFIG_USE_GPTIMER_GENERATE_TICKS && (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
+            if (ch == 0 && stage < 6) {
+                /* A stopped timer must not notify the shared worker while it is suspended. */
+                TEST_ASSERT_NOT_NULL(xTaskGetHandle("lightbulb_fade"));
+                vTaskSuspend(xTaskGetHandle("lightbulb_fade"));
+                ulTaskNotifyValueClear(xTaskGetHandle("lightbulb_fade"), UINT32_MAX);
+                vTaskDelay(pdMS_TO_TICKS(100));
+                duty = ulTaskNotifyValueClear(xTaskGetHandle("lightbulb_fade"), UINT32_MAX);
+                vTaskResume(xTaskGetHandle("lightbulb_fade"));
+                TEST_ASSERT_EQUAL_UINT32_MESSAGE(0, duty, "Idle bulbs must stop the shared timer");
+            }
+#endif
+        }
     }
 }
 
