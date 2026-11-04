@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.7.5 (2026-11-03)
+
+* Fix LVGL v8/v9 PPA opacity, software fallback and display resource cleanup.
+
 ## v0.7.4 (2026-10-28)
 
 * Fix the LVGL v9 flush deadlock when LVGL invokes the flush from a task other than the adapter task. v9 pipeline waits block on bridge-owned semaphores, so a flush no longer clears or increments the calling task's notification index 0. The frame-complete ISR wakes the registered flush and dummy-draw waiters; v8 still uses task notifications. Covers `pipeline_blit()`, `wait_free_buf()`, buffer-switch wait, and GPIO TE completion.

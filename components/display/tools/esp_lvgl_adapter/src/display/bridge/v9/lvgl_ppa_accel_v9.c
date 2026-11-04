@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -11,6 +11,7 @@
 
 #if CONFIG_SOC_PPA_SUPPORTED
 
+#include <stdlib.h>
 #include "lvgl_port_alignment.h"
 #include "esp_log.h"
 #include "lvgl_port_draw_private.h"
@@ -22,6 +23,23 @@
 
 static ppa_client_handle_t s_blend_handle = NULL;
 static ppa_client_handle_t s_fill_handle = NULL;
+static const char *TAG = "esp_lvgl:ppa";
+
+typedef struct ppa_display {
+    lv_display_t *display;
+    lv_color_format_t color_format;
+    struct ppa_display *next;
+} ppa_display_t;
+
+typedef struct {
+    unsigned display_count;
+    lv_draw_sw_blend_handler_t previous_handler;
+} ppa_format_t;
+
+/* Registration/deletion run under the LVGL lock with drawing quiesced. */
+static ppa_display_t *s_displays;
+static ppa_format_t s_rgb565;
+static ppa_format_t s_rgb888;
 
 static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
 static void lv_draw_ppa_v9_handler_rgb888(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
@@ -35,7 +53,10 @@ static lv_draw_sw_custom_blend_handler_t s_custom_handler_rgb888 = {
     .handler = lv_draw_ppa_v9_handler_rgb888,
 };
 
-static void lvgl_port_ppa_v9_register_handler(lv_color_format_t cf);
+static void ppa_display_deleted(lv_event_t *event);
+static void ppa_release_display(ppa_display_t *entry);
+static void ppa_release_clients(void);
+static bool ppa_task_enabled(const lv_draw_task_t *task);
 static size_t ppa_get_cache_line_size(const void *addr);
 static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size);
 static bool ppa_buffer_cache_aligned(const void *addr);
@@ -58,23 +79,157 @@ void lvgl_port_ppa_v9_init(lv_display_t *display)
         return;
     }
 
-    if (s_blend_handle == NULL && s_fill_handle == NULL) {
+    for (ppa_display_t *entry = s_displays; entry; entry = entry->next) {
+        if (entry->display == display) {
+            return;
+        }
+    }
+    ppa_display_t *entry = calloc(1, sizeof(*entry));
+    if (!entry) {
+        ESP_LOGW(TAG, "No memory for PPA display; using software drawing");
+        return;
+    }
+
+    if (!s_displays) {
         ppa_client_config_t blend_cfg = {.oper_type = PPA_OPERATION_BLEND};
         ppa_client_config_t fill_cfg = {.oper_type = PPA_OPERATION_FILL};
-        ESP_ERROR_CHECK(ppa_register_client(&blend_cfg, &s_blend_handle));
-        ESP_ERROR_CHECK(ppa_register_client(&fill_cfg, &s_fill_handle));
+        esp_err_t ret = ppa_register_client(&blend_cfg, &s_blend_handle);
+        if (ret == ESP_OK) {
+            ret = ppa_register_client(&fill_cfg, &s_fill_handle);
+        }
+        if (ret != ESP_OK) {
+            ppa_release_clients();
+            ESP_LOGW(TAG, "Cannot register PPA clients (%d); using software drawing", ret);
+            free(entry);
+            return;
+        }
     }
 
-    lvgl_port_ppa_v9_register_handler(cf);
+    ppa_format_t *format = cf == LV_COLOR_FORMAT_RGB565 ? &s_rgb565 : &s_rgb888;
+    lv_draw_sw_custom_blend_handler_t *handler = cf == LV_COLOR_FORMAT_RGB565 ?
+                                                 &s_custom_handler : &s_custom_handler_rgb888;
+    if (format->display_count == 0) {
+        format->previous_handler = lv_draw_sw_get_blend_handler(cf);
+        if (!lv_draw_sw_register_blend_handler(handler)) {
+            if (!s_displays) {
+                ppa_release_clients();
+            }
+            format->previous_handler = NULL;
+            free(entry);
+            ESP_LOGW(TAG, "Cannot install PPA blend handler; using software drawing");
+            return;
+        }
+    }
+    format->display_count++;
+    entry->display = display;
+    entry->color_format = cf;
+    entry->next = s_displays;
+    s_displays = entry;
+    /* LVGL <=9.5 returns void here; the event count works across v9 versions. */
+    uint32_t event_count = lv_display_get_event_count(display);
+    lv_display_add_event_cb(display, ppa_display_deleted, LV_EVENT_DELETE, entry);
+    if (lv_display_get_event_count(display) == event_count) {
+        ppa_release_display(entry);
+        ESP_LOGW(TAG, "Cannot install PPA cleanup callback; using software drawing");
+    }
 }
 
-static void lvgl_port_ppa_v9_register_handler(lv_color_format_t cf)
+static void ppa_release_display(ppa_display_t *entry)
 {
-    if (cf == LV_COLOR_FORMAT_RGB888) {
-        lv_draw_sw_register_blend_handler(&s_custom_handler_rgb888);
-    } else if (cf == LV_COLOR_FORMAT_RGB565) {
-        lv_draw_sw_register_blend_handler(&s_custom_handler);
+    ppa_display_t **cursor = &s_displays;
+    while (*cursor && *cursor != entry) {
+        cursor = &(*cursor)->next;
     }
+    if (!*cursor) {
+        return;
+    }
+    *cursor = entry->next;
+    lv_color_format_t cf = entry->color_format;
+    ppa_format_t *format = cf == LV_COLOR_FORMAT_RGB565 ? &s_rgb565 : &s_rgb888;
+    lv_draw_sw_blend_handler_t handler = cf == LV_COLOR_FORMAT_RGB565 ?
+                                         lv_draw_ppa_v9_handler : lv_draw_ppa_v9_handler_rgb888;
+    if (--format->display_count == 0) {
+        /* Do not overwrite a handler installed by the application meanwhile. */
+        if (lv_draw_sw_get_blend_handler(cf) == handler) {
+            if (format->previous_handler) {
+                lv_draw_sw_custom_blend_handler_t previous = {
+                    .dest_cf = cf,
+                    .handler = format->previous_handler,
+                };
+                lv_draw_sw_register_blend_handler(&previous);
+            } else {
+                lv_draw_sw_unregister_blend_handler(cf);
+            }
+        }
+        format->previous_handler = NULL;
+    }
+    free(entry);
+    if (!s_displays) {
+        ppa_release_clients();
+    }
+}
+
+static void ppa_release_clients(void)
+{
+    if (s_fill_handle) {
+        ESP_ERROR_CHECK(ppa_unregister_client(s_fill_handle));
+        s_fill_handle = NULL;
+    }
+    if (s_blend_handle) {
+        ESP_ERROR_CHECK(ppa_unregister_client(s_blend_handle));
+        s_blend_handle = NULL;
+    }
+}
+
+static void ppa_display_deleted(lv_event_t *event)
+{
+    ppa_release_display(lv_event_get_user_data(event));
+}
+
+static bool ppa_task_enabled(const lv_draw_task_t *task)
+{
+    const lv_draw_dsc_base_t *base = task->draw_dsc;
+    if (base && base->obj) {
+        lv_display_t *display = lv_obj_get_display(base->obj);
+        for (ppa_display_t *entry = s_displays; entry; entry = entry->next) {
+            if (entry->display == display) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    const lv_layer_t *root = task->target_layer;
+    while (root && root->parent) {
+        root = root->parent;
+    }
+    for (ppa_display_t *entry = s_displays; entry; entry = entry->next) {
+        if (root == entry->display->layer_head) {
+            return true;
+        }
+    }
+    /* A canvas/snapshot without an owner must not inherit another display's flag. */
+    return false;
+}
+
+/* The custom handler runs before LVGL clips image draws to source/mask bounds. */
+static bool ppa_get_blend_area(lv_area_t *area, const lv_draw_task_t *task, const lv_draw_sw_blend_dsc_t *dsc)
+{
+    if (!lv_area_intersect(area, dsc->blend_area, &task->clip_area)) {
+        return false;
+    }
+    if (dsc->src_buf) {
+        const lv_area_t *source = dsc->src_area ? dsc->src_area : dsc->blend_area;
+        if (!lv_area_intersect(area, area, source)) {
+            return false;
+        }
+    }
+    if ((dsc->src_buf || (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER)) &&
+            dsc->mask_area &&
+            !lv_area_intersect(area, area, dsc->mask_area)) {
+        return false;
+    }
+    return true;
 }
 
 static size_t ppa_get_cache_line_size(const void *addr)
@@ -198,11 +353,12 @@ static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_col
         .bg_rgb_swap = 0,
         .bg_byte_swap = 0,
         .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        .bg_alpha_fix_val = 255 - opa,
+        /* RGB565 is opaque; source-over already weights BG by (1 - FG alpha). */
+        .bg_alpha_fix_val = LV_OPA_COVER,
         .fg_rgb_swap = 0,
         .fg_byte_swap = 0,
         .fg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        .fg_alpha_fix_val = opa,
+        .fg_alpha_fix_val = opa >= LV_OPA_MAX ? LV_OPA_COVER : opa,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 
@@ -240,13 +396,17 @@ static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area
 
 static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc)
 {
+    if (s_rgb565.previous_handler) {
+        s_rgb565.previous_handler(t, dsc);
+        return;
+    }
     lv_layer_t *layer = t->target_layer;
     if (!layer || !layer->draw_buf) {
         return;
     }
 
     lv_area_t blend_area;
-    if (!lv_area_intersect(&blend_area, dsc->blend_area, &t->clip_area)) {
+    if (!ppa_get_blend_area(&blend_area, t, dsc)) {
         return;
     }
 
@@ -288,13 +448,13 @@ static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend
     image_dsc.opa = dsc->opa;
     image_dsc.blend_mode = dsc->blend_mode;
     const lv_area_t *src_area = dsc->src_area ? dsc->src_area : dsc->blend_area;
-    uint32_t src_px_size = lv_color_format_get_size(dsc->src_color_format);
-    image_dsc.src_stride = dsc->src_stride ? dsc->src_stride : (lv_area_get_width(src_area) * src_px_size);
+    uint32_t src_bpp = lv_color_format_get_bpp(dsc->src_color_format);
+    image_dsc.src_stride = dsc->src_stride ? dsc->src_stride : ((lv_area_get_width(src_area) * src_bpp + 7) >> 3);
     image_dsc.src_color_format = dsc->src_color_format;
 
     const uint8_t *src_buf = dsc->src_buf;
     src_buf += (size_t)(blend_area.y1 - src_area->y1) * image_dsc.src_stride;
-    src_buf += (size_t)(blend_area.x1 - src_area->x1) * src_px_size;
+    src_buf += ((size_t)(blend_area.x1 - src_area->x1) * src_bpp) >> 3;
     image_dsc.src_buf = src_buf;
 
     if (dsc->mask_buf == NULL || dsc->mask_res == LV_DRAW_SW_MASK_RES_FULL_COVER) {
@@ -308,12 +468,8 @@ static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend
 
     image_dsc.relative_area = blend_area;
     lv_area_move(&image_dsc.relative_area, -layer->buf_area.x1, -layer->buf_area.y1);
-    if (src_area) {
-        image_dsc.src_area = *src_area;
-        lv_area_move(&image_dsc.src_area, -layer->buf_area.x1, -layer->buf_area.y1);
-    } else {
-        lv_memset(&image_dsc.src_area, 0, sizeof(image_dsc.src_area));
-    }
+    image_dsc.src_area = *src_area;
+    lv_area_move(&image_dsc.src_area, -layer->buf_area.x1, -layer->buf_area.y1);
     image_dsc.dest_buf = lv_draw_layer_go_to_xy(layer,
                                                 blend_area.x1 - layer->buf_area.x1,
                                                 blend_area.y1 - layer->buf_area.y1);
@@ -337,13 +493,13 @@ static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc
     }
 
     lv_area_t block_area;
-    if (!_lv_area_intersect(&block_area, dsc->blend_area, &t->clip_area)) {
+    if (!ppa_get_blend_area(&block_area, t, dsc)) {
         return;
     }
 
-    /* PPA doesn't support complex masking */
-    if (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER &&
-            dsc->mask_res != LV_DRAW_SW_MASK_RES_UNKNOWN) {
+    /* PPA implements normal source-over and cannot apply a pixel mask. */
+    if (!ppa_task_enabled(t) || dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
+            (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER)) {
         lv_draw_ppa_v9_sw_fallback(t, dsc);
         return;
     }
@@ -477,13 +633,17 @@ static void ppa_fill_rgb888(uint8_t *bg_buf, const lv_area_t *bg_area,
 /* Software fallback for RGB888 destination. */
 static void lv_draw_ppa_v9_sw_fallback_rgb888(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc)
 {
+    if (s_rgb888.previous_handler) {
+        s_rgb888.previous_handler(t, dsc);
+        return;
+    }
     lv_layer_t *layer = t->target_layer;
     if (!layer || !layer->draw_buf) {
         return;
     }
 
     lv_area_t blend_area;
-    if (!lv_area_intersect(&blend_area, dsc->blend_area, &t->clip_area)) {
+    if (!ppa_get_blend_area(&blend_area, t, dsc)) {
         return;
     }
 
@@ -522,13 +682,13 @@ static void lv_draw_ppa_v9_sw_fallback_rgb888(lv_draw_task_t *t, const lv_draw_s
     image_dsc.blend_mode = dsc->blend_mode;
     image_dsc.src_color_format = dsc->src_color_format;
     const lv_area_t *src_area = dsc->src_area ? dsc->src_area : dsc->blend_area;
-    uint32_t src_px_size = lv_color_format_get_size(dsc->src_color_format);
+    uint32_t src_bpp = lv_color_format_get_bpp(dsc->src_color_format);
     image_dsc.src_stride = dsc->src_stride ? dsc->src_stride
-                           : (lv_area_get_width(src_area) * src_px_size);
+                           : ((lv_area_get_width(src_area) * src_bpp + 7) >> 3);
 
     const uint8_t *src_buf = dsc->src_buf;
     src_buf += (size_t)(blend_area.y1 - src_area->y1) * image_dsc.src_stride;
-    src_buf += (size_t)(blend_area.x1 - src_area->x1) * src_px_size;
+    src_buf += ((size_t)(blend_area.x1 - src_area->x1) * src_bpp) >> 3;
     image_dsc.src_buf = src_buf;
 
     if (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER) {
@@ -540,10 +700,8 @@ static void lv_draw_ppa_v9_sw_fallback_rgb888(lv_draw_task_t *t, const lv_draw_s
     }
     image_dsc.relative_area = blend_area;
     lv_area_move(&image_dsc.relative_area, -layer->buf_area.x1, -layer->buf_area.y1);
-    if (src_area) {
-        image_dsc.src_area = *src_area;
-        lv_area_move(&image_dsc.src_area, -layer->buf_area.x1, -layer->buf_area.y1);
-    }
+    image_dsc.src_area = *src_area;
+    lv_area_move(&image_dsc.src_area, -layer->buf_area.x1, -layer->buf_area.y1);
     image_dsc.dest_buf = lv_draw_layer_go_to_xy(layer,
                                                 blend_area.x1 - layer->buf_area.x1,
                                                 blend_area.y1 - layer->buf_area.y1);
@@ -565,12 +723,12 @@ static void lv_draw_ppa_v9_handler_rgb888(lv_draw_task_t *t, const lv_draw_sw_bl
     }
 
     lv_area_t block_area;
-    if (!_lv_area_intersect(&block_area, dsc->blend_area, &t->clip_area)) {
+    if (!ppa_get_blend_area(&block_area, t, dsc)) {
         return;
     }
 
-    if (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER &&
-            dsc->mask_res != LV_DRAW_SW_MASK_RES_UNKNOWN) {
+    if (!ppa_task_enabled(t) || dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
+            (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER)) {
         lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
         return;
     }

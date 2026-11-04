@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,12 +21,14 @@
 #include "lvgl_port_alignment.h"
 #include "common/display_bridge_common.h"
 #include "esp_log.h"
+#include "src/core/lv_refr.h"
 #include "src/draw/sw/lv_draw_sw.h"
 #include "src/draw/sw/lv_draw_sw_blend.h"
 
 static ppa_client_handle_t s_blend_handle = NULL;
 static ppa_client_handle_t s_fill_handle = NULL;
-static lv_disp_drv_t *s_bound_drv = NULL;
+/* Draw contexts share the clients; LVGL's lock serializes their lifetime. */
+static unsigned s_context_count;
 
 static size_t ppa_get_cache_line_size(const void *addr);
 static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size);
@@ -43,10 +45,10 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
 
 void lvgl_port_ppa_v8_init(lv_disp_drv_t *drv)
 {
-    if (!drv || sizeof(lv_color_t) != 2) {
+    /* PPA fills/blends produce native RGB565, not LVGL's byte-swapped layout. */
+    if (!drv || sizeof(lv_color_t) != 2 || LV_COLOR_16_SWAP) {
         return;
     }
-    s_bound_drv = drv;
     drv->draw_ctx_size = sizeof(lv_draw_sw_ctx_t);
     drv->draw_ctx_init = lv_draw_ppa_ctx_init;
     drv->draw_ctx_deinit = lv_draw_ppa_ctx_deinit;
@@ -165,9 +167,10 @@ static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_col
             .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
         },
         .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        .bg_alpha_fix_val = 255 - opa,
+        /* RGB565 is opaque; source-over already weights BG by (1 - FG alpha). */
+        .bg_alpha_fix_val = LV_OPA_COVER,
         .fg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        .fg_alpha_fix_val = opa,
+        .fg_alpha_fix_val = opa >= LV_OPA_MAX ? LV_OPA_COVER : opa,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
 
@@ -223,6 +226,7 @@ static void lv_draw_ppa_ctx_init(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx)
         ESP_ERROR_CHECK(ppa_register_client(&blend_cfg, &s_blend_handle));
         ESP_ERROR_CHECK(ppa_register_client(&fill_cfg, &s_fill_handle));
     }
+    s_context_count++;
 
     lv_draw_sw_ctx_t *sw_ctx = (lv_draw_sw_ctx_t *)draw_ctx;
     sw_ctx->blend = lv_draw_ppa_blend;
@@ -238,7 +242,10 @@ static void lv_draw_ppa_ctx_deinit(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx)
 {
     lv_draw_sw_deinit_ctx(drv, draw_ctx);
 
-    if (drv == s_bound_drv) {
+    if (s_context_count > 0) {
+        s_context_count--;
+    }
+    if (s_context_count == 0) {
         if (s_blend_handle) {
             ESP_ERROR_CHECK(ppa_unregister_client(s_blend_handle));
             s_blend_handle = NULL;
@@ -269,9 +276,16 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    /* PPA doesn't support complex masking */
-    if (dsc->mask_buf && dsc->mask_res != LV_DRAW_MASK_RES_FULL_COVER &&
-            dsc->mask_res != LV_DRAW_MASK_RES_UNKNOWN) {
+    /* Alpha layers use ARGB8565; custom pixel callbacks own the buffer layout. */
+    lv_disp_t *disp = _lv_refr_get_disp_refreshing();
+    if (disp->driver->screen_transp || disp->driver->set_px_cb) {
+        lv_draw_sw_blend_basic(draw_ctx, dsc);
+        return;
+    }
+
+    /* PPA implements normal source-over and cannot apply a pixel mask. */
+    if (dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
+            (dsc->mask_buf && dsc->mask_res != LV_DRAW_MASK_RES_FULL_COVER)) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
@@ -296,12 +310,9 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
 
     /* Image blending: RGB565 format only */
     if (dsc->src_buf) {
-        /* Calculate source stride - handle both line buffer and full buffer cases */
-        lv_coord_t src_w = lv_area_get_width(dsc->blend_area);
+        /* LVGL v8 sources use the unclipped blend area's width as their stride. */
+        uint16_t src_stride_px = lv_area_get_width(dsc->blend_area);
         lv_coord_t block_h = lv_area_get_height(&block_area);
-
-        /* Detect stride: if source appears to be a line buffer, use block width as stride */
-        uint16_t src_stride_px = src_w;
 
         lv_coord_t src_off_y = block_area.y1 - dsc->blend_area->y1;
         lv_coord_t src_off_x = block_area.x1 - dsc->blend_area->x1;

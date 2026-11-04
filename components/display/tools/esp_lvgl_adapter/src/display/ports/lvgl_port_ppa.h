@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -31,6 +31,10 @@ void lvgl_port_ppa_v8_init(lv_disp_drv_t *drv);
 #else
 /**
  * @brief Initialize PPA acceleration for LVGL v9 display
+ *
+ * Display deletion restores unused blend handlers and releases shared clients
+ * after their last display. Unowned offscreen tasks use software drawing.
+ * Serialize display setup/deletion with LVGL drawing.
  *
  * @param display Display to enable PPA acceleration for
  */

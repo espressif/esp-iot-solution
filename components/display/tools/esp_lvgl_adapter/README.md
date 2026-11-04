@@ -732,7 +732,10 @@ Configure via `idf.py menuconfig`:
 
 ### PPA/DMA2D Acceleration
 
-- With PPA acceleration, set `LV_DRAW_SW_DRAW_UNIT_CNT == 1` for best behavior
+- `profile.enable_ppa_accel` enables PPA drawing only for that display. Unowned offscreen tasks use software; set the draw descriptor's `base.obj` to its owning object when drawing to a canvas.
+- Non-normal blend modes, masks and premultiplied formats use software. LVGL v8 also uses software for byte-swapped RGB565, transparent targets and custom pixel callbacks.
+- Shared drawing clients and previous blend handlers are released or restored when the last accelerated display is removed.
+- LVGL v9 PPA drawing requires `LV_DRAW_SW_DRAW_UNIT_CNT == 1`.
 - Rotation uses PPA when possible; otherwise CPU copy with cache-friendly blocks
 - **Effect**:
   - PPA reduces CPU load
