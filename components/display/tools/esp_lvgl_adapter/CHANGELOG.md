@@ -3,6 +3,8 @@
 ## v0.7.5 (2026-11-03)
 
 * Fix LVGL v8/v9 PPA opacity, software fallback and display resource cleanup.
+* Accelerate LVGL v9 straight ARGB8888-to-RGB565 blends and single-color A8 masks.
+* Reduce PPA overhead for small draws and software fallbacks.
 
 ## v0.7.4 (2026-10-28)
 

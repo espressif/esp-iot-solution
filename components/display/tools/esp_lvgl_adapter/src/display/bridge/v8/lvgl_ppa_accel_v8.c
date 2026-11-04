@@ -261,8 +261,8 @@ static void lv_draw_ppa_ctx_deinit(lv_disp_drv_t *drv, lv_draw_ctx_t *draw_ctx)
  * @brief PPA hardware acceleration handler for LVGL v8 blending operations
  *
  * Accelerates RGB565 image blending and opaque fills. Falls back to CPU for:
- * - Semi-transparent fills (PPA has ~28% overhead: redundant DMA + cache sync)
- * - Complex masking, small areas (<100px), unsupported formats
+ * - Semi-transparent fills, masks and custom pixel layouts
+ * - Small blends and copies below the measured hardware cutoffs
  */
 static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_dsc_t *dsc)
 {
@@ -290,8 +290,8 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    /* Small areas: DMA setup overhead exceeds benefit */
-    if (lv_area_get_size(&block_area) <= 100) {
+    if ((!dsc->src_buf && dsc->opa < LV_OPA_MAX) ||
+            !lvgl_port_ppa_use_hw(lv_area_get_size(&block_area), dsc->opa >= LV_OPA_MAX, draw_ctx->buf)) {
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
@@ -304,9 +304,6 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         lv_draw_sw_blend_basic(draw_ctx, dsc);
         return;
     }
-
-    /* Writeback cache before PPA reads */
-    ppa_cache_sync_region(&block_area, draw_ctx->buf_area, draw_ctx->buf, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
     /* Image blending: RGB565 format only */
     if (dsc->src_buf) {
@@ -330,6 +327,7 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         src_ptr8 += (size_t)src_off_y * src_stride_px * sizeof(lv_color_t);
 
         size_t src_bytes = (size_t)src_stride_px * block_h * sizeof(lv_color_t);
+        ppa_cache_sync_region(&block_area, draw_ctx->buf_area, draw_ctx->buf, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
         ppa_cache_msync_addr(src_ptr8, src_bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 
         ppa_blend(draw_ctx->buf, draw_ctx->buf_area, dsc->src_buf, dsc->blend_area, src_stride_px, &block_area, dsc->opa);
@@ -337,14 +335,9 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
-    if (dsc->opa >= LV_OPA_MAX) {
-        ppa_fill(draw_ctx->buf, draw_ctx->buf_area, &block_area, dsc->color);
-        ppa_cache_invalidate(&block_area, draw_ctx->buf_area, draw_ctx->buf);
-        return;
-    }
-
-    /* Semi-transparent fills: use CPU (more efficient than PPA) */
-    lv_draw_sw_blend_basic(draw_ctx, dsc);
+    ppa_cache_sync_region(&block_area, draw_ctx->buf_area, draw_ctx->buf, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    ppa_fill(draw_ctx->buf, draw_ctx->buf_area, &block_area, dsc->color);
+    ppa_cache_invalidate(&block_area, draw_ctx->buf_area, draw_ctx->buf);
 }
 
 #else /* !CONFIG_SOC_PPA_SUPPORTED */

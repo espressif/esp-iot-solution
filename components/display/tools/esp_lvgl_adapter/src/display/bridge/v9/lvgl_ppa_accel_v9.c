@@ -63,9 +63,7 @@ static bool ppa_buffer_cache_aligned(const void *addr);
 static void ppa_cache_msync_addr(const void *addr, size_t size, int flag);
 static void ppa_cache_sync_region(const lv_area_t *area, const lv_area_t *buf_area, void *buf, uint32_t px_size, int flag);
 static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_area, void *buf, uint32_t px_size);
-static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_color_t *fg_buf,
-                      const lv_area_t *fg_area, uint16_t fg_stride_px, const lv_area_t *block_area, lv_opa_t opa);
-static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area_t *block_area, lv_color_t color);
+static bool ppa_try_draw(lv_draw_task_t *task, const lv_draw_sw_blend_dsc_t *dsc, lv_color_format_t cf);
 static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc);
 
 void lvgl_port_ppa_v9_init(lv_display_t *display)
@@ -303,95 +301,165 @@ static void ppa_cache_invalidate(const lv_area_t *area, const lv_area_t *buf_are
     ppa_cache_sync_region(area, buf_area, buf, px_size, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
 }
 
-static void ppa_blend(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_color_t *fg_buf,
-                      const lv_area_t *fg_area, uint16_t fg_stride_px, const lv_area_t *block_area, lv_opa_t opa)
+/* Both opaque destination formats share the same eligibility and cache rules.
+ * A mask can be a PPA A8 foreground only for a single fill color; images with
+ * an independent mask (including planar RGB565A8) still use software. */
+static bool ppa_try_draw(lv_draw_task_t *task, const lv_draw_sw_blend_dsc_t *dsc, lv_color_format_t cf)
 {
-    uint16_t bg_w = lv_area_get_width(bg_area);
-    uint16_t bg_h = lv_area_get_height(bg_area);
-    uint16_t bg_off_x = block_area->x1 - bg_area->x1;
-    uint16_t bg_off_y = block_area->y1 - bg_area->y1;
+    lv_layer_t *layer = task->target_layer;
+    if (!layer || !layer->draw_buf || layer->color_format != cf ||
+            !ppa_task_enabled(task) || dsc->blend_mode != LV_BLEND_MODE_NORMAL) {
+        return false;
+    }
 
-    uint16_t block_w = lv_area_get_width(block_area);
-    uint16_t block_h = lv_area_get_height(block_area);
-    uint16_t fg_w = fg_stride_px;
-    uint16_t fg_h = lv_area_get_height(fg_area);
-    uint16_t fg_off_x = block_area->x1 - fg_area->x1;
-    uint16_t fg_off_y = block_area->y1 - fg_area->y1;
+    bool masked = dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER;
+    if (dsc->src_buf) {
+        if (masked || (dsc->src_color_format != LV_COLOR_FORMAT_ARGB8888 &&
+                       !(cf == LV_COLOR_FORMAT_RGB565 && dsc->src_color_format == LV_COLOR_FORMAT_RGB565))) {
+            return false;
+        }
+    } else if ((!masked && dsc->opa < LV_OPA_MAX) ||
+               (masked && (!dsc->mask_area || dsc->mask_stride < 0))) {
+        return false;
+    }
 
-    size_t out_buffer_size = ppa_get_aligned_buffer_size(bg_buf, (size_t)2 * bg_w * bg_h);
+    lv_area_t block;
+    if (!ppa_get_blend_area(&block, task, dsc)) {
+        return true;
+    }
+    uint8_t *buffer = layer->draw_buf->data;
+    bool copy = !masked && dsc->opa >= LV_OPA_MAX &&
+                (!dsc->src_buf || dsc->src_color_format == LV_COLOR_FORMAT_RGB565);
+    if (!buffer || !lvgl_port_ppa_use_hw(lv_area_get_size(&block), copy, buffer)) {
+        return false;
+    }
+#if CONFIG_IDF_TARGET_ESP32P4
+    /* Sparse RGB888 PSRAM masks stay faster in software at medium sizes. */
+    if (masked && cf == LV_COLOR_FORMAT_RGB888 &&
+            lv_area_get_size(&block) < 256 * 256 && esp_ptr_external_ram(buffer)) {
+        return false;
+    }
+#endif
 
-    ppa_blend_oper_config_t cfg = {
-        .in_bg = {
-            .buffer = bg_buf,
-            .pic_w = bg_w,
-            .pic_h = bg_h,
-            .block_w = block_w,
-            .block_h = block_h,
-            .block_offset_x = bg_off_x,
-            .block_offset_y = bg_off_y,
-            .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
-        },
-        .in_fg = {
-            .buffer = fg_buf,
-            .pic_w = fg_w,
-            .pic_h = fg_h,
-            .block_w = block_w,
-            .block_h = block_h,
-            .block_offset_x = fg_off_x,
-            .block_offset_y = fg_off_y,
-            .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
-        },
-        .out = {
-            .buffer = bg_buf,
-            .buffer_size = out_buffer_size,
-            .pic_w = bg_w,
-            .pic_h = bg_h,
-            .block_offset_x = bg_off_x,
-            .block_offset_y = bg_off_y,
-            .blend_cm = PPA_BLEND_COLOR_MODE_RGB565,
-        },
-        .bg_rgb_swap = 0,
-        .bg_byte_swap = 0,
-        .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        /* RGB565 is opaque; source-over already weights BG by (1 - FG alpha). */
-        .bg_alpha_fix_val = LV_OPA_COVER,
-        .fg_rgb_swap = 0,
-        .fg_byte_swap = 0,
-        .fg_alpha_update_mode = PPA_ALPHA_FIX_VALUE,
-        .fg_alpha_fix_val = opa >= LV_OPA_MAX ? LV_OPA_COVER : opa,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
+    uint32_t width = lv_area_get_width(&layer->buf_area);
+    uint32_t height = lv_area_get_height(&layer->buf_area);
+    uint32_t bytes = cf == LV_COLOR_FORMAT_RGB565 ? 2 : 3;
+    /* PPA's DMA2D picture dimensions are 14-bit on both supported targets. */
+    const uint32_t max_dimension = 0x3FFF;
+    if (!width || !height || width > max_dimension || height > max_dimension ||
+            block.x1 < layer->buf_area.x1 || block.y1 < layer->buf_area.y1 ||
+            block.x2 > layer->buf_area.x2 || block.y2 > layer->buf_area.y2 ||
+            layer->draw_buf->header.stride != width * bytes ||
+            !ppa_buffer_cache_aligned(buffer) ||
+            !display_bridge_dma2d_window_is_compatible(buffer, width,
+                                                       block.x1 - layer->buf_area.x1,
+                                                       lv_area_get_width(&block), bytes)) {
+        return false;
+    }
+    size_t buffer_size = ppa_get_aligned_buffer_size(buffer, (size_t)width * height * bytes);
+    if (buffer_size > layer->draw_buf->data_size) {
+        return false;
+    }
 
-    ESP_ERROR_CHECK(ppa_do_blend(s_blend_handle, &cfg));
-}
+    const void *source = dsc->src_buf ? dsc->src_buf : masked ? dsc->mask_buf : NULL;
+    uint32_t source_bytes = 0;
+    uint32_t source_stride = 0;
+    uint32_t source_height = 0;
+    uint32_t source_x = 0;
+    uint32_t source_y = 0;
+    if (source) {
+        const lv_area_t *source_area = masked ? dsc->mask_area : dsc->src_area ? dsc->src_area : dsc->blend_area;
+        source_bytes = masked ? 1 : dsc->src_color_format == LV_COLOR_FORMAT_RGB565 ? 2 : 4;
+        source_height = lv_area_get_height(source_area);
+        source_stride = masked ? (uint32_t)dsc->mask_stride : dsc->src_stride;
+        if (!source_stride) {
+            source_stride = lv_area_get_width(source_area) * source_bytes;
+        }
+        source_x = block.x1 - source_area->x1;
+        source_y = block.y1 - source_area->y1;
+        if (!source_height || source_height > max_dimension || source_stride % source_bytes ||
+                source_stride / source_bytes > max_dimension ||
+                source_x + lv_area_get_width(&block) > source_stride / source_bytes ||
+                source_y + lv_area_get_height(&block) > source_height ||
+                !display_bridge_dma2d_window_is_compatible(source, source_stride / source_bytes,
+                                                           source_x, lv_area_get_width(&block), source_bytes)) {
+            return false;
+        }
+        /* DMA cannot preserve general overlapping image/mask reads. */
+        uintptr_t src = (uintptr_t)source;
+        uintptr_t dst = (uintptr_t)buffer;
+        size_t source_size = (size_t)source_stride * source_height;
+        if (src < dst + buffer_size && dst < src + source_size) {
+            return false;
+        }
+    }
 
-static void ppa_fill(lv_color_t *bg_buf, const lv_area_t *bg_area, const lv_area_t *block_area, lv_color_t color)
-{
-    uint16_t bg_w = lv_area_get_width(bg_area);
-    uint16_t bg_h = lv_area_get_height(bg_area);
-    size_t out_buffer_size = ppa_get_aligned_buffer_size(bg_buf, (size_t)2 * bg_w * bg_h);
-
-    lv_color32_t c32 = lv_color_to_32(color, LV_OPA_COVER);
-    uint32_t argb = ((uint32_t)c32.alpha << 24) | ((uint32_t)c32.red << 16) |
-                    ((uint32_t)c32.green << 8) | ((uint32_t)c32.blue);
-
-    ppa_fill_oper_config_t cfg = {
-        .out = {
-            .buffer = bg_buf,
-            .buffer_size = out_buffer_size,
-            .pic_w = bg_w,
-            .pic_h = bg_h,
-            .block_offset_x = block_area->x1 - bg_area->x1,
-            .block_offset_y = block_area->y1 - bg_area->y1,
-            .fill_cm = PPA_FILL_COLOR_MODE_RGB565,
-        },
-        .fill_block_w = lv_area_get_width(block_area),
-        .fill_block_h = lv_area_get_height(block_area),
-        .fill_argb_color.val = argb,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
-
-    ESP_ERROR_CHECK(ppa_do_fill(s_fill_handle, &cfg));
+    ppa_blend_color_mode_t dest = cf == LV_COLOR_FORMAT_RGB565 ?
+                                  PPA_BLEND_COLOR_MODE_RGB565 : PPA_BLEND_COLOR_MODE_RGB888;
+    ppa_cache_sync_region(&block, &layer->buf_area, buffer, bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+    if (source) {
+        const uint8_t *row = (const uint8_t *)source + (size_t)source_y * source_stride;
+        ppa_cache_msync_addr(row, (size_t)source_stride * lv_area_get_height(&block), ESP_CACHE_MSYNC_FLAG_DIR_C2M);
+        lv_color32_t color = {0};
+        if (masked) {
+            color = lv_color_to_32(dsc->color, LV_OPA_COVER);
+        }
+        bool rgb565 = !masked && dsc->src_color_format == LV_COLOR_FORMAT_RGB565;
+        ppa_blend_color_mode_t foreground = masked ? PPA_BLEND_COLOR_MODE_A8 :
+                                            rgb565 ? PPA_BLEND_COLOR_MODE_RGB565 : PPA_BLEND_COLOR_MODE_ARGB8888;
+        ppa_alpha_update_mode_t alpha = PPA_ALPHA_NO_CHANGE;
+        if (rgb565) {
+            alpha = PPA_ALPHA_FIX_VALUE;
+        } else if (dsc->opa < LV_OPA_MAX) {
+            alpha = PPA_ALPHA_SCALE;
+        }
+        ppa_blend_oper_config_t cfg = {
+            .in_bg = {
+                .buffer = buffer, .pic_w = width, .pic_h = height,
+                .block_w = lv_area_get_width(&block), .block_h = lv_area_get_height(&block),
+                .block_offset_x = block.x1 - layer->buf_area.x1, .block_offset_y = block.y1 - layer->buf_area.y1,
+                .blend_cm = dest,
+            },
+            .in_fg = {
+                .buffer = source, .pic_w = source_stride / source_bytes, .pic_h = source_height,
+                .block_w = lv_area_get_width(&block), .block_h = lv_area_get_height(&block),
+                .block_offset_x = source_x, .block_offset_y = source_y,
+                .blend_cm = foreground,
+            },
+            .out = {
+                .buffer = buffer, .buffer_size = buffer_size, .pic_w = width, .pic_h = height,
+                .block_offset_x = block.x1 - layer->buf_area.x1, .block_offset_y = block.y1 - layer->buf_area.y1,
+                .blend_cm = dest,
+            },
+            .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE, .bg_alpha_fix_val = LV_OPA_COVER,
+            .fg_alpha_update_mode = alpha,
+            .fg_fix_rgb_val = {.r = color.red, .g = color.green, .b = color.blue},
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+        if (rgb565) {
+            cfg.fg_alpha_fix_val = dsc->opa >= LV_OPA_MAX ? LV_OPA_COVER : dsc->opa;
+        } else if (dsc->opa < LV_OPA_MAX) {
+            cfg.fg_alpha_scale_ratio = (float)dsc->opa / 255.0f;
+        }
+        ESP_ERROR_CHECK(ppa_do_blend(s_blend_handle, &cfg));
+    } else {
+        lv_color32_t color = lv_color_to_32(dsc->color, LV_OPA_COVER);
+        uint32_t argb = ((uint32_t)color.alpha << 24) | ((uint32_t)color.red << 16) |
+                        ((uint32_t)color.green << 8) | color.blue;
+        ppa_fill_oper_config_t cfg = {
+            .out = {
+                .buffer = buffer, .buffer_size = buffer_size, .pic_w = width, .pic_h = height,
+                .block_offset_x = block.x1 - layer->buf_area.x1, .block_offset_y = block.y1 - layer->buf_area.y1,
+                .fill_cm = cf == LV_COLOR_FORMAT_RGB565 ? PPA_FILL_COLOR_MODE_RGB565 : PPA_FILL_COLOR_MODE_RGB888,
+            },
+            .fill_block_w = lv_area_get_width(&block), .fill_block_h = lv_area_get_height(&block),
+            .fill_argb_color.val = argb,
+            .mode = PPA_TRANS_MODE_BLOCKING,
+        };
+        ESP_ERROR_CHECK(ppa_do_fill(s_fill_handle, &cfg));
+    }
+    ppa_cache_invalidate(&block, &layer->buf_area, buffer, bytes);
+    return true;
 }
 
 static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc)
@@ -477,157 +545,11 @@ static void lv_draw_ppa_v9_sw_fallback(lv_draw_task_t *t, const lv_draw_sw_blend
     lv_draw_sw_blend_image_to_rgb565(&image_dsc);
 }
 
-/**
- * @brief PPA hardware acceleration handler for LVGL v9 blending operations
- *
- * Accelerates RGB565 image blending and opaque fills. Falls back to CPU for:
- * - Semi-transparent fills (PPA has ~28% overhead: redundant DMA + cache sync)
- * - Complex masking, small areas (<100px), unsupported formats
- */
 static void lv_draw_ppa_v9_handler(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc)
 {
-    lv_layer_t *layer = t->target_layer;
-    if (!layer || !layer->draw_buf || layer->color_format != LV_COLOR_FORMAT_RGB565) {
+    if (!ppa_try_draw(t, dsc, LV_COLOR_FORMAT_RGB565)) {
         lv_draw_ppa_v9_sw_fallback(t, dsc);
-        return;
     }
-
-    lv_area_t block_area;
-    if (!ppa_get_blend_area(&block_area, t, dsc)) {
-        return;
-    }
-
-    /* PPA implements normal source-over and cannot apply a pixel mask. */
-    if (!ppa_task_enabled(t) || dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
-            (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER)) {
-        lv_draw_ppa_v9_sw_fallback(t, dsc);
-        return;
-    }
-
-    /* Small areas: DMA setup overhead exceeds benefit */
-    if (lv_area_get_size(&block_area) <= 100) {
-        lv_draw_ppa_v9_sw_fallback(t, dsc);
-        return;
-    }
-
-    lv_color_t *bg_buf = (lv_color_t *)layer->draw_buf->data;
-    if (!bg_buf || !ppa_buffer_cache_aligned(bg_buf) ||
-            layer->draw_buf->header.stride != (uint32_t)lv_area_get_width(&layer->buf_area) * 2 ||
-            !display_bridge_dma2d_window_is_compatible(bg_buf, lv_area_get_width(&layer->buf_area),
-                                                       block_area.x1 - layer->buf_area.x1,
-                                                       lv_area_get_width(&block_area), 2)) {
-        lv_draw_ppa_v9_sw_fallback(t, dsc);
-        return;
-    }
-
-    if (block_area.x1 < layer->buf_area.x1 || block_area.y1 < layer->buf_area.y1 ||
-            block_area.x2 > layer->buf_area.x2 || block_area.y2 > layer->buf_area.y2) {
-        lv_draw_ppa_v9_sw_fallback(t, dsc);
-        return;
-    }
-
-    /* Writeback cache before PPA reads (RGB565 destination = 2 bytes/pixel) */
-    ppa_cache_sync_region(&block_area, &layer->buf_area, bg_buf, 2, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-
-    /* Image blending: RGB565 format only */
-    if (dsc->src_buf) {
-        if (dsc->src_color_format != LV_COLOR_FORMAT_RGB565) {
-            lv_draw_ppa_v9_sw_fallback(t, dsc);
-            return;
-        }
-
-        const lv_area_t *src_area = dsc->src_area ? dsc->src_area : dsc->blend_area;
-        uint32_t src_px_size = lv_color_format_get_size(dsc->src_color_format);
-        size_t src_stride = dsc->src_stride ? dsc->src_stride : (lv_area_get_width(src_area) * src_px_size);
-
-        if (src_px_size == 0 || (src_stride % src_px_size) != 0) {
-            lv_draw_ppa_v9_sw_fallback(t, dsc);
-            return;
-        }
-
-        lv_coord_t src_off_x = block_area.x1 - src_area->x1;
-        lv_coord_t src_off_y = block_area.y1 - src_area->y1;
-        if (src_off_x < 0 || src_off_y < 0 ||
-                (size_t)src_off_x + lv_area_get_width(&block_area) > src_stride / src_px_size ||
-                src_off_y + lv_area_get_height(&block_area) > lv_area_get_height(src_area) ||
-                !display_bridge_dma2d_window_is_compatible(dsc->src_buf, src_stride / src_px_size,
-                                                           src_off_x, lv_area_get_width(&block_area),
-                                                           src_px_size)) {
-            lv_draw_ppa_v9_sw_fallback(t, dsc);
-            return;
-        }
-
-        /* Writeback source buffer cache */
-        const uint8_t *src_ptr8 = (const uint8_t *)dsc->src_buf + (size_t)src_off_y * src_stride;
-        size_t src_bytes = src_stride * lv_area_get_height(&block_area);
-        ppa_cache_msync_addr(src_ptr8, src_bytes, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-
-        uint16_t src_stride_px = src_stride / src_px_size;
-        ppa_blend(bg_buf, &layer->buf_area, (const lv_color_t *)dsc->src_buf,
-                  src_area, src_stride_px, &block_area, dsc->opa);
-
-        /* Invalidate cache after PPA writes */
-        ppa_cache_invalidate(&block_area, &layer->buf_area, bg_buf, 2);
-        return;
-    }
-
-    if (dsc->opa >= LV_OPA_MAX) {
-        ppa_fill(bg_buf, &layer->buf_area, &block_area, dsc->color);
-        ppa_cache_invalidate(&block_area, &layer->buf_area, bg_buf, 2);
-        return;
-    }
-
-    /* Semi-transparent fills: use CPU (more efficient than PPA) */
-    lv_draw_ppa_v9_sw_fallback(t, dsc);
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
- * RGB888 display acceleration
- *
- * PPA-accelerated paths (fall back to CPU otherwise):
- *   - ARGB8888 source : per-pixel alpha blend onto the RGB888 framebuffer
- *                       (single PPA blend op; pairs with the decoder option
- *                        CONFIG_ESP_LV_DECODER_PJPG_HW_ALPHA_BLEND).
- *   - Opaque RGB565 / RGB888 source : CPU fallback. The SW blend descriptor
- *                                     does not expose image draw flags such as
- *                                     tile mode, and tiled images require
- *                                     LVGL's normal source clipping path.
- *   - Opaque fill : PPA fill.
- *
- * RGB565A8 sources fall back to CPU on purpose: the PPA route for planar
- * RGB565A8 (SRM + per-pixel CPU alpha insert + blend) measured slower than the
- * CPU blend and needs a full-frame ARGB scratch buffer.
- * ────────────────────────────────────────────────────────────────────────── */
-
-/* PPA fill: solid color into RGB888 buffer. */
-static void ppa_fill_rgb888(uint8_t *bg_buf, const lv_area_t *bg_area,
-                            const lv_area_t *block_area, lv_color_t color)
-{
-    uint32_t bg_w = lv_area_get_width(bg_area);
-    uint32_t bg_h = lv_area_get_height(bg_area);
-    size_t out_buf_size = ppa_get_aligned_buffer_size(bg_buf, (size_t)bg_w * bg_h * 3);
-
-    lv_color32_t c32 = lv_color_to_32(color, LV_OPA_COVER);
-    uint32_t argb = ((uint32_t)c32.alpha << 24) | ((uint32_t)c32.red << 16) |
-                    ((uint32_t)c32.green << 8) | ((uint32_t)c32.blue);
-
-    ppa_fill_oper_config_t cfg = {
-        .out = {
-            .buffer = bg_buf,
-            .buffer_size = out_buf_size,
-            .pic_w = bg_w,
-            .pic_h = bg_h,
-            .block_offset_x = block_area->x1 - bg_area->x1,
-            .block_offset_y = block_area->y1 - bg_area->y1,
-            .fill_cm = PPA_FILL_COLOR_MODE_RGB888,
-        },
-        .fill_block_w = lv_area_get_width(block_area),
-        .fill_block_h = lv_area_get_height(block_area),
-        .fill_argb_color.val = argb,
-        .mode = PPA_TRANS_MODE_BLOCKING,
-    };
-
-    ESP_ERROR_CHECK(ppa_do_fill(s_fill_handle, &cfg));
 }
 
 /* Software fallback for RGB888 destination. */
@@ -708,151 +630,11 @@ static void lv_draw_ppa_v9_sw_fallback_rgb888(lv_draw_task_t *t, const lv_draw_s
     lv_draw_sw_blend_image_to_rgb888(&image_dsc, 3);
 }
 
-/*
- * @brief PPA hardware acceleration handler for RGB888 display.
- *
- * Falls back to software for: masks, small areas (<100px), unsupported formats
- * (including planar RGB565A8) and semi-transparent fills.
- */
 static void lv_draw_ppa_v9_handler_rgb888(lv_draw_task_t *t, const lv_draw_sw_blend_dsc_t *dsc)
 {
-    lv_layer_t *layer = t->target_layer;
-    if (!layer || !layer->draw_buf || layer->color_format != LV_COLOR_FORMAT_RGB888) {
+    if (!ppa_try_draw(t, dsc, LV_COLOR_FORMAT_RGB888)) {
         lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
     }
-
-    lv_area_t block_area;
-    if (!ppa_get_blend_area(&block_area, t, dsc)) {
-        return;
-    }
-
-    if (!ppa_task_enabled(t) || dsc->blend_mode != LV_BLEND_MODE_NORMAL ||
-            (dsc->mask_buf && dsc->mask_res != LV_DRAW_SW_MASK_RES_FULL_COVER)) {
-        lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
-    }
-
-    if (lv_area_get_size(&block_area) <= 100) {
-        lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
-    }
-
-    uint8_t *bg_buf = (uint8_t *)layer->draw_buf->data;
-    if (!bg_buf || !ppa_buffer_cache_aligned(bg_buf) ||
-            layer->draw_buf->header.stride != (uint32_t)lv_area_get_width(&layer->buf_area) * 3 ||
-            !display_bridge_dma2d_window_is_compatible(bg_buf, lv_area_get_width(&layer->buf_area),
-                                                       block_area.x1 - layer->buf_area.x1,
-                                                       lv_area_get_width(&block_area), 3)) {
-        lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
-    }
-
-    if (block_area.x1 < layer->buf_area.x1 || block_area.y1 < layer->buf_area.y1 ||
-            block_area.x2 > layer->buf_area.x2 || block_area.y2 > layer->buf_area.y2) {
-        lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
-    }
-
-    uint32_t block_w = lv_area_get_width(&block_area);
-    uint32_t block_h = lv_area_get_height(&block_area);
-    uint32_t bg_off_x = block_area.x1 - layer->buf_area.x1;
-    uint32_t bg_off_y = block_area.y1 - layer->buf_area.y1;
-    uint32_t bg_w = lv_area_get_width(&layer->buf_area);
-    uint32_t bg_h = lv_area_get_height(&layer->buf_area);
-
-    /* Writeback bg cache before PPA reads (RGB888 destination = 3 bytes/pixel) */
-    ppa_cache_sync_region(&block_area, &layer->buf_area, bg_buf, 3, ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-
-    /* ── Image blend path ─────────────────────────────────────────────── */
-    if (dsc->src_buf) {
-        const lv_area_t *src_area = dsc->src_area ? dsc->src_area : dsc->blend_area;
-        uint32_t img_w = lv_area_get_width(src_area);
-        uint32_t img_h = lv_area_get_height(src_area);
-        size_t out_buf_size = ppa_get_aligned_buffer_size(bg_buf, (size_t)bg_w * bg_h * 3);
-
-        /* LVGL does not pre-clip blend_area to src_area on the custom-handler path
-         * (unlike the default path in lv_draw_sw_blend). Guard the source bounds so
-         * PPA never reads outside the image (also avoids unsigned offset underflow). */
-        if (block_area.x1 < src_area->x1 || block_area.y1 < src_area->y1 ||
-                block_area.x2 > src_area->x2 || block_area.y2 > src_area->y2) {
-            lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-            return;
-        }
-        uint32_t off_x = block_area.x1 - src_area->x1;
-        uint32_t off_y = block_area.y1 - src_area->y1;
-
-        /* ── ARGB8888 source: direct PPA blend (per-pixel alpha, no CPU work) ── */
-        if (dsc->src_color_format == LV_COLOR_FORMAT_ARGB8888) {
-            uint32_t src_stride_bytes = dsc->src_stride ? dsc->src_stride : (img_w * 4);
-            uint32_t src_stride_px = src_stride_bytes / 4;
-            if (src_stride_bytes % 4 != 0 || off_x + block_w > src_stride_px ||
-                    !display_bridge_dma2d_window_is_compatible(dsc->src_buf, src_stride_px,
-                                                               off_x, block_w, 4)) {
-                lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-                return;
-            }
-
-            /* Write back only the block rows PPA will read (not the whole image). */
-            const uint8_t *src_start = (const uint8_t *)dsc->src_buf + (size_t)off_y * src_stride_bytes;
-            ppa_cache_msync_addr(src_start, (size_t)src_stride_bytes * block_h,
-                                 ESP_CACHE_MSYNC_FLAG_DIR_C2M);
-
-            ppa_blend_oper_config_t cfg = {
-                .in_bg = {
-                    .buffer = bg_buf, .pic_w = bg_w, .pic_h = bg_h,
-                    .block_w = block_w, .block_h = block_h,
-                    .block_offset_x = bg_off_x, .block_offset_y = bg_off_y,
-                    .blend_cm = PPA_BLEND_COLOR_MODE_RGB888,
-                },
-                .in_fg = {
-                    .buffer = (void *)dsc->src_buf,
-                    .pic_w = src_stride_px, .pic_h = img_h,
-                    .block_w = block_w, .block_h = block_h,
-                    .block_offset_x = off_x, .block_offset_y = off_y,
-                    .blend_cm = PPA_BLEND_COLOR_MODE_ARGB8888,
-                },
-                .out = {
-                    .buffer = bg_buf, .buffer_size = out_buf_size,
-                    .pic_w = bg_w, .pic_h = bg_h,
-                    .block_offset_x = bg_off_x, .block_offset_y = bg_off_y,
-                    .blend_cm = PPA_BLEND_COLOR_MODE_RGB888,
-                },
-                .bg_alpha_update_mode = PPA_ALPHA_FIX_VALUE, .bg_alpha_fix_val = LV_OPA_COVER,
-                .fg_alpha_update_mode = (dsc->opa >= LV_OPA_MAX) ? PPA_ALPHA_NO_CHANGE : PPA_ALPHA_SCALE,
-                .fg_alpha_scale_ratio = (float)dsc->opa / 255.0f,
-                .mode = PPA_TRANS_MODE_BLOCKING,
-            };
-            ESP_ERROR_CHECK(ppa_do_blend(s_blend_handle, &cfg));
-            ppa_cache_sync_region(&block_area, &layer->buf_area, bg_buf, 3, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-            return;
-        }
-
-        /* Opaque RGB565/RGB888 images can include tiled image draws. The SW
-         * custom blend descriptor does not expose the original image draw flags,
-         * so keep this path on CPU instead of using PPA SRM with incomplete
-         * source-coordinate context. */
-        if (dsc->opa >= LV_OPA_MAX &&
-                (dsc->src_color_format == LV_COLOR_FORMAT_RGB565 ||
-                 dsc->src_color_format == LV_COLOR_FORMAT_RGB888)) {
-            lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-            return;
-        }
-
-        /* Other source formats (e.g. planar RGB565A8): CPU blend. */
-        lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
-        return;
-    }
-
-    /* ── Opaque fill path ─────────────────────────────────────────────── */
-    if (dsc->opa >= LV_OPA_MAX) {
-        ppa_fill_rgb888(bg_buf, &layer->buf_area, &block_area, dsc->color);
-        ppa_cache_sync_region(&block_area, &layer->buf_area, bg_buf, 3, ESP_CACHE_MSYNC_FLAG_DIR_M2C);
-        return;
-    }
-
-    /* Semi-transparent fill: use CPU */
-    lv_draw_ppa_v9_sw_fallback_rgb888(t, dsc);
 }
 
 #else /* !CONFIG_SOC_PPA_SUPPORTED */

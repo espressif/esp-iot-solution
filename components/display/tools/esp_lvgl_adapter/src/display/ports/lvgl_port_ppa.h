@@ -12,6 +12,25 @@
  *      INCLUDES
  *********************/
 #include "lvgl.h"
+#include "soc/soc_caps.h"
+
+#if CONFIG_SOC_PPA_SUPPORTED
+#include "esp_memory_utils.h"
+
+/* Conservative cutoffs from P4/S31 SRAM and PSRAM measurements. Copies and
+ * opaque fills have cheap software paths, so reserve PPA for large PSRAM work. */
+static inline bool lvgl_port_ppa_use_hw(uint32_t pixels, bool copy, const void *buffer)
+{
+    if (copy) {
+        return pixels >= 128 * 1024 && esp_ptr_external_ram(buffer);
+    }
+#if CONFIG_IDF_TARGET_ESP32S31
+    return pixels >= 128 * 128;
+#else
+    return pixels >= 64 * 64;
+#endif
+}
+#endif
 
 #ifdef __cplusplus
 extern "C" {
