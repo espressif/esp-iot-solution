@@ -510,6 +510,7 @@ esp_err_t bldc_six_step_stop(bldc_six_step_handle_t handle)
 uint8_t bldc_six_step_operation(void *handle)
 {
     bldc_six_step_t *six_step = (bldc_six_step_t *)handle;
+    BLDC_CHECK(six_step != NULL, "six_step has not been init", 0);
     if (six_step->control_param->status == CLOSED_LOOP) {
         if (six_step->control_param->phase_cnt <= 0 || six_step->control_param->phase_cnt > 6) {
             return 0;
