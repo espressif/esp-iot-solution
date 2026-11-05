@@ -26,7 +26,5 @@ menu "BLE ESL Tag Product Example"
         bool "Enable multi-Tag LED demo local green on SYNCHRONIZED"
         depends on ESL_TAG_LED_BACKEND_WS2812 || ESL_TAG_LED_BACKEND_GPIO
         default n
-        help
-            Keep disabled for mode 2 so association NVS is saved and restored.
 
 endmenu

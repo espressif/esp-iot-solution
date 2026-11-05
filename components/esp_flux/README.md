@@ -211,7 +211,7 @@ gatt_session_destroy(session);
 
 ## Examples
 
-Complete examples can be found in `examples/esp_flux/`:
+Complete examples are described in the [BLE SPP example guide](../../examples/esp_flux/README.md):
 - `ble_spp_client` - BLE SPP client example
 - `ble_spp_server` - BLE SPP server example
 

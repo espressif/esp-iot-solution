@@ -36,13 +36,24 @@ idf.py set-target esp32
 idf.py build flash monitor
 ```
 
+Server 以 `ESP-GMP-OTA` 广播并通过 BLE 接收固件。待上传镜像不得超过上文说明的 OTA 槽容量。
+
+也可以使用 [ESP BLE App](https://github.com/EspressifApps/esp-ble-app) 在 Android 12 及以上手机上代替示例 Client 开发板调试 `ble_gmp_ota_server`。从 [v0.0.1 发布页](https://github.com/EspressifApps/esp-ble-app/releases/tag/v0.0.1)安装 [app-debug.apk](https://github.com/EspressifApps/esp-ble-app/releases/download/v0.0.1/app-debug.apk)，授予蓝牙权限并启动 Server。在 App 中打开 **GMP OTA → Scan & Connect**，连接 `ESP-GMP-OTA`，再选择固件 `.bin` 文件并点击 **Start GMP OTA Update**。
+
+在主界面选择 **GMP OTA**；**Scan & Connect** 用于查找 Server，**GMP OTA** 页面用于选择待上传的固件文件。截图展示的是未连接状态，并非正在升级。
+
+| App 主界面 | Scan & Connect：扫描设备 | GMP OTA：选择固件 |
+| --- | --- | --- |
+| <img src="ble_gmp_ota_server/image/main_page.png" alt="ESP BLE App 主界面" width="220"> | <img src="ble_gmp_ota_server/image/ota_00.png" alt="GMP OTA 扫描界面" width="220"> | <img src="ble_gmp_ota_server/image/ota_01.png" alt="GMP OTA 固件选择界面" width="220"> |
+
 ## 构建 Client
 
-```bash
-cp ble_gmp_ota_server/build/ble_gmp_ota_server.bin \
-   ble_gmp_ota_client/spiffs/ota_image.bin
+构建 Server 后，在 Server 工程目录执行：
 
-cd ble_gmp_ota_client
+```bash
+cp build/ble_gmp_ota_server.bin ../ble_gmp_ota_client/spiffs/ota_image.bin
+
+cd ../ble_gmp_ota_client
 idf.py set-target esp32
 idf.py build flash monitor
 ```
@@ -55,7 +66,7 @@ Client 从 `/spiffs/ota_image.bin` 读取固件，扫描 `ESP-GMP-OTA` 后自动
 
 本示例只演示 GMP-over-Flux OTA 数据通路，不验证固件来源，不启用 BLE 访问控制，也不替代 signed app 或 secure boot。请仅在受控实验环境中使用；生产产品需要自行增加链路鉴权、业务授权和固件可信校验。
 
-Client 示例默认挂载 SPIFFS 时不会自动格式化失败分区（`format_if_mount_failed=false`）；挂载失败会报错退出。如需更新 `ota_image.bin`，请按 `ble_gmp_ota_client/spiffs/README.md` 重新生成并烧录 SPIFFS。
+Client 示例默认挂载 SPIFFS 时不会自动格式化失败分区（`format_if_mount_failed=false`）；挂载失败会报错退出。如需更新 `ota_image.bin`，将固件复制到 `ble_gmp_ota_client/spiffs/ota_image.bin`，然后在 `ble_gmp_ota_client` 目录执行 `idf.py build flash`，重新生成 `storage.bin` 并将其写入 `0x110000` 处的 `storage` SPIFFS 分区。检查 `ble_gmp_ota_client/build/flash_args` 是否包含 `0x110000 storage.bin`。运行时 Client 从 `/spiffs/ota_image.bin` 读取固件。
 
 ## 组件 API
 
