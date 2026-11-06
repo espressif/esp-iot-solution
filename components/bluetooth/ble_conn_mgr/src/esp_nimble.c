@@ -3253,6 +3253,9 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
         case BLE_GAP_EVENT_CONN_UPDATE:
             rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
             if (rc == 0) {
+                ESP_LOGD(TAG, "conn update, conn_handle=%d itvl_min=%d itvl_max=%d, latency=%d, supervision_timeout=%d",
+                    event->conn_update.conn_handle, (unsigned)desc.conn_itvl, (unsigned)desc.conn_itvl, (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout);
+
                 blecm_evt_conn_param_update_t cpe = {0};
                 cpe.conn_handle = event->conn_update.conn_handle;
                 cpe.status = event->conn_update.status;
@@ -3262,6 +3265,18 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 cpe.params.supervision_timeout = desc.supervision_timeout;
                 esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE, &cpe, sizeof(cpe), portMAX_DELAY);
             }
+            break;
+        case BLE_GAP_EVENT_PHY_UPDATE_COMPLETE:
+            ESP_LOGD(TAG, "phy update, conn_handle=%d tx_phy=%d rx_phy=%d, status=%d", event->phy_updated.conn_handle,
+                (unsigned)event->phy_updated.tx_phy, (unsigned)event->phy_updated.rx_phy, (unsigned)event->phy_updated.status);
+
+            esp_ble_conn_event_data_t phy_event = {0};
+            phy_event.phy_update.conn_handle = event->phy_updated.conn_handle;
+            phy_event.phy_update.status = event->phy_updated.status;
+            phy_event.phy_update.tx_phy = event->phy_updated.tx_phy;
+            phy_event.phy_update.rx_phy = event->phy_updated.rx_phy;
+            esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_PHY_UPDATE_COMPLETE,
+                        &phy_event, sizeof(phy_event), portMAX_DELAY);
             break;
         case BLE_GAP_EVENT_ADV_COMPLETE:
 #if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP

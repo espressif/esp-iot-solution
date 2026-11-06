@@ -894,6 +894,9 @@
 .patterns-example_esp_flux_ble_spp_server: &patterns-example_esp_flux_ble_spp_server
   - "examples/esp_flux/ble_spp_server/**/*"
 
+.patterns-example_esp_flux_common_components_ble_link_gate: &patterns-example_esp_flux_common_components_ble_link_gate
+  - "examples/esp_flux/common_components/ble_link_gate/**/*"
+
 .patterns-example_esp_gmp_ble_gmp_ota_client: &patterns-example_esp_gmp_ble_gmp_ota_client
   - "examples/esp_gmp/gmp_ota/ble_gmp_ota_client/**/*"
   - "examples/esp_gmp/gmp_ota/common_components/**/*"
@@ -1774,6 +1777,8 @@
       changes: *patterns-components_bluetooth_ble_conn_mgr
     - <<: *if-dev-push
       changes: *patterns-example_esp_flux_ble_spp_client
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:example_esp_flux_ble_spp_server:
   rules:
@@ -1787,6 +1792,8 @@
       changes: *patterns-components_bluetooth_ble_conn_mgr
     - <<: *if-dev-push
       changes: *patterns-example_esp_flux_ble_spp_server
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:example_esp_gmp_ble_gmp_ota_client:
   rules:
@@ -1800,6 +1807,8 @@
       changes: *patterns-components_esp_flux
     - <<: *if-dev-push
       changes: *patterns-example_esp_gmp_ble_gmp_ota_client
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:example_esp_gmp_ble_gmp_ota_server:
   rules:
@@ -1813,6 +1822,8 @@
       changes: *patterns-components_esp_flux
     - <<: *if-dev-push
       changes: *patterns-example_esp_gmp_ble_gmp_ota_server
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:components_esp_gmp_test:
   rules:
@@ -1839,6 +1850,8 @@
       changes: *patterns-components_esp_flux
     - <<: *if-dev-push
       changes: *patterns-example_esp_gmp_file_transfer_sender
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:example_esp_gmp_file_transfer_receiver:
   rules:
@@ -1852,6 +1865,8 @@
       changes: *patterns-components_esp_flux
     - <<: *if-dev-push
       changes: *patterns-example_esp_gmp_file_transfer_receiver
+    - <<: *if-dev-push
+      changes: *patterns-example_esp_flux_common_components_ble_link_gate
 
 .rules:build:example_get_started_blink:
   rules:

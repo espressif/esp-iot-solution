@@ -8,7 +8,7 @@ Device-side handler writes firmware to the next OTA partition with `esp_ota_writ
 
 Flow:
 
-1. `OTA_UPLOAD_CONTROL(start)` → `esp_ota_begin()`
+1. `OTA_UPLOAD_CONTROL(start)` → `esp_ota_begin()` pre-erases the image range and responds after erasure completes
 2. `OTA_UPLOAD_DATA` → accept/enqueue then respond; a worker runs `esp_ota_write()` and incremental SHA256
 3. `OTA_UPLOAD_CONTROL(finish + sha256)` → drain → verify → `esp_ota_end()` → set boot partition → restart (or wait for `esp_gmp_ota_apply()` under manual policy)
 

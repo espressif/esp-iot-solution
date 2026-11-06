@@ -8,7 +8,7 @@ OTA 位于 `profiles/ota/`（与 OS / File Transfer 同级）。共享 SHA-256 �
 
 流程：
 
-1. `OTA_UPLOAD_CONTROL(start)` → `esp_ota_begin()`
+1. `OTA_UPLOAD_CONTROL(start)` → `esp_ota_begin()` 按镜像大小预先擦除目标分区，擦除完成后应答
 2. `OTA_UPLOAD_DATA` → 入队并应答；后台 worker 执行 `esp_ota_write()` 与增量 SHA256
 3. `OTA_UPLOAD_CONTROL(finish + sha256)` → 排空 → 校验 → `esp_ota_end()` → 设启动分区 → 重启（或手动策略下等待 `esp_gmp_ota_apply()`）
 
