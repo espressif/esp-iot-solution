@@ -290,6 +290,20 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 | OTHER + PSRAM | `ver_res` (整屏高度) | 整屏高度分区，吞吐更高 |
 | OTHER 无 PSRAM | 10 | 小条带以节省 RAM |
 
+#### 绘图缓冲区的内存位置
+
+RGB/MIPI DSI 显示在 `DOUBLE_PARTIAL` 或 `TRIPLE_PARTIAL` 模式下，适配器会将
+LVGL 分区绘图缓冲区分配在**片内 RAM**，即使 `profile.use_psram` 为 `true`
+也是如此。该缓冲区与 `esp_lcd` 提供的面板帧缓冲区相互独立；将面板帧缓冲区
+配置在 PSRAM 中，不会改变分区绘图缓冲区的内存位置。
+
+分区绘图缓冲区占用 `hor_res × buffer_height × 每像素字节数` 字节。例如，
+480 像素宽、RGB565 格式、`buffer_height = 50` 时，该缓冲区需要 48,000 字节
+片内 RAM。若分配失败，可减小 `buffer_height`；仅启用 `use_psram` 不会改变
+这部分内存的分配策略。
+
+直接复用面板帧缓冲区的模式，沿用面板初始化时选择的内存位置。
+
 #### 调优建议
 
 - **提高 `buffer_height`**：
