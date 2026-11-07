@@ -27,6 +27,17 @@ USB Device UAC User Guide
     4. The ``UAC_SPK_NEW_PLAY_INTERVAL`` macro determines whether the incoming audio is new. If it is new, it will buffer a segment of data before transmission, which helps reduce the frequency of audio data transmission interruptions.
     5. The ``UAC_SUPPORT_MACOS`` macro supports MacOS. Note that enabling this macro may make the device unrecognizable by Windows systems.
 
+Using UAC in a TinyUSB composite device
+-----------------------------------------
+
+By default, this component supplies the TinyUSB configuration, USB descriptors, and stack initialization for a standalone UAC device. To add UAC to an application that owns its TinyUSB composite device:
+
+1. Enable ``CONFIG_USB_DEVICE_UAC_AS_PART=y``. In this mode, provide the application's ``tusb_config.h`` and ``usb_descriptors.c``, and include the UAC class configuration and descriptors from this component. Make sure the UAC configuration macros are visible when TinyUSB is compiled.
+2. Set ``.skip_tinyusb_init = true`` in ``uac_device_config_t``. The application is then responsible for initializing the USB PHY and TinyUSB stack, and for running the TinyUSB device task.
+3. Set ``.spk_itf_num`` and ``.mic_itf_num`` to the speaker and microphone streaming interface numbers used by the application's USB descriptors. Reserve unique endpoint addresses for UAC and every other class in the composite device.
+
+Do not combine this mode with the ``esp_tinyusb`` component. ``esp_tinyusb`` is a self-contained TinyUSB integration and does not support adding specialized classes such as UAC or UVC. Base the application directly on TinyUSB instead. Check that the target has enough USB endpoints for all enabled interfaces; the ESP32-S3 USB controller has six endpoints.
+
 USB Device UAC API Reference
 ------------------------------
 
