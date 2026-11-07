@@ -1090,7 +1090,21 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
                             LV_EVENT_INVALIDATE_AREA, NULL);
 
 #if CONFIG_SOC_PPA_SUPPORTED
-    if (pub->profile.enable_ppa_accel) {
+    bool ppa_accel = pub->profile.enable_ppa_accel;
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (ppa_accel && draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        /* lv_draw_ortho already drives the PPA on this display: it turns every
+         * tile and fills plain rectangles. The PPA blend handlers would run on
+         * those same tiles, through LVGL's software renderer, and put two
+         * drivers of the PPA under one refresh -- never run on a board, and an
+         * LVGL PPA draw unit beside lv_draw_ortho was seen to stall the PPA on
+         * an ESP32-P4. Not registering the display keeps the handlers off its
+         * tasks; other displays keep their setting. */
+        ESP_LOGW(TAG, "enable_ppa_accel is ignored on a display rotated in draw: lv_draw_ortho drives the PPA there");
+        ppa_accel = false;
+    }
+#endif
+    if (ppa_accel) {
         /* PPA acceleration assumes draw unit count is forced to 1 via configuration. */
         lvgl_port_ppa_v9_init(disp);
 #if defined(LV_DRAW_SW_DRAW_UNIT_CNT) && (LV_DRAW_SW_DRAW_UNIT_CNT > 1)

@@ -736,6 +736,7 @@ Configure via `idf.py menuconfig`:
 ### PPA/DMA2D Acceleration
 
 - `profile.enable_ppa_accel` enables PPA drawing only for that display. Unowned offscreen tasks use software; set the draw descriptor's `base.obj` to its owning object when drawing to a canvas.
+- On a display rotated with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`, `enable_ppa_accel` is ignored (with a warning): `lv_draw_ortho` already uses the PPA there to rotate each tile and fill plain rectangles.
 - LVGL v9 accelerates straight ARGB8888 images onto RGB565/RGB888 and large single-color A8 masks. Non-normal blend modes, images with separate masks and premultiplied formats use software.
 - Measured size cutoffs keep small draws and SRAM copies/fills on software; large PSRAM copies remain eligible. LVGL v8 also uses software for byte-swapped RGB565, transparent targets and custom pixel callbacks.
 - Shared drawing clients and previous blend handlers are released or restored when the last accelerated display is removed.

@@ -730,6 +730,7 @@ static void panel_wake_cb(void *user_data)
 ### PPA/DMA2D 加速
 
 - 启用 PPA 加速时，建议设置 `LV_DRAW_SW_DRAW_UNIT_CNT == 1`
+- 对于启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` 旋转的显示，`enable_ppa_accel` 会被忽略（并输出警告）：`lv_draw_ortho` 已使用 PPA 旋转每个图块并填充纯色矩形
 - 旋转操作优先使用 PPA；否则使用 CPU 拷贝路径（带缓存局部性的块拷贝）
 - **效果与预期**：
   - PPA 可显著降低 CPU 占用

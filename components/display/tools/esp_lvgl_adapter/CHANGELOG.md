@@ -2,7 +2,7 @@
 
 ## v0.8.0 (unreleased)
 
-* Add `CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): a rotated `DOUBLE_DIRECT` display is drawn straight into the panel's two frame buffers in the panel's orientation, through LVGL's matrix rotation and the `lv_draw_ortho` draw unit, instead of being drawn upright and copied rotated. Needs 2 frame buffers instead of 3. On chips with a PPA, the PPA rotates each drawn tile while the CPU draws the next, and fills plain rectangles; every PPA wait is bounded. Off by default; other modes are unchanged.
+* Add `CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): a rotated `DOUBLE_DIRECT` display is drawn straight into the panel's two frame buffers in the panel's orientation, through LVGL's matrix rotation and the `lv_draw_ortho` draw unit, instead of being drawn upright and copied rotated. Needs 2 frame buffers instead of 3. On chips with a PPA, the PPA rotates each drawn tile while the CPU draws the next, and fills plain rectangles; every PPA wait is bounded. Off by default; other modes are unchanged. `profile.enable_ppa_accel` is ignored on a display rotated this way, which keeps a single PPA user per refresh.
 
 ## v0.7.5 (2026-11-03)
 
