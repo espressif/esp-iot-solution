@@ -22,6 +22,40 @@ typedef struct elf_file {
 } elf_file_t;
 
 /**
+ * @brief Random-access byte source for streaming ELF relocation.
+ *
+ * The loader reads headers, sections and relocation tables on demand
+ * through @p read, so the whole image never has to be resident in DRAM.
+ * @p size is required so structural validation can bound every read the
+ * same way the whole-buffer loader does.
+ */
+typedef struct elf_source {
+    /**
+     * @brief Total image length in bytes.
+     *
+     * @return Image size; every read offset and length is checked
+     *         against it before the loader dereferences anything.
+     */
+    size_t (*size)(void *ctx);
+
+    /**
+     * @brief Read @p len bytes starting at @p off into @p buf.
+     *
+     * @return 0 on success or a negative errno on failure.
+     */
+    int (*read)(void *ctx, size_t off, void *buf, size_t len);
+
+    /**
+     * @brief Optional cleanup callback invoked after relocation.
+     *
+     * @note May be NULL when the source needs no teardown.
+     */
+    void (*close)(void *ctx);
+
+    void *ctx;                   /*!< opaque context passed to the callbacks */
+} elf_source_t;
+
+/**
  * @brief Symbol table type
  *
  * A symbol table is an array of esp_elfsym structures terminated with ESP_ELFSYM_END.
@@ -102,6 +136,29 @@ int esp_elf_init(esp_elf_t *elf);
  * @return ESP_OK if success or other if failed.
  */
 int esp_elf_relocate(esp_elf_t *elf, const uint8_t *pbuf, size_t size);
+
+/**
+ * @brief Decode and relocate ELF data read on demand from a byte source.
+ *
+ * The loader reads headers, sections and relocation tables on demand through
+ * @p src without holding the entire image in DRAM. The source must support
+ * random access by offset.
+ *
+ * @note The loader calls src->close() exactly once before returning, whether
+ *       it succeeds or fails, except when src or src->read is NULL. The
+ *       caller must not close the source itself.
+ * @note The image must not change between validation and relocation or while
+ *       reads are in progress; bounds are checked during validation and
+ *       trusted on subsequent reads.
+ * @note Temporary buffers for large tables (e.g. .symtab, .rela.*) may still
+ *       be megabytes; a buffered source is strongly recommended for SD.
+ *
+ * @param elf - ELF object pointer (esp_elf_init'ed)
+ * @param src - Byte source of the ELF image
+ *
+ * @return ESP_OK if success or other if failed.
+ */
+int esp_elf_relocate_source(esp_elf_t *elf, const elf_source_t *src);
 
 /**
  * @brief Request running relocated ELF function.

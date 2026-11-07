@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.5.3 - 2026-10-30
+
+### Bug Fixes:
+
+* Use the discovered RNDIS interface number as the class-request `wIndex` so control transfers succeed when the communication interface is not interface 0.
+
 ## v0.5.2 - 2026-10-21
 
 ### Bug Fixes:

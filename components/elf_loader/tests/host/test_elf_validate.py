@@ -1017,6 +1017,26 @@ int main(void) {
                 ], check=True)
                 subprocess.run([str(output)], check=True)
 
+    def test_public_stream_source_api(self):
+        output = Path(self.build.name) / 'test_stream_source'
+        subprocess.run([
+            os.environ.get('CC', 'cc'),
+            '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
+            '-Wno-pointer-to-int-cast', '-Wno-int-to-pointer-cast',
+            '-Wno-format', '-Wno-unused-variable', '-Wno-unused-parameter',
+            '-Wno-unused-but-set-variable', '-Wno-sign-compare',
+            '-ffunction-sections', '-fdata-sections', HOST_GC_LINKER_FLAG,
+            '-DCONFIG_IDF_TARGET_ARCH_XTENSA=1',
+            '-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1',
+            '-I', str(COMPONENT / 'tests/host/include'),
+            '-I', str(COMPONENT / 'include'),
+            str(COMPONENT / 'tests/host/test_stream_source.c'),
+            str(COMPONENT / 'src/esp_elf_validate.c'),
+            str(COMPONENT / 'src/arch/esp_elf_xtensa.c'),
+            '-o', str(output),
+        ], check=True)
+        subprocess.run([str(output), str(FIXTURES['xtensa'])], check=True)
+
     def test_psram_exported_function_uses_executable_alias(self):
         output = Path(self.build.name) / 'test_psram_export_alias'
         subprocess.run([

@@ -16,6 +16,8 @@
 #if CONFIG_IDF_TARGET_ESP32S31
 #include "esp32s31/rom/cache.h"
 #include "soc/cache_reg.h"
+#elif CONFIG_IDF_TARGET_ESP32P4
+#include "esp32p4/rom/cache.h"
 #endif
 #include "private/elf_platform.h"
 
@@ -171,6 +173,16 @@ int IRAM_ATTR esp_elf_arch_flush(esp_elf_t *elf)
     Cache_Invalidate_All(CACHE_MAP_L1_ICACHE_MASK);
     spi_flash_enable_interrupts_caches_and_other_cpu();
     REG_CLR_BIT(CACHE_L1_ICACHE_CTRL_REG, CACHE_L1_ICACHE_SHUT_IBUS1);
+#elif CONFIG_IDF_TARGET_ESP32P4
+    /* ESP32-P4: the ROM functions take a cache map. The generic declaration
+     * below has no argument, which leaves the map undefined, so the code
+     * written to PSRAM is not reliably written back from the L1 D-cache and
+     * L2 cache and the I-cache is not invalidated (Instruction access fault
+     * when the ELF first runs). */
+    Cache_WriteBack_All(CACHE_MAP_L1_DCACHE | CACHE_MAP_L2_CACHE);
+    spi_flash_disable_interrupts_caches_and_other_cpu();
+    Cache_Invalidate_All(CACHE_MAP_L1_ICACHE_MASK);
+    spi_flash_enable_interrupts_caches_and_other_cpu();
 #else
     extern void Cache_WriteBack_All(void);
     Cache_WriteBack_All();

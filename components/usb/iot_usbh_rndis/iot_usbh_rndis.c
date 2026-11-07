@@ -46,6 +46,7 @@ typedef struct {
     iot_eth_mediator_t *mediator;
     iot_usbh_rndis_config_t config;
     uint8_t cdc_dev_addr;
+    uint8_t itf_num; /* RNDIS communication interface; class control wIndex */
     usbh_cdc_port_handle_t cdc_port;
     EventGroupHandle_t event_group;
     atomic_uint pending_responses;
@@ -73,7 +74,7 @@ static uint32_t usbh_rndis_next_request_id(usbh_rndis_t *rndis)
 static esp_err_t usbh_rndis_send_ctrl_msg(usbh_rndis_t *rndis, const uint8_t *data, uint32_t data_len)
 {
     uint8_t req_type = USB_BM_REQUEST_TYPE_TYPE_CLASS | USB_BM_REQUEST_TYPE_RECIP_INTERFACE | USB_BM_REQUEST_TYPE_DIR_OUT;
-    return usbh_cdc_send_custom_request(rndis->cdc_port, req_type, CDC_REQ_SEND_ENCAPSULATED_COMMAND, 0, 0, data_len, (uint8_t *)data);
+    return usbh_cdc_send_custom_request(rndis->cdc_port, req_type, CDC_REQ_SEND_ENCAPSULATED_COMMAND, 0, rndis->itf_num, data_len, (uint8_t *)data);
 }
 
 static esp_err_t usbh_rndis_send_keepalive_response(usbh_rndis_t *rndis, const rndis_keepalive_msg_t *req)
@@ -120,7 +121,7 @@ static esp_err_t usbh_rndis_recv_ctrl_response(usbh_rndis_t *rndis, uint32_t exp
     // Linux polls the control channel directly after SEND_ENCAPSULATED_COMMAND; notifications are only used to wake async response handling.
     for (int retry = 0; retry < RNDIS_CONTROL_RETRY_COUNT; retry++) {
         memset(data, 0, data_len);
-        esp_err_t ret = usbh_cdc_send_custom_request(rndis->cdc_port, req_type, CDC_REQ_GET_ENCAPSULATED_RESPONSE, 0, 0, data_len, data);
+        esp_err_t ret = usbh_cdc_send_custom_request(rndis->cdc_port, req_type, CDC_REQ_GET_ENCAPSULATED_RESPONSE, 0, rndis->itf_num, data_len, data);
         if (ret != ESP_OK) {
             if (expected_type == 0 || rndis->cdc_port == NULL) {
                 return ret;
@@ -602,6 +603,7 @@ static void _usbh_rndis_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_dev
             return;
         }
         ESP_LOGI(TAG, "RNDIS device found: VID: %04X, PID: %04X, IFNUM: %d", device_desc->idVendor, device_desc->idProduct, itf_num);
+        rndis->itf_num = (uint8_t)itf_num;
 
         usbh_cdc_port_config_t cdc_port_config = {
             .dev_addr = event_data->new_dev.dev_addr,
@@ -628,6 +630,7 @@ static void _usbh_rndis_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_dev
         usbh_rndis_t *rndis = (usbh_rndis_t *)user_ctx;
         if (rndis->cdc_dev_addr == event_data->dev_gone.dev_addr) {
             rndis->cdc_dev_addr = 0;
+            rndis->itf_num = 0;
             rndis->connect_status = false;
             rndis->rx_pending_data_len = 0;
             rndis->cdc_port = NULL;
