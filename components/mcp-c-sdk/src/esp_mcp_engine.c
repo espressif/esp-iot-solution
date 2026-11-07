@@ -1789,14 +1789,39 @@ static esp_err_t esp_mcp_tool_args_cb(const esp_mcp_property_t *property, void *
     esp_mcp_property_foreach_ctx_t *ctx = (esp_mcp_property_foreach_ctx_t *)arg;
     const char *name = property->name;
     cJSON *value = cJSON_GetObjectItem(ctx->arg, name);
-    if (!value) {
-        ctx->has_error = true;
-        ESP_LOGE(TAG, "tools/call: Missing argument: %s", name);
-        return ESP_ERR_INVALID_ARG;
-    }
-
     esp_mcp_property_t *new_prop = NULL;
-    if (property->type == ESP_MCP_PROPERTY_TYPE_BOOLEAN) {
+    if (!value) {
+        if (!property->has_default_value) {
+            ctx->has_error = true;
+            ESP_LOGE(TAG, "tools/call: Missing argument: %s", name);
+            return ESP_ERR_INVALID_ARG;
+        }
+        switch (property->type) {
+        case ESP_MCP_PROPERTY_TYPE_BOOLEAN:
+            new_prop = esp_mcp_property_create_with_bool(name, property->default_value.bool_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_INTEGER:
+            new_prop = property->has_range ?
+                       esp_mcp_property_create_with_int_and_range(name, property->default_value.int_value,
+                                                                  property->min_value, property->max_value) :
+                       esp_mcp_property_create_with_int(name, property->default_value.int_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_FLOAT:
+            new_prop = esp_mcp_property_create_with_float(name, property->default_value.float_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_STRING:
+            new_prop = esp_mcp_property_create_with_string(name, property->default_value.string_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_ARRAY:
+            new_prop = esp_mcp_property_create_with_array(name, property->default_value.string_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_OBJECT:
+            new_prop = esp_mcp_property_create_with_object(name, property->default_value.string_value);
+            break;
+        default:
+            break;
+        }
+    } else if (property->type == ESP_MCP_PROPERTY_TYPE_BOOLEAN) {
         new_prop = esp_mcp_property_create_with_bool(name, value->valueint == 1);
     } else if (property->type == ESP_MCP_PROPERTY_TYPE_INTEGER) {
         int int_value = value->valueint;
@@ -2021,7 +2046,7 @@ static void esp_mcp_tool_task_worker(void *arg)
         goto cleanup;
     }
 
-    if (args_obj && cJSON_IsObject(args_obj)) {
+    if (!args_obj || cJSON_IsObject(args_obj)) {
         if (!tool->properties) {
             ESP_LOGW(TAG, "tools/call: tool %s has no property schema", ctx->tool_name);
             if (cJSON_GetArraySize(args_obj) > 0) {
@@ -2264,7 +2289,7 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, const cJSON *id, const cha
 
     esp_mcp_property_list_t *arguments = esp_mcp_property_list_create();
     if (arguments) {
-        if (tool_arguments && cJSON_IsObject(tool_arguments)) {
+        if (!tool_arguments || cJSON_IsObject(tool_arguments)) {
             if (!tool->properties) {
                 ESP_LOGW(TAG, "tools/call: tool %s has no property schema", tool_name);
                 if (cJSON_GetArraySize((cJSON *)tool_arguments) > 0) {
