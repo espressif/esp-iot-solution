@@ -146,7 +146,8 @@ typedef struct {
     uint16_t hor_res;                       /*!< Horizontal resolution in pixels */
     uint16_t ver_res;                       /*!< Vertical resolution in pixels */
     uint16_t buffer_height;                 /*!< Draw buffer height in pixels */
-    bool use_psram;                         /*!< Use PSRAM for buffers if available */
+    bool use_psram;                         /*!< Use PSRAM for adapter-allocated buffers, except RGB/MIPI
+                                               partial tear-avoidance draw buffers, which use internal RAM */
     bool enable_ppa_accel;                  /*!< Enable PPA drawing for this display; rotation is independent */
     bool require_double_buffer;             /*!< Require double buffering */
     esp_lv_adapter_mono_layout_t mono_layout;      /*!< Monochrome layout selection */
