@@ -337,7 +337,7 @@ esp_err_t wifi_cmd_ap_set(const char* ssid, const char* pass)
         strlcpy((char*) wifi_config.ap.password, pass, sizeof(wifi_config.ap.password));
     }
 
-    if (strlen(pass) == 0) {
+    if (pass == NULL || pass[0] == '\0') {
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
     }
 
