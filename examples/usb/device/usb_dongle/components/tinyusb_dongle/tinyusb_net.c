@@ -47,8 +47,9 @@ esp_err_t tinyusb_net_send(void *buffer, uint16_t len, void *buff_free_arg)
         .buff_free_arg = buff_free_arg,
         .len = len,
     };
-    ESP_RETURN_ON_FALSE(xQueueSend(s_net_obj.tx_packet_queue, &packet, 0) == pdTRUE,
-                        ESP_ERR_NO_MEM, TAG, "TX packet queue is full");
+    if (xQueueSend(s_net_obj.tx_packet_queue, &packet, 0) != pdTRUE) {
+        return ESP_ERR_NO_MEM;
+    }
     return ESP_OK;
 }
 
@@ -67,7 +68,7 @@ void tinyusb_net_process_tx_queue(void)
 
     packet_t packet;
     if (!tud_ready()) {
-        // Match the synchronous API behavior: reject packets when USB is not ready.
+        // Drop pending packets while USB is unavailable and release their Wi-Fi RX buffers.
         while (xQueueReceive(s_net_obj.tx_packet_queue, &packet, 0) == pdTRUE) {
             if (s_net_obj.tx_buff_free_cb) {
                 s_net_obj.tx_buff_free_cb(packet.buff_free_arg, s_net_obj.ctx);
@@ -91,6 +92,7 @@ void tinyusb_net_process_tx_queue(void)
         tud_network_xmit(&s_net_obj.packet_to_send, s_net_obj.packet_to_send.len);
     }
 }
+
 esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t *cfg)
 {
     (void) usb_dev;

@@ -40,11 +40,9 @@ typedef struct {
     uint8_t mac_addr[6];                      /*!< MAC address. Must be 6 bytes long. */
     tusb_net_rx_cb_t on_recv_callback;        /*!< TinyUSB receive data callbeck */
     tusb_net_free_tx_cb_t free_tx_buffer;     /*!< User function for freeing the Tx buffer.
-                                               *    - could be NULL, if user app is responsible for freeing the buffer
-                                               *    - must be used in asynchronous send mode
-                                               *    - is only called if the used tinyusb_net_send...() function returns ESP_OK
-                                               *        - in sync mode means that the packet was accepted by TinyUSB
-                                               *        - in async mode means that the packet was queued to be processed in TinyUSB task
+                                               *    - could be NULL if the application is responsible for freeing the buffer
+                                               *    - is called after tinyusb_net_send() returns ESP_OK and the packet is sent
+                                               *      or discarded because USB is not ready; it runs in TinyUSB task context
                                                */
     tusb_net_init_cb_t on_init_callback;      /*!< TinyUSB init network callback */
     void *user_context;                       /*!< User context to be passed to any of the callback */
@@ -65,7 +63,8 @@ esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t 
  * @param[in] buffer            USB send data
  * @param[in] len               USB send data length
  * @param[in] buff_free_arg     Pointer passed to the free_tx_buffer() callback
- * @return ESP_OK if the packet was queued
+ * @return ESP_OK if the packet was queued; the send buffer must remain valid until the
+ *         free_tx_buffer() callback runs, if configured
  *         ESP_ERR_INVALID_STATE if the TinyUSB NET driver is not initialized
  *         ESP_ERR_NO_MEM if the transmit queue is full
  */
