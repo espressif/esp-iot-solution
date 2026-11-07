@@ -215,9 +215,8 @@ static void button_handler(button_dev_t *btn)
                 btn->ticks = 0;
                 btn->state = PRESS_REPEAT_DOWN_CHECK; //repeat press
             } else {
-                btn->state = PRESS_DOWN_CHECK;
-                btn->event = (uint8_t)BUTTON_PRESS_END;
-                CALL_EVENT_CB(BUTTON_PRESS_END);
+                /* Finish the repeated-press sequence after the last press is released. */
+                btn->state = PRESS_REPEAT_DOWN_CHECK;
             }
         }
         break;
