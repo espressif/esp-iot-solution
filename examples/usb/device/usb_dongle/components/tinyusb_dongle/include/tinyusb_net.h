@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "tinyusb_types.h"
 #include "esp_err.h"
@@ -59,16 +60,32 @@ typedef struct {
 esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t *cfg);
 
 /**
- * @brief TinyUSB NET driver send data synchronously
+ * @brief Queue a packet for asynchronous transmission over USB
  *
  * @param[in] buffer            USB send data
- * @param[in] len               Send data len
- * @param[in] buff_free_arg     Pointer to be passed to the free_tx_buffer() callback
- * @return  ESP_OK on success == packet has been consumed by tusb and would be eventually freed
- *                              by free_tx_buffer() callback (if non null)
- *          ESP_ERR_INVALID_STATE if tusb not initialized, ESP_ERR_NO_MEM on alloc failure
+ * @param[in] len               USB send data length
+ * @param[in] buff_free_arg     Pointer passed to the free_tx_buffer() callback
+ * @return ESP_OK if the packet was queued
+ *         ESP_ERR_INVALID_STATE if the TinyUSB NET driver is not initialized
+ *         ESP_ERR_NO_MEM if the transmit queue is full
  */
 esp_err_t tinyusb_net_send(void *buffer, uint16_t len, void *buff_free_arg);
+
+/**
+ * @brief Queue a network link-state update for the TinyUSB task
+ *
+ * @param[in] connected True when the network link is up
+ */
+void tinyusb_net_set_link_state(bool connected);
+
+/**
+ * @brief Process one pending transmit packet and any queued link-state update
+ *
+ * Call this from the same task that runs the TinyUSB device task. When using
+ * CONFIG_TINYUSB_NO_DEFAULT_TASK, call tud_task_ext(1, false) and this function
+ * in the application-owned TinyUSB task loop.
+ */
+void tinyusb_net_process_tx_queue(void);
 
 #endif // (CONFIG_TINYUSB_NET_MODE_NONE != 1)
 
