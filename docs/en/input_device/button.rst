@@ -207,7 +207,11 @@ In this context:
 Long press hold count
 ^^^^^^^^^^^^^^^^^^^^^
 
-`iot_button_get_long_press_hold_cnt()` is intended for use with the :cpp:enumerator:`BUTTON_LONG_PRESS_HOLD` event. Its counter increments before each hold callback and resets when the button is released. The callback interval is configured by `CONFIG_BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS` (20 ms by default).
+Use `iot_button_get_long_press_hold_cnt()` in the
+:cpp:enumerator:`BUTTON_LONG_PRESS_HOLD` callback to read the number of hold
+triggers during the current long press. The counter increments before each
+callback and resets when the button is released. The callback interval is
+configured by `CONFIG_BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS` (20 ms by default).
 
 .. code:: c
 

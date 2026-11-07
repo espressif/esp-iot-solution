@@ -204,9 +204,12 @@ Button 组件支持为多个事件注册回调函数，每个事件都可以注�
         iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, &args, button_long_press_2_cb, NULL);
 
 长按回调计数
-^^^^^^
+^^^^^^^^^^^^
 
-`iot_button_get_long_press_hold_cnt()` 用于 `BUTTON_LONG_PRESS_HOLD` 事件回调中。每次长按回调触发前，计数会加一；按键松开后计数清零。回调间隔由 `CONFIG_BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS` 配置，默认值为 20 ms。
+在 `BUTTON_LONG_PRESS_HOLD` 事件回调中使用
+`iot_button_get_long_press_hold_cnt()`，可读取本次长按期间该事件的触发次数。
+每次回调触发前计数加一；按键松开后计数清零。回调间隔由
+`CONFIG_BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS` 配置，默认值为 20 ms。
 
 .. code:: c
 
