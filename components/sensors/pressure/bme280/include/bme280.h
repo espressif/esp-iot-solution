@@ -200,8 +200,9 @@ extern "C"
 /**
  * @brief   Create bme280 handle_t
  *
- * @param  object handle of I2C
- * @param  device address
+ * @param  bus Handle returned by i2c_bus_create(); this is not a native
+ *             i2c_master_bus_handle_t.
+ * @param  dev_addr 7-bit I2C device address
  *
  * @return
  *     - bme280_handle_t
