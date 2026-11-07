@@ -81,6 +81,17 @@ static esp_err_t iot_eth_post_attach(esp_netif_t *esp_netif, void *args)
     return ESP_OK;
 }
 
+static void eth_log_dns_info(esp_netif_t *netif, esp_netif_dns_type_t type, const char *name)
+{
+    esp_netif_dns_info_t dns_info = {0};
+    esp_err_t ret = esp_netif_get_dns_info(netif, type, &dns_info);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "%s DNS: " IPSTR, name, IP2STR(&dns_info.ip.u_addr.ip4));
+    } else {
+        ESP_LOGI(TAG, "%s DNS unavailable: %s", name, esp_err_to_name(ret));
+    }
+}
+
 static void eth_action_got_ip(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     iot_eth_netif_glue_t *netif_glue = handler_args;
@@ -97,11 +108,8 @@ static void eth_action_got_ip(void *handler_args, esp_event_base_t base, int32_t
     ESP_LOGI(TAG, "ETHMASK:" IPSTR, IP2STR(&ip_info->netmask));
     ESP_LOGI(TAG, "ETHGW:" IPSTR, IP2STR(&ip_info->gw));
 
-    esp_netif_dns_info_t dns_info;
-    esp_netif_get_dns_info(netif, ESP_NETIF_DNS_MAIN, &dns_info);
-    ESP_LOGI(TAG, "Main DNS: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
-    esp_netif_get_dns_info(netif, ESP_NETIF_DNS_BACKUP, &dns_info);
-    ESP_LOGI(TAG, "Backup DNS: " IPSTR, IP2STR(&dns_info.ip.u_addr.ip4));
+    eth_log_dns_info(netif, ESP_NETIF_DNS_MAIN, "Main");
+    eth_log_dns_info(netif, ESP_NETIF_DNS_BACKUP, "Backup");
     ESP_LOGI(TAG, "~~~~~~~~~~~");
 }
 
