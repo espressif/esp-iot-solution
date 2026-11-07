@@ -72,6 +72,25 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 
 ### QSPI Interface
 
+#### Refresh requirements
+
+The current QSPI driver uses continuous full-frame transfers. Send each complete
+frame either as one bitmap or as consecutive full-width strips in top-to-bottom
+order. The first transfer must start at row zero after the configured Y gap is
+applied.
+
+In QSPI mode, `draw_bitmap()` does not send `LCD_CMD_RASET` to set an independent
+Y-axis window. It sends `LCD_CMD_RAMWR` when the adjusted `y_start` is zero and
+`LCD_CMD_RAMWRC` for later strips. A draw call with a nonzero `y_start` therefore
+continues the preceding write instead of positioning an arbitrary dirty rectangle.
+
+When using LVGL, select a full-refresh mode in the display integration and flush
+the whole frame in this order. A mode that only flushes changed rectangles is not
+supported by the current QSPI path and can place pixels on the wrong rows.
+
+This transfer sequence follows the panel manufacturer's recommendation described
+in [issue #666](https://github.com/espressif/esp-iot-solution/issues/666#issuecomment-6594439162).
+
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
     const spi_bus_config_t buscfg = AXS15231B_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
