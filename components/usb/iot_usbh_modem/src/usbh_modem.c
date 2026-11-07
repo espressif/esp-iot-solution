@@ -219,7 +219,7 @@ static void _modem_daemon_task(void *param)
              * Some modules may return to command mode automatically, while others may require an explicit AT command to exit PPP mode.
              */
             bool exit_ppp_with_at_cmd = false;
-#ifdef CONFIG_MOEDM_EXIT_PPP_WITH_AT_CMD
+#ifdef CONFIG_MODEM_EXIT_PPP_WITH_AT_CMD
             exit_ppp_with_at_cmd = true;
 #endif
             // if the dte is still connected, change to command mode
