@@ -91,6 +91,8 @@ supported by the current QSPI path and can place pixels on the wrong rows.
 This transfer sequence follows the panel manufacturer's recommendation described
 in [issue #666](https://github.com/espressif/esp-iot-solution/issues/666#issuecomment-6594439162).
 
+#### Initialization example
+
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
     const spi_bus_config_t buscfg = AXS15231B_PANEL_BUS_QSPI_CONFIG(EXAMPLE_PIN_NUM_LCD_PCLK,
