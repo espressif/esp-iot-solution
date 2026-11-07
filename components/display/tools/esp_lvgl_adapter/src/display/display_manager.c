@@ -920,17 +920,16 @@ static lv_display_rotation_t display_manager_lvgl_rotation(esp_lv_adapter_rotati
  */
 static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adapter_rotation_t rotation)
 {
-    static bool unit_ready = false;
-    if (!unit_ready) {
-        lv_draw_ortho_init();
+    /* lv_deinit() deletes every draw unit, lv_draw_ortho's included, so the
+     * unit is asked for again with each display: both calls do nothing while
+     * it exists, and create it again after LVGL has been restarted. */
+    lv_draw_ortho_init();
 #if SOC_PPA_SUPPORTED
-        esp_err_t err = lv_draw_ortho_ppa_init();
-        if (err != ESP_OK) {
-            ESP_LOGW(TAG, "rotate in draw: no PPA client (%s), the CPU turns the tiles", esp_err_to_name(err));
-        }
-#endif
-        unit_ready = true;
+    esp_err_t err = lv_draw_ortho_ppa_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "rotate in draw: no PPA client (%s), the CPU turns the tiles", esp_err_to_name(err));
     }
+#endif
     lv_display_set_rotation(disp, display_manager_lvgl_rotation(rotation));
     lv_display_set_matrix_rotation(disp, true);
     ESP_LOGI(TAG, "rotation %d drawn in the panel's orientation", (int)rotation);
