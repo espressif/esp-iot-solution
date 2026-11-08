@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 
 """
@@ -147,6 +147,20 @@ def test_adapter_esp32p4_eco4(dut: Dut) -> None:
     ],
 )
 def test_adapter_esp32p4_eco_default(dut: Dut) -> None:
+    test_adapter_esp32p4_template(dut)
+
+
+@pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco_default')
+@pytest.mark.parametrize(
+    'config',
+    [
+        'rotate_in_draw',
+    ],
+)
+def test_adapter_esp32p4_rotate_in_draw(dut: Dut) -> None:
+    """The same feature tests on a display rotated 90 degrees and drawn in the
+    panel's orientation (CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW), ESP32-P4 rev >= 3."""
     test_adapter_esp32p4_template(dut)
 
 
