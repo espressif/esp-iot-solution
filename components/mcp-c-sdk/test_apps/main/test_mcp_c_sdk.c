@@ -96,7 +96,7 @@ static esp_mcp_value_t test_tool_callback_multi(const esp_mcp_property_list_t *p
 static SemaphoreHandle_t thread_test_mutex;
 static int thread_test_counter = 0;
 static const int THREAD_TEST_ITERATIONS = 100;
-static const int THREAD_TEST_THREADS = 4;
+#define THREAD_TEST_THREADS 4
 static bool relax_memory_check;
 static char s_last_emit_message[1024];
 static char s_last_emit_session_id[64];
@@ -1115,9 +1115,9 @@ TEST_CASE("test_http_client_auth_api_rejects_non_http_transport", "[mcp][http][a
     esp_mcp_mgr_handle_t handle = 0;
     ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
 
-    TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, esp_mcp_mgr_http_client_set_bearer_token(handle, "token"));
+    TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, esp_mcp_mgr_set_bearer_token(handle, "token"));
     TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED,
-                      esp_mcp_mgr_http_client_set_auth_callback(handle, test_http_auth_callback, NULL));
+                      esp_mcp_mgr_set_auth_callback(handle, test_http_auth_callback, NULL));
 
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
@@ -1142,11 +1142,11 @@ TEST_CASE("test_http_client_auth_api_accepts_http_client_transport", "[mcp][http
     esp_mcp_mgr_handle_t handle = 0;
     ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
 
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_bearer_token(handle, "token"));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_bearer_token(handle, "token"));
     TEST_ASSERT_EQUAL(ESP_OK,
-                      esp_mcp_mgr_http_client_set_auth_callback(handle, test_http_auth_callback, NULL));
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_bearer_token(handle, NULL));
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_auth_callback(handle, NULL, NULL));
+                      esp_mcp_mgr_set_auth_callback(handle, test_http_auth_callback, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_bearer_token(handle, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_auth_callback(handle, NULL, NULL));
 
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
