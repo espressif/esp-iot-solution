@@ -728,6 +728,7 @@ static void panel_wake_cb(void *user_data)
 
 - 启用 PPA 加速时，建议设置 `LV_DRAW_SW_DRAW_UNIT_CNT == 1`
 - 旋转操作优先使用 PPA；否则使用 CPU 拷贝路径（带缓存局部性的块拷贝）
+- 绘制与旋转的输出对齐、缓冲区容量或尺寸不满足 PPA 要求时，自动使用软件路径，无需额外配置。
 - **效果与预期**：
   - PPA 可显著降低 CPU 占用
   - 通常不会带来明显的 FPS 提升

@@ -738,6 +738,7 @@ Configure via `idf.py menuconfig`:
 - Shared drawing clients and previous blend handlers are released or restored when the last accelerated display is removed.
 - LVGL v9 PPA drawing requires `LV_DRAW_SW_DRAW_UNIT_CNT == 1`.
 - Rotation uses PPA when possible; otherwise CPU copy with cache-friendly blocks
+- Drawing and rotation automatically use software when output alignment, buffer capacity or dimensions do not meet PPA requirements; no extra configuration is needed.
 - **Effect**:
   - PPA reduces CPU load
   - Usually does not deliver noticeable FPS gains
