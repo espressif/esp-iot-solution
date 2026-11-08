@@ -16,6 +16,49 @@
 
 #if CONFIG_SOC_PPA_SUPPORTED
 #include "esp_memory_utils.h"
+#include "esp_heap_caps.h"
+#include "esp_private/esp_cache_private.h"
+#include "lvgl_port_alignment.h"
+
+/* Legacy PPA drivers use external-memory alignment for every output buffer.
+ * This is independent of the cache line used to synchronize a given address. */
+static inline size_t lvgl_port_ppa_output_alignment(const void *buffer)
+{
+    uint32_t caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA;
+#ifdef ESP_PPA_HAS_PER_BUFFER_ALIGNMENT
+    if (esp_ptr_internal(buffer)) {
+        caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA;
+    }
+#else
+    (void)buffer;
+#endif
+    size_t alignment = 0;
+    if (esp_cache_get_alignment(caps, &alignment) != ESP_OK) {
+        return LVGL_PORT_PPA_ALIGNMENT;
+    }
+    return alignment;
+}
+
+/* SRM destinations are heap allocations owned by the adapter or panel driver.
+ * Never advertise padding beyond the allocation's usable capacity. */
+static inline size_t lvgl_port_ppa_output_buffer_size(void *buffer, size_t size)
+{
+    if (!buffer || !size) {
+        return 0;
+    }
+    size_t alignment = lvgl_port_ppa_output_alignment(buffer);
+    if (alignment && ((uintptr_t)buffer & (alignment - 1))) {
+        return 0;
+    }
+    size_t capacity = heap_caps_get_allocated_size(buffer);
+    if (alignment) {
+        capacity &= ~(alignment - 1);
+    }
+    if (size > capacity) {
+        return 0;
+    }
+    return alignment ? LVGL_PORT_PPA_ALIGN_UP(size, alignment) : size;
+}
 
 /* Conservative cutoffs from P4/S31 SRAM and PSRAM measurements. Copies and
  * opaque fills have cheap software paths, so reserve PPA for large PSRAM work. */

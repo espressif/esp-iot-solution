@@ -65,14 +65,14 @@ static size_t ppa_get_cache_line_size(const void *addr)
 
 static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size)
 {
-    size_t align = ppa_get_cache_line_size(addr);
+    size_t align = lvgl_port_ppa_output_alignment(addr);
 
     return (align > 0) ? LVGL_PORT_PPA_ALIGN_UP(size, align) : size;
 }
 
 static bool ppa_buffer_cache_aligned(const void *addr)
 {
-    size_t align = ppa_get_cache_line_size(addr);
+    size_t align = lvgl_port_ppa_output_alignment(addr);
 
     return (align == 0) || (((uintptr_t)addr & (align - 1)) == 0);
 }
@@ -296,7 +296,12 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
         return;
     }
 
+    /* A v8 draw context does not expose padding capacity, so keep the declared
+     * PPA output size within the logical draw buffer. */
+    size_t buffer_size = (size_t)lv_area_get_width(draw_ctx->buf_area) *
+                         lv_area_get_height(draw_ctx->buf_area) * sizeof(lv_color_t);
     if (!ppa_buffer_cache_aligned(draw_ctx->buf) ||
+            ppa_get_aligned_buffer_size(draw_ctx->buf, buffer_size) != buffer_size ||
             !display_bridge_dma2d_window_is_compatible(draw_ctx->buf,
                                                        lv_area_get_width(draw_ctx->buf_area),
                                                        block_area.x1 - draw_ctx->buf_area->x1,

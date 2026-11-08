@@ -2933,10 +2933,14 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
 #if CONFIG_SOC_PPA_SUPPORTED
     const esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
     ppa_client_handle_t ppa_handle = hw ? (ppa_client_handle_t)hw->ppa_handle : NULL;
+    size_t buffer_size = 0;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
     if (ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888) &&
             !display_bridge_dma2d_buffer_needs_alignment(src) &&
             !display_bridge_dma2d_buffer_needs_alignment(dst_fb)) {
+        buffer_size = lvgl_port_ppa_output_buffer_size(dst_fb, (size_t)color_bytes * hor_res * ver_res);
+    }
+    if (buffer_size) {
         const size_t rect_w = lv_x_end - lv_x_start + 1;
         const size_t rect_h = lv_y_end - lv_y_start + 1;
 
@@ -2969,14 +2973,6 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
             break;
         }
 
-        size_t buffer_size = heap_caps_get_allocated_size(dst_fb);
-        if (buffer_size == 0) {
-            buffer_size = (size_t)color_bytes * hor_res * ver_res;
-            size_t line_size = display_bridge_get_cache_line_size_by_addr(dst_fb);
-            if (line_size > 0) {
-                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
-            }
-        }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer          = src,
             .in.pic_w           = src_stride_px,
@@ -3037,10 +3033,14 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
 #if CONFIG_SOC_PPA_SUPPORTED
     const esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
     ppa_client_handle_t ppa_handle = hw ? (ppa_client_handle_t)hw->ppa_handle : NULL;
+    size_t buffer_size = 0;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
     if (ppa_handle && (color_bytes == COLOR_BYTES_RGB565 || color_bytes == COLOR_BYTES_RGB888) &&
             !display_bridge_dma2d_buffer_needs_alignment(from) &&
             !display_bridge_dma2d_buffer_needs_alignment(to)) {
+        buffer_size = lvgl_port_ppa_output_buffer_size(to, (size_t)color_bytes * dst_physical_w * dst_physical_h);
+    }
+    if (buffer_size) {
         ppa_srm_rotation_angle_t ppa_rotation;
         int x_offset = 0, y_offset = 0;
         const uint16_t rect_w = x_end - x_start + 1;
@@ -3069,14 +3069,6 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
             break;
         }
 
-        size_t buffer_size = heap_caps_get_allocated_size(to);
-        if (buffer_size == 0) {
-            buffer_size = (size_t)color_bytes * dst_physical_w * dst_physical_h;
-            size_t line_size = display_bridge_get_cache_line_size_by_addr(to);
-            if (line_size > 0) {
-                buffer_size = LVGL_PORT_PPA_ALIGN_UP(buffer_size, line_size);
-            }
-        }
         ppa_srm_oper_config_t oper_config = {
             .in.buffer = from,
             .in.pic_w = src_logical_w,
