@@ -918,6 +918,20 @@ static lv_display_rotation_t display_manager_lvgl_rotation(esp_lv_adapter_rotati
  * the logical resolution, and syncs the two buffers in the panel's
  * orientation (refr_sync_areas).
  */
+#if LV_DRAW_SW_DRAW_UNIT_CNT > 1 && LV_USE_OS != LV_OS_NONE && CONFIG_FREERTOS_NUMBER_OF_CORES > 1
+/* Run by lv_async_call() on the LVGL task: lv_draw_ortho starts its helper on
+ * the core the calling task is not on, at the calling task's priority. */
+static void display_manager_ortho_cores_cb(void *arg)
+{
+    LV_UNUSED(arg);
+    if (lv_draw_ortho_set_cores(2)) {
+        ESP_LOGI(TAG, "rotate in draw: tiles painted on both cores");
+    } else {
+        ESP_LOGW(TAG, "rotate in draw: no internal RAM for the second core's tiles, one core paints");
+    }
+}
+#endif
+
 static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adapter_rotation_t rotation)
 {
     /* lv_deinit() deletes every draw unit, lv_draw_ortho's included, so the
@@ -929,6 +943,11 @@ static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adap
     if (err != ESP_OK) {
         ESP_LOGW(TAG, "rotate in draw: no PPA client (%s), the CPU turns the tiles", esp_err_to_name(err));
     }
+#endif
+#if LV_DRAW_SW_DRAW_UNIT_CNT > 1 && LV_USE_OS != LV_OS_NONE && CONFIG_FREERTOS_NUMBER_OF_CORES > 1
+    /* LVGL was given more than one draw thread, which lv_draw_ortho replaces
+     * on this display: it paints every other tile on the second core instead. */
+    lv_async_call(display_manager_ortho_cores_cb, NULL);
 #endif
     lv_display_set_rotation(disp, display_manager_lvgl_rotation(rotation));
     lv_display_set_matrix_rotation(disp, true);

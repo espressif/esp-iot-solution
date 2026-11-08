@@ -696,7 +696,7 @@ static void panel_wake_cb(void *user_data)
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的两个帧缓冲中：不再先正向绘制再旋转拷贝，并少用一个帧缓冲。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
+  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的两个帧缓冲中：不再先正向绘制再旋转拷贝，并少用一个帧缓冲。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射
