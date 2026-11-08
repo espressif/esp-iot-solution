@@ -39,6 +39,12 @@ static inline size_t lvgl_port_ppa_output_alignment(const void *buffer)
     return alignment;
 }
 
+static inline bool lvgl_port_ppa_dimensions_supported(uint32_t width, uint32_t height)
+{
+    /* PPA's DMA2D picture dimensions are 14-bit. */
+    return width > 0 && width <= 0x3FFF && height > 0 && height <= 0x3FFF;
+}
+
 /* SRM destinations are heap allocations owned by the adapter or panel driver.
  * Never advertise padding beyond the allocation's usable capacity. */
 static inline size_t lvgl_port_ppa_output_buffer_size(void *buffer, size_t size)

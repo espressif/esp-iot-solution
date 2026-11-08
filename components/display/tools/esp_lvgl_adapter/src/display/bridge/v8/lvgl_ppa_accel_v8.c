@@ -298,6 +298,11 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
 
     /* A v8 draw context does not expose padding capacity, so keep the declared
      * PPA output size within the logical draw buffer. */
+    if (!lvgl_port_ppa_dimensions_supported(lv_area_get_width(draw_ctx->buf_area),
+                                            lv_area_get_height(draw_ctx->buf_area))) {
+        lv_draw_sw_blend_basic(draw_ctx, dsc);
+        return;
+    }
     size_t buffer_size = (size_t)lv_area_get_width(draw_ctx->buf_area) *
                          lv_area_get_height(draw_ctx->buf_area) * sizeof(lv_color_t);
     if (!ppa_buffer_cache_aligned(draw_ctx->buf) ||
@@ -313,12 +318,13 @@ static void lv_draw_ppa_blend(lv_draw_ctx_t *draw_ctx, const lv_draw_sw_blend_ds
     /* Image blending: RGB565 format only */
     if (dsc->src_buf) {
         /* LVGL v8 sources use the unclipped blend area's width as their stride. */
-        uint16_t src_stride_px = lv_area_get_width(dsc->blend_area);
+        uint32_t src_stride_px = lv_area_get_width(dsc->blend_area);
         lv_coord_t block_h = lv_area_get_height(&block_area);
 
         lv_coord_t src_off_y = block_area.y1 - dsc->blend_area->y1;
         lv_coord_t src_off_x = block_area.x1 - dsc->blend_area->x1;
-        if (src_off_y < 0 || src_off_x < 0 ||
+        if (!lvgl_port_ppa_dimensions_supported(src_stride_px, lv_area_get_height(dsc->blend_area)) ||
+                src_off_y < 0 || src_off_x < 0 ||
                 src_off_x + lv_area_get_width(&block_area) > src_stride_px ||
                 src_off_y + block_h > lv_area_get_height(dsc->blend_area) ||
                 !display_bridge_dma2d_window_is_compatible(dsc->src_buf, src_stride_px,

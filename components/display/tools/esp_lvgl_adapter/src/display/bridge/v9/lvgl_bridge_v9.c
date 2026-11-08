@@ -3151,6 +3151,8 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
     size_t buffer_size = 0;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
     if (ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
+            lvgl_port_ppa_dimensions_supported(hor_res, ver_res) &&
+            lvgl_port_ppa_dimensions_supported(src_stride_px, (uint32_t)lv_y_end - lv_y_start + 1) &&
             !display_bridge_dma2d_buffer_needs_alignment(src) &&
             !display_bridge_dma2d_buffer_needs_alignment(dst_fb)) {
         buffer_size = lvgl_port_ppa_output_buffer_size(dst_fb, (size_t)color_bytes * hor_res * ver_res);
@@ -3254,6 +3256,8 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
     size_t buffer_size = 0;
     /* SRM macro-block accesses cannot satisfy strict external-memory alignment. */
     if (ppa_handle && (color_bytes == 2 || color_bytes == 3) &&
+            lvgl_port_ppa_dimensions_supported(dst_physical_w, dst_physical_h) &&
+            lvgl_port_ppa_dimensions_supported(src_logical_w, src_logical_h) &&
             !display_bridge_dma2d_buffer_needs_alignment(from) &&
             !display_bridge_dma2d_buffer_needs_alignment(to)) {
         buffer_size = lvgl_port_ppa_output_buffer_size(to, (size_t)color_bytes * dst_physical_w * dst_physical_h);
