@@ -927,7 +927,7 @@ static void display_manager_ortho_cores_cb(void *arg)
     if (lv_draw_ortho_set_cores(2)) {
         ESP_LOGI(TAG, "rotate in draw: tiles painted on both cores");
     } else {
-        ESP_LOGW(TAG, "rotate in draw: no internal RAM for the second core's tiles, one core paints");
+        ESP_LOGW(TAG, "rotate in draw: the second core's task could not be started, one core paints");
     }
 }
 #endif

@@ -150,9 +150,11 @@ void lv_draw_ortho_set_filler(lv_draw_ortho_fill_cb_t fill);
  * Only LVGL's software renderer runs there, into a tile of its own; the
  * frame buffer and the turner stay with the core LVGL runs on. Needs an OS
  * (LV_USE_OS: FreeRTOS on an ESP32 with two cores, pthreads elsewhere),
- * because two renderers at once are safe only behind LVGL's own locks, and
- * a tile of internal RAM more (three more with a turner). Returns false and
- * stays on one core when either is missing.
+ * because two renderers at once are safe only behind LVGL's own locks.
+ * It wants four tiles with a turner (two otherwise); where internal RAM holds
+ * fewer blocks, the tiles are cut out of the blocks there are. Returns false
+ * and stays on one core when there is no OS or the second core's task cannot
+ * be started.
  */
 bool lv_draw_ortho_set_cores(uint32_t cores);
 
