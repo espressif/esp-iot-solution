@@ -13,10 +13,15 @@ config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
     default n
     help
         With rotation 90, 180 or 270 and ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT,
-        LVGL draws straight into the panel's two frame buffers in the panel's own
+        LVGL draws straight into the panel's frame buffers in the panel's own
         orientation, through LVGL's matrix rotation, and the flush only switches
-        buffers. Nothing is drawn upright and copied turned afterwards, and one
-        frame buffer fewer is needed (2 instead of 3).
+        buffers. Nothing is drawn upright and copied turned afterwards.
+
+        The display keeps the three frame buffers a rotated display is given
+        (esp_lv_adapter_get_required_frame_buffer_count()): LVGL draws the next
+        frame into the third while the panel waits for its refresh to show this
+        one. A panel made with two still works, and each frame then waits for
+        that refresh.
 
         Widgets are drawn by LVGL's software renderer into a small upright tile in
         internal RAM; on chips with a PPA, the PPA turns each tile into the frame

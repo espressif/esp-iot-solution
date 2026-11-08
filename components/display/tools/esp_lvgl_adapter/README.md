@@ -250,7 +250,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **Frame Buffer Count Rules**:
 - Non-zero rotation (except `DOUBLE_PARTIAL`) or triple-buffer modes: **3** frame buffers
-- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): **2** frame buffers, rotated or not
+- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9), rotated: **3**, as without the option; LVGL draws the next frame into the third while the panel waits for its refresh (with 2 it works, and each frame waits for that refresh)
 - Double-buffer modes without rotation, and `DOUBLE_PARTIAL`: **2** frame buffers
 - Single-buffer mode: **1** frame buffer
 
@@ -702,7 +702,7 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's two frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards, and one frame buffer fewer is needed. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
+  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
