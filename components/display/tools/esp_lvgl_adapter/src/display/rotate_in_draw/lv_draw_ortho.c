@@ -60,18 +60,19 @@ typedef struct {
     lv_draw_unit_t base;
     lv_draw_task_t * task_act;
     job_t * jobs;            /* LV_DRAW_ORTHO_MAX_BATCH */
-    /* LV_DRAW_ORTHO_TILE_BYTES each, aligned to a cache line. The second with
-     * a turner (one is drawn while the other is being turned) or a second
-     * core (each draws one); the third and fourth with both, so a pair is
-     * drawn while the last pair is being turned. */
+    /* Aligned to a cache line. The second with a turner (one is drawn while
+     * the other is being turned) or a second core (each draws one); the third
+     * and fourth with both, so a pair is drawn while the last pair is being
+     * turned. They are cut out of the blocks in tile_alloc, of
+     * LV_DRAW_ORTHO_TILE_BYTES each, the first ones first: a block per tile
+     * while internal RAM gives them, then each block shared (share_tiles). */
     uint8_t * tile[4];
     void * tile_alloc[4];
     uint32_t ticket[4];      /* the last turn reading each tile, 0 if none */
     int32_t next;
     int32_t pair;
-    /* What a tile holds: LV_DRAW_ORTHO_TILE_BYTES, or half of it when the
-     * third and fourth are the second halves of the first two (two cores and
-     * a turner, with no internal RAM for more). */
+    /* What a tile holds: LV_DRAW_ORTHO_TILE_BYTES, or a half or a quarter of
+     * it when there are fewer blocks than tiles. */
     size_t tile_bytes;
 } ortho_unit_t;
 
@@ -1588,17 +1589,48 @@ static uint8_t * tile_aligned(void * p)
     return (uint8_t *)(((uintptr_t)p + TILE_ALIGN - 1) & ~(uintptr_t)(TILE_ALIGN - 1));
 }
 
-/* The tiles past the first: internal RAM or nothing, since a tile in PSRAM
- * would put all the drawing on the bus the turn is meant to keep it off. The
- * second when a turner or a second core can use it, the third and fourth
- * when both can. */
-static bool more_tiles(ortho_unit_t * u)
+/* The tiles the pipeline can use: one alone, two with a turner or a second
+ * core, four with both. */
+static int tiles_wanted(void)
 {
-    const int want = g_turn && g_helper.on ? 4 : g_turn || g_helper.on ? 2 : 1;
-    for (int i = 1; i < want; i++) {
-        if (u->tile[i]) {
-            continue;
-        }
+    return g_turn && g_helper.on ? 4 : g_turn || g_helper.on ? 2 : 1;
+}
+
+/* The blocks there are, shared out into `want` tiles of one size: a block
+ * each when there are enough, else each block cut into equal parts. Only
+ * after a fence, since a turner may still be reading a tile. */
+static void share_tiles(ortho_unit_t * u, int want)
+{
+    int blocks = 0;
+    while (blocks < 4 && u->tile_alloc[blocks]) {
+        blocks++;
+    }
+    const int per = (want + blocks - 1) / blocks;
+    const size_t bytes = per == 1 ? LV_DRAW_ORTHO_TILE_BYTES
+                         : (LV_DRAW_ORTHO_TILE_BYTES / (size_t)per) & ~(size_t)(TILE_ALIGN - 1);
+    for (int j = 0; j < 4; j++) {
+        u->tile[j] = j < want ? tile_aligned(u->tile_alloc[j / per]) + (size_t)(j % per) * bytes : NULL;
+        u->ticket[j] = 0;
+    }
+    u->tile_bytes = bytes;
+}
+
+/* The blocks past the first: internal RAM or nothing, since a tile in PSRAM
+ * would put all the drawing on the bus the turn is meant to keep it off. When
+ * internal RAM has no room for a block per tile, the tiles are cut out of the
+ * blocks there are: smaller tiles, for no RAM more. Without that, a board
+ * whose internal RAM holds a single block -- an ESP32-P4 whose L2 cache takes
+ * 256 KB leaves one 256 KB region, and two blocks do not fit in it beside
+ * anything else -- would draw one tile and then wait for the turner to finish
+ * it, with nothing overlapped and no second core. */
+static void more_tiles(ortho_unit_t * u)
+{
+    const int want = tiles_wanted();
+    int blocks = 0;
+    while (blocks < 4 && u->tile_alloc[blocks]) {
+        blocks++;
+    }
+    while (blocks < want) {
         bool internal = false;
         void * p = tile_alloc(LV_DRAW_ORTHO_TILE_BYTES + TILE_ALIGN, &internal);
 #if !defined(ESP_PLATFORM)
@@ -1608,30 +1640,17 @@ static bool more_tiles(ortho_unit_t * u)
             tile_free(p);
             p = NULL;
         }
-        if (p == NULL && i >= 2) {
-            /* No room for two more: the first two cut in half make four,
-             * which is what lets a pair be painted while the last is turned
-             * -- smaller tiles, but no RAM more than one core needs. */
-            if (i == 3) {
-                tile_free(u->tile_alloc[2]);
-                u->tile_alloc[2] = NULL;
-            }
-            const size_t half = (LV_DRAW_ORTHO_TILE_BYTES / 2) & ~(size_t)(TILE_ALIGN - 1);
-            u->tile[2] = u->tile[0] + half;
-            u->tile[3] = u->tile[1] + half;
-            u->tile_bytes = half;
-            LV_LOG_WARN("ortho: no internal RAM for two more tiles; four of %u KiB from the two there are",
-                        (unsigned)(half / 1024));
-            return true;
-        }
         if (p == NULL) {
-            LV_LOG_WARN("ortho: no internal RAM for tile %d of %d", i + 1, want);
-            return false;
+            break;
         }
-        u->tile_alloc[i] = p;
-        u->tile[i] = tile_aligned(p);
+        u->tile_alloc[blocks++] = p;
     }
-    return true;
+    fence();
+    share_tiles(u, want);
+    if (blocks < want) {
+        LV_LOG_WARN("ortho: internal RAM for %d block(s) of %u KiB; %d tiles of %u KiB cut from them",
+                    blocks, (unsigned)(LV_DRAW_ORTHO_TILE_BYTES / 1024), want, (unsigned)(u->tile_bytes / 1024));
+    }
 }
 
 static int32_t delete_cb(lv_draw_unit_t * draw_unit)
@@ -1698,19 +1717,6 @@ void lv_draw_ortho_set_turner(lv_draw_ortho_turn_cb_t turn, lv_draw_ortho_wait_c
     }
 }
 
-/* The halves go back to being whole tiles. */
-static void whole_tiles(ortho_unit_t * u)
-{
-    fence();
-    for (int i = 2; i < 4; i++) {
-        if (u->tile_alloc[i] == NULL) {
-            u->tile[i] = NULL;
-        }
-        u->ticket[i] = 0;
-    }
-    u->tile_bytes = LV_DRAW_ORTHO_TILE_BYTES;
-}
-
 bool lv_draw_ortho_set_cores(uint32_t cores)
 {
     if (g_unit == NULL) {
@@ -1721,9 +1727,7 @@ bool lv_draw_ortho_set_cores(uint32_t cores)
             helper_stop_thread();
         }
         g_helper.on = false;
-        if (g_unit->tile_bytes != LV_DRAW_ORTHO_TILE_BYTES) {
-            whole_tiles(g_unit);
-        }
+        more_tiles(g_unit);   /* the tiles one core uses, whole again if they were cut */
         return true;
     }
     if (g_helper.on) {
@@ -1733,19 +1737,13 @@ bool lv_draw_ortho_set_cores(uint32_t cores)
         LV_LOG_WARN("ortho: no second core without an OS (LV_USE_OS), which LVGL's own locks need");
         return false;
     }
-    g_helper.on = true;   /* more_tiles asks */
-    if (!more_tiles(g_unit) || g_unit->tile[1] == NULL) {
-        g_helper.on = false;
-        LV_LOG_WARN("ortho: no internal RAM for the second core's tile");
-        return false;
-    }
-    g_helper.on = false;
     if (!helper_start_thread()) {
         LV_LOG_WARN("ortho: the second core's task could not be started");
         return false;
     }
-    g_unit->pair = 0;
     g_helper.on = true;
+    more_tiles(g_unit);   /* tiles_wanted() now asks for the second core's */
+    g_unit->pair = 0;
     return true;
 }
 
