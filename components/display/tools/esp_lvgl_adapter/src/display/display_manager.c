@@ -932,6 +932,25 @@ static void display_manager_ortho_cores_cb(void *arg)
 }
 #endif
 
+/**
+ * @brief Take the third panel buffer of a display rotated in draw
+ *
+ * A rotated display is given three panel buffers
+ * (esp_lv_adapter_get_required_frame_buffer_count()), and drawn in the panel's
+ * orientation it uses all three: LVGL draws the next frame into the third
+ * while the panel waits for its refresh to show this one. The rest of the
+ * DOUBLE_DIRECT setup asks for two, and finds them among these. A panel made
+ * with two still works, and each frame then waits for that refresh.
+ */
+static void display_manager_fetch_third_buffer(esp_lv_adapter_display_node_t *node, lv_color_format_t color_format)
+{
+    if (display_manager_fetch_panel_frame_buffers(node, 3, lv_color_format_get_size(color_format))) {
+        return;
+    }
+    ESP_LOGW(TAG, "rotate in draw: the panel has two frame buffers, so each frame waits for its refresh;"
+             " made with esp_lv_adapter_get_required_frame_buffer_count() it has three");
+}
+
 static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adapter_rotation_t rotation)
 {
     /* lv_deinit() deletes every draw unit, lv_draw_ortho's included, so the
@@ -1053,6 +1072,12 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
         lv_display_delete(disp);
         return false;
     }
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        display_manager_fetch_third_buffer(node, color_format);
+    }
+#endif
 
     if (!display_manager_prepare_buffers(node, render_mode, color_format)) {
         lv_display_delete(disp);
@@ -1801,14 +1826,6 @@ uint8_t display_manager_required_frame_buffer_count(esp_lv_adapter_tear_avoid_mo
     if (tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC) {
         return 1;
     }
-
-#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
-    /* Drawn in the panel's orientation, a rotated DOUBLE_DIRECT display is the
-     * unrotated one: LVGL draws into the two scanout buffers directly. */
-    if (tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT) {
-        return 2;
-    }
-#endif
 
     /* Any non-zero rotation requires 3 buffers for rotation processing.
      * DOUBLE_PARTIAL has its own drawing buffers and is out of scope here.

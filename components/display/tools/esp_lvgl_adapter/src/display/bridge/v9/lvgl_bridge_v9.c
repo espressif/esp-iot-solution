@@ -154,6 +154,12 @@ typedef struct esp_lv_adapter_display_bridge_v9 {
     /* --- Pipeline buffer management (owned by bridge, inited by display_bridge_pipeline_init_from_cfg) --- */
     esp_lv_adapter_display_pipeline_t pipeline;
     display_bridge_v9_diff_tracker_t diff_tracker;
+
+    /* --- DOUBLE_DIRECT drawn into three panel buffers (see display_bridge_v9_flush_triple_direct) --- */
+    bool triple_direct;
+    bool triple_prev_known;                       /**< triple_prev holds the areas of the last frame */
+    uint16_t triple_prev_count;
+    lv_area_t triple_prev[DISPLAY_BRIDGE_V9_DIFF_RECT_CAPACITY]; /**< In the panel's orientation */
 } esp_lv_adapter_display_bridge_v9_t;
 
 #if CONFIG_SOC_PPA_SUPPORTED || CONFIG_SOC_DMA2D_SUPPORTED
@@ -959,6 +965,8 @@ static void display_bridge_v9_set_draw_bitmap_callbacks(esp_lv_adapter_display_b
 
 /* Event callbacks */
 static void rounder_event_cb(lv_event_t *e);
+static void display_bridge_v9_triple_render_start_cb(lv_event_t *e);
+static void display_bridge_v9_triple_direct_setup(esp_lv_adapter_display_bridge_v9_t *impl);
 
 /* Core callbacks */
 static void display_bridge_v9_flush_entry(esp_lv_adapter_display_bridge_t *bridge,
@@ -1260,6 +1268,7 @@ esp_lv_adapter_display_bridge_t *esp_lv_adapter_display_bridge_v9_create(const e
     display_dirty_region_reset(&impl->dirty);
     display_bridge_v9_diff_reset(impl);
     display_bridge_v9_prime_double_buffers(impl);
+    display_bridge_v9_triple_direct_setup(impl);
 
     if (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_OTHER &&
             impl->runtime.rotation != ESP_LV_ADAPTER_ROTATE_0 &&
@@ -1316,6 +1325,7 @@ static void display_bridge_v9_destroy(esp_lv_adapter_display_bridge_t *bridge)
     /* Remove rounder event callback if exists */
     if (impl && impl->cfg.lv_disp) {
         lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, rounder_event_cb, impl);
+        lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp, display_bridge_v9_triple_render_start_cb, impl);
     }
 
     /* Clear VSync callbacks and free pipeline (owned by bridge) */
@@ -1420,6 +1430,7 @@ static esp_err_t display_bridge_v9_update_panel(esp_lv_adapter_display_bridge_t 
     display_dirty_region_reset(&impl->dirty);
     display_bridge_v9_diff_reset(impl);
     display_bridge_v9_prime_double_buffers(impl);
+    display_bridge_v9_triple_direct_setup(impl);
 
     /* Re-register VSYNC callbacks for new panel */
     return impl->panel ? display_bridge_v9_register_vsync(impl) : ESP_OK;
@@ -1603,7 +1614,19 @@ static void display_bridge_v9_set_dummy_draw(esp_lv_adapter_display_bridge_t *br
     }
 
     const bool was_enabled = impl->dummy_draw;
+    if (enable && !was_enabled && impl->triple_direct) {
+        /* A dummy draw hands frames over two buffers at a time, waiting for each
+         * switch: let the one LVGL handed over last land first. */
+        display_bridge_v9_wait_double_ready(impl);
+    }
     impl->dummy_draw = enable;
+    if (!enable && was_enabled && impl->triple_direct) {
+        /* What the dummy draw wrote is in none of the bookkeeping: only the
+         * buffer on screen is known to hold the latest picture, and the next
+         * frames bring the others up to date from it. */
+        display_bridge_v9_diff_reset(impl);
+        impl->triple_prev_known = false;
+    }
     if (!enable) {
         /* On real disable, align buf_act to the free buffer; skip the setup call. */
         lv_display_t *disp = impl->cfg.lv_disp;
@@ -2773,6 +2796,241 @@ static void display_bridge_v9_flush_triple_full(esp_lv_adapter_display_bridge_v9
     display_manager_flush_ready(disp);
 }
 
+/**********************
+ *   DOUBLE_DIRECT INTO THREE PANEL BUFFERS
+ **********************/
+
+/*
+ * A DOUBLE_DIRECT display drawn in the panel's orientation (ROTATE_IN_DRAW) is
+ * given three panel buffers, as a rotated display always has been. LVGL keeps
+ * its two draw buffers, and the one it draws into next is pointed at whichever
+ * panel buffer is neither on screen nor waiting to be: a frame is handed to
+ * the panel and LVGL starts the next at once. With two buffers it has to wait
+ * for the panel's next refresh first, and a frame costs what drawing it costs
+ * rounded up to a whole number of refreshes -- measured on a 60 Hz ESP32-P4
+ * panel, 58.4 ms of drawing became 66.1 ms a frame, four refreshes.
+ *
+ * LVGL brings the buffer it draws into up to date with the frame before
+ * (refr_sync_areas). With three that buffer is two frames old: what the frame
+ * before that drew is copied here, at LV_EVENT_RENDER_START, from the diff
+ * tracker, which records per panel buffer the areas it is behind by.
+ */
+static bool display_bridge_v9_wants_triple_direct(const esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    return impl->cfg.base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT &&
+           bridge_rotation(impl) == ESP_LV_ADAPTER_ROTATE_0 &&
+           (impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI ||
+            impl->cfg.base.profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB) &&
+           impl->runtime.frame_buffer_count >= 3 &&
+           impl->runtime.frame_buffers[0] && impl->runtime.frame_buffers[1] &&
+           impl->runtime.frame_buffers[2];
+}
+
+static void display_bridge_v9_triple_direct_setup(esp_lv_adapter_display_bridge_v9_t *impl)
+{
+    if (!impl) {
+        return;
+    }
+    if (impl->cfg.lv_disp) {
+        lv_display_remove_event_cb_with_user_data(impl->cfg.lv_disp,
+                                                  display_bridge_v9_triple_render_start_cb, impl);
+    }
+
+    impl->triple_direct = impl->cfg.lv_disp && display_bridge_v9_wants_triple_direct(impl);
+    /* Nothing drawn yet, so LVGL has nothing of a frame before to bring over. */
+    impl->triple_prev_known = true;
+    impl->triple_prev_count = 0;
+    if (!impl->triple_direct) {
+        return;
+    }
+
+    /* The diff tracker was reset to the buffer on screen; the one LVGL draws
+     * into first has just been primed from it. The third has never been drawn
+     * and stays behind everywhere until it is first drawn into. */
+    const uint8_t first = display_bridge_v9_diff_buffer_index(impl, impl->draw_fb);
+    if (first != UINT8_MAX) {
+        impl->diff_tracker.buffers[first].valid = true;
+        impl->diff_tracker.buffers[first].pending_count = 0;
+    }
+    lv_display_add_event_cb(impl->cfg.lv_disp, display_bridge_v9_triple_render_start_cb,
+                            LV_EVENT_RENDER_START, impl);
+    ESP_LOGI(TAG, "three panel buffers: LVGL draws the next frame while the panel waits for its refresh");
+}
+
+/* The areas LVGL is about to draw, in the panel's orientation. A display
+ * rotated in draw is drawn through LVGL's matrix, and refr_sync_areas turns an
+ * area the same way before it copies it: clipped to the screen, then turned. */
+static bool display_bridge_v9_triple_capture(lv_display_t *disp, lv_area_t *out, uint16_t *count)
+{
+    const int32_t hor_res = lv_display_get_horizontal_resolution(disp);
+    const int32_t ver_res = lv_display_get_vertical_resolution(disp);
+
+    *count = 0;
+    for (uint32_t i = 0; i < disp->inv_p; i++) {
+        if (disp->inv_area_joined[i]) {
+            continue;
+        }
+        lv_area_t a = disp->inv_areas[i];
+        a.x1 = LV_MAX(a.x1, 0);
+        a.y1 = LV_MAX(a.y1, 0);
+        a.x2 = LV_MIN(a.x2, hor_res - 1);
+        a.y2 = LV_MIN(a.y2, ver_res - 1);
+        if (!display_bridge_v9_diff_rect_valid(&a)) {
+            continue;
+        }
+#if LV_DRAW_TRANSFORM_USE_MATRIX
+        if (lv_display_get_matrix_rotation(disp)) {
+            lv_display_rotate_area(disp, &a);
+        }
+#endif
+        if (*count >= DISPLAY_BRIDGE_V9_DIFF_RECT_CAPACITY) {
+            *count = 0;
+            return false;
+        }
+        out[(*count)++] = a;
+    }
+    return true;
+}
+
+/**
+ * @brief Bring the buffer LVGL is about to draw into up to date
+ *
+ * Runs after LVGL's own refr_sync_areas and before anything is drawn. What the
+ * buffer is behind by, less what LVGL has just brought over (the areas of the
+ * frame before) and less what this frame draws, is copied from the buffer
+ * handed to the panel last, which holds the whole of the latest frame.
+ */
+static void display_bridge_v9_triple_render_start_cb(lv_event_t *e)
+{
+    esp_lv_adapter_display_bridge_v9_t *impl =
+        (esp_lv_adapter_display_bridge_v9_t *)lv_event_get_user_data(e);
+    lv_display_t *disp = impl ? impl->cfg.lv_disp : NULL;
+    if (!impl || !impl->triple_direct || impl->dummy_draw || !disp ||
+            disp->render_mode != LV_DISPLAY_RENDER_MODE_DIRECT ||
+            !disp->buf_1 || !disp->buf_2 || !disp->buf_act) {
+        return;
+    }
+
+    lv_draw_buf_t *target_buf = disp->buf_act;
+    lv_draw_buf_t *source_buf = (target_buf == disp->buf_1) ? disp->buf_2 : disp->buf_1;
+    uint8_t target = display_bridge_v9_diff_buffer_index(impl, target_buf->data);
+    const uint8_t source = display_bridge_v9_diff_buffer_index(impl, impl->disp_fb);
+    if (target == UINT8_MAX || source == UINT8_MAX) {
+        return; /* LVGL is not drawing into a panel buffer (dummy draw redirected it) */
+    }
+
+    if (target_buf->data == impl->disp_fb || source_buf->data != impl->disp_fb) {
+        /* Out of step: the draw buffers were set again behind this bridge
+         * (a dummy draw restored, a panel updated). Draw into a buffer that is
+         * not on screen, and bring the whole of it up to date from the one
+         * that is: what LVGL synced did not come from there. */
+        display_bridge_v9_wait_double_ready(impl);
+        void *free_fb = target_buf->data;
+        for (uint8_t i = 0; free_fb == impl->disp_fb && i < 3; i++) {
+            if (impl->runtime.frame_buffers[i] != impl->disp_fb) {
+                free_fb = impl->runtime.frame_buffers[i];
+            }
+        }
+        source_buf->data = impl->disp_fb;
+        target_buf->data = free_fb;
+        impl->draw_fb = free_fb;
+        target = display_bridge_v9_diff_buffer_index(impl, free_fb);
+        display_bridge_v9_diff_reset(impl);
+        impl->triple_prev_known = false;
+    }
+
+    lv_area_t current[DISPLAY_BRIDGE_V9_DIFF_RECT_CAPACITY];
+    uint16_t current_count = 0;
+    const bool current_known = display_bridge_v9_triple_capture(disp, current, &current_count);
+
+    /* What is not copied: what LVGL just brought over, and what it draws now. */
+    lv_area_t cuts[DISPLAY_BRIDGE_V9_DIFF_RECT_CAPACITY * 2];
+    uint16_t cut_count = 0;
+    if (current_known) {
+        memcpy(cuts, current, current_count * sizeof(lv_area_t));
+        cut_count = current_count;
+    }
+    if (impl->triple_prev_known) {
+        memcpy(&cuts[cut_count], impl->triple_prev, impl->triple_prev_count * sizeof(lv_area_t));
+        cut_count += impl->triple_prev_count;
+    }
+
+    const lv_area_t screen = {
+        0, 0, (int32_t)bridge_h_res(impl) - 1, (int32_t)bridge_v_res(impl) - 1
+    };
+    const display_bridge_v9_diff_buffer_t *state = &impl->diff_tracker.buffers[target];
+    const lv_area_t *behind = state->valid ? state->pending : &screen;
+    const uint16_t behind_count = state->valid ? state->pending_count : 1;
+
+    lv_area_t repair[DISPLAY_BRIDGE_V9_REPAIR_CAPACITY];
+    uint16_t repair_count = 0;
+    if (!display_bridge_v9_diff_subtract(behind, behind_count, cuts, cut_count,
+                                         repair, &repair_count)) {
+        /* Cut into too many pieces: copy all of it, which is more than needed
+         * and never wrong. */
+        repair_count = LV_MIN(behind_count, (uint16_t)DISPLAY_BRIDGE_V9_REPAIR_CAPACITY);
+        memcpy(repair, behind, repair_count * sizeof(lv_area_t));
+    }
+    for (uint16_t i = 0; i < repair_count; i++) {
+        lv_draw_buf_copy(target_buf, &repair[i], source_buf, &repair[i]);
+    }
+
+    /* Every other buffer is now behind by what this frame draws. */
+    if (current_known) {
+        display_bridge_v9_diff_commit(impl, target, current, current_count);
+        memcpy(impl->triple_prev, current, current_count * sizeof(lv_area_t));
+        impl->triple_prev_count = current_count;
+    } else {
+        display_bridge_v9_diff_commit(impl, target, &screen, 1);
+        impl->triple_prev_count = 0;
+    }
+    impl->triple_prev_known = current_known;
+}
+
+/**
+ * @brief Hand a frame drawn directly into a panel buffer over, three buffers
+ */
+static void display_bridge_v9_flush_triple_direct(esp_lv_adapter_display_bridge_v9_t *impl,
+                                                  lv_display_t *disp,
+                                                  uint8_t *color_map)
+{
+    if (!lv_display_flush_is_last(disp)) {
+        display_manager_flush_ready(disp);
+        return;
+    }
+
+    /* The panel takes one switch at a time, so the frame handed over last has
+     * to be on screen first. LVGL has drawn a whole frame since: unless that
+     * took less than a refresh, the switch is long done and nothing waits. */
+    display_bridge_v9_wait_double_ready(impl);
+    const uint32_t submitted_switch_seq = display_bridge_v9_prepare_double_wait(impl);
+    esp_err_t ret = display_bridge_v9_blit_full_frame(impl, color_map, true);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Blit failed: %s", esp_err_to_name(ret));
+        display_manager_flush_ready(disp);
+        return;
+    }
+    /* Armed, not waited for: the next frame is drawn into the third buffer. */
+    (void)display_bridge_v9_arm_double_wait_after_submit(impl, submitted_switch_seq);
+
+    void *on_screen = impl->disp_fb;
+    void *next = NULL;
+    for (uint8_t i = 0; i < 3 && !next; i++) {
+        void *fb = impl->runtime.frame_buffers[i];
+        if (fb != color_map && fb != on_screen) {
+            next = fb;
+        }
+    }
+    impl->disp_fb = color_map;
+    impl->draw_fb = next;
+    /* LVGL swaps its two draw buffers after this returns: the other one is
+     * drawn into next. */
+    lv_draw_buf_t *after = (disp->buf_act == disp->buf_1) ? disp->buf_2 : disp->buf_1;
+    after->data = next;
+
+    display_manager_flush_ready(disp);
+}
+
 /**
  * @brief Double buffering with direct mode
  */
@@ -2782,6 +3040,13 @@ static void display_bridge_v9_flush_double_direct(esp_lv_adapter_display_bridge_
                                                   uint8_t *color_map)
 {
     (void)area;
+
+    if (impl->triple_direct && !impl->dummy_draw &&
+            disp->render_mode == LV_DISPLAY_RENDER_MODE_DIRECT &&
+            display_bridge_v9_diff_buffer_index(impl, color_map) != UINT8_MAX) {
+        display_bridge_v9_flush_triple_direct(impl, disp, color_map);
+        return;
+    }
 
     /* Action after last area refresh */
     if (lv_display_flush_is_last(disp)) {
