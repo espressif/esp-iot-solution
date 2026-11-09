@@ -63,4 +63,4 @@ common/                     # shared by OTA + FT
 └── src/esp_gmp_sha256.c
 ```
 
-See `examples/esp_gmp/gmp_ota`.
+See the [GMP OTA example guide](../../../../examples/esp_gmp/gmp_ota/README.md).

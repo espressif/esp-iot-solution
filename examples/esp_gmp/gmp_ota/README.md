@@ -38,13 +38,24 @@ idf.py set-target esp32
 idf.py build flash monitor
 ```
 
+The server advertises as `ESP-GMP-OTA` and receives firmware over BLE. Keep the uploaded image within the OTA slot size described above.
+
+You can use the [ESP BLE App](https://github.com/EspressifApps/esp-ble-app) to debug `ble_gmp_ota_server` from an Android 12 or newer phone instead of using the example client board. Install [app-debug.apk](https://github.com/EspressifApps/esp-ble-app/releases/download/v0.0.1/app-debug.apk) from the [v0.0.1 release](https://github.com/EspressifApps/esp-ble-app/releases/tag/v0.0.1), grant Bluetooth permissions, and start the server. Open **GMP OTA → Scan & Connect**, connect to `ESP-GMP-OTA`, then select a firmware `.bin` file and tap **Start GMP OTA Update**.
+
+Select **GMP OTA** on the launcher. **Scan & Connect** finds the server, and the **GMP OTA** page selects the firmware binary to upload. The screenshots show the disconnected state, not an OTA in progress.
+
+| App launcher | Scan & Connect | GMP OTA: select firmware |
+| --- | --- | --- |
+| <img src="ble_gmp_ota_server/image/main_page.png" alt="ESP BLE App launcher" width="220"> | <img src="ble_gmp_ota_server/image/ota_00.png" alt="GMP OTA scan screen" width="220"> | <img src="ble_gmp_ota_server/image/ota_01.png" alt="GMP OTA firmware selection screen" width="220"> |
+
 ## Build the client
 
-```bash
-cp ble_gmp_ota_server/build/ble_gmp_ota_server.bin \
-   ble_gmp_ota_client/spiffs/ota_image.bin
+After building the server, run the following commands from its project directory:
 
-cd ble_gmp_ota_client
+```bash
+cp build/ble_gmp_ota_server.bin ../ble_gmp_ota_client/spiffs/ota_image.bin
+
+cd ../ble_gmp_ota_client
 idf.py set-target esp32
 idf.py build flash monitor
 ```
@@ -57,7 +68,7 @@ If `ble_gmp_ota_client/spiffs/ota_image.bin` is missing, the client still builds
 
 This example only demonstrates the GMP-over-Flux OTA data path. It does not verify firmware provenance, does not enable BLE access control, and does not replace signed app images or secure boot. Use it only in controlled lab setups. Production products must add link authentication, application authorization, and firmware trust checks.
 
-The client example does not auto-format a failed SPIFFS mount (`format_if_mount_failed=false`); mount failure aborts with an error. To refresh `ota_image.bin`, regenerate and flash SPIFFS as described in `ble_gmp_ota_client/spiffs/README.md`.
+The client example does not auto-format a failed SPIFFS mount (`format_if_mount_failed=false`); mount failure aborts with an error. To refresh `ota_image.bin`, copy the firmware to `ble_gmp_ota_client/spiffs/ota_image.bin`, then run `idf.py build flash` in `ble_gmp_ota_client` so `storage.bin` is regenerated and written to the `storage` SPIFFS partition at `0x110000`. Check that `ble_gmp_ota_client/build/flash_args` lists `0x110000 storage.bin`. At runtime the client reads `/spiffs/ota_image.bin`.
 
 ## Component API
 
