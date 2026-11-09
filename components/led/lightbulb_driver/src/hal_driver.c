@@ -17,6 +17,7 @@
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0))
 #define FADE_TICKS_FROM_GPTIMER 1
 #include "driver/gptimer.h"
+#include <sys/lock.h>
 #else
 #warning The current IDF version does not support using the gptimer API
 #endif
@@ -111,13 +112,23 @@ struct hal_context_s {
     float balance_coefficient[5];
     SemaphoreHandle_t fade_mutex;
 #if FADE_TICKS_FROM_GPTIMER
-    gptimer_handle_t fade_timer;
-    TaskHandle_t notify_task;
+    hal_context_t next;
     bool gptimer_is_active;
 #else
     esp_timer_handle_t fade_timer;
 #endif
 };
+
+#if FADE_TICKS_FROM_GPTIMER
+/* One tick source for all instances. The lock also protects callback lifetime. */
+static struct {
+    gptimer_handle_t fade_timer;
+    TaskHandle_t notify_task;
+    bool gptimer_is_active;
+    hal_context_t head;
+    _lock_t lock;
+} s_fade;
+#endif
 
 #ifdef CONFIG_ENABLE_PWM_DRIVER
 static hal_obj_t *hal_create_pwm_driver(void)
@@ -399,18 +410,22 @@ static void fade_cb(void *priv);
 static IRAM_ATTR bool on_timer_alarm_cb(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx)
 {
     BaseType_t task_woken = pdFALSE;
-    hal_context_t hal_ctx = (hal_context_t)user_ctx;
-    vTaskNotifyGiveFromISR(hal_ctx->notify_task, &task_woken);
+    vTaskNotifyGiveFromISR(s_fade.notify_task, &task_woken);
 
     return task_woken == pdTRUE;
 }
 
 static void fade_tick_task(void *arg)
 {
-    hal_context_t hal_ctx = (hal_context_t)arg;
     while (true) {
         ulTaskNotifyTake(true, portMAX_DELAY);
-        fade_cb(hal_ctx);
+        _lock_acquire_recursive(&s_fade.lock);
+        for (hal_context_t hal_ctx = s_fade.head; hal_ctx; hal_ctx = hal_ctx->next) {
+            if (hal_ctx->gptimer_is_active) {
+                fade_cb(hal_ctx);
+            }
+        }
+        _lock_release_recursive(&s_fade.lock);
     }
     vTaskDelete(NULL);
 }
@@ -463,19 +478,38 @@ static void cleanup(hal_context_t hal_ctx)
         return;
     }
 
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_acquire_recursive(&s_fade.lock);
+    hal_context_t *ctx = &s_fade.head;
+    while (*ctx && *ctx != hal_ctx) {
+        ctx = &(*ctx)->next;
+    }
+    if (*ctx) {
+        *ctx = hal_ctx->next;
+    }
+    for (ctx = &s_fade.head; *ctx && !(*ctx)->gptimer_is_active; ctx = &(*ctx)->next) {
+    }
+    if (!*ctx && s_fade.gptimer_is_active) {
+        ESP_ERROR_CHECK(gptimer_stop(s_fade.fade_timer));
+        ESP_ERROR_CHECK(gptimer_disable(s_fade.fade_timer));
+        s_fade.gptimer_is_active = false;
+    }
+#endif
+
     if (hal_ctx->table_group) {
         free(hal_ctx->table_group);
         hal_ctx->table_group = NULL;
     }
 #ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->fade_timer) {
-        gptimer_disable(hal_ctx->fade_timer);
-        gptimer_del_timer(hal_ctx->fade_timer);
-        hal_ctx->fade_timer = NULL;
-    }
-    if (hal_ctx->notify_task) {
-        vTaskDelete(hal_ctx->notify_task);
-        hal_ctx->notify_task = NULL;
+    if (!s_fade.head) {
+        if (s_fade.fade_timer) {
+            ESP_ERROR_CHECK(gptimer_del_timer(s_fade.fade_timer));
+            s_fade.fade_timer = NULL;
+        }
+        if (s_fade.notify_task) {
+            vTaskDelete(s_fade.notify_task);
+            s_fade.notify_task = NULL;
+        }
     }
 #else
     if (hal_ctx->fade_timer) {
@@ -502,6 +536,9 @@ static void cleanup(hal_context_t hal_ctx)
     if (hal_ctx) {
         free(hal_ctx);
     }
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_release_recursive(&s_fade.lock);
+#endif
 }
 
 #ifdef CONFIG_ENABLE_PWM_DRIVER
@@ -555,11 +592,20 @@ static void fade_cb(void *priv)
         return;
     }
     esp_err_t err = ESP_OK;
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_acquire_recursive(&s_fade.lock);
+#endif
     if (xSemaphoreTake(hal_ctx->fade_mutex, 0) == pdFALSE) {
+#ifdef FADE_TICKS_FROM_GPTIMER
+        _lock_release_recursive(&s_fade.lock);
+#endif
         return;
     }
     if (hal_ctx->deiniting) {
         xSemaphoreGive(hal_ctx->fade_mutex);
+#ifdef FADE_TICKS_FROM_GPTIMER
+        _lock_release_recursive(&s_fade.lock);
+#endif
         return;
     }
     int idle_channel_num = 0;
@@ -575,8 +621,8 @@ static void fade_cb(void *priv)
             hal_ctx->s_err_count = 0;
             ESP_LOGE(TAG, "Hardware may be unresponsive, fade terminated");
             force_stop_all_ch(hal_ctx);
-            xSemaphoreGive(hal_ctx->fade_mutex);
-            return;
+            idle_channel_num = hal_ctx->interface->channel_num;
+            goto FADE_DONE;
         }
 
         // If this channel needs to be updated
@@ -655,12 +701,29 @@ static void fade_cb(void *priv)
             }
     }
 
+FADE_DONE:
 #ifdef FADE_TICKS_FROM_GPTIMER
-    if (idle_channel_num >= hal_ctx->interface->channel_num) {
-        if (hal_ctx->gptimer_is_active) {
-            hal_ctx->gptimer_is_active = false;
-            gptimer_stop(hal_ctx->fade_timer);
+    hal_ctx->gptimer_is_active = idle_channel_num < hal_ctx->interface->channel_num;
+    hal_context_t ctx = s_fade.head;
+    while (ctx && !ctx->gptimer_is_active) {
+        ctx = ctx->next;
+    }
+    if (ctx && !s_fade.gptimer_is_active) {
+        err = gptimer_enable(s_fade.fade_timer);
+        if (err == ESP_OK) {
+            err = gptimer_start(s_fade.fade_timer);
+            if (err != ESP_OK) {
+                ESP_ERROR_CHECK(gptimer_disable(s_fade.fade_timer));
+            }
         }
+        s_fade.gptimer_is_active = err == ESP_OK;
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "start fade timer failed: %s", esp_err_to_name(err));
+        }
+    } else if (!ctx && s_fade.gptimer_is_active) {
+        ESP_ERROR_CHECK(gptimer_stop(s_fade.fade_timer));
+        ESP_ERROR_CHECK(gptimer_disable(s_fade.fade_timer));
+        s_fade.gptimer_is_active = false;
     }
 #else
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
@@ -674,6 +737,9 @@ static void fade_cb(void *priv)
 #endif
 #endif
     xSemaphoreGive(hal_ctx->fade_mutex);
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_release_recursive(&s_fade.lock);
+#endif
 }
 
 static void driver_default_hook_func(void *user_data, void *ctx)
@@ -763,39 +829,43 @@ static hal_context_t hal_output_init_common(hal_obj_t *interface, void *driver_c
     }
 
 #ifdef FADE_TICKS_FROM_GPTIMER
-    static uint8_t s_task_id = 0;
-    char task_name[16];
-    snprintf(task_name, sizeof(task_name), "%s_%u", hal_ctx->interface->name, s_task_id++);
-    xTaskCreate(fade_tick_task, task_name, CONFIG_LB_NOTIFY_TASK_STACK, hal_ctx, CONFIG_LB_NOTIFY_TASK_PRIORITY, &hal_ctx->notify_task);
-    LIGHTBULB_CHECK(hal_ctx->notify_task, "notify task create fail", goto EXIT);
-
-    gptimer_clock_source_t clk;
+    _lock_acquire_recursive(&s_fade.lock);
+    if (!s_fade.fade_timer) {
+        gptimer_clock_source_t clk;
 #if CONFIG_IDF_TARGET_ESP32
-    clk = GPTIMER_CLK_SRC_APB;
+        clk = GPTIMER_CLK_SRC_APB;
 #if CONFIG_PM_ENABLE
-    ESP_LOGW(TAG, "This clock source will be affected by the DFS of the power management");
+        ESP_LOGW(TAG, "This clock source will be affected by the DFS of the power management");
 #endif
 #else
-    clk = GPTIMER_CLK_SRC_XTAL;
+        clk = GPTIMER_CLK_SRC_XTAL;
 #endif
-    gptimer_config_t timer_config = {
-        .clk_src = clk,
-        .direction = GPTIMER_COUNT_UP,
-        .resolution_hz = 1000000, // 1MHz, 1 tick = 1us
-    };
-    gptimer_new_timer(&timer_config, &hal_ctx->fade_timer);
+        gptimer_config_t timer_config = {
+            .clk_src = clk,
+            .direction = GPTIMER_COUNT_UP,
+            .resolution_hz = 1000000, // 1MHz, 1 tick = 1us
+        };
+        err = gptimer_new_timer(&timer_config, &s_fade.fade_timer);
+        LIGHTBULB_CHECK(err == ESP_OK, "fade timer create fail", cleanup(hal_ctx); _lock_release_recursive(&s_fade.lock); return NULL);
 
-    gptimer_alarm_config_t alarm_config = {
-        .reload_count = 0,
-        .alarm_count = CHANGE_RATE_MS * 1000,
-        .flags.auto_reload_on_alarm = true,
-    };
-    gptimer_event_callbacks_t cbs = {
-        .on_alarm = on_timer_alarm_cb,
-    };
-    gptimer_register_event_callbacks(hal_ctx->fade_timer, &cbs, hal_ctx);
-    gptimer_set_alarm_action(hal_ctx->fade_timer, &alarm_config);
-    gptimer_enable(hal_ctx->fade_timer);
+        gptimer_alarm_config_t alarm_config = {
+            .reload_count = 0,
+            .alarm_count = CHANGE_RATE_MS * 1000,
+            .flags.auto_reload_on_alarm = true,
+        };
+        gptimer_event_callbacks_t cbs = {
+            .on_alarm = on_timer_alarm_cb,
+        };
+        err = gptimer_register_event_callbacks(s_fade.fade_timer, &cbs, NULL);
+        LIGHTBULB_CHECK(err == ESP_OK, "fade callback register fail", cleanup(hal_ctx); _lock_release_recursive(&s_fade.lock); return NULL);
+        err = gptimer_set_alarm_action(s_fade.fade_timer, &alarm_config);
+        LIGHTBULB_CHECK(err == ESP_OK, "fade alarm config fail", cleanup(hal_ctx); _lock_release_recursive(&s_fade.lock); return NULL);
+        xTaskCreate(fade_tick_task, "lightbulb_fade", CONFIG_LB_NOTIFY_TASK_STACK, NULL, CONFIG_LB_NOTIFY_TASK_PRIORITY, &s_fade.notify_task);
+        LIGHTBULB_CHECK(s_fade.notify_task, "notify task create fail", cleanup(hal_ctx); _lock_release_recursive(&s_fade.lock); return NULL);
+    }
+    hal_ctx->next = s_fade.head;
+    s_fade.head = hal_ctx;
+    _lock_release_recursive(&s_fade.lock);
 #else
     esp_timer_create_args_t timer_conf = {
         .callback = fade_cb,
@@ -895,19 +965,23 @@ esp_err_t hal_output_deinit(hal_context_t hal_ctx)
     esp_err_t err = ESP_OK;
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_acquire_recursive(&s_fade.lock);
+#endif
     hal_ctx->deiniting = true;
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     esp_timer_stop(hal_ctx->fade_timer);
 #endif
 
     if (hal_ctx->fade_mutex) {
-        LIGHTBULB_CHECK(xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't quiesce fade callback", return ESP_ERR_INVALID_STATE);
+        if (xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) != pdTRUE) {
+#ifdef FADE_TICKS_FROM_GPTIMER
+            _lock_release_recursive(&s_fade.lock);
+#endif
+            ESP_LOGE(TAG, "Can't quiesce fade callback");
+            return ESP_ERR_INVALID_STATE;
+        }
         xSemaphoreGive(hal_ctx->fade_mutex);
     }
 
@@ -926,6 +1000,9 @@ esp_err_t hal_output_deinit(hal_context_t hal_ctx)
     }
 
     cleanup(hal_ctx);
+#ifdef FADE_TICKS_FROM_GPTIMER
+    _lock_release_recursive(&s_fade.lock);
+#endif
 
     return err;
 }
@@ -950,12 +1027,7 @@ esp_err_t hal_set_channel(hal_context_t hal_ctx, int channel, uint16_t value, ui
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
     if (esp_timer_is_active(hal_ctx->fade_timer)) {
@@ -1028,11 +1100,7 @@ esp_err_t hal_set_channel(hal_context_t hal_ctx, int channel, uint16_t value, ui
 
     // 7. We need to execute a fade_cb immediately
     fade_cb(hal_ctx);
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (gptimer_start(hal_ctx->fade_timer) == ESP_OK) {
-        hal_ctx->gptimer_is_active = true;
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     esp_timer_start_periodic(hal_ctx->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
 
@@ -1044,12 +1112,7 @@ esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
     if (esp_timer_is_active(hal_ctx->fade_timer)) {
@@ -1061,7 +1124,9 @@ esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t
 #endif
 
     LIGHTBULB_CHECK(xSemaphoreTake(hal_ctx->fade_mutex, pdMS_TO_TICKS(FADE_CB_CHECK_MS)) == pdTRUE, "Can't get mutex", return ESP_ERR_INVALID_STATE);
+#ifndef FADE_TICKS_FROM_GPTIMER
     bool need_timer = false;
+#endif
 
 #ifdef CONFIG_ENABLE_DITHERING_CHECK
     // Allows to reduce fade time to increase resolution to avoid dithering
@@ -1127,10 +1192,12 @@ esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t
         fade_data[channel].cycle = 0; /* only for actions */
         fade_data[channel].min = 0; /* only for actions */
 
+#ifndef FADE_TICKS_FROM_GPTIMER
         // 2.7 If any channel nun > 1 then need to enable timer
         if (fade_data[channel].num > 1) {
             need_timer = true;
         }
+#endif
         ESP_LOGD(TAG, "set group:[%d] value:%d fade_ms:%d cur:%f final:%f step:%f num:%f", channel, value[channel], fade_ms, fade_data[channel].cur, fade_data[channel].final, fade_data[channel].step, fade_data[channel].num);
     }
     memcpy(hal_ctx->fade_data, fade_data, sizeof(fade_data));
@@ -1138,13 +1205,7 @@ esp_err_t hal_set_channel_group(hal_context_t hal_ctx, uint16_t value[], uint8_t
 
     // 3. We need to execute a fade_cb immediately, if need_timer is true then enable the timer to complete the fade operation
     fade_cb(hal_ctx);
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (need_timer) {
-        if (gptimer_start(hal_ctx->fade_timer) == ESP_OK) {
-            hal_ctx->gptimer_is_active = true;
-        }
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     if (need_timer) {
         esp_timer_start_periodic(hal_ctx->fade_timer, 1000 * CHANGE_RATE_MS);
     }
@@ -1157,12 +1218,7 @@ esp_err_t hal_start_channel_action(hal_context_t hal_ctx, int channel, uint16_t 
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
     if (esp_timer_is_active(hal_ctx->fade_timer)) {
@@ -1218,11 +1274,7 @@ esp_err_t hal_start_channel_action(hal_context_t hal_ctx, int channel, uint16_t 
 
     // 8. Actions need to be periodic, directly enabled
     fade_cb(hal_ctx);
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (gptimer_start(hal_ctx->fade_timer) == ESP_OK) {
-        hal_ctx->gptimer_is_active = true;
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     esp_timer_start_periodic(hal_ctx->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
 
@@ -1235,12 +1287,7 @@ esp_err_t hal_start_channel_group_action(hal_context_t hal_ctx, uint16_t value_m
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
     LIGHTBULB_CHECK(period_ms > CHANGE_RATE_MS * 2, "period_ms not allowed", return ESP_ERR_INVALID_ARG);
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
     if (esp_timer_is_active(hal_ctx->fade_timer)) {
@@ -1301,11 +1348,7 @@ esp_err_t hal_start_channel_group_action(hal_context_t hal_ctx, uint16_t value_m
 
     // 8. Actions need to be periodic, directly enabled
     fade_cb(hal_ctx);
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (gptimer_start(hal_ctx->fade_timer) == ESP_OK) {
-        hal_ctx->gptimer_is_active = true;
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     esp_timer_start_periodic(hal_ctx->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
 
@@ -1316,12 +1359,7 @@ esp_err_t hal_stop_channel_action(hal_context_t hal_ctx, uint8_t channel_mask)
 {
     LIGHTBULB_CHECK(hal_ctx, "init() must be called first", return ESP_ERR_INVALID_STATE);
 
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (hal_ctx->gptimer_is_active) {
-        hal_ctx->gptimer_is_active = false;
-        gptimer_stop(hal_ctx->fade_timer);
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 3, 0))
     // 1. Stop all fade_cb operations
     if (esp_timer_is_active(hal_ctx->fade_timer)) {
@@ -1353,11 +1391,7 @@ esp_err_t hal_stop_channel_action(hal_context_t hal_ctx, uint8_t channel_mask)
     xSemaphoreGive(hal_ctx->fade_mutex);
 
     fade_cb(hal_ctx);
-#ifdef FADE_TICKS_FROM_GPTIMER
-    if (gptimer_start(hal_ctx->fade_timer) == ESP_OK) {
-        hal_ctx->gptimer_is_active = true;
-    }
-#else
+#ifndef FADE_TICKS_FROM_GPTIMER
     esp_timer_start_periodic(hal_ctx->fade_timer, 1000 * CHANGE_RATE_MS);
 #endif
     return ESP_OK;
