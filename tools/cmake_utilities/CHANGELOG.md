@@ -1,3 +1,11 @@
+## v1.4.0 - 2026-11-04
+
+* gen_custom_ota: add v3 ddelta packing (`-d ddelta -b base.bin`) via the `esp_ddelta` extension. Pure compression output is unchanged.
+* gen_custom_ota: optional `--pad_https_ota` (menuconfig `CU_OTA_PAD_HTTPS`) pads a packed image shorter than 1024 bytes so `esp_https_ota` can finish reading the image header. Off by default.
+* gen_diff_ota: `idf.py -DDIFF_OTA_NEW_FILE=<new> gen_diff_ota` builds the project, uses that binary as the base, and packs a ddelta image to the given new firmware.
+* gen_custom_ota: use an already installed `esp_ddelta` extension before the source tree next to the script. A managed copy that has not been built no longer hides a working install.
+* esp_ddelta: fix suffix-array search bounds after divsufsort. The previous call used en = oldsize and could read the uninitialized I[oldsize], which crashed encode under MALLOC_PERTURB_ or ASAN. Empty bases are handled without searching.
+
 ## v1.3.0 - 2026-10-27
 
 * relinker: add IDF v5.1.x support

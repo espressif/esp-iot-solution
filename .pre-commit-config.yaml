@@ -38,7 +38,9 @@ repos:
             components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)|
             components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
             components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
-            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)
+            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)|
+            tools/cmake_utilities/scripts/esp_ddelta/src/(ddelta\.h|ddelta_apply\.c|ddelta_generate\.c)|
+            tools/cmake_utilities/scripts/esp_ddelta/third_party/libdivsufsort/.*
           )$
       - id: end-of-file-fixer
         exclude: *whitespace_excludes
@@ -52,7 +54,9 @@ repos:
             components/sensors/gas/bme690/(bme69x_defs\.h|bme69x\.h|bme69x\.c|LICENSE)|
             components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
             components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
-            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)
+            examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)|
+            tools/cmake_utilities/scripts/esp_ddelta/src/(ddelta\.h|ddelta_apply\.c|ddelta_generate\.c)|
+            tools/cmake_utilities/scripts/esp_ddelta/third_party/libdivsufsort/.*
           )$
       - id: double-quote-string-fixer
       - id: no-commit-to-branch
@@ -111,5 +115,7 @@ repos:
           components/sensors/magnetometer/bmm150/(bmm150_defs\.h|bmm150\.h|bmm150\.c|LICENSE)|
           components/sensors/magnetometer/bmm350/(bmm350_defs\.h|bmm350\.h|bmm350\.c|bmm350_oor\.h|bmm350_oor\.c|LICENSE)|
           examples/sensors/airmouse/components/bmm350_sensor/(bmm350\.c|bmm350_api\.c|include/bmm350\.h|include/bmm350_api\.h|include/bmm350_defs\.h|LICENSE)|
-          components/quickjs-ng/quickjs-ng/.*
+          components/quickjs-ng/quickjs-ng/.*|
+          tools/cmake_utilities/scripts/esp_ddelta/src/(ddelta\.h|ddelta_apply\.c|ddelta_generate\.c)|
+          tools/cmake_utilities/scripts/esp_ddelta/third_party/libdivsufsort/.*
         )$

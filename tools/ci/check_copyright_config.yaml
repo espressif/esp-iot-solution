@@ -93,3 +93,8 @@ ignore:  # You can also select ignoring files here
     - 'examples/robot/ragtime_panthera/main/ui/**/*'
     # Vendored QuickJS-NG upstream sources (retain original license/headers; do not SPDX-rewrite)
     - 'components/quickjs-ng/quickjs-ng/**'
+    # Vendored ddelta and libdivsufsort (retain original license/headers; do not SPDX-rewrite)
+    - 'tools/cmake_utilities/scripts/esp_ddelta/src/ddelta.h'
+    - 'tools/cmake_utilities/scripts/esp_ddelta/src/ddelta_apply.c'
+    - 'tools/cmake_utilities/scripts/esp_ddelta/src/ddelta_generate.c'
+    - 'tools/cmake_utilities/scripts/esp_ddelta/third_party/libdivsufsort/**'
