@@ -140,6 +140,18 @@ if(_has_frame_buf_complete_cb)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB=1)
 endif()
 
+if(CONFIG_SOC_PPA_SUPPORTED)
+    idf_component_get_property(_ppa_dir esp_driver_ppa COMPONENT_DIR)
+    set(_ppa_private_header "${_ppa_dir}/src/ppa_priv.h")
+    if(EXISTS "${_ppa_private_header}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_ppa_private_header}")
+        file(STRINGS "${_ppa_private_header}" _ppa_per_buffer_alignment REGEX "int_mem_align")
+        if(_ppa_per_buffer_alignment)
+            target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_PPA_HAS_PER_BUFFER_ALIGNMENT=1)
+        endif()
+    endif()
+endif()
+
 target_link_libraries(${COMPONENT_LIB} PUBLIC idf::${lvgl_name})
 
 set(ESP_LV_ADAPTER_PPA_ALIGNMENT 128)

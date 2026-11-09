@@ -241,14 +241,14 @@ static size_t ppa_get_cache_line_size(const void *addr)
 
 static size_t ppa_get_aligned_buffer_size(const void *addr, size_t size)
 {
-    size_t align = ppa_get_cache_line_size(addr);
+    size_t align = lvgl_port_ppa_output_alignment(addr);
 
     return (align > 0) ? LVGL_PORT_PPA_ALIGN_UP(size, align) : size;
 }
 
 static bool ppa_buffer_cache_aligned(const void *addr)
 {
-    size_t align = ppa_get_cache_line_size(addr);
+    size_t align = lvgl_port_ppa_output_alignment(addr);
 
     return (align == 0) || (((uintptr_t)addr & (align - 1)) == 0);
 }

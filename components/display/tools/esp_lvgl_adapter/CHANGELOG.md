@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v0.7.6 (2026-11-08)
+
+* Fix LVGL v8/v9 PPA output alignment and buffer capacity checks for drawing and rotation.
+* Fall back to software when dimensions exceed PPA limits.
+
 ## v0.7.5 (2026-11-03)
 
 * Fix LVGL v8/v9 PPA opacity, software fallback and display resource cleanup.
