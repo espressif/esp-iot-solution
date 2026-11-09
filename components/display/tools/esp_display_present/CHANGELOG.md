@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 - 2026-11-09
+
+- Bound GRAM draw-buffer acquisition to the transfer timeout, retain DMA-owned buffers
+  when completion callbacks are missing, and expose the resulting presenter fault.
+
 ## 1.2.0 - 2026-10-27
 
 - Add correlated frame receipts, coherent transfer/display status and tracking cancellation.

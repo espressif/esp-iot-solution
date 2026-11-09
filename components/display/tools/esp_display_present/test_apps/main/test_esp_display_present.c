@@ -19,6 +19,8 @@
 #include "esp_lcd_panel_rgb.h"
 #endif
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "unity.h"
 #include "unity_test_runner.h"
 #include "unity_test_utils_memory.h"
@@ -883,6 +885,78 @@ TEST_CASE("stop with held lease closes without stealing producer storage",
     TEST_ESP_OK(esp_display_presenter_get_state(presenter, &state));
     TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENTER_STATE_STOPPED, state);
     test_presenter_delete(presenter);
+}
+
+/* A delayed panel completion must not make the producer wait forever for the
+ * sole GRAM buffer. The deferred callback also verifies safe DMA retirement. */
+TEST_CASE("GRAM acquire times out before a late transfer completion",
+          "[present][gram][timeout]")
+{
+    dummy_panel_init();
+    const esp_display_present_target_config_t target = {
+        .hw = {
+            .panel = &s_dummy_panel.base,
+            .io = &s_dummy_io.base,
+            .panel_type = ESP_DISPLAY_PRESENT_PANEL_IO,
+            .input_pixel_format = ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB565,
+        },
+        .fb = {.mode = ESP_DISPLAY_PRESENT_MODE_NONE},
+        .drawbuf = {.buffers = 1, .lines = 2},
+    };
+    const esp_display_presenter_config_t config = {
+        .width = TEST_LCD_H_RES,
+        .height = TEST_LCD_V_RES,
+        .pixel_format = ESP_DISPLAY_PRESENT_PIXEL_FORMAT_RGB565,
+        .max_damage_areas = 8,
+        .transfer_timeout_ms = 10,
+        .target = target,
+    };
+    esp_display_presenter_t *presenter = NULL;
+    TEST_ESP_OK(esp_display_presenter_create(&config, &presenter));
+
+    esp_display_present_area_t areas[8];
+    size_t count = 0;
+    bool full = false;
+    TEST_ESP_OK(esp_display_presenter_begin_next_frame(
+                    presenter, NULL, areas, 8, &count, &full));
+    esp_display_presenter_buffer_t buffer = {0};
+    TEST_ESP_OK(esp_display_presenter_acquire_buffer(presenter, &buffer));
+    const size_t stride = TEST_LCD_H_RES * sizeof(uint16_t);
+    size_t rows = 0;
+    TEST_ESP_OK(buffer.resolve_rows(
+                    buffer.resolve_rows_ctx, buffer.lease_id,
+                    stride, TEST_LCD_V_RES, &rows));
+    TEST_ASSERT_GREATER_THAN(0, rows);
+    const esp_display_present_area_t area = {
+        .x1 = 0, .y1 = 0, .x2 = TEST_LCD_H_RES - 1, .y2 = (int)rows - 1,
+    };
+    s_auto_complete = false;
+    TEST_ESP_OK(esp_display_presenter_submit_buffer(
+                    presenter, &buffer, &area, stride));
+    TEST_ASSERT_EQUAL(1, s_dummy_panel.draw_count);
+    TEST_ASSERT_NOT_NULL(s_dummy_io.on_color_trans_done);
+
+    /* Return the real DMA callback after the 10 ms budget, but within a
+     * finite time so the unpatched implementation also terminates the test. */
+    s_auto_complete = true;
+    TEST_ESP_OK(esp_timer_start_once(s_dummy_io.done_timer, 300000));
+    esp_display_presenter_buffer_t next = {0};
+    esp_err_t acquire_rc = esp_display_presenter_acquire_buffer(presenter, &next);
+    esp_display_presenter_state_t state;
+    TEST_ESP_OK(esp_display_presenter_get_state(presenter, &state));
+    esp_display_present_fault_reason_t fault;
+    TEST_ESP_OK(esp_display_presenter_get_fault_reason(presenter, &fault));
+
+    esp_display_presenter_cancel_frame(presenter);
+    esp_err_t early_stop = esp_display_presenter_stop(presenter);
+    vTaskDelay(pdMS_TO_TICKS(400));
+    TEST_ESP_OK(esp_display_presenter_stop(presenter));
+    test_presenter_delete(presenter);
+
+    TEST_ASSERT_EQUAL(ESP_ERR_TIMEOUT, acquire_rc);
+    TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENTER_STATE_FAULTED, state);
+    TEST_ASSERT_EQUAL(ESP_DISPLAY_PRESENT_FAULT_TRANSFER_TIMEOUT, fault);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE, early_stop);
 }
 
 void app_main(void)
