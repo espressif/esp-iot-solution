@@ -644,22 +644,38 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
     LV_UNUSED(decoder);
     lv_draw_buf_t * decoded = NULL;
 
+    uint8_t file_header[8];
+    uint32_t file_header_size = 0;
+    bool is_sp = false;
 #if ESP_LV_ENABLE_PJPG
     bool is_pjpg = false;
+#endif
     if (dsc->src_type == LV_IMAGE_SRC_FILE) {
         const char *ext = lv_fs_get_ext(dsc->src);
-        if (ext && lv_strcmp(ext, "pjpg") == 0) {
-            is_pjpg = true;
-        } else {
-            uint8_t magic[PJPG_MAGIC_LEN];
-            uint32_t rn = 0;
-            if (lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK ||
-                    lv_fs_read(&dsc->file, magic, sizeof(magic), &rn) != LV_FS_RES_OK ||
-                    lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET) != LV_FS_RES_OK) {
+        is_sp = ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sqoi") == 0 || lv_strcmp(ext, "sjpg") == 0);
+#if ESP_LV_ENABLE_PJPG
+        is_pjpg = ext && lv_strcmp(ext, "pjpg") == 0;
+        const bool need_header = !is_pjpg;
+#else
+        const bool need_header = !is_sp;
+#endif
+        if (need_header) {
+            /* LVGL closes dsc->file after info_cb; open our own probe handle. */
+            lv_fs_file_t file;
+            if (lv_fs_open(&file, dsc->src, LV_FS_MODE_RD) != LV_FS_RES_OK) {
                 return LV_RESULT_INVALID;
             }
-            is_pjpg = rn == sizeof(magic) && memcmp(magic, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0;
+            lv_fs_res_t read_res = lv_fs_read(&file, file_header, sizeof(file_header), &file_header_size);
+            lv_fs_res_t close_res = lv_fs_close(&file);
+            if (read_res != LV_FS_RES_OK || close_res != LV_FS_RES_OK) {
+                return LV_RESULT_INVALID;
+            }
         }
+    }
+
+#if ESP_LV_ENABLE_PJPG
+    if (dsc->src_type == LV_IMAGE_SRC_FILE) {
+        is_pjpg = is_pjpg || (file_header_size >= PJPG_MAGIC_LEN && memcmp(file_header, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0);
     } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
         const lv_image_dsc_t * img_dsc = dsc->src;
         if (img_dsc->data_size >= PJPG_HEADER_SIZE && memcmp(img_dsc->data, PJPG_MAGIC, PJPG_MAGIC_LEN) == 0) {
@@ -676,29 +692,15 @@ static lv_result_t decoder_open(lv_image_decoder_t * decoder, lv_image_decoder_d
 #endif
 
     {
-        bool is_sp = false;
-
-        // First, try to detect by file extension (more reliable with mmap_assets)
-        if (dsc->src_type == LV_IMAGE_SRC_FILE) {
-            const char *ext = lv_fs_get_ext(dsc->src);
-            if (ext && (lv_strcmp(ext, "spng") == 0 || lv_strcmp(ext, "sqoi") == 0 || lv_strcmp(ext, "sjpg") == 0)) {
-                is_sp = true;
-            }
-        }
-
         // If not detected by extension, try reading header (for memory sources or validation)
         if (!is_sp) {
-            uint8_t hdr8[8];
             if (dsc->src_type == LV_IMAGE_SRC_FILE) {
-                uint32_t rn;
-                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
-                if (lv_fs_read(&dsc->file, hdr8, 8, &rn) == LV_FS_RES_OK && rn == 8) {
+                if (file_header_size == sizeof(file_header)) {
                     sp_image_type_t dummy = SP_IMAGE_TYPE_PNG;
-                    if (sp_is_sp_tag(hdr8, &dummy)) {
+                    if (sp_is_sp_tag(file_header, &dummy)) {
                         is_sp = true;
                     }
                 }
-                lv_fs_seek(&dsc->file, 0, LV_FS_SEEK_SET);
             } else if (dsc->src_type == LV_IMAGE_SRC_VARIABLE) {
                 const lv_image_dsc_t * img = dsc->src;
                 if (img->data_size >= 8) {

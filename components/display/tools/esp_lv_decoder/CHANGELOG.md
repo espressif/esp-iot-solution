@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.5.1 (2026-11-10)
+
+* Fix LVGL v9 file-header probing after info queries, restoring PNG/JPEG and PJPG file decoding.
+
 ## v0.5.0 (2026-10-20)
 
 * Added software PJPG decoding through `esp_new_jpeg` on supported targets; requires LVGL >= 8.3.
