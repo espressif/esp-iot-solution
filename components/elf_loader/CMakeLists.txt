@@ -1,6 +1,7 @@
 
 if(CONFIG_ELF_LOADER)
     set(srcs  "src/esp_elf_symbol.c"
+              "src/esp_elf_symbol_registry.c"
               "src/esp_elf.c"
               "src/esp_elf_validate.c"
               "src/esp_elf_adapter.c")
@@ -46,5 +47,7 @@ idf_component_register(SRCS ${srcs}
 
 include(package_manager)
 if(CONFIG_ELF_LOADER)
+    # Keep the registry available to offline firmware inspection, including LTO.
+    target_link_libraries(${COMPONENT_LIB} INTERFACE "-u g_esp_elf_static_symbol_registry")
     cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
 endif()

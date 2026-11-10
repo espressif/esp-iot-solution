@@ -428,8 +428,11 @@ exported function: adding a symbol name cannot provide missing implementation.
 
 Do not indiscriminately add internal FreeRTOS or ESP-IDF functions such as
 `esp_crosscore_int_send_yield` to the public libc table. Internal functions can
-change across ESP-IDF versions and should be exported only when the application's
-specific ABI and dependencies require them.
+change across ESP-IDF versions and should be exported only when the application's specific ABI and dependencies require them.
+
+### Inspecting compiled exports offline
+
+Read `g_esp_elf_static_symbol_registry` to discover which compiled tables the loader actually exports, in resolver order. The registry covers enabled libc, ESP-IDF and customer tables; runtime registrations and dynamic shared objects are intentionally excluded because they can only be resolved on a running firmware. Each table entry uses `ESP_ELFSYM_END` and names match the ELF symbol table exactly. Offline tooling can enumerate addresses from linked firmware and verify they remain file-backed, without executing target code.
 
 ### Adding the Component to Your Project
 
