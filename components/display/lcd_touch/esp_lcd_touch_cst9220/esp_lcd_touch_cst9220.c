@@ -304,7 +304,9 @@ static esp_err_t cst9220_read_data(esp_lcd_touch_handle_t tp)
     uint8_t reported_points = 0;
     esp_err_t ret = cst9220_read_report(cst9220, report, &reported_points);
     if (ret != ESP_OK) {
-        cst9220_clear_data(tp);
+        if (ret != ESP_ERR_NOT_FINISHED) {
+            cst9220_clear_data(tp);
+        }
         return ret;
     }
 
@@ -675,22 +677,34 @@ static esp_err_t cst9220_read_report(cst9220_touch_t *cst9220, uint8_t *report, 
         }
     }
 
-    if (report[0] == 0) {
+    bool empty_header = true;
+    for (uint8_t i = 0; i < CST9220_REPORT_HEADER_SIZE; i++) {
+        if (report[i] != 0) {
+            empty_header = false;
+            break;
+        }
+    }
+    if (empty_header) {
         *point_num = 0;
         return ESP_OK;
     }
-    if (report[0] == CST9220_REPORT_ACK || report[CST9220_REPORT_HEADER_SIZE - 1] != CST9220_REPORT_ACK) {
+    /* An ACK-only response is not a new touch snapshot. */
+    if (report[0] == CST9220_REPORT_ACK) {
+        *point_num = 0;
+        return ESP_ERR_NOT_FINISHED;
+    }
+    if (report[CST9220_REPORT_HEADER_SIZE - 1] != CST9220_REPORT_ACK) {
         ESP_LOGW(TAG, "Malformed report header: first=0x%02x marker=0x%02x",
                  report[0], report[CST9220_REPORT_HEADER_SIZE - 1]);
         *point_num = 0;
-        return ESP_OK;
+        return ESP_ERR_NOT_FINISHED;
     }
 
-    uint8_t reported_points = report[5] & 0x7F;
+    const uint8_t reported_points = report[5] & 0x7F;
     if (reported_points > ESP_LCD_TOUCH_CST9220_MAX_POINTS) {
-        ESP_LOGW(TAG, "Clamping report point count %u to %u",
-                 reported_points, ESP_LCD_TOUCH_CST9220_MAX_POINTS);
-        reported_points = ESP_LCD_TOUCH_CST9220_MAX_POINTS;
+        ESP_LOGW(TAG, "Invalid report point count %u", reported_points);
+        *point_num = 0;
+        return ESP_ERR_NOT_FINISHED;
     }
 
     *point_num = reported_points;

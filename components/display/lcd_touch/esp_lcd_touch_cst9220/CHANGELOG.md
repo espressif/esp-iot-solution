@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.1.2 - 2026-11-10
+
+### Bug Fixes:
+
+* Return `ESP_ERR_NOT_FINISHED` for unusable reports without clearing touch state.
+* Preserve remaining contacts when the first touch record is released.
+
 ## v0.1.1 - 2026-09-14
 
 ### Enhancements:

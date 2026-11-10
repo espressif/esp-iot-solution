@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3 - 2026-11-09
+
+- Fix partition draw-buffer reuse during asynchronous LVGL copies.
+
 ## 0.1.2 - 2026-10-09
 
 - Fix borrowed buffer alignment, capacity, color format and stride.

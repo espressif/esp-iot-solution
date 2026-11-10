@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -29,6 +29,43 @@ static const char *TAG = "esp_lvgl:touch";
 #define MAX_TOUCH_POINTS_V8     1
 /* LVGL gesture internals store finger id as int8_t, valid runtime IDs are 0..127 */
 #define MAX_LV_GESTURE_TOUCH_ID 127
+#define TOUCH_READ_RETRY_LIMIT 3
+
+typedef enum {
+    TOUCH_READ_PROCESS,
+    TOUCH_READ_HOLD,
+    TOUCH_READ_CANCEL,
+} touch_read_action_t;
+
+static bool touch_read_retry_pending(uint8_t failures)
+{
+    return failures > 0 && failures <= TOUCH_READ_RETRY_LIMIT;
+}
+
+static touch_read_action_t touch_read_update(uint8_t *failures, esp_err_t ret, uint8_t count, bool pressed)
+{
+    /* An exhausted retry budget suppresses this contact until a valid release. */
+    if (*failures > TOUCH_READ_RETRY_LIMIT) {
+        if (ret == ESP_OK && count == 0) {
+            *failures = 0;
+        }
+        return TOUCH_READ_HOLD;
+    }
+    if (ret == ESP_ERR_NOT_FINISHED) {
+        (*failures)++;
+        if (*failures > TOUCH_READ_RETRY_LIMIT && !pressed) {
+            *failures = 0;
+            return TOUCH_READ_HOLD;
+        }
+        return *failures > TOUCH_READ_RETRY_LIMIT ? TOUCH_READ_CANCEL : TOUCH_READ_HOLD;
+    }
+    if (ret != ESP_OK && *failures > 0 && pressed) {
+        *failures = TOUCH_READ_RETRY_LIMIT + 1;
+        return TOUCH_READ_CANCEL;
+    }
+    *failures = 0;
+    return TOUCH_READ_PROCESS;
+}
 
 /**
  * @brief ISR context wrapper to protect original user_data
@@ -85,6 +122,7 @@ struct esp_lv_adapter_touch_ctx {
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    uint8_t read_failures;               /*!< Pending retries; above the limit suppresses contacts until release */
     bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
     bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
@@ -390,6 +428,7 @@ static void lvgl_multi_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
     if (touch_ctx->multi.snapshot_generation == 0 ||
             slot_ctx->last_generation_seen == touch_ctx->multi.snapshot_generation) {
         if (!touch_ctx->with_irq || xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE ||
+                touch_read_retry_pending(touch_ctx->read_failures) ||
                 touch_ctx->multi.snapshot_generation == 0) {
             multi_touch_refresh_snapshot(touch_ctx);
         }
@@ -415,8 +454,9 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
     /* Determine if we should read touch data */
     bool should_read = true;
     if (touch_ctx->with_irq) {
-        /* In IRQ mode, only read if semaphore is available (signaled by ISR) */
-        should_read = (xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE);
+        /* Read on IRQ or while recovering a skipped sample. */
+        should_read = (xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE) ||
+                      touch_read_retry_pending(touch_ctx->read_failures);
     }
 
     if (should_read) {
@@ -432,6 +472,22 @@ static void lvgl_touch_read(lv_indev_t *indev_drv, lv_indev_data_t *data)
             if (ret == ESP_OK) {
                 ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V9);
             }
+        }
+
+        touch_read_action_t action = touch_read_update(&touch_ctx->read_failures, ret, count,
+                                                       touch_ctx->last_state == LV_INDEV_STATE_PRESSED);
+        if (action == TOUCH_READ_CANCEL) {
+            lv_indev_wait_release(indev_drv);
+#if LV_USE_GESTURE_RECOGNITION
+            flush_released_touches_on_error(touch_ctx, indev_drv, NULL);
+            reset_gesture_state(touch_ctx);
+#endif
+            touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
+        }
+        if (action != TOUCH_READ_PROCESS) {
+            data->point = touch_ctx->last_point;
+            data->state = touch_ctx->last_state;
+            return;
         }
 
 #if LV_USE_GESTURE_RECOGNITION
@@ -644,9 +700,26 @@ static void multi_touch_refresh_snapshot(esp_lv_adapter_touch_ctx_t *touch_ctx)
         }
     }
 
-    if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Multi-touch snapshot refresh failed: %s", esp_err_to_name(ret));
-        multi_touch_mark_all_released(touch_ctx);
+    bool pressed = false;
+    for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+        pressed |= touch_ctx->multi.slots[i].last_state == LV_INDEV_STATE_PRESSED;
+    }
+    touch_read_action_t action = touch_read_update(&touch_ctx->read_failures, ret, count, pressed);
+    if (action != TOUCH_READ_PROCESS || ret != ESP_OK) {
+        if (action == TOUCH_READ_CANCEL) {
+            for (uint8_t i = 0; i < touch_ctx->multi.slot_count; i++) {
+                esp_lv_adapter_touch_slot_ctx_t *slot = &touch_ctx->multi.slots[i];
+                if (slot->indev != NULL && slot->last_state == LV_INDEV_STATE_PRESSED) {
+                    lv_indev_wait_release(slot->indev);
+                }
+            }
+        }
+        if (action == TOUCH_READ_CANCEL || (action == TOUCH_READ_PROCESS && ret != ESP_OK)) {
+            if (ret != ESP_ERR_NOT_FINISHED) {
+                ESP_LOGW(TAG, "Multi-touch snapshot refresh failed: %s", esp_err_to_name(ret));
+            }
+            multi_touch_mark_all_released(touch_ctx);
+        }
         touch_ctx->multi.snapshot_generation++;
         return;
     }
@@ -870,7 +943,9 @@ static void flush_released_touches_on_error(const esp_lv_adapter_touch_ctx_t *to
     append_released_touches(touch_ctx, curr_hw_ids, 0, gesture_touches, &gesture_touch_count, ts);
     if (gesture_touch_count > 0) {
         lv_indev_gesture_recognizers_update(indev_drv, gesture_touches, gesture_touch_count);
-        lv_indev_gesture_recognizers_set_data(indev_drv, data);
+        if (data != NULL) {
+            lv_indev_gesture_recognizers_set_data(indev_drv, data);
+        }
     }
 }
 
@@ -931,6 +1006,7 @@ typedef struct {
         float y;                        /*!< Y-axis scale factor */
     } scale;                            /*!< Touch coordinate scaling */
     bool with_irq;                      /*!< Whether interrupt mode is enabled */
+    uint8_t read_failures;               /*!< Pending retries; above the limit suppresses contacts until release */
     bool idf_interrupt_callback_registration_enabled; /*!< Whether adapter owns ESP-IDF interrupt callback */
     bool idf_interrupt_callback_registered; /*!< Whether adapter has registered ESP-IDF interrupt callback */
     SemaphoreHandle_t touch_sem;        /*!< Binary semaphore for touch event signaling (IRQ mode) */
@@ -1130,8 +1206,9 @@ static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
     /* Determine if we should read touch data */
     bool should_read = true;
     if (touch_ctx->with_irq) {
-        /* In IRQ mode, only read if semaphore is available (signaled by ISR) */
-        should_read = (xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE);
+        /* Read on IRQ or while recovering a skipped sample. */
+        should_read = (xSemaphoreTake(touch_ctx->touch_sem, 0) == pdTRUE) ||
+                      touch_read_retry_pending(touch_ctx->read_failures);
     }
 
     if (should_read) {
@@ -1147,6 +1224,18 @@ static void lvgl_touch_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
             if (ret == ESP_OK) {
                 ret = esp_lcd_touch_get_data(touch_ctx->handle, touch_data, &count, MAX_TOUCH_POINTS_V8);
             }
+        }
+
+        touch_read_action_t action = touch_read_update(&touch_ctx->read_failures, ret, count,
+                                                       touch_ctx->last_state == LV_INDEV_STATE_PRESSED);
+        if (action == TOUCH_READ_CANCEL) {
+            lv_indev_wait_release(touch_ctx->indev);
+            touch_ctx->last_state = LV_INDEV_STATE_RELEASED;
+        }
+        if (action != TOUCH_READ_PROCESS) {
+            data->point = touch_ctx->last_point;
+            data->state = touch_ctx->last_state;
+            return;
         }
 
         /* Update last state */

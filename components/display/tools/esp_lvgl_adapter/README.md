@@ -381,6 +381,10 @@ assert(touch != NULL);
 - `touch_handle`: Touch handle created via `esp_lcd_touch` API
 - Default scale factors: x = 1.0, y = 1.0
 
+Both default and custom touch reads retry `ESP_ERR_NOT_FINISHED` up to three times, including in IRQ mode.
+Failed recovery cancels the contact without a click and suppresses it until a valid release.
+Return `ESP_OK` with zero points for a valid release; other read errors release the touch.
+
 To enable independent multi-touch control for discrete widgets on LVGL v9:
 
 ```c

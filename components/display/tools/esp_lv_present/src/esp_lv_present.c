@@ -213,14 +213,42 @@ static esp_err_t esp_lv_present_bind_surface_buffer(
     return ESP_OK;
 }
 
+/* Acquire the first partition buffer before LVGL starts painting it. */
+static esp_err_t esp_lv_present_bind_partition_buffer(esp_lv_present_ctx_t *ctx)
+{
+    esp_err_t ret = esp_lv_present_begin_frame(ctx);
+    if (ret == ESP_OK) {
+        ret = esp_display_presenter_acquire_buffer(ctx->presenter, &ctx->acquired);
+    }
+    if (ret != ESP_OK) {
+        return esp_lv_present_fail_frame(ctx, ret);
+    }
+    lv_draw_buf_t *first = ctx->display->buf_1;
+    lv_draw_buf_t *second = ctx->display->buf_2;
+    if (ctx->acquired.surface.pixels == first->data) {
+        if (ctx->display->buf_act != first) {
+            lv_display_set_draw_buffers(ctx->display, first, second);
+        }
+    } else if (second != NULL && ctx->acquired.surface.pixels == second->data) {
+        if (ctx->display->buf_act != second) {
+            lv_display_set_draw_buffers(ctx->display, second, first);
+        }
+    } else {
+        return esp_lv_present_fail_frame(ctx, ESP_ERR_INVALID_STATE);
+    }
+    return ESP_OK;
+}
+
 static void esp_lv_present_on_render_start(lv_event_t *event)
 {
     esp_lv_present_ctx_t *ctx = lv_event_get_user_data(event);
-    esp_err_t ret = esp_lv_present_bind_surface_buffer(ctx);
-    if (ret != ESP_OK) {
+    esp_err_t ret = ctx->is_surface_contract
+                    ? esp_lv_present_bind_surface_buffer(ctx)
+                    : esp_lv_present_bind_partition_buffer(ctx);
+    if (ret != ESP_OK && (ctx->is_surface_contract || !ctx->needs_full_redraw)) {
         ctx->display->inv_p = 0;
         lv_timer_pause(lv_display_get_refr_timer(ctx->display));
-        ESP_LOGE(TAG, "acquire surface draw buffer failed: %s",
+        ESP_LOGE(TAG, "acquire LVGL draw buffer failed: %s",
                  esp_err_to_name(ret));
     }
 }
@@ -266,9 +294,14 @@ static esp_err_t esp_lv_present_flush_area(esp_lv_present_ctx_t *ctx,
         return ESP_ERR_INVALID_SIZE;
     }
 
+    const bool double_buffered = lv_display_is_double_buffered(ctx->display);
     esp_display_presenter_buffer_t acquired = ctx->acquired;
     esp_err_t ret = ESP_OK;
-    ret = esp_display_presenter_acquire_buffer(ctx->presenter, &acquired);
+    if (!double_buffered) {
+        ret = esp_display_presenter_acquire_buffer(ctx->presenter, &acquired);
+    } else if (acquired.lease_id == 0 || color_map != acquired.surface.pixels) {
+        ret = ESP_ERR_INVALID_STATE;
+    }
     if (ret != ESP_OK) {
         return ret;
     }
@@ -293,8 +326,16 @@ static esp_err_t esp_lv_present_flush_area(esp_lv_present_ctx_t *ctx,
         .x2 = area->x2,
         .y2 = area->y2,
     };
-    return esp_display_presenter_submit_buffer(ctx->presenter, &acquired, &band,
-                                               stride);
+    ret = esp_display_presenter_submit_buffer(ctx->presenter, &acquired, &band,
+                                              stride);
+    if (double_buffered) {
+        memset(&ctx->acquired, 0, sizeof(ctx->acquired));
+        if (ret == ESP_OK && !last) {
+            /* LVGL paints into the other buffer as soon as flush returns. */
+            ret = esp_display_presenter_acquire_buffer(ctx->presenter, &ctx->acquired);
+        }
+    }
+    return ret;
 }
 
 static esp_err_t esp_lv_present_commit_frame(esp_lv_present_ctx_t *ctx)
@@ -441,8 +482,6 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
             ctx->display = NULL;
             return ret;
         }
-        lv_display_add_event_cb(display, esp_lv_present_on_render_start,
-                                LV_EVENT_RENDER_START, ctx);
     } else {
         const lv_color_format_t cf = lv_display_get_color_format(display);
         size_t stride = lv_draw_buf_width_to_stride(ctx->caps.width, cf);
@@ -460,6 +499,10 @@ esp_err_t esp_lv_present_start(esp_display_presenter_t *presenter,
         lv_display_set_buffers(display, drawbuf.buffers[0],
                                drawbuf.count > 1 ? drawbuf.buffers[1] : NULL,
                                buffer_bytes, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    }
+    if (ctx->is_surface_contract || drawbuf.count > 1) {
+        lv_display_add_event_cb(display, esp_lv_present_on_render_start,
+                                LV_EVENT_RENDER_START, ctx);
     }
     lv_display_set_flush_cb(display, esp_lv_present_flush_cb);
     *ret_disp = display;

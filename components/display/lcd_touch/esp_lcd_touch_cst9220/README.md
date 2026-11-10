@@ -57,10 +57,20 @@ Read touch data through the common API:
 esp_lcd_touch_point_data_t points[ESP_LCD_TOUCH_CST9220_MAX_POINTS];
 uint8_t point_count = 0;
 
-ESP_ERROR_CHECK(esp_lcd_touch_read_data(tp));
-ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp, points, &point_count,
-                                      ESP_LCD_TOUCH_CST9220_MAX_POINTS));
+esp_err_t ret = esp_lcd_touch_read_data(tp);
+if (ret == ESP_OK) {
+    ESP_ERROR_CHECK(esp_lcd_touch_get_data(tp, points, &point_count,
+                                          ESP_LCD_TOUCH_CST9220_MAX_POINTS));
+    // Update the application touch state from this valid snapshot.
+} else if (ret != ESP_ERR_NOT_FINISHED) {
+    ESP_ERROR_CHECK(ret);
+}
 ```
+
+`ESP_ERR_NOT_FINISHED` means no usable sample; cached touch data is unchanged. Keep the previous
+application state until a valid report arrives, and do not pass this result to `ESP_ERROR_CHECK`.
+IRQ consumers must retry skipped samples; `esp_lvgl_adapter` 0.7.7 or later handles recovery.
+Other I/O errors are still propagated.
 
 Set `CONFIG_ESP_LCD_TOUCH_MAX_POINTS` to at least `2` to receive both supported touch points.
 
