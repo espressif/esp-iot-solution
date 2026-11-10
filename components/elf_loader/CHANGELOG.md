@@ -5,7 +5,10 @@
 * Add `g_esp_elf_static_symbol_registry` so host tooling can inspect which compiled symbol tables the loader actually exports and in what order.
 * Declare libc, ESP-IDF and customer tables `extern` so consumers can build an offline registry of firmware-visible symbols.
 * Document symbol-table registration scanning slots from lowest to highest, reusing empty slots.
-
+* Add `esp_elf_finalize()` to run finalization callbacks once while retaining
+  executable memory and MMU mappings for host-managed module cleanup.
+* Reject entry invocation after finalization and reentrant lifecycle operations;
+  `esp_elf_deinit()` retains an image whose entry or callbacks are executing.
 ## v2.1.0 - 2026-11-02
 
 * Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,

@@ -54,6 +54,9 @@ int main(void)
     assert(elf.ptext && elf.pdata);
     elf.mmu_num = 1;
     elf.mmu_off = 8;
+    assert(esp_elf_finalize(&elf) == 0);
+    assert(mmu_detaches == 0 && frees == 0);
+    assert(elf.ptext && elf.pdata && elf.mmu_num == 1);
     esp_elf_deinit(&elf);
     assert(mmu_detaches == 1 && frees == 2);
     assert(elf.ptext == NULL && elf.pdata == NULL);

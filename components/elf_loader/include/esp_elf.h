@@ -189,8 +189,29 @@ int esp_elf_relocate_source(esp_elf_t *elf, const elf_source_t *src);
  * @param argv - Arguments value array
  *
  * @return ESP_OK if success or other if failed.
+ *
+ * @note Returns -EINVAL for NULL, missing entry or finalized images;
+ *       -EBUSY for reentrant lifecycle calls.
+ * @note Externally serialize calls on the same object. Entry and lifecycle
+ *       callbacks must return normally; non-local exits are unsupported.
  */
 int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
+
+/**
+ * @brief Finalize an ELF image without releasing its memory or MMU mappings.
+ *
+ * @param elf - Initialized ELF object, including failed relocations
+ *
+ * @return ESP_OK if success or other if failed.
+ *
+ * @note Returns -EINVAL for NULL; -EBUSY during entry or lifecycle callbacks.
+ * @note Runs callbacks once, in the calling task, only if startup ran.
+ *       Repeated calls succeed. Finalized images cannot execute again.
+ *       Call esp_elf_deinit() after host-managed cleanup to release the image.
+ * @note Quiesce module tasks and externally serialize object access.
+ *       Callbacks must return normally. Does not invoke __cxa_finalize.
+ */
+int esp_elf_finalize(esp_elf_t *elf);
 
 /**
  * @brief Deinitialize ELF object.
@@ -198,6 +219,10 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
  * @param elf - ELF object pointer
  *
  * @return None
+ *
+ * @note Finalizes, frees and resets the object. NULL is accepted. Reentrant
+ *       calls log an error and retain the image; retry after execution returns.
+ *       Quiesce module tasks and externally serialize object access.
  */
 void esp_elf_deinit(esp_elf_t *elf);
 

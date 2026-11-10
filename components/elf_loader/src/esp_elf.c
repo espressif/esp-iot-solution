@@ -1328,7 +1328,14 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
     if (!elf || !(elf->entry)) {
         return -EINVAL;
     }
+    if (elf->lifecycle_busy) {
+        return -EBUSY;
+    }
+    if (elf->fini_done) {
+        return -EINVAL;
+    }
 
+    elf->lifecycle_busy = true;
     if (!elf->init_done) {
         elf->init_done = true;
         esp_elf_run_lifecycle_array(elf->preinit_array, elf->preinit_count, false);
@@ -1336,7 +1343,29 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
     }
 
     elf->entry(argc, argv);
+    elf->lifecycle_busy = false;
 
+    return 0;
+}
+
+int esp_elf_finalize(esp_elf_t *elf)
+{
+    if (!elf) {
+        return -EINVAL;
+    }
+    if (elf->lifecycle_busy) {
+        return -EBUSY;
+    }
+    if (elf->fini_done) {
+        return 0;
+    }
+
+    elf->lifecycle_busy = true;
+    if (elf->init_done) {
+        esp_elf_run_lifecycle_array(elf->fini_array, elf->fini_count, elf->fini_reverse);
+    }
+    elf->fini_done = true;
+    elf->lifecycle_busy = false;
     return 0;
 }
 
@@ -1356,8 +1385,10 @@ void esp_elf_deinit(esp_elf_t *elf)
         return;
     }
 
-    if (elf->init_done) {
-        esp_elf_run_lifecycle_array(elf->fini_array, elf->fini_count, elf->fini_reverse);
+    int ret = esp_elf_finalize(elf);
+    if (ret) {
+        ESP_LOGE(TAG, "Cannot deinitialize an executing ELF, ret=%d", ret);
+        return;
     }
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU

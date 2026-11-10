@@ -35,6 +35,8 @@ configurations. The host Python runner selects the appropriate GNU or macOS
 linker option for dead-section removal. ESP32-S2 MMU span arithmetic is also
 tested for unaligned allocation bases and multi-page executable pools.
 
+Lifecycle tests cover explicit finalization, idempotence, legacy sentinels, never-executed images, finalized-image rejection and reentrancy. Allocation and MMU checks verify retention until deinitialization. `idf_runtime` covers the two-phase lifecycle on ESP32-S3 and ESP32-P4 hardware.
+
 For ESP-IDF cross-compilation, build the freestanding ELF fixture in
 `components/elf_loader/tests/idf_cpp_lifecycle` with `idf.py set-target
 <target> build`; then inspect the resulting `elf_cpp_lifecycle.app.elf` for
