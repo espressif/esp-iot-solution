@@ -7,7 +7,13 @@ if (NOT TARGET gen_compressed_ota)
         set(COMPRESSED_OTA_BIN_SIGN_PARA )
     endif()
 
-    set(GEN_COMPRESSED_BIN_CMD  ${CMAKE_CURRENT_LIST_DIR}/scripts/gen_custom_ota.py ${COMPRESSED_OTA_BIN_SIGN_PARA} --add_app_header)
+    if(CONFIG_CU_OTA_PAD_HTTPS)
+        set(COMPRESSED_OTA_PAD_PARA --pad_https_ota)
+    else()
+        set(COMPRESSED_OTA_PAD_PARA)
+    endif()
+
+    set(GEN_COMPRESSED_BIN_CMD  ${CMAKE_CURRENT_LIST_DIR}/scripts/gen_custom_ota.py ${COMPRESSED_OTA_BIN_SIGN_PARA} --add_app_header ${COMPRESSED_OTA_PAD_PARA})
 
     add_custom_command(TARGET gen_compressed_ota
     POST_BUILD

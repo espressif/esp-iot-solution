@@ -6,7 +6,7 @@
 
 | 目录 | 说明 |
 |------|------|
-| [`gmp_ota/`](gmp_ota/) | BLE GMP OTA：Server 直写 OTA 分区 + Client SPIFFS 固件管理 |
+| [`gmp_ota/`](gmp_ota/README_CN.md) | BLE GMP OTA：Server 直写 OTA 分区 + Client SPIFFS 固件管理 |
 
 协议规范：[`SPEC.md`](../../components/esp_gmp/SPEC.md)。
 

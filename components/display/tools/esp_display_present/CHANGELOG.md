@@ -2,6 +2,8 @@
 
 ## 1.2.1 - 2026-11-09
 
+- Bound GRAM draw-buffer acquisition to the transfer timeout, retain DMA-owned buffers
+  when completion callbacks are missing, and expose the resulting presenter fault.
 - Fix PPA rotation buffer alignment, capacity, strides and dimension checks.
 - Fix TE input setup and automatic polarity detection.
 

@@ -1506,6 +1506,15 @@ esp_err_t esp_mcp_mgr_clear_session_state(esp_mcp_mgr_handle_t handle, const cha
     return esp_mcp_clear_session_state(engine, session_id);
 }
 
+esp_err_t esp_mcp_mgr_clear_recent_request_ids(esp_mcp_mgr_handle_t handle, const char *session_id)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
+    esp_mcp_mgr_t *mcp_ctx = (esp_mcp_mgr_t *)handle;
+    esp_mcp_t *engine = (esp_mcp_t *)mcp_ctx->config.instance;
+    ESP_RETURN_ON_FALSE(engine, ESP_ERR_INVALID_STATE, TAG, "No MCP instance");
+    return esp_mcp_clear_recent_request_ids(engine, session_id);
+}
+
 esp_err_t esp_mcp_mgr_track_pending_request(esp_mcp_mgr_handle_t handle,
                                             const char *request_id,
                                             const char *session_id,

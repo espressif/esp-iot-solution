@@ -73,4 +73,15 @@ menu "CMake Utilities"
             "Enable this option, user can make string in designated components align
              by 1-byte instead 1-word(4-byte), this can reduce unnecessary filled data
              so that to reduce firmware size."
+
+    config CU_OTA_PAD_HTTPS
+        bool "Pad packed OTA image to 1024 bytes"
+        default n
+        help
+            "esp_https_ota reads 1024 bytes before the HTTP response may end.
+             A small compressed or ddelta package can be shorter than that and
+             the download fails with \"Complete headers were not received\".
+             Enable this so idf.py gen_compressed_ota and idf.py gen_diff_ota
+             append zero bytes until the file is 1024 bytes. The padding is
+             outside the custom header length and MD5."
 endmenu

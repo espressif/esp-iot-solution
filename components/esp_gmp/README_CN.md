@@ -109,4 +109,4 @@ idf_component_register(
 
 OTA（直写 OTA 分区）见 [`profiles/ota/README_CN.md`](profiles/ota/README_CN.md) / [`profiles/ota/README.md`](profiles/ota/README.md)。
 
-BLE OTA 示例：[`examples/esp_gmp/gmp_ota`](../../examples/esp_gmp/gmp_ota)。
+BLE OTA 示例：[`examples/esp_gmp/gmp_ota`](../../examples/esp_gmp/gmp_ota/README_CN.md)。

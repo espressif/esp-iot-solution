@@ -1,6 +1,6 @@
 # ESP-GMP OTA Profile
 
-**English** | [中文](README_CN.md)
+[English](README.md) | **中文**
 
 OTA 位于 `profiles/ota/`（与 OS / File Transfer 同级）。共享 SHA-256 在 `common/`。
 
@@ -53,4 +53,4 @@ common/                     # OTA + FT 共用
 └── src/esp_gmp_sha256.c
 ```
 
-示例见 `examples/esp_gmp/gmp_ota`。
+示例见 [GMP OTA 示例文档](../../../../examples/esp_gmp/gmp_ota/README_CN.md)。

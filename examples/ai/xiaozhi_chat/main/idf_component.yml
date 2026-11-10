@@ -7,6 +7,10 @@ dependencies:
   # Registry 0.1.0 only supports IDF <6; use in-tree 0.1.1 for IDF 6.x until published.
   espressif/esp_xiaozhi:
     path: ../../../../components/esp_xiaozhi
+  # mcp-c-sdk 2.0.2 is not on the registry yet. Resolve the in-tree component.
+  espressif/mcp-c-sdk:
+    version: "^2.0.2"
+    override_path: ../../../../components/mcp-c-sdk
 
   ## Required IDF version
   idf:

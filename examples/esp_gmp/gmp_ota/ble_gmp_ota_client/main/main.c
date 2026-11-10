@@ -203,7 +203,8 @@ static void ota_runner_task(void *arg)
 
     struct stat st;
     if (stat(GMP_OTA_FIRMWARE_PATH, &st) != 0 || st.st_size <= 0) {
-        ESP_LOGW(TAG, "Firmware not found at %s (see spiffs/README)", GMP_OTA_FIRMWARE_PATH);
+        ESP_LOGW(TAG, "Firmware not found at %s (add spiffs/ota_image.bin, rebuild and flash; "
+                 "see examples/esp_gmp/gmp_ota/README.md)", GMP_OTA_FIRMWARE_PATH);
         ota_runner_set_scheduled(false);
         vTaskDelete(NULL);
         return;

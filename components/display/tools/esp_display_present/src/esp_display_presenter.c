@@ -893,6 +893,11 @@ esp_err_t esp_display_presenter_acquire_buffer(
               &ctx, &full_area, presenter->caps.pixel_format,
               &presenter->frame.region);
     if (ret != ESP_OK) {
+        if (esp_display_present_tracker_is_faulted(presenter->tracker)) {
+            portENTER_CRITICAL(&presenter->lifecycle_lock);
+            presenter->state = ESP_DISPLAY_PRESENTER_STATE_FAULTED;
+            portEXIT_CRITICAL(&presenter->lifecycle_lock);
+        }
         presenter_leave(presenter);
         return ret;
     }

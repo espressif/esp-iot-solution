@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.1.4
+
+### Fixed
+
+- **Board UUID**: Generate and save a UUID when the NVS `uuid` key is missing or empty. A missing key was treated as success with an empty default, so `Client-Id` and the MQTT client id third segment stayed empty. If the new UUID cannot be written or committed, return that error instead of publishing an unsaved value.
+- **MCP request ids**: On server hello, clear remembered JSON-RPC ids for the default MCP session without resetting initialize state. The cloud restarts those ids each dialogue.
+- **MCP error replies**: Send a JSON-RPC error payload when request handling fails, and release that buffer.
+
 ## v0.1.3~1 - 2026-10-23
 
 ### Bundled example updates

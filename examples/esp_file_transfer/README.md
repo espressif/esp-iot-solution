@@ -31,15 +31,15 @@ transfer is not supported in this release.
 
 ## Build
 
-```bash
-source ~/workspace/esp/esp-idf/export.sh
+Activate your local ESP-IDF environment, then run these commands from the repository root:
 
+```bash
 cd examples/esp_file_transfer/sender_demo
-idf.py --preview set-target esp32-h4
+idf.py --preview set-target esp32h4
 idf.py build
 
 cd ../receiver_demo
-idf.py --preview set-target esp32-h4
+idf.py --preview set-target esp32h4
 idf.py build
 ```
 
@@ -51,15 +51,17 @@ without automatic formatting.
 The example limits each file to 2 MiB, leaving filesystem overhead in the
 approximately 2.375 MiB FATFS partition.
 To exercise cancellation or link loss, create a larger file before building
-the sender:
+the sender. Run the following commands from the repository root:
 
 ```bash
 cd examples/esp_file_transfer
 dd if=/dev/urandom of=sender_demo/storage/send/large.bin bs=1024 count=1024
 ```
 
-After both boards start, the sender scans for and connects to the receiver.
-Begin verification only after both boards report:
+If you already built the sender, rebuild and flash it after adding the file so the new FATFS image reaches the board.
+
+For the two-board workflow below, start both boards. The sender scans for and
+connects to the receiver. Begin verification only after both boards report:
 
 ```text
 File transfer link ready
@@ -202,3 +204,13 @@ and both report `File transfer link ready`, a new transfer should succeed.
 Note that a full `idf.py flash` rewrites the example FATFS image and removes
 files received at runtime. Use `idf.py app-flash` when updating only the
 application while preserving `/fatfs`.
+
+## Debug `receiver_demo` with an Android app
+
+`receiver_demo` advertises as `ESP-File-Transfer` and receives files over BLE. You can also use the [ESP BLE App](https://github.com/EspressifApps/esp-ble-app) to debug it from an Android 12 or newer phone instead of using a `sender_demo` board. Install [app-debug.apk](https://github.com/EspressifApps/esp-ble-app/releases/download/v0.0.1/app-debug.apk) from the [v0.0.1 release](https://github.com/EspressifApps/esp-ble-app/releases/tag/v0.0.1), grant Bluetooth permissions, and start `receiver_demo`. In the app, open **GMP File Transfer → Scan & Connect**, connect to `ESP-File-Transfer`, then select a file in **Transfer** and tap **Send File**.
+
+The launcher opens the file-transfer tool. **Scan & Connect** finds the receiver, and **Transfer** selects the file to send. The screenshots show the disconnected state; sending becomes available after connection.
+
+| App launcher | Scan & Connect | Transfer: select a file |
+| --- | --- | --- |
+| <img src="receiver_demo/image/main_page.png" alt="ESP BLE App launcher" width="220"> | <img src="receiver_demo/image/file_00.png" alt="GMP File Transfer scan screen" width="220"> | <img src="receiver_demo/image/file_01.png" alt="GMP File Transfer file selection screen" width="220"> |
