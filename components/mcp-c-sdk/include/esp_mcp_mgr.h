@@ -747,6 +747,18 @@ esp_err_t esp_mcp_mgr_set_request_context(esp_mcp_mgr_handle_t handle,
 esp_err_t esp_mcp_mgr_clear_session_state(esp_mcp_mgr_handle_t handle, const char *session_id);
 
 /**
+ * @brief Forget remembered JSON-RPC request ids for one session
+ *
+ * Does not reset initialize lifecycle or other session state.
+ * A NULL or empty session_id clears ids recorded when no session id was set.
+ *
+ * @param[in] handle MCP manager handle
+ * @param[in] session_id Target session id (nullable)
+ * @return ESP_OK on success
+ */
+esp_err_t esp_mcp_mgr_clear_recent_request_ids(esp_mcp_mgr_handle_t handle, const char *session_id);
+
+/**
  * @brief Track a server-initiated JSON-RPC request for response correlation
  *
  * The manager stores callback metadata keyed by request id. When a matching response

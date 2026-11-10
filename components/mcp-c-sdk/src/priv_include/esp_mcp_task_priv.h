@@ -77,8 +77,20 @@ void esp_mcp_task_store_set_status_cb(esp_mcp_task_store_t *store,
  */
 esp_err_t esp_mcp_task_store_destroy(esp_mcp_task_store_t *store);
 
-/** Remove all tasks from the store (used on session re-initialize). */
+/** Remove all tasks from the store. */
 esp_err_t esp_mcp_task_store_clear(esp_mcp_task_store_t *store);
+
+/**
+ * @brief Remove tasks that belong to one session
+ *
+ * A NULL or empty session_id removes tasks recorded with no origin session.
+ * Tasks from other sessions stay in the store.
+ *
+ * @param[in] store Task store handle
+ * @param[in] session_id Origin session id (nullable)
+ * @return ESP_OK on success
+ */
+esp_err_t esp_mcp_task_store_clear_session(esp_mcp_task_store_t *store, const char *session_id);
 
 /**
  * @brief Iterate all tasks in store

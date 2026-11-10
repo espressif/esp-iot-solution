@@ -52,28 +52,33 @@ esp_err_t esp_xiaozhi_mcp_handle_message(esp_mcp_mgr_handle_t mgr_handle,
     uint8_t *outbuf = NULL;
     uint16_t outlen = 0;
     esp_err_t ret = esp_mcp_mgr_req_handle(mgr_handle, ep_name, (const uint8_t *)payload, payload_len, &outbuf, &outlen);
-    if (ret == ESP_OK && outbuf && outlen > 0) {
+    if (outbuf && outlen > 0) {
         cJSON *response_root = cJSON_CreateObject();
-        if (session_id) {
-            cJSON_AddStringToObject(response_root, "session_id", session_id);
-        }
-        cJSON_AddStringToObject(response_root, "type", "mcp");
-        cJSON *response_payload = cJSON_Parse((char *)outbuf);
-        if (response_payload) {
-            cJSON_AddItemToObject(response_root, "payload", response_payload);
-            char *json_str = cJSON_PrintUnformatted(response_root);
-            if (json_str) {
-                esp_xiaozhi_transport_send_text(mcp_item->transport_handle, json_str);
-                cJSON_free(json_str);
-            } else {
-                ESP_LOGE(TAG, "Failed to print MCP response");
+        if (response_root) {
+            if (session_id) {
+                cJSON_AddStringToObject(response_root, "session_id", session_id);
             }
+            cJSON_AddStringToObject(response_root, "type", "mcp");
+            cJSON *response_payload = cJSON_Parse((char *)outbuf);
+            if (response_payload) {
+                cJSON_AddItemToObject(response_root, "payload", response_payload);
+                char *json_str = cJSON_PrintUnformatted(response_root);
+                if (json_str) {
+                    esp_xiaozhi_transport_send_text(mcp_item->transport_handle, json_str);
+                    cJSON_free(json_str);
+                } else {
+                    ESP_LOGE(TAG, "Failed to print MCP response");
+                }
+            } else {
+                ESP_LOGE(TAG, "Failed to parse MCP response payload");
+            }
+            cJSON_Delete(response_root);
         } else {
-            ESP_LOGE(TAG, "Failed to parse MCP response payload");
+            ESP_LOGE(TAG, "Failed to allocate MCP response");
         }
-        cJSON_Delete(response_root);
         esp_mcp_mgr_req_destroy_response(mgr_handle, outbuf);
-    } else if (ret != ESP_ERR_NOT_FOUND && ret != ESP_OK) {
+    }
+    if (ret != ESP_ERR_NOT_FOUND && ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to process MCP message: %s", esp_err_to_name(ret));
     }
 
