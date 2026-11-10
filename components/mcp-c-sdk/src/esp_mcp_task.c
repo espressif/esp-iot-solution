@@ -257,7 +257,7 @@ esp_err_t esp_mcp_task_store_clear(esp_mcp_task_store_t *store)
 
 static bool esp_mcp_task_origin_matches(const esp_mcp_task_t *task, const char *session_id)
 {
-    const char *origin = task && task->origin_session_id ? task->origin_session_id : "";
+    const char *origin = task ? task->origin_session_id : "";
     const char *key = session_id ? session_id : "";
     return strcmp(origin, key) == 0;
 }
