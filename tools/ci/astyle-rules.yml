@@ -58,6 +58,11 @@ not_formatted_permanent:
     - "components/sensors/magnetometer/bmm350/bmm350_defs.h"
     - "components/sensors/magnetometer/bmm350/bmm350_oor.c"
     - "components/sensors/magnetometer/bmm350/bmm350_oor.h"
+    # Vendored ddelta and libdivsufsort (retain upstream formatting)
+    - "tools/cmake_utilities/scripts/esp_ddelta/src/ddelta.h"
+    - "tools/cmake_utilities/scripts/esp_ddelta/src/ddelta_apply.c"
+    - "tools/cmake_utilities/scripts/esp_ddelta/src/ddelta_generate.c"
+    - "tools/cmake_utilities/scripts/esp_ddelta/third_party/libdivsufsort/"
 
 docs:
   # Docs directory contains some .inc files, which are not C include files

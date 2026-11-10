@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "esp_ddelta"
+version = "0.1.0"
+description = "Uncompressed ddelta encode/decode for bootloader_support_plus"
+requires-python = ">=3.8"
+readme = "README.md"
+
+[tool.setuptools]
+license-files = ["NOTICE"]
+
+[tool.setuptools.packages.find]
+include = ["esp_ddelta*"]
