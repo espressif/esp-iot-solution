@@ -62,6 +62,26 @@ typedef struct elf_source {
  */
 typedef const struct esp_elfsym esp_elf_symbol_table_t;
 
+/** @brief Compiled symbol registry layout version. */
+#define ESP_ELF_SYMBOL_REGISTRY_VERSION 1
+
+/** @brief Read-only compiled tables in default resolver order. */
+typedef struct esp_elf_symbol_registry {
+    uint32_t version;                          /*!< registry layout version */
+    uint32_t table_count;                      /*!< table count excluding NULL terminator */
+    esp_elf_symbol_table_t *const *tables;     /*!< NULL-terminated array of table pointers */
+} esp_elf_symbol_registry_t;
+
+/**
+ * @brief Compiled symbol registry for runtime and firmware inspection.
+ *
+ * @note Contains enabled libc, ESP-IDF and customer tables, in that order.
+ *       Entries use ESP_ELFSYM_END; the first matching name wins.
+ *       Runtime registrations, shared objects and custom resolvers are excluded.
+ *       Static storage; valid for the firmware lifetime.
+ */
+extern const esp_elf_symbol_registry_t g_esp_elf_static_symbol_registry;
+
 /**
  * @brief Open and load an ELF file into memory.
  *
@@ -247,7 +267,8 @@ int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table);
  * @param sym_name - Symbol name string to search
  *
  * @return Symbol address if found, 0 if not found.
- * @note Search order is reverse registration order (latest registered first).
+ * @note Searches slots from lowest to highest. Registration reuses the first
+ *       empty slot; unregistering a table does not reorder other slots.
  */
 uintptr_t esp_elf_find_symbol(const char *sym_name);
 

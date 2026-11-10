@@ -1631,7 +1631,7 @@ int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table)
  * @param sym_name - Symbol name string to search
  *
  * @return Symbol address if found, 0 if not found.
- * @note Search order is registration order (earliest registered first).
+ * @note Searches slots from lowest to highest; registration reuses empty slots.
  */
 uintptr_t esp_elf_find_symbol(const char *sym_name)
 {
