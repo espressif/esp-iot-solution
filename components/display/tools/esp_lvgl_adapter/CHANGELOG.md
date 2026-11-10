@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.7.7 (2026-11-10)
+
+* Fix LVGL v9 async TE RGB565 rotation cache coherency and fuse PPA byte swapping.
+* Stabilize automatic TE polarity detection.
+* Retry skipped touch samples and cancel failed recovery without clicks in LVGL v8/v9.
+
 ## v0.7.6 (2026-11-08)
 
 * Fix LVGL v8/v9 PPA output alignment and buffer capacity checks for drawing and rotation.
