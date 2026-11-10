@@ -294,11 +294,17 @@ EXIT:
     if (timer_acquired && --s_timers[timer].users == 0) {
         /* Pause first; ledc_timer_del rejects a timer that is still running. */
         ledc_timer_pause(pwm_handle->ledc_config.speed_mode, pwm_handle->ledc_config.timer_num);
+    }
+    if (s_instances == 0) {
+        for (timer = 0; timer < LEDC_TIMER_MAX; timer++) {
+            if (s_timers[timer].config.freq_hz) {
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-        pwm_handle->ledc_config.deconfigure = true;
-        ledc_timer_config(&pwm_handle->ledc_config);
+                s_timers[timer].config.deconfigure = true;
+                ledc_timer_config(&s_timers[timer].config);
 #endif
-        memset(&s_timers[timer], 0, sizeof(s_timers[0]));
+            }
+        }
+        memset(s_timers, 0, sizeof(s_timers));
     }
     free(pwm_handle);
     _lock_release(&s_resource_lock);
@@ -346,13 +352,17 @@ esp_err_t pwm_deinit(pwm_handle_t pwm_handle)
 #endif
         }
         err |= ledc_timer_pause(pwm_handle->ledc_config.speed_mode, pwm_handle->ledc_config.timer_num);
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
-        pwm_handle->ledc_config.deconfigure = true;
-        err |= ledc_timer_config(&pwm_handle->ledc_config);
-#endif
-        memset(&s_timers[pwm_handle->ledc_config.timer_num], 0, sizeof(s_timers[0]));
     }
     if (--s_instances == 0) {
+        for (int timer = 0; timer < LEDC_TIMER_MAX; timer++) {
+            if (s_timers[timer].config.freq_hz) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)
+                s_timers[timer].config.deconfigure = true;
+                err |= ledc_timer_config(&s_timers[timer].config);
+#endif
+            }
+        }
+        memset(s_timers, 0, sizeof(s_timers));
         ledc_fade_func_uninstall();
     }
     free(pwm_handle);
@@ -397,6 +407,10 @@ esp_err_t pwm_regist_channel(pwm_handle_t pwm_handle, pwm_channel_t channel, gpi
         .speed_mode = pwm_handle->ledc_config.speed_mode,
         .timer_sel = pwm_handle->ledc_config.timer_num,
         .duty = duty,
+#if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 4, 0)) && !CONFIG_IDF_TARGET_ESP32
+        /* Keep the XTAL clock and GPIO output active during Light-sleep. */
+        .sleep_mode = LEDC_SLEEP_MODE_KEEP_ALIVE,
+#endif
 #if (ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 4, 0))
         .flags.output_invert = pwm_handle->invert_level,
 #endif
