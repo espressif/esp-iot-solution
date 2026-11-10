@@ -14,6 +14,13 @@
 
 static char trace[32];
 static size_t trace_pos;
+static size_t free_count;
+static esp_elf_t *active_elf;
+
+enum {
+    TEXT_BYTES = 32,
+    DATA_BYTES = 16,
+};
 
 static void record(char c)
 {
@@ -62,32 +69,122 @@ void *esp_elf_malloc(uint32_t size, bool executable)
 
 void esp_elf_free(void *ptr)
 {
+    if (ptr) {
+        ++free_count;
+    }
     free(ptr);
 }
 
-static void check_order(bool legacy)
+static size_t allocate_image(esp_elf_t *elf)
+{
+#ifdef CONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR
+    elf->ptext = malloc(TEXT_BYTES);
+    elf->pdata = malloc(DATA_BYTES);
+    assert(elf->ptext && elf->pdata);
+    return 2;
+#else
+    elf->psegment = malloc(TEXT_BYTES + DATA_BYTES);
+    assert(elf->psegment);
+    return 1;
+#endif
+}
+
+static void check_order(bool legacy, bool explicit_finalize)
 {
     void (*pre[])(void) = {pre1, pre2};
     void (*init[])(void) = {init1, init2};
-    void (*fini[])(void) = {fini1, fini2};
+    void (*fini[])(void) = {NULL, fini1, (void (*)(void))UINTPTR_MAX, fini2};
     esp_elf_t elf = {
         .entry = entry,
         .preinit_array = pre, .preinit_count = 2,
         .init_array = init, .init_count = 2, .init_reverse = legacy,
-        .fini_array = fini, .fini_count = 2, .fini_reverse = !legacy,
+        .fini_array = fini, .fini_count = 4, .fini_reverse = !legacy,
     };
+    const size_t previous_frees = free_count;
+    const size_t allocations = allocate_image(&elf);
     memset(trace, 0, sizeof(trace));
     trace_pos = 0;
     assert(esp_elf_request(&elf, 0, 0, NULL) == 0);
     assert(strcmp(trace, legacy ? "PQBAE" : "PQABE") == 0);
     assert(esp_elf_request(&elf, 0, 0, NULL) == 0);
     assert(strcmp(trace, legacy ? "PQBAEE" : "PQABEE") == 0);
+    if (explicit_finalize) {
+        assert(esp_elf_finalize(&elf) == 0);
+        assert(strcmp(trace, legacy ? "PQBAEEXY" : "PQABEEYX") == 0);
+        assert(free_count == previous_frees);
+        assert(elf.entry == entry);
+        assert(esp_elf_finalize(&elf) == 0);
+        assert(esp_elf_request(&elf, 0, 0, NULL) == -EINVAL);
+    }
     esp_elf_deinit(&elf);
     assert(strcmp(trace, legacy ? "PQBAEEXY" : "PQABEEYX") == 0);
+    assert(free_count == previous_frees + allocations);
     assert(!elf.init_done);
     assert(!elf.entry);
     esp_elf_deinit(&elf);
     assert(strcmp(trace, legacy ? "PQBAEEXY" : "PQABEEYX") == 0);
+}
+
+static void check_finalize_without_execution(void)
+{
+    void (*fini[])(void) = {fini1};
+    esp_elf_t elf = {.entry = entry, .fini_array = fini, .fini_count = 1};
+    trace_pos = 0;
+    trace[0] = '\0';
+    assert(esp_elf_finalize(NULL) == -EINVAL);
+    assert(esp_elf_finalize(&elf) == 0);
+    assert(esp_elf_finalize(&elf) == 0);
+    assert(esp_elf_request(&elf, 0, 0, NULL) == -EINVAL);
+    esp_elf_deinit(&elf);
+    assert(trace_pos == 0);
+
+    /* A released object can host a new image, including one without fini hooks. */
+    elf.entry = entry;
+    assert(esp_elf_request(&elf, 0, 0, NULL) == 0);
+    assert(esp_elf_finalize(&elf) == 0);
+    assert(strcmp(trace, "E") == 0);
+    esp_elf_deinit(&elf);
+}
+
+static void reject_reentrant_lifecycle(void)
+{
+    const size_t previous_frees = free_count;
+    assert(esp_elf_finalize(active_elf) == -EBUSY);
+    assert(esp_elf_request(active_elf, 0, 0, NULL) == -EBUSY);
+    esp_elf_deinit(active_elf);
+    assert(active_elf->entry != NULL);
+    assert(free_count == previous_frees);
+    record('R');
+}
+
+static int reentrant_entry(int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+    reject_reentrant_lifecycle();
+    return 0;
+}
+
+static void check_reentrant_lifecycle_retains_image(void)
+{
+    void (*callbacks[])(void) = {reject_reentrant_lifecycle};
+    esp_elf_t elf = {
+        .entry = reentrant_entry,
+        .init_array = callbacks, .init_count = 1,
+        .fini_array = callbacks, .fini_count = 1,
+    };
+    active_elf = &elf;
+    trace_pos = 0;
+    trace[0] = '\0';
+    const size_t previous_frees = free_count;
+    const size_t allocations = allocate_image(&elf);
+    assert(esp_elf_request(&elf, 0, 0, NULL) == 0);
+    assert(strcmp(trace, "RR") == 0);
+    assert(esp_elf_finalize(&elf) == 0);
+    assert(strcmp(trace, "RRR") == 0);
+    esp_elf_deinit(&elf);
+    assert(free_count == previous_frees + allocations);
+    active_elf = NULL;
 }
 
 static void check_section_mapping(void)
@@ -154,8 +251,12 @@ static void check_section_mapping(void)
 
 int main(void)
 {
-    check_order(false);  /* .init_array ascending; .fini_array descending */
-    check_order(true);   /* legacy .ctors descending; .dtors ascending */
+    check_order(false, false);  /* .init_array ascending; .fini_array descending */
+    check_order(true, false);   /* legacy .ctors descending; .dtors ascending */
+    check_order(false, true);
+    check_order(true, true);
+    check_finalize_without_execution();
+    check_reentrant_lifecycle_retains_image();
     check_section_mapping();
     esp_elf_t missing_entry = {0};
     assert(esp_elf_request(&missing_entry, 0, 0, NULL) == -EINVAL);

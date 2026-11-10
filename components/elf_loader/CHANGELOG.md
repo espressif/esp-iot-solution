@@ -1,5 +1,12 @@
 # ChangeLog
 
+## Unreleased
+
+* Add `esp_elf_finalize()` to run finalization callbacks once while retaining
+  executable memory and MMU mappings for host-managed module cleanup.
+* Reject entry invocation after finalization and reentrant lifecycle operations;
+  `esp_elf_deinit()` retains an image whose entry or callbacks are executing.
+
 ## v2.1.0 - 2026-11-02
 
 * Apply the addend of Xtensa `R_XTENSA_GLOB_DAT` / `R_XTENSA_JMP_SLOT` relocations,

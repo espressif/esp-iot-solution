@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <errno.h>
 #include <stdint.h>
 
 #include "esp_elf.h"
@@ -33,6 +34,31 @@ TEST_CASE("C++ ELF constructors run once and destructors run at unload", "[elf_l
     observed_stage = -1;
     esp_elf_deinit(&elf);
     TEST_ASSERT_EQUAL_INT(99, observed_stage); /* C++ global dtor executed */
+}
+
+TEST_CASE("C++ ELF finalization retains the image until deinit", "[elf_loader][lifecycle]")
+{
+    esp_elf_t elf;
+    volatile int observed_stage = -1;
+    char *args[] = { (char *) &observed_stage };
+
+    TEST_ASSERT_EQUAL_INT(0, esp_elf_init(&elf));
+    TEST_ASSERT_EQUAL_INT(0, esp_elf_relocate(&elf, cpp_lifecycle_start,
+                                              (size_t)(cpp_lifecycle_end - cpp_lifecycle_start)));
+    const uintptr_t runtime_base = esp_elf_runtime_base(&elf);
+    TEST_ASSERT_NOT_EQUAL(0, runtime_base);
+    TEST_ASSERT_EQUAL_INT(0, esp_elf_request(&elf, 0, 1, args));
+    TEST_ASSERT_EQUAL_INT(42, observed_stage);
+
+    TEST_ASSERT_EQUAL_INT(0, esp_elf_finalize(&elf));
+    TEST_ASSERT_EQUAL_INT(99, observed_stage);
+    TEST_ASSERT_EQUAL(runtime_base, esp_elf_runtime_base(&elf));
+    observed_stage = -1;
+    TEST_ASSERT_EQUAL_INT(0, esp_elf_finalize(&elf));
+    TEST_ASSERT_EQUAL_INT(-EINVAL, esp_elf_request(&elf, 0, 1, args));
+    esp_elf_deinit(&elf);
+    TEST_ASSERT_EQUAL_INT(-1, observed_stage);
+    TEST_ASSERT_EQUAL(0, esp_elf_runtime_base(&elf));
 }
 
 void app_main(void)
