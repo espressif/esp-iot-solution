@@ -2191,6 +2191,142 @@ TEST_CASE("test_initialize_is_session_scoped", "[mcp][protocol][initialize][sess
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
 }
 
+TEST_CASE("test_reinitialize_same_id_keeps_other_session", "[mcp][protocol][initialize][session]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+    esp_mcp_resource_t *res = esp_mcp_resource_create("device://status",
+                                                      "device.status",
+                                                      "Status",
+                                                      "status resource",
+                                                      "application/json",
+                                                      test_resource_read_cb,
+                                                      NULL);
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("task.tool", "Task tool", test_tool_callback_noarg);
+    TEST_ASSERT_NOT_NULL(res);
+    TEST_ASSERT_NOT_NULL(tool);
+    ESP_ERROR_CHECK(esp_mcp_add_resource(mcp, res));
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+
+    const char *init_msg =
+        "{\"jsonrpc\":\"2.0\",\"method\":\"initialize\",\"id\":1,\"params\":"
+        MCP_TEST_INIT_DEFAULT_PARAMS_JSON "}";
+    const char *initialized_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\",\"params\":{}}";
+    uint8_t *outbuf = NULL;
+    uint16_t outlen = 0;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_set_request_context(handle, "sess-a", NULL, true));
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    cJSON *root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)initialized_msg, strlen(initialized_msg), &outbuf, &outlen));
+    TEST_ASSERT_NULL(outbuf);
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_set_request_context(handle, "sess-b", NULL, true));
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)initialized_msg, strlen(initialized_msg), &outbuf, &outlen));
+    TEST_ASSERT_NULL(outbuf);
+
+    const char *sub_msg = "{\"jsonrpc\":\"2.0\",\"id\":\"b-sub\",\"method\":\"resources/subscribe\",\"params\":{\"uri\":\"device://status\"}}";
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)sub_msg, strlen(sub_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    const char *call_msg = "{\"jsonrpc\":\"2.0\",\"id\":\"b-task\",\"method\":\"tools/call\",\"params\":{\"name\":\"task.tool\",\"arguments\":{},\"task\":{}}}";
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)call_msg, strlen(call_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON *call_result = cJSON_GetObjectItem(root, "result");
+    cJSON *task_obj = call_result ? cJSON_GetObjectItem(call_result, "task") : NULL;
+    cJSON *task_id = task_obj ? cJSON_GetObjectItem(task_obj, "taskId") : NULL;
+    TEST_ASSERT_TRUE(cJSON_IsString(task_id));
+    char task_id_buf[64] = {0};
+    snprintf(task_id_buf, sizeof(task_id_buf), "%s", task_id->valuestring);
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_set_request_context(handle, "sess-a", NULL, true));
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)init_msg, strlen(init_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)initialized_msg, strlen(initialized_msg), &outbuf, &outlen));
+    TEST_ASSERT_NULL(outbuf);
+
+    const char *list_msg = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}";
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)list_msg, strlen(list_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    outbuf = NULL;
+
+    mcp_test_reset_emit_capture();
+    ESP_ERROR_CHECK(esp_mcp_remove_resource(mcp, res));
+    int updated_index = -1;
+    for (int i = 0; i < s_emit_count && i < (int)(sizeof(s_emit_session_history) / sizeof(s_emit_session_history[0])); ++i) {
+        if (strstr(s_emit_history[i], "\"method\":\"notifications/resources/updated\"") &&
+                strcmp(s_emit_session_history[i], "sess-b") == 0) {
+            updated_index = i;
+            break;
+        }
+    }
+    TEST_ASSERT_TRUE(updated_index >= 0);
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_set_request_context(handle, "sess-b", NULL, true));
+    char get_msg[160] = {0};
+    snprintf(get_msg, sizeof(get_msg),
+             "{\"jsonrpc\":\"2.0\",\"id\":\"b-get\",\"method\":\"tasks/get\",\"params\":{\"taskId\":\"%s\"}}",
+             task_id_buf);
+    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)get_msg, strlen(get_msg), &outbuf, &outlen));
+    root = parse_json_response(outbuf, outlen);
+    TEST_ASSERT_NOT_NULL(root);
+    TEST_ASSERT_NULL(cJSON_GetObjectItem(root, "error"));
+    cJSON *get_result = cJSON_GetObjectItem(root, "result");
+    TEST_ASSERT_NOT_NULL(get_result);
+    cJSON *got_task_id = cJSON_GetObjectItem(get_result, "taskId");
+    TEST_ASSERT_TRUE(cJSON_IsString(got_task_id));
+    TEST_ASSERT_EQUAL_STRING(task_id_buf, got_task_id->valuestring);
+    cJSON_Delete(root);
+    ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+
+    ESP_ERROR_CHECK(esp_mcp_resource_destroy(res));
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
 TEST_CASE("test_clear_session_state_resets_initialize_lifecycle", "[mcp][protocol][initialize][session]")
 {
     esp_mcp_t *mcp = NULL;

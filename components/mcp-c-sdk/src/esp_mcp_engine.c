@@ -1452,16 +1452,28 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
         // Some clients may re-send initialize on reconnect/session reset.
         // Treat it as session re-initialization for compatibility.
         ESP_LOGW(TAG, "Re-initialize received; resetting MCP session state");
+        const char *reinit_session = mcp->request_session_id[0] ? mcp->request_session_id : NULL;
         if (mcp->tasks) {
-            (void)esp_mcp_task_store_clear((esp_mcp_task_store_t *)mcp->tasks);
+            (void)esp_mcp_task_store_clear_session((esp_mcp_task_store_t *)mcp->tasks, reinit_session);
         }
-        esp_mcp_resource_sub_lock(mcp);
-        mcp->resource_subscriptions_count = 0;
-        memset(mcp->resource_subscriptions, 0, sizeof(mcp->resource_subscriptions));
-        esp_mcp_resource_sub_unlock(mcp);
+        if (reinit_session) {
+            esp_mcp_resource_sub_lock(mcp);
+            for (size_t i = 0; i < mcp->resource_subscriptions_count;) {
+                if (strcmp(mcp->resource_subscriptions[i].session_id, reinit_session) != 0) {
+                    i++;
+                    continue;
+                }
+                for (size_t j = i + 1; j < mcp->resource_subscriptions_count; ++j) {
+                    memcpy(&mcp->resource_subscriptions[j - 1],
+                           &mcp->resource_subscriptions[j],
+                           sizeof(mcp->resource_subscriptions[j - 1]));
+                }
+                mcp->resource_subscriptions_count--;
+            }
+            esp_mcp_resource_sub_unlock(mcp);
+        }
         esp_mcp_req_id_lock(mcp);
-        memset(mcp->recent_request_ids, 0, sizeof(mcp->recent_request_ids));
-        mcp->recent_request_id_cursor = 0;
+        esp_mcp_forget_request_ids_for_session(mcp, esp_mcp_request_session_or_default(mcp));
         esp_mcp_req_id_unlock(mcp);
         session_state->require_initialized_notification = false;
         session_state->received_initialized_notification = false;
