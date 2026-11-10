@@ -223,7 +223,30 @@ esp_err_t esp_display_present_gram_acquire_drawbuf(
     }
     portEXIT_CRITICAL(&gram->lock);
 
-    if (xSemaphoreTake(gram->available, portMAX_DELAY) != pdTRUE) {
+    /* A missing DMA completion must not block the producer indefinitely.
+     * Keep the minimum wait finite even when the configured budget is below
+     * one RTOS tick; portMAX_DELAY is the infinite-wait sentinel. */
+    TickType_t wait_ticks = pdMS_TO_TICKS(gram->transfer_timeout_ms);
+    if (wait_ticks == 0) {
+        wait_ticks = 1;
+    } else if (wait_ticks == portMAX_DELAY) {
+        --wait_ticks;
+    }
+    if (xSemaphoreTake(gram->available, wait_ticks) != pdTRUE) {
+        portENTER_CRITICAL(&gram->lock);
+        bool cancelled = gram->life != GRAM_RUNNING;
+        if (!cancelled) {
+            /* Stop new submissions without freeing buffers still owned by
+             * a DMA transfer or an outstanding producer lease. */
+            gram->life = GRAM_CLOSING;
+        }
+        portEXIT_CRITICAL(&gram->lock);
+        if (cancelled) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        esp_display_present_tracker_mark_faulted(
+            &gram->tracker, ESP_DISPLAY_PRESENT_FAULT_TRANSFER_TIMEOUT);
+        ESP_LOGE(TAG, "GRAM acquire timed out; retaining owned drawbufs");
         return ESP_ERR_TIMEOUT;
     }
 
