@@ -14,6 +14,8 @@
 #if CONFIG_SOC_PPA_SUPPORTED
 #include "driver/ppa.h"
 #include "esp_heap_caps.h"
+#include "esp_memory_utils.h"
+#include "esp_private/esp_cache_private.h"
 
 #include "esp_display_present_cache.h"
 #endif
@@ -37,20 +39,38 @@ static ppa_srm_color_mode_t present_ppa_color_mode(uint8_t color_bytes)
            PPA_SRM_COLOR_MODE_RGB888 : PPA_SRM_COLOR_MODE_RGB565;
 }
 
-static size_t present_ppa_get_buffer_size(void *buffer, uint8_t color_bytes, uint16_t width, uint16_t height)
+/* PPA picture dimensions include stride padding, not only visible pixels. */
+static bool present_ppa_plane_supported(const esp_display_present_blit_plane_t *plane)
 {
-    size_t buffer_size = heap_caps_get_allocated_size(buffer);
-    if (buffer_size != 0) {
-        return buffer_size;
-    }
+    return plane->width > 0 && plane->height > 0 && plane->height <= 0x3FFF &&
+           plane->stride_bytes % plane->color_bytes == 0 &&
+           plane->stride_bytes / plane->color_bytes >= plane->width &&
+           plane->stride_bytes / plane->color_bytes <= 0x3FFF;
+}
 
-    buffer_size = (size_t)color_bytes * width * height;
-    size_t line_size = esp_display_present_get_cache_line_size_by_addr(buffer);
-    if (line_size > 0) {
-        buffer_size = present_ppa_align_up(buffer_size, line_size);
+/* Framebuffers are heap allocations owned by the producer or panel driver.
+ * Advertise only the required aligned span that fits in that allocation. */
+static size_t present_ppa_get_buffer_size(void *buffer, size_t required)
+{
+    uint32_t caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA;
+#ifdef ESP_DISPLAY_PRESENT_PPA_HAS_PER_BUFFER_ALIGNMENT
+    if (esp_ptr_internal(buffer)) {
+        caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA;
     }
-
-    return buffer_size;
+#endif
+    size_t alignment = 0;
+    if (esp_cache_get_alignment(caps, &alignment) != ESP_OK ||
+            (alignment && ((uintptr_t)buffer & (alignment - 1U)))) {
+        return 0;
+    }
+    size_t capacity = heap_caps_get_allocated_size(buffer);
+    if (alignment) {
+        capacity &= ~(alignment - 1U);
+    }
+    if (required > capacity) {
+        return 0;
+    }
+    return present_ppa_align_up(required, alignment);
 }
 
 static ppa_srm_rotation_angle_t present_ppa_rotation_angle(esp_display_present_rotation_t rotation)
@@ -157,13 +177,16 @@ esp_err_t esp_display_present_ppa_rotate_copy(
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (!present_ppa_plane_supported(&request->source) ||
+            !present_ppa_plane_supported(&request->destination)) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     const void *src = request->source.pixels;
     void *dst_fb = request->destination.pixels;
     uint16_t x_start = (uint16_t)request->logical_area.x1;
     uint16_t y_start = (uint16_t)request->logical_area.y1;
     uint16_t x_end = (uint16_t)request->logical_area.x2;
     uint16_t y_end = (uint16_t)request->logical_area.y2;
-    uint16_t src_logical_w = request->source.width;
     uint16_t src_logical_h = request->source.height;
     uint16_t dst_physical_w = request->destination.width;
     uint16_t dst_physical_h = request->destination.height;
@@ -194,10 +217,14 @@ esp_err_t esp_display_present_ppa_rotate_copy(
         break;
     }
 
-    size_t buffer_size = present_ppa_get_buffer_size(dst_fb, color_bytes, dst_physical_w, dst_physical_h);
+    size_t buffer_size = present_ppa_get_buffer_size(
+                             dst_fb, request->destination.stride_bytes * dst_physical_h);
+    if (buffer_size == 0) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     ppa_srm_oper_config_t oper_config = {
         .in.buffer = src,
-        .in.pic_w = src_logical_w,
+        .in.pic_w = request->source.stride_bytes / color_bytes,
         .in.pic_h = src_logical_h,
         .in.block_w = rect_w,
         .in.block_h = rect_h,
@@ -207,7 +234,7 @@ esp_err_t esp_display_present_ppa_rotate_copy(
 
            .out.buffer = dst_fb,
            .out.buffer_size = buffer_size,
-           .out.pic_w = dst_physical_w,
+           .out.pic_w = request->destination.stride_bytes / color_bytes,
            .out.pic_h = dst_physical_h,
            .out.block_offset_x = x_offset,
            .out.block_offset_y = y_offset,
@@ -249,9 +276,12 @@ esp_err_t esp_display_present_ppa_rotate_copy_block(
         return ESP_ERR_INVALID_ARG;
     }
 
+    if (!present_ppa_plane_supported(&request->source) ||
+            !present_ppa_plane_supported(&request->destination)) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     const void *src = request->source.pixels;
     void *dst_fb = request->destination.pixels;
-    uint16_t src_stride_px = request->source.width;
     uint16_t src_height = request->source.height;
     uint16_t block_w =
         (uint16_t)(request->source_area.x2 - request->source_area.x1 + 1);
@@ -259,16 +289,18 @@ esp_err_t esp_display_present_ppa_rotate_copy_block(
         (uint16_t)(request->source_area.y2 - request->source_area.y1 + 1);
     uint16_t dst_offset_x = (uint16_t)request->destination_origin.x;
     uint16_t dst_offset_y = (uint16_t)request->destination_origin.y;
-    uint16_t dst_physical_w = request->destination.width;
     uint16_t dst_physical_h = request->destination.height;
     esp_display_present_rotation_t rotation = request->rotation;
     uint8_t color_bytes = request->source.color_bytes;
 
     size_t buffer_size = present_ppa_get_buffer_size(
-                             dst_fb, color_bytes, dst_physical_w, dst_physical_h);
+                             dst_fb, request->destination.stride_bytes * dst_physical_h);
+    if (buffer_size == 0) {
+        return ESP_ERR_NOT_SUPPORTED;
+    }
     ppa_srm_oper_config_t oper_config = {
         .in.buffer = src,
-        .in.pic_w = src_stride_px,
+        .in.pic_w = request->source.stride_bytes / color_bytes,
         .in.pic_h = src_height,
         .in.block_w = block_w,
         .in.block_h = block_h,
@@ -278,7 +310,7 @@ esp_err_t esp_display_present_ppa_rotate_copy_block(
 
            .out.buffer = dst_fb,
            .out.buffer_size = buffer_size,
-           .out.pic_w = dst_physical_w,
+           .out.pic_w = request->destination.stride_bytes / color_bytes,
            .out.pic_h = dst_physical_h,
            .out.block_offset_x = dst_offset_x,
            .out.block_offset_y = dst_offset_y,

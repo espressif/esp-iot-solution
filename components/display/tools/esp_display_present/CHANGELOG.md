@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1 - 2026-11-09
+
+- Fix PPA rotation buffer alignment, capacity, strides and dimension checks.
+- Fix TE input setup and automatic polarity detection.
+
 ## 1.2.0 - 2026-10-27
 
 - Add correlated frame receipts, coherent transfer/display status and tracking cancellation.

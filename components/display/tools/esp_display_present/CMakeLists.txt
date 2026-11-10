@@ -79,3 +79,18 @@ if(EXISTS "${_lcd_dir}/dsi/include/esp_lcd_mipi_dsi.h")
         target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_DISPLAY_PRESENT_DPI_VSYNC=1)
     endif()
 endif()
+
+# Older PPA drivers apply the external-memory alignment to every output.
+# Detect the actual SDK layout so backports retain SRAM acceleration.
+if(CONFIG_SOC_PPA_SUPPORTED)
+    idf_component_get_property(present_ppa_dir esp_driver_ppa COMPONENT_DIR)
+    set(present_ppa_header "${present_ppa_dir}/src/ppa_priv.h")
+    if(EXISTS "${present_ppa_header}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${present_ppa_header}")
+        file(STRINGS "${present_ppa_header}" present_ppa_per_buffer_alignment REGEX "int_mem_align")
+        if(present_ppa_per_buffer_alignment)
+            target_compile_definitions(${COMPONENT_LIB} PRIVATE
+                ESP_DISPLAY_PRESENT_PPA_HAS_PER_BUFFER_ALIGNMENT=1)
+        endif()
+    endif()
+endif()
