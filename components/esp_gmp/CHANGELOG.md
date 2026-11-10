@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.0.4 - 2026-11-07
+
+### Enhancements:
+
+* File Transfer: acknowledge DATA after admission to a bounded write queue, then write and hash the block in the worker; abort the transfer if deferred writing or hashing fails
+* OTA: erase the image range before acknowledging START so subsequent DATA writes do not pause for sector erasure
+
 ## v0.0.3 - 2026-08-18
 
 ### Breaking Changes:

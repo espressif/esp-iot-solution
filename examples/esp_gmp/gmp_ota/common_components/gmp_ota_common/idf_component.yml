@@ -1,8 +1,7 @@
 dependencies:
   idf: ">=5.0"
   esp_gmp:
-    version: "*"
     override_path: "../../../../../components/esp_gmp"
   esp_flux:
-    version: "*"
+    version: "^0.2.0~1"
     override_path: "../../../../../components/esp_flux"

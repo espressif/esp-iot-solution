@@ -31,6 +31,7 @@ extern "C" {
 #define ESP_FT_DEFAULT_MAX_BLOCK_SIZE   (16u * 1024u)
 #define ESP_FT_EVENT_QUEUE_LEN          8u
 #define ESP_FT_URGENT_QUEUE_LEN         4u
+#define ESP_FT_WRITE_QUEUE_LEN          3u
 #define ESP_FT_WORKER_STACK_SIZE        6144u
 #define ESP_FT_WORKER_PRIORITY          5u
 #define ESP_FT_META_RSP_TIMEOUT_US      (10ULL * 1000ULL * 1000ULL)
@@ -62,6 +63,7 @@ typedef enum {
     FT_WORK_SEND_CMD = 0,
     FT_WORK_ABORT_CMD,
     FT_WORK_GMP_PACKET,
+    FT_WORK_WRITE_BLOCK,
     FT_WORK_TIMEOUT,
     FT_WORK_DEINIT,
 } ft_worker_event_type_t;
@@ -95,6 +97,14 @@ typedef struct {
 } ft_command_reply_t;
 
 typedef struct {
+    esp_gmp_link_t link;
+    uint32_t transfer_id;
+    uint32_t block_index;
+    uint8_t *data;
+    size_t data_len;
+} ft_write_block_t;
+
+typedef struct {
     ft_worker_event_type_t type;
     union {
         struct {
@@ -111,6 +121,7 @@ typedef struct {
             ft_command_reply_t reply;
         } abort;
         ft_gmp_packet_t packet;
+        ft_write_block_t write_block;
         ft_timeout_tuple_t timeout;
         struct {
             ft_command_reply_t reply;
@@ -129,6 +140,7 @@ struct ft_context {
     uint32_t block_size;
     uint64_t file_size;
     uint64_t bytes_transferred;
+    uint64_t bytes_accepted; /**< Receiver: bytes queued for writing. */
     char file_name[ESP_FT_FILE_NAME_MAX_LEN + 1];
     char saved_name[ESP_FT_FILE_NAME_MAX_LEN + 1];
     char *source_path;
@@ -209,6 +221,7 @@ struct ft_instance {
     TaskHandle_t worker_task;
     QueueHandle_t event_queue;
     QueueHandle_t urgent_queue;
+    QueueHandle_t write_queue; /**< Bounded receiver blocks awaiting file I/O. */
     SemaphoreHandle_t event_queue_mutex; /**< Serializes producers + urgent eviction. */
     SemaphoreHandle_t snapshot_mutex;
     SemaphoreHandle_t abort_mutex;
@@ -308,6 +321,7 @@ void ft_sender_handle_timeout(ft_instance_t *instance, ft_timer_kind_t kind);
 
 void ft_receiver_handle_meta(ft_instance_t *instance, const ft_gmp_packet_t *packet);
 void ft_receiver_handle_data(ft_instance_t *instance, const ft_gmp_packet_t *packet);
+void ft_receiver_write_block(ft_instance_t *instance, const ft_write_block_t *block);
 void ft_receiver_handle_timeout(ft_instance_t *instance, ft_timer_kind_t kind);
 
 void ft_handle_peer_abort(ft_instance_t *instance, const ft_gmp_packet_t *packet);

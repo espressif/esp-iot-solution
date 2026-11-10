@@ -4,11 +4,13 @@ set(FILE_TRANSFER_EXAMPLE_COMMON_DIR
 idf_component_register(
     SRCS
         "app_main.c"
+        "${CMAKE_CURRENT_LIST_DIR}/../../../esp_flux/common_components/ble_link_gate/ble_link_gate.c"
         "${FILE_TRANSFER_EXAMPLE_COMMON_DIR}/file_transfer_example_common.c"
         "${FILE_TRANSFER_EXAMPLE_COMMON_DIR}/file_transfer_example_console.c"
         "${FILE_TRANSFER_EXAMPLE_COMMON_DIR}/file_transfer_example_storage.c"
     INCLUDE_DIRS
         "."
+        "${CMAKE_CURRENT_LIST_DIR}/../../../esp_flux/common_components/ble_link_gate"
         "${FILE_TRANSFER_EXAMPLE_COMMON_DIR}"
     REQUIRES
         nvs_flash

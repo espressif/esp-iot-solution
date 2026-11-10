@@ -890,12 +890,9 @@ static esp_err_t handle_control(const esp_gmp_rx_t *pkt, ota_sess_t *s, ota_pend
                                      ESP_GMP_STATUS_BAD_LENGTH, NULL, 0);
         }
 
-        /*
-         * Erase incrementally during writes. Passing image_size here would
-         * erase the whole image synchronously and block the START response
-         * (host control timeout is 40s; ~600KB+ erase often exceeds that).
-         */
-        esp_err_t err = esp_ota_begin(part, OTA_WITH_SEQUENTIAL_WRITES, &s->ota_handle);
+        /* Erase the image range before acknowledging START so DATA writes
+         * do not stall the link while sectors are being erased. */
+        esp_err_t err = esp_ota_begin(part, req.image_size, &s->ota_handle);
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "esp_ota_begin failed: %s", esp_err_to_name(err));
             return pending_write_rsp(rsp, pkt->link, pkt->sequence, pkt->command_id,

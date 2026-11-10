@@ -374,7 +374,7 @@ void ft_receiver_handle_data(ft_instance_t *instance, const ft_gmp_packet_t *pac
         receiver_fail(instance, ESP_FT_REASON_INVALID_MESSAGE, err, false);
         return;
     }
-    uint64_t remaining = ctx->file_size - ctx->bytes_transferred;
+    uint64_t remaining = ctx->file_size - ctx->bytes_accepted;
     size_t expected = remaining > ctx->block_size ? ctx->block_size : (size_t)remaining;
     if (request.transfer_id != ctx->transfer_id ||
             request.block_index != ctx->current_block || request.data_len != expected) {
@@ -383,40 +383,75 @@ void ft_receiver_handle_data(ft_instance_t *instance, const ft_gmp_packet_t *pac
         receiver_fail(instance, ESP_FT_REASON_INVALID_MESSAGE, ESP_ERR_INVALID_SIZE, false);
         return;
     }
+    /* The DATA response confirms bounded queue admission. FINAL confirms the file. */
+    ft_worker_event_t write_event = {
+        .type = FT_WORK_WRITE_BLOCK,
+        .data.write_block = {
+            .link = packet->link,
+            .transfer_id = request.transfer_id,
+            .block_index = request.block_index,
+            .data_len = request.data_len,
+        },
+    };
+    write_event.data.write_block.data = malloc(request.data_len);
+    if (!write_event.data.write_block.data) {
+        ft_gmp_send_response(instance, packet, ESP_GMP_STATUS_BUSY, NULL, 0);
+        return;
+    }
+    memcpy(write_event.data.write_block.data, request.data, request.data_len);
+    if (xQueueSend(instance->write_queue, &write_event, 0) != pdTRUE) {
+        free(write_event.data.write_block.data);
+        ft_gmp_send_response(instance, packet, ESP_GMP_STATUS_BUSY, NULL, 0);
+        return;
+    }
     ft_timer_disarm(instance);
-    errno = 0;
-    size_t written = fwrite(request.data, 1, request.data_len, ctx->file);
-    if (written != request.data_len) {
-        uint16_t reason = errno == ENOSPC ? ESP_FT_REASON_NO_SPACE :
-                          ESP_FT_REASON_FILE_WRITE_FAILED;
-        ft_data_send_response(instance, packet, request.transfer_id, request.block_index,
-                              ESP_FT_WIRE_STATUS_FAILED, reason);
-        receiver_fail(instance, reason, ESP_FAIL, false);
-        return;
-    }
-    err = ft_hash_update(ctx->hash, request.data, request.data_len);
-    if (err != ESP_OK) {
-        ft_data_send_response(instance, packet, request.transfer_id, request.block_index,
-                              ESP_FT_WIRE_STATUS_FAILED, ESP_FT_REASON_INTERNAL_ERROR);
-        receiver_fail(instance, ESP_FT_REASON_INTERNAL_ERROR, err, false);
-        return;
-    }
+    ctx->bytes_accepted += request.data_len;
+    ++ctx->current_block;
     err = ft_data_send_response(instance, packet, request.transfer_id, request.block_index,
                                 ESP_FT_WIRE_STATUS_OK, ESP_FT_REASON_OK);
     if (err != ESP_OK) {
         receiver_fail(instance, ESP_FT_REASON_DATA_SEND_FAILED, err, false);
+    }
+}
+
+void ft_receiver_write_block(ft_instance_t *instance, const ft_write_block_t *block)
+{
+    ft_context_t *ctx = instance ? instance->active_ctx : NULL;
+    if (!ctx || !block || ctx->role != ESP_FILE_TRANSFER_ROLE_RECEIVER ||
+            ctx->state != TRANSFER_STATE_WAIT_DATA_BLOCK || ctx->link != block->link ||
+            ctx->transfer_id != block->transfer_id) {
+        return; /* ABORT or link-down may have removed this queued block. */
+    }
+    if (!block->data || block->data_len == 0 || !ctx->file || ctx->block_size == 0 ||
+            ctx->bytes_transferred > ctx->bytes_accepted ||
+            block->block_index != ctx->bytes_transferred / ctx->block_size ||
+            block->data_len > ctx->bytes_accepted - ctx->bytes_transferred) {
+        receiver_fail(instance, ESP_FT_REASON_INTERNAL_ERROR, ESP_ERR_INVALID_STATE, true);
         return;
     }
-    ctx->bytes_transferred += request.data_len;
-    ++ctx->current_block;
+
+    errno = 0;
+    size_t written = fwrite(block->data, 1, block->data_len, ctx->file);
+    if (written != block->data_len) {
+        uint16_t reason = errno == ENOSPC ? ESP_FT_REASON_NO_SPACE :
+                          ESP_FT_REASON_FILE_WRITE_FAILED;
+        receiver_fail(instance, reason, ESP_FAIL, true);
+        return;
+    }
+    esp_err_t err = ft_hash_update(ctx->hash, block->data, block->data_len);
+    if (err != ESP_OK) {
+        receiver_fail(instance, ESP_FT_REASON_INTERNAL_ERROR, err, true);
+        return;
+    }
+    ctx->bytes_transferred += block->data_len;
     receiver_progress(instance);
-    if (ctx->current_block == ctx->total_blocks) {
-        if (ctx->bytes_transferred != ctx->file_size) {
-            receiver_fail(instance, ESP_FT_REASON_INVALID_MESSAGE, ESP_ERR_INVALID_SIZE, false);
+    if (ctx->bytes_transferred == ctx->file_size) {
+        if (ctx->current_block != ctx->total_blocks || ctx->bytes_accepted != ctx->file_size) {
+            receiver_fail(instance, ESP_FT_REASON_INVALID_MESSAGE, ESP_ERR_INVALID_SIZE, true);
         } else {
             finalize_receiver(instance);
         }
-    } else {
+    } else if (ctx->current_block < ctx->total_blocks) {
         err = ft_timer_arm(instance, FT_TIMER_DATA_RX, ESP_FT_DATA_RX_TIMEOUT_US);
         if (err != ESP_OK) {
             receiver_fail(instance, ESP_FT_REASON_INTERNAL_ERROR, err, true);

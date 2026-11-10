@@ -15,22 +15,73 @@
 #include "nvs_flash.h"
 
 #include "host/ble_att.h"
+#include "host/ble_gap.h"
 
 #include "esp_ble_conn_mgr.h"
 #include "esp_flux_transport.h"
+#include "esp_gmp_ft.h"
 #include "file_transfer_example_common.h"
 #include "flux_gatt_session.h"
+#include "ble_link_gate.h"
 
 static const char *TAG = "ft_receiver_demo";
+static ble_link_gate_t s_link_gate;
+static void on_disconnected(uint16_t conn_handle);
+
+#define LL_PACKET_TIME      2120
+#define LL_PACKET_LENGTH    251
+#define OPTIMAL_MTU_SIZE    498
+
+static const char *link_phy_name(uint8_t phy)
+{
+    switch (phy) {
+    case ESP_BLE_CONN_PHY_1M:
+        return "1M";
+    case ESP_BLE_CONN_PHY_2M:
+        return "2M";
+    case ESP_BLE_CONN_PHY_CODED:
+        return "Coded";
+    default:
+        return "unknown";
+    }
+}
+
+static void log_link_warn(const char *stage, uint16_t conn_handle)
+{
+    struct ble_gap_conn_desc desc;
+    uint8_t tx_phy = 0;
+    uint8_t rx_phy = 0;
+    esp_err_t phy_err = esp_ble_conn_get_phy(conn_handle, &tx_phy, &rx_phy);
+    const char *tx_name = phy_err == ESP_OK ? link_phy_name(tx_phy) : "unavailable";
+    const char *rx_name = phy_err == ESP_OK ? link_phy_name(rx_phy) : "unavailable";
+    uint16_t mtu = ble_att_mtu(conn_handle);
+
+    if (ble_gap_conn_find(conn_handle, &desc) == 0) {
+        ESP_LOGW(TAG, "%s conn=%u interval=%.2f ms latency=%u supervision=%u ms MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, desc.conn_itvl * 1.25f,
+                 (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout * 10,
+                 (unsigned)mtu, tx_name, rx_name);
+    } else {
+        ESP_LOGW(TAG, "%s conn=%u interval/latency/supervision unavailable MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, (unsigned)mtu, tx_name, rx_name);
+    }
+}
 
 static gatt_session_t *s_session;
 static gatt_session_t *s_teardown_pending;
 static bool s_tearing_down;
+static bool s_transfer_link_logged;
 static bool s_adv_pending;
 static bool s_notify_enabled;
 static portMUX_TYPE s_session_lock = portMUX_INITIALIZER_UNLOCKED;
 static uint16_t s_rx_handle;
 static uint16_t s_tx_handle;
+
+static uint16_t current_att_mtu(uint16_t conn_handle)
+{
+    uint16_t mtu = ble_att_mtu(conn_handle);
+    return mtu >= BLE_ATT_MTU_DFLT ? mtu : BLE_ATT_MTU_DFLT;
+}
 
 static esp_ble_conn_character_t s_ft_chars[] = {
     {
@@ -192,8 +243,8 @@ static void activate_link_task(void *arg)
             vTaskDelete(NULL);
             return;
         }
-        if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) == ESP_OK &&
-                mtu >= need_mtu && notify_enabled) {
+        mtu = current_att_mtu(conn_handle);
+        if (mtu >= need_mtu && notify_enabled) {
             break;
         }
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -271,24 +322,51 @@ static void activate_link_task(void *arg)
         return;
     }
 
-    ESP_LOGI(TAG, "Receiver link ready, conn=%u, mtu=%u",
-             conn_handle, (unsigned)mtu);
+    ESP_LOGI(TAG, "Receiver link ready, conn=%u", conn_handle);
     vTaskDelete(NULL);
 }
 
 static void on_connected(uint16_t conn_handle)
 {
+    esp_ble_conn_params_t params = {
+        .itvl_min = 24,
+        .itvl_max = 24,
+        .latency = 0,
+        .supervision_timeout = 300,
+        .min_ce_len = 0,
+        .max_ce_len = 0,
+    };
+    esp_err_t err = esp_ble_conn_set_data_len(conn_handle, LL_PACKET_LENGTH, LL_PACKET_TIME);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set data length failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_mtu_update(conn_handle, OPTIMAL_MTU_SIZE);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set MTU failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_set_preferred_phy(conn_handle, ESP_BLE_CONN_PHY_MASK_2M,
+                                         ESP_BLE_CONN_PHY_MASK_2M, 0);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Set preferred phy failed: %s", esp_err_to_name(err));
+    }
+    err = esp_ble_conn_update_params(conn_handle, &params);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Update connection params failed: %s", esp_err_to_name(err));
+    }
+
+    if (!ble_link_gate_wait(&s_link_gate, conn_handle, 185, BLE_LINK_GATE_WAIT_MS)) {
+        ESP_LOGW(TAG, "Link setup did not complete for conn=%u", conn_handle);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        return;
+    }
+
     if (!s_rx_handle || !s_tx_handle) {
         ESP_LOGE(TAG, "Data channel handles are not ready");
         (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
 
-    uint16_t mtu = BLE_ATT_MTU_DFLT;
-    if (esp_ble_conn_get_mtu_by_handle(conn_handle, &mtu) != ESP_OK ||
-            mtu < BLE_ATT_MTU_DFLT) {
-        mtu = BLE_ATT_MTU_DFLT;
-    }
+    uint16_t mtu = current_att_mtu(conn_handle);
     gatt_session_t *session = gatt_session_create(
                                   conn_handle, NULL,
                                   s_tx_handle, s_rx_handle, mtu,
@@ -308,7 +386,13 @@ static void on_connected(uint16_t conn_handle)
         return;
     }
     s_session = session;
+    s_transfer_link_logged = false;
     portEXIT_CRITICAL(&s_session_lock);
+    if (!ble_link_gate_is_ready(&s_link_gate, conn_handle, 185)) {
+        on_disconnected(conn_handle);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        return;
+    }
 
     /* Defer FT init until ATT MTU exchange finishes (default 23 is too small). */
     if (xTaskCreate(activate_link_task, "ft_rx_up", 4096, NULL, 5, NULL) != pdPASS) {
@@ -327,6 +411,12 @@ static void on_connected(uint16_t conn_handle)
         }
         (void)esp_ble_conn_disconnect_by_handle(conn_handle);
     }
+}
+
+static void on_connected_task(void *arg)
+{
+    on_connected((uint16_t)(uintptr_t)arg);
+    vTaskDelete(NULL);
 }
 
 static void on_disconnected(uint16_t conn_handle)
@@ -363,6 +453,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         return;
     }
 
+    ble_link_gate_on_event(&s_link_gate, id, event_data);
     switch (id) {
     case ESP_BLE_CONN_EVENT_STARTED:
         cache_local_chr_handles();
@@ -373,7 +464,11 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
-        on_connected(evt->connected.conn_handle);
+        ble_link_gate_begin(&s_link_gate, evt->connected.conn_handle);
+        if (xTaskCreate(on_connected_task, "ft_rx_link", 4096,
+                        (void *)(uintptr_t)evt->connected.conn_handle, 5, NULL) != pdPASS) {
+            (void)esp_ble_conn_disconnect_by_handle(evt->connected.conn_handle);
+        }
         break;
     }
     case ESP_BLE_CONN_EVENT_DISCONNECTED: {
@@ -382,6 +477,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
+        ble_link_gate_end(&s_link_gate, evt->disconnected.conn_handle);
         on_disconnected(evt->disconnected.conn_handle);
         break;
     }
@@ -392,6 +488,20 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
             break;
         }
         if (conn_data->data && conn_data->data_len) {
+            bool log_first = false;
+            uint16_t conn_handle = conn_data->write_conn_id;
+            esp_file_transfer_status_t status;
+            if (esp_file_transfer_get_status(&status) == ESP_OK && status.in_progress) {
+                portENTER_CRITICAL(&s_session_lock);
+                if (s_session && s_session->conn_handle == conn_handle && !s_transfer_link_logged) {
+                    s_transfer_link_logged = true;
+                    log_first = true;
+                }
+                portEXIT_CRITICAL(&s_session_lock);
+            }
+            if (log_first) {
+                log_link_warn("First transfer data received", conn_handle);
+            }
             (void)gatt_session_feed_data_by_handle(conn_data->write_conn_id,
                                                    conn_data->data,
                                                    conn_data->data_len);
@@ -430,8 +540,17 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
     }
 }
 
-static void init_nvs(void)
+void app_main(void)
 {
+    esp_log_level_set("NimBLE", ESP_LOG_WARN);
+    esp_log_level_set("blecm_nimble", ESP_LOG_WARN);
+    esp_log_level_set("gatt_session", ESP_LOG_WARN);
+    esp_log_level_set("esp_flux", ESP_LOG_WARN);
+
+    esp_ble_conn_config_t config = {
+        .device_name = FILE_TRANSFER_EXAMPLE_DEVICE_NAME,
+    };
+
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
             err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -439,21 +558,14 @@ static void init_nvs(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-}
 
-void app_main(void)
-{
-    esp_ble_conn_config_t config = {
-        .device_name = FILE_TRANSFER_EXAMPLE_DEVICE_NAME,
-    };
-
-    init_nvs();
     ESP_ERROR_CHECK(file_transfer_example_init());
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID,
                                                app_ble_conn_event_handler, NULL));
     ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(ble_link_gate_init(&s_link_gate));
     ESP_ERROR_CHECK(esp_ble_conn_adv_data_set(s_adv_data, sizeof(s_adv_data)));
     set_scan_response();
     ESP_ERROR_CHECK(esp_ble_conn_add_svc(&s_ft_svc));

@@ -22,9 +22,11 @@
 #include "nvs_flash.h"
 
 #include "host/ble_att.h"
+#include "host/ble_gap.h"
 
 #include "esp_ble_conn_mgr.h"
 #include "flux_gatt_session.h"
+#include "ble_link_gate.h"
 #include "esp_gmp.h"
 #include "esp_gmp_flux.h"
 #include "esp_gmp_os.h"
@@ -34,6 +36,43 @@
 #include "sdkconfig.h"
 
 static const char *TAG = "gmp_ota_cli";
+static ble_link_gate_t g_link_gate;
+static void on_disconnected(uint16_t conn_handle);
+
+static const char *link_phy_name(uint8_t phy)
+{
+    switch (phy) {
+    case ESP_BLE_CONN_PHY_1M:
+        return "1M";
+    case ESP_BLE_CONN_PHY_2M:
+        return "2M";
+    case ESP_BLE_CONN_PHY_CODED:
+        return "Coded";
+    default:
+        return "unknown";
+    }
+}
+
+static void log_link_warn(const char *stage, uint16_t conn_handle)
+{
+    struct ble_gap_conn_desc desc;
+    uint8_t tx_phy = 0;
+    uint8_t rx_phy = 0;
+    esp_err_t phy_err = esp_ble_conn_get_phy(conn_handle, &tx_phy, &rx_phy);
+    const char *tx_name = phy_err == ESP_OK ? link_phy_name(tx_phy) : "unavailable";
+    const char *rx_name = phy_err == ESP_OK ? link_phy_name(rx_phy) : "unavailable";
+    uint16_t mtu = ble_att_mtu(conn_handle);
+
+    if (ble_gap_conn_find(conn_handle, &desc) == 0) {
+        ESP_LOGW(TAG, "%s conn=%u interval=%.2f ms latency=%u supervision=%u ms MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, desc.conn_itvl * 1.25f,
+                 (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout * 10,
+                 (unsigned)mtu, tx_name, rx_name);
+    } else {
+        ESP_LOGW(TAG, "%s conn=%u interval/latency/supervision unavailable MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, (unsigned)mtu, tx_name, rx_name);
+    }
+}
 
 #define MAX_CONNECTIONS CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS
 #define GMP_OTA_FIRMWARE_PATH "/spiffs/ota_image.bin"
@@ -46,14 +85,10 @@ static gatt_session_t *g_session;
 static bool g_conn_params_ready;
 static bool g_notify_enabled;
 static bool g_ota_runner_scheduled;
+static bool g_transfer_link_logged;
 static uint32_t g_conn_generation;
 static gatt_session_t *g_teardown_pending[MAX_CONNECTIONS];
 static portMUX_TYPE g_state_lock = portMUX_INITIALIZER_UNLOCKED;
-
-typedef struct {
-    gatt_session_t *session;
-    uint32_t generation;
-} conn_ready_fallback_arg_t;
 
 static void maybe_start_ota(gatt_session_t *session);
 
@@ -105,6 +140,26 @@ static bool session_is_current(gatt_session_t *session)
     return current;
 }
 
+static void ota_event_cb(const esp_gmp_profile_event_t *event, void *ctx)
+{
+    uint16_t conn_handle = BLE_CONN_HANDLE_INVALID;
+
+    (void)ctx;
+    if (!event || event->event_id != ESP_GMP_OTA_EVT_STARTED) {
+        return;
+    }
+
+    portENTER_CRITICAL(&g_state_lock);
+    if (g_session && !g_transfer_link_logged) {
+        g_transfer_link_logged = true;
+        conn_handle = g_session->conn_handle;
+    }
+    portEXIT_CRITICAL(&g_state_lock);
+    if (conn_handle != BLE_CONN_HANDLE_INVALID) {
+        log_link_warn("OTA transfer started", conn_handle);
+    }
+}
+
 static bool teardown_pending_push(gatt_session_t *session)
 {
     bool stored = false;
@@ -150,19 +205,29 @@ static esp_err_t enable_tx_notify(uint16_t conn_handle)
     return esp_ble_conn_subscribe_by_handle(conn_handle, ESP_BLE_CONN_DESC_CIENT_CONFIG, &sub);
 }
 
+typedef struct {
+    FILE *fp;
+    size_t next_offset;
+} spiffs_firmware_reader_t;
+
 static esp_err_t spiffs_firmware_read(void *ctx, size_t offset, uint8_t *buf, size_t len, size_t *out_len)
 {
-    FILE *fp = (FILE *)ctx;
+    spiffs_firmware_reader_t *reader = (spiffs_firmware_reader_t *)ctx;
 
-    if (fseek(fp, (long)offset, SEEK_SET) != 0) {
-        return ESP_FAIL;
+    /* Sequential reads already leave the file at the next requested offset. */
+    if (offset != reader->next_offset) {
+        if (fseek(reader->fp, (long)offset, SEEK_SET) != 0) {
+            return ESP_FAIL;
+        }
+        reader->next_offset = offset;
     }
 
-    size_t n = fread(buf, 1, len, fp);
+    size_t n = fread(buf, 1, len, reader->fp);
     if (n != len) {
         return ESP_FAIL;
     }
 
+    reader->next_offset += n;
     *out_len = n;
     return ESP_OK;
 }
@@ -221,7 +286,11 @@ static void ota_runner_task(void *arg)
     size_t image_len = (size_t)st.st_size;
     ESP_LOGI(TAG, "Streaming firmware from SPIFFS: %zu bytes", image_len);
 
-    esp_err_t err = esp_gmp_ota_host_upload_stream(session, image_len, spiffs_firmware_read, fp);
+    spiffs_firmware_reader_t reader = {
+        .fp = fp,
+        .next_offset = 0,
+    };
+    esp_err_t err = esp_gmp_ota_host_upload_stream(session, image_len, spiffs_firmware_read, &reader);
     fclose(fp);
 
     if (err == ESP_OK) {
@@ -282,27 +351,6 @@ static void maybe_start_ota(gatt_session_t *session)
         ota_runner_set_scheduled(false);
         return;
     }
-}
-
-static void conn_ready_fallback_task(void *arg)
-{
-    conn_ready_fallback_arg_t *fallback = (conn_ready_fallback_arg_t *)arg;
-    bool should_start = false;
-
-    vTaskDelay(pdMS_TO_TICKS(2000));
-    portENTER_CRITICAL(&g_state_lock);
-    if (!g_conn_params_ready && g_session == fallback->session &&
-            g_conn_generation == fallback->generation) {
-        g_conn_params_ready = true;
-        should_start = true;
-    }
-    portEXIT_CRITICAL(&g_state_lock);
-
-    if (should_start) {
-        maybe_start_ota(fallback->session);
-    }
-    free(fallback);
-    vTaskDelete(NULL);
 }
 
 static void process_pending_teardowns(void)
@@ -407,12 +455,18 @@ static void on_disc_complete(uint16_t conn_handle)
     uint32_t generation = 0;
     portENTER_CRITICAL(&g_state_lock);
     g_session = session;
-    g_conn_params_ready = false;
+    g_conn_params_ready = true;
     g_notify_enabled = false;
+    g_transfer_link_logged = false;
     g_conn_generation++;
     generation = g_conn_generation;
     portEXIT_CRITICAL(&g_state_lock);
-    ESP_LOGI(TAG, "GMP client session conn=%d mtu=%u", conn_handle, (unsigned)mtu);
+    if (!ble_link_gate_is_ready(&g_link_gate, conn_handle, 185)) {
+        on_disconnected(conn_handle);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        return;
+    }
+    ESP_LOGI(TAG, "GMP client session conn=%d", conn_handle);
 
     esp_err_t err = enable_tx_notify(conn_handle);
     bool should_start = false;
@@ -445,21 +499,24 @@ static void on_disc_complete(uint16_t conn_handle)
         return;
     }
 
-    conn_ready_fallback_arg_t *fallback = calloc(1, sizeof(*fallback));
-    if (fallback) {
-        fallback->session = session;
-        fallback->generation = generation;
-        if (xTaskCreate(conn_ready_fallback_task, "conn_fb", 2048, fallback, 3, NULL) != pdPASS) {
-            free(fallback);
-        }
-    }
-
     if (should_start) {
         maybe_start_ota(session);
     }
 }
 
-static void on_conn_params_updated(uint16_t conn_handle, uint16_t itvl)
+static void create_session_after_link_ready(void *arg)
+{
+    uint16_t conn_handle = (uint16_t)(uintptr_t)arg;
+    if (ble_link_gate_wait(&g_link_gate, conn_handle, 185, BLE_LINK_GATE_WAIT_MS)) {
+        on_disc_complete(conn_handle);
+    } else {
+        ESP_LOGW(TAG, "Link setup did not complete for conn=%u", conn_handle);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+    }
+    vTaskDelete(NULL);
+}
+
+static void on_conn_params_updated(uint16_t conn_handle)
 {
     gatt_session_t *session = NULL;
 
@@ -474,7 +531,6 @@ static void on_conn_params_updated(uint16_t conn_handle, uint16_t itvl)
         return;
     }
 
-    ESP_LOGI(TAG, "Connection params ready (interval=%.2f ms)", itvl * 1.25f);
     maybe_start_ota(session);
 }
 
@@ -558,6 +614,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         return;
     }
 
+    ble_link_gate_on_event(&g_link_gate, id, event_data);
     switch (id) {
     case ESP_BLE_CONN_EVENT_STARTED:
         start_scan();
@@ -570,6 +627,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         }
         ESP_LOGI(TAG, "Connected to " MACSTR " (conn=%d)",
                  MAC2STR(evt->connected.peer_addr), evt->connected.conn_handle);
+        ble_link_gate_begin(&g_link_gate, evt->connected.conn_handle);
         tune_connection(evt->connected.conn_handle);
         break;
     }
@@ -592,6 +650,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
+        ble_link_gate_end(&g_link_gate, evt->disconnected.conn_handle);
         on_disconnected(evt->disconnected.conn_handle);
         break;
     }
@@ -601,7 +660,10 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
-        on_disc_complete(evt->disc_complete.conn_handle);
+        if (xTaskCreate(create_session_after_link_ready, "ota_wait_link", 4096,
+                        (void *)(uintptr_t)evt->disc_complete.conn_handle, 5, NULL) != pdPASS) {
+            (void)esp_ble_conn_disconnect_by_handle(evt->disc_complete.conn_handle);
+        }
         break;
     }
     case ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE: {
@@ -610,8 +672,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
-        on_conn_params_updated(evt->conn_param_update.conn_handle,
-                               evt->conn_param_update.params.itvl_min);
+        on_conn_params_updated(evt->conn_param_update.conn_handle);
         break;
     }
     case ESP_BLE_CONN_EVENT_DATA_RECEIVE: {
@@ -668,12 +729,16 @@ void app_main(void)
     esp_gmp_init();
     /* OS profile owns GRP_OS and forwards CAP READ_RSP to the OTA host waiter. */
     ESP_ERROR_CHECK(esp_gmp_os_init());
-    ESP_ERROR_CHECK(esp_gmp_ota_host_init(NULL));
+    const esp_gmp_ota_host_config_t ota_config = {
+        .event_cb = ota_event_cb,
+    };
+    ESP_ERROR_CHECK(esp_gmp_ota_host_init(&ota_config));
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID,
                                                app_ble_conn_event_handler, NULL));
     ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(ble_link_gate_init(&g_link_gate));
     ESP_ERROR_CHECK(esp_ble_conn_scan_params_set(&scan_params));
     ESP_ERROR_CHECK(esp_ble_conn_register_scan_callback(scan_cb, NULL));
     if (esp_ble_conn_start() != ESP_OK) {

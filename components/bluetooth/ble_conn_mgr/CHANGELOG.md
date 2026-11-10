@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v1.3.5 - 2026.11.07
+
+### Enhancements:
+
+- Post `ESP_BLE_CONN_EVENT_PHY_UPDATE_COMPLETE` with the connection handle, status, and TX/RX PHY after a PHY update procedure completes
+
+### Bug Fixes:
+
+- Read the current ATT MTU from NimBLE in `esp_ble_conn_get_mtu_by_handle()` instead of relying on a per-link cache that can miss an early MTU exchange
+
 ## v1.3.4 - 2026.10.29
 
 ### Bug Fixes:
