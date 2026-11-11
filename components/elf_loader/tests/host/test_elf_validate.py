@@ -304,6 +304,32 @@ class ElfValidationTests(unittest.TestCase):
                 ], check=True)
                 subprocess.run([str(output)], check=True)
 
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'Requires an ELF linker with LTO support')
+    def test_compiled_registry_retained_without_application_reference(self):
+        """Exercise the real CMake -u option with LTO and section GC."""
+        cmake = shutil.which('cmake')
+        nm = shutil.which('nm')
+        self.assertIsNotNone(cmake)
+        self.assertIsNotNone(nm)
+
+        project = COMPONENT / 'tests/host/symbols/registry_retention'
+        build = Path(self.build.name) / 'registry_retention'
+        subprocess.run([cmake, '-S', str(project), '-B', str(build)],
+                       check=True, capture_output=True, text=True)
+        result = subprocess.run([cmake, '--build', str(build), '--verbose'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('-flto', result.stdout)
+        self.assertIn('--gc-sections', result.stdout)
+        self.assertIn('-u g_esp_elf_static_symbol_registry', result.stdout)
+
+        def defined_symbols(program):
+            return subprocess.run([nm, '--defined-only', str(build / program)],
+                                  check=True, capture_output=True, text=True).stdout
+
+        self.assertIn('g_esp_elf_static_symbol_registry', defined_symbols('with_force'))
+        self.assertNotIn('g_esp_elf_static_symbol_registry', defined_symbols('without_force'))
+
     def test_vprintf_export_matches_available_libc_function(self):
         """Exercise the default export-table entry with the host C runtime."""
         import re

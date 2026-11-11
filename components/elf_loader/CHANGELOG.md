@@ -3,7 +3,8 @@
 ## Unreleased
 
 * Add `g_esp_elf_static_symbol_registry` so host tooling can inspect which compiled symbol tables the loader actually exports and in what order.
-* Declare libc, ESP-IDF and customer tables `extern` so consumers can build an offline registry of firmware-visible symbols.
+* Make libc and ESP-IDF export tables link-visible alongside the customer table,
+  so offline tooling can inspect the firmware's compiled symbol exports.
 * Document symbol-table registration scanning slots from lowest to highest, reusing empty slots.
 * Add `esp_elf_finalize()` to run finalization callbacks once while retaining
   executable memory and MMU mappings for host-managed module cleanup.

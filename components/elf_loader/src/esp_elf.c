@@ -1348,6 +1348,17 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
     return 0;
 }
 
+/**
+ * @brief Execute ELF finalizers once, keeping the loaded image resident.
+ *
+ * @param elf - Initialized ELF object, including a failed-relocation image.
+ *
+ * @return 0 on success, -EINVAL for NULL, or -EBUSY while entry or callbacks run.
+ *
+ * @note Callbacks run in the caller's task only if startup ran. Finalization
+ *       retains the code/data allocations and executable MMU mappings until
+ *       esp_elf_deinit(). Access to the ELF object must be externally serialized.
+ */
 int esp_elf_finalize(esp_elf_t *elf)
 {
     if (!elf) {
@@ -1376,8 +1387,10 @@ int esp_elf_finalize(esp_elf_t *elf)
  *
  * @return None
  *
- * @note This function frees all resources allocated by esp_elf_relocate() and
- *       resets the structure to its initial state (same as after esp_elf_init()).
+ * @note Runs finalization callbacks (unless already finalized) before unmapping
+ *       executable memory, freeing allocations, and resetting the structure.
+ *       If entry or lifecycle callbacks are executing, logs an error and retains
+ *       the image; the caller must retry after execution returns.
  */
 void esp_elf_deinit(esp_elf_t *elf)
 {

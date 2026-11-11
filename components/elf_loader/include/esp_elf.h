@@ -200,7 +200,8 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
 /**
  * @brief Finalize an ELF image without releasing its memory or MMU mappings.
  *
- * @param elf - Initialized ELF object, including failed relocations
+ * @param elf - Initialized ELF object. May be called after failed relocation;
+ *              callbacks are skipped if startup never ran.
  *
  * @return ESP_OK if success or other if failed.
  *
