@@ -165,6 +165,18 @@ def test_adapter_esp32p4_rotate_in_draw(dut: Dut) -> None:
 
 
 @pytest.mark.target('esp32p4')
+@pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco_default')
+@pytest.mark.parametrize('config', ['rotate_in_draw_cache'])
+def test_adapter_esp32p4_rotate_in_draw_cache(dut: Dut) -> None:
+    """Exercise flash-image admission, warm hits, mutable exclusion and teardown."""
+    dut.expect('ESP LVGL Adapter Feature Test Suite', timeout=30)
+    dut.expect_exact('Press ENTER to see the list of tests.', timeout=5)
+    dut.write('[ortho_cache]')
+    # Require Unity's result after tearDown, including its heap-leak check.
+    dut.expect_exact('rotate in draw caches immutable images and excludes modifiable ones:PASS', timeout=30)
+
+
+@pytest.mark.target('esp32p4')
 @pytest.mark.env('esp32p4_function_ev_board,screen,touch,eco4')
 def test_adapter_flush_from_non_adapter_task(dut: Dut) -> None:
     """Flush from a dedicated task must not block on frame-complete notification."""

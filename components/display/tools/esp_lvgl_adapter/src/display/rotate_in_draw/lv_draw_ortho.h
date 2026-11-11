@@ -93,6 +93,10 @@ typedef struct {
     uint32_t tiles_other_core; /**< of `tiles`, those the second core painted */
     uint8_t turner_failed;     /**< 1, for good, once a turner stopped answering: the CPU turns
                                     from then on, and the screen must be drawn again once */
+    uint64_t bytes_straight_handed; /**< of bytes_straight, those a turner (the PPA) copied */
+    uint32_t images_cached;    /**< pictures drawn from a copy turned once (lv_draw_ortho_set_image_cache) */
+    uint32_t image_cache_builds; /**< pictures turned into the cache */
+    uint32_t image_cache_bytes; /**< what the turned copies hold now */
 } lv_draw_ortho_stats_t;
 
 /** Called with a straight (unturned) copy so a platform can hand it to DMA.
@@ -150,7 +154,8 @@ void lv_draw_ortho_set_filler(lv_draw_ortho_fill_cb_t fill);
  * Only LVGL's software renderer runs there, into a tile of its own; the
  * frame buffer and the turner stay with the core LVGL runs on. Needs an OS
  * (LV_USE_OS: FreeRTOS on an ESP32 with two cores, pthreads elsewhere),
- * because two renderers at once are safe only behind LVGL's own locks.
+ * because shared LVGL caches need their locks. Pairs of tiles that both draw
+ * text are painted serially: a font callback need not be reentrant.
  * It wants four tiles with a turner (two otherwise); where internal RAM holds
  * fewer blocks, the tiles are cut out of the blocks there are. Returns false
  * and stays on one core when there is no OS or the second core's task cannot
@@ -189,6 +194,39 @@ void lv_draw_ortho_set_window(lv_display_t * disp, const lv_area_t * native_area
 
 /** Where an area of the UI (an object's coordinates) lands on the panel. */
 void lv_draw_ortho_native_area(lv_display_t * disp, const lv_area_t * area, lv_area_t * native_area);
+
+/**
+ * Keep up to `bytes` of pictures turned once, 0 (the default) to keep none
+ * and free them. The budget counts aligned allocations, including padding.
+ *
+ * Every time a picture is drawn on a turned display it is turned again, and a
+ * turn is the slowest thing the PPA does: a wallpaper under a clock is turned
+ * whole once a second. With a cache, the second time an opaque, unscaled
+ * picture of at least LV_DRAW_ORTHO_ALONE_BYTES is drawn it is turned once
+ * into a buffer of its own (PSRAM on ESP32) and every draw after that
+ * is a straight copy -- by the PPA too, at angle 0, when there is one. The
+ * least recently drawn go first when the budget is spent; a picture bigger
+ * than the budget is never kept.
+ *
+ * Only pictures that cannot change are kept: on an ESP32 those in the flash
+ * (a picture compiled in, an ESPHome `image:`), never a draw buffer marked
+ * LV_IMAGE_FLAGS_MODIFIABLE (a canvas). See the two calls below to widen that.
+ * As with LVGL drawing APIs, cache configuration/invalidation must run on the
+ * LVGL task or under its lock, with no render in progress.
+ */
+void lv_draw_ortho_set_image_cache(size_t bytes);
+
+/** Forget the turned copy of the picture whose pixels are at `data` -- after
+ *  changing them in place -- or of every picture with NULL. */
+void lv_draw_ortho_image_cache_drop(const void * data);
+
+/** Whether a picture's pixels never change, so its turned copy may be kept.
+ *  Never asked about one marked LV_IMAGE_FLAGS_MODIFIABLE. */
+typedef bool (*lv_draw_ortho_constant_cb_t)(const lv_image_dsc_t * img);
+
+/** Decide which pictures may be kept instead of "in the flash" (NULL for that
+ *  again). Forgets everything kept so far. */
+void lv_draw_ortho_set_image_constant_cb(lv_draw_ortho_constant_cb_t cb);
 
 const lv_draw_ortho_stats_t * lv_draw_ortho_get_stats(void);
 void lv_draw_ortho_reset_stats(void);

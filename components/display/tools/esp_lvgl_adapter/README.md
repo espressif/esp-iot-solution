@@ -683,6 +683,7 @@ Configure via `idf.py menuconfig`:
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
 | `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9: draw a rotated `DOUBLE_DIRECT` display in the panel's orientation (see Rotation Limitations) |
+| `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | Optional PSRAM budget for immutable rotated images; zero disables it (default) |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB
@@ -713,6 +714,29 @@ Configure via `idf.py menuconfig`:
   - Rotation is handled at the software level by LVGL
   - Supports both I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts
   - No additional configuration needed, just set via the `rotation` parameter
+
+### Repeated images with rotation-in-draw
+
+`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` sets a maximum PSRAM
+budget for opaque, unscaled images whose pixels are in flash. The first draw
+uses the normal path; the second builds a rotated copy, and later draws copy
+that buffer without another rotation. This targets repeatedly redrawn backgrounds.
+It does not increase the frame rate of changing video or camera images.
+
+The cache is off by default. For example, `2048` allows at most 2 MiB of aligned
+pixel allocations, shared across displays. A 1280x720 RGB565 background needs
+about 1.76 MiB plus row/alignment padding. Least recently used images are evicted;
+allocation failure or an image exceeding the budget uses the normal path.
+Cached pixels use PSRAM, preserving internal RAM for rendering tiles, and are
+freed when LVGL is deinitialized. Images marked `LV_IMAGE_FLAGS_MODIFIABLE`
+are always excluded.
+
+With two rendering cores, pairs of tiles that both draw text run serially so
+application font callbacks need not be reentrant. Other tile pairs remain parallel.
+
+The cache-enabled target test uses `sdkconfig.ci.rotate_in_draw_cache` and the
+`[ortho_cache]` Unity tag. For pixel comparisons and regression reproduction
+without a board, see [the host runner](test_apps/host_ortho/README.md).
 
 ### Buffering and Render Modes
 

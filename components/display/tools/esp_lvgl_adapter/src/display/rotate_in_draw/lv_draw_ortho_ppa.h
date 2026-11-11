@@ -29,11 +29,17 @@
  *    finishes. The driver works around it, but up to v5.5.6 -- what ESPHome
  *    builds with -- it sizes that last block before the turn instead of after,
  *    so a sixth of all block sizes hang for ever (fixed on master by 469aa16).
- *    Such a block is cut here into pieces that are safe either way.
+ *    And both drivers bypass only strictly below the FIFO's depth, while a
+ *    Tab5 hung on a block leaving exactly that depth (464x70 turned 90).
+ *    Such a block is cut here into pieces that are either given the bypass
+ *    or leave at least twice the depth -- a bypass where it is not needed does
+ *    no harm, Espressif's own esp_lvgl_adapter gives it to every transaction
+ *    -- each at least 16 pixels a side: no sliver.
  *  - No wait is unbounded: a transaction that has not finished in
  *    LV_DRAW_ORTHO_PPA_TIMEOUT_MS marks the PPA stuck, and lv_draw_ortho and
  *    the video window go on without it. The driver's own blocking mode waits
- *    with portMAX_DELAY, which is a frozen screen.
+ *    with portMAX_DELAY, which is a frozen screen. What it was stuck on is
+ *    kept: lv_draw_ortho_ppa_describe_stall().
  */
 #ifndef LV_DRAW_ORTHO_PPA_H
 #define LV_DRAW_ORTHO_PPA_H
@@ -70,9 +76,27 @@ esp_err_t lv_draw_ortho_ppa_srm(const ppa_srm_oper_config_t * op);
 bool lv_draw_ortho_ppa_stuck(void);
 void lv_draw_ortho_ppa_mark_stuck(void);
 
-/** Whether the PPA driver of ESP-IDF v5.5.6 and earlier can hang on this
- *  scale-rotate-mirror: `w` x `h` the INPUT block, `rot` LVGL's rotation, `bits`
- *  the output's bits a pixel, scales as given to the driver. DIG-734. */
+/** A line of lv_draw_ortho_ppa_describe_stall(). */
+typedef void (*lv_draw_ortho_ppa_line_cb_t)(const char * line, void * user);
+
+/** After a stall, a few lines on what the PPA was stuck on: which engine, the
+ *  transaction that never finished with its whole geometry and the bypass
+ *  each driver would program, those queued behind it, and the last that
+ *  finished. Nothing when the PPA has not stalled. */
+void lv_draw_ortho_ppa_describe_stall(lv_draw_ortho_ppa_line_cb_t line, void * user);
+
+/** How a `w` x `h` input block turned at `rot` is cut before it is sent:
+ *  the number of pieces (1 when it is sent whole) with each piece's x, y, w, h
+ *  in `pieces`, or 0 when it is left to the CPU. For tests. */
+int lv_draw_ortho_ppa_cut(uint32_t w, uint32_t h, lv_display_rotation_t rot, uint32_t bits, uint32_t (*pieces)[4],
+                          int max);
+
+/** Whether the PPA driver can hang on this scale-rotate-mirror: `w` x `h`
+ *  the INPUT block, `rot` LVGL's rotation, `bits` the output's bits a pixel,
+ *  scales as given to the driver: it needs the macro-block bypass and the
+ *  driver does not give it. DIG-734 as v5.5.6 and earlier meet it, and a last
+ *  macro block within twice the FIFO's depth, which master meets too (a Tab5
+ *  hung at exactly the depth). */
 bool lv_draw_ortho_ppa_dig734(uint32_t w, uint32_t h, lv_display_rotation_t rot, uint32_t bits,
                               float scale_x, float scale_y);
 

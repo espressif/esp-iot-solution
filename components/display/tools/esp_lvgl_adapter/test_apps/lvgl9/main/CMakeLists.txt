@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "test_esp_lvgl_adapter_features.c"
+    SRCS "test_esp_lvgl_adapter_features.c" "test_ortho_cache.c"
     INCLUDE_DIRS "."
     REQUIRES hw_init unity esp_timer
 )

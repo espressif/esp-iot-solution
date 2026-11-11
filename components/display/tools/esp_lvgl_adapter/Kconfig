@@ -35,6 +35,23 @@ config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
         Other modes, rotation 0 and LVGL v8 are unchanged. Under this option,
         dummy-draw frames are shown as the panel stores them (not rotated).
 
+config ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB
+    int "PSRAM budget for images cached in the panel's orientation (KiB)"
+    depends on ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && SPIRAM
+    range 0 32768
+    default 0
+    help
+        Keep immutable, opaque, unscaled images in their rotated orientation.
+        After warm-up, drawing the same image is a straight PPA copy instead
+        of another rotation. This is useful for repeated large backgrounds.
+        Only flash-backed pixels are cached automatically; modifiable images
+        and canvas/video buffers are never cached. Allocation failure or an
+        image exceeding the budget keeps the normal rendering path.
+
+        The budget is shared by displays using rotation-in-draw and includes
+        aligned pixel allocations. Zero disables the cache. Cached pixels are
+        allocated in PSRAM, preserving internal RAM for rendering tiles.
+
 config ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
     bool "Set LVGL image cache to max (partial tear-avoid modes)"
     default n

@@ -2,6 +2,11 @@
 
 ## v0.8.0 (unreleased)
 
+* Add an optional PSRAM cache for immutable images in rotation-in-draw (`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB`, zero/off by default). Repeated opaque, unscaled images are rotated once after warm-up and then copied straight. The bounded LRU includes allocation padding in its budget, excludes modifiable images, and frees its pixels at `lv_deinit()`.
+* Serialize pairs of tiles that both draw text, since application font callbacks need not be reentrant; other tile pairs still use both cores.
+* Keep a full FIFO of additional margin when deciding which PPA transfers need splitting, including the exact-FIFO geometry observed hanging on a Tab5. Prefer macro-block-sized pieces or CPU fallback, and report the queued/completed geometry on a PPA timeout.
+* Add a reproducible host regression runner using the adapter's actual sources, and a cache-enabled ESP32-P4 Unity/pytest configuration.
+
 * Add `CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): a rotated `DOUBLE_DIRECT` display is drawn straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation and the `lv_draw_ortho` draw unit, instead of being drawn upright and copied rotated. Of its three frame buffers, LVGL draws the next frame into the one neither on screen nor waiting to be, so a frame is not rounded up to a whole number of panel refreshes; a panel made with two still works, and waits for each refresh. On chips with a PPA, the PPA rotates each drawn tile while the CPU draws the next, and fills plain rectangles; every PPA wait is bounded. With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE`, since that task then does the drawing. Off by default; other modes are unchanged. `profile.enable_ppa_accel` is ignored on a display rotated this way, which keeps a single PPA user per refresh.
 
 ## v0.7.5 (2026-11-03)

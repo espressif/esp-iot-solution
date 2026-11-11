@@ -19,6 +19,10 @@
 #include "lvgl_private.h"
 #include <math.h>
 #include <string.h>
+#if defined(ESP_PLATFORM)
+#include "esp_memory_utils.h"
+#include "esp_heap_caps.h"
+#endif
 
 /* LVGL 10 renamed the draw task types after their descriptors. */
 #if LVGL_VERSION_MAJOR < 10
@@ -1039,6 +1043,17 @@ static void helper_join(void)
  * other core paints. Both are turned out after the join, in order. With four
  * tiles the pairs alternate, so a pair is painted while the PPA turns out
  * the last one. */
+static bool draws_text(const job_t * jobs, int32_t n, const lv_area_t * rect)
+{
+    for (int32_t i = 0; i < n; i++) {
+        const lv_draw_task_type_t type = jobs[i].t->type;
+        if ((type == LV_DRAW_DSC_TYPE_LABEL || type == LV_DRAW_DSC_TYPE_LETTER) && job_touches(&jobs[i], rect)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ortho_t * o, const lv_area_t rect[2])
 {
     int32_t base = 0;
@@ -1048,9 +1063,10 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
     }
     tile_work_t w[2];
     bool ok[2];
+    const bool helped = !(draws_text(jobs, n, &rect[0]) && draws_text(jobs, n, &rect[1]));
     wait_ticket(&u->ticket[base + 1]);
     ok[1] = prep_tile(jobs, n, o, &rect[1], u->tile[base + 1], u->tile_bytes, &w[1]);
-    if (ok[1]) {
+    if (ok[1] && helped) {
         helper_paint(&w[1]);
     }
     wait_ticket(&u->ticket[base]);
@@ -1059,8 +1075,12 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
         paint_tile(&w[0]);
     }
     if (ok[1]) {
-        helper_join();
-        g_stats.tiles_other_core++;
+        if (helped) {
+            helper_join();
+            g_stats.tiles_other_core++;
+        } else {
+            paint_tile(&w[1]);
+        }
     }
     if (ok[0]) {
         finish_tile(o, &w[0], &u->ticket[base]);
@@ -1265,6 +1285,261 @@ static bool plain_image(const lv_draw_task_t * t, const lv_image_dsc_t ** src_ou
     return true;
 }
 
+static uint8_t * tile_aligned(void * p);
+
+/* A straight copy of a native rectangle from `src` (a buffer holding the
+ * native area `src_area`) into the frame buffer, by the turner at angle 0 when
+ * there is one -- the PPA is a DMA copy then, where the CPU would read and
+ * write every line through its cache into PSRAM. Queued like a turn; the CPU
+ * does it after everything queued when there is no turner or it declines. */
+static void straight_or_cpu(lv_color_format_t cf, int32_t px, uint8_t * dst, int32_t dst_stride,
+                            const lv_area_t * dst_buf_area, const uint8_t * src, int32_t src_stride,
+                            const lv_area_t * src_area, const lv_area_t * rect)
+{
+    if (g_turn) {
+        const lv_draw_ortho_pic_t s = {(void *)src, (uint32_t)src_stride, (uint32_t)(src_stride / px),
+                                       (uint32_t)lv_area_get_height(src_area)
+                                      };
+        const lv_draw_ortho_pic_t d = {dst, (uint32_t)dst_stride, (uint32_t)(dst_stride / px),
+                                       (uint32_t)lv_area_get_height(dst_buf_area)
+                                      };
+        lv_area_t blk = *rect;
+        lv_area_move(&blk, -src_area->x1, -src_area->y1);
+        const uint32_t t = g_turn(&s, &blk, &d, rect->x1 - dst_buf_area->x1, rect->y1 - dst_buf_area->y1,
+                                  LV_DISPLAY_ROTATION_0, cf);
+        if (t) {
+            const uint64_t bytes = (uint64_t)lv_area_get_size(rect) * (uint64_t)px;
+            g_stats.bytes_straight += bytes;
+            g_stats.bytes_straight_handed += bytes;
+            g_last = t;
+            return;
+        }
+    }
+    fence();
+    const uint8_t * sp = src + (intptr_t)(rect->y1 - src_area->y1) * src_stride + (intptr_t)(rect->x1 - src_area->x1) * px;
+    uint8_t * dp = dst + (intptr_t)(rect->y1 - dst_buf_area->y1) * dst_stride + (intptr_t)(rect->x1 - dst_buf_area->x1) * px;
+    copy_straight(dp, dst_stride, sp, src_stride, lv_area_get_width(rect) * px, lv_area_get_height(rect));
+}
+
+/* ------------------------------------------------------------------------ */
+/* Pictures turned once                                                     */
+/* ------------------------------------------------------------------------ */
+
+/* A picture that does not change, drawn on a turned display, is turned again
+ * every time it is drawn: a wallpaper behind a clock that ticks, a background
+ * under a page that scrolls. Turned, a pixel is read in one order and written
+ * in another, which is the slowest thing the PPA does -- a Tab5 measured it at
+ * about 60 ns a pixel, against about 7 for a straight DMA copy on a Waveshare
+ * 7B. So the second time a picture is drawn, it is turned once into a buffer
+ * of its own, and every draw after that is a straight copy out of it.
+ *
+ * Only pictures that cannot change under it: by default those in the flash
+ * (an ESPHome `image:`, any picture compiled in), never a draw buffer LVGL
+ * marks modifiable (a canvas). lv_draw_ortho_set_image_constant_cb() widens
+ * that for an application that knows better, and lv_draw_ortho_image_cache_drop()
+ * forgets a picture whose pixels it changed in place. */
+#ifndef LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS
+#define LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS 16
+#endif
+
+typedef struct {
+    const void * data;            /* the key, with the four below */
+    uint32_t w, h, stride;
+    lv_color_format_t cf;
+    lv_display_rotation_t rot;
+    void * alloc;                 /* NULL: seen once, not turned yet */
+    uint8_t * nat;                /* the native pixels, `alloc` aligned to a cache line */
+    size_t bytes;
+    uint32_t used;                /* for least recently used */
+    bool no_room;                 /* turned once already and would not fit: never again */
+} cached_t;
+
+static cached_t g_cache[LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS];
+static size_t g_cache_budget;     /* 0: off */
+static size_t g_cache_bytes;
+static uint32_t g_cache_clock;
+static lv_draw_ortho_constant_cb_t g_constant_cb;
+
+static void * cache_alloc(size_t bytes)
+{
+#if defined(ESP_PLATFORM)
+    /* Cached pixels must not compete with rendering tiles for internal RAM. */
+    return heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+#else
+    return lv_malloc(bytes);
+#endif
+}
+
+static void cache_free(void * p)
+{
+#if defined(ESP_PLATFORM)
+    heap_caps_free(p);
+#else
+    lv_free(p);
+#endif
+}
+
+static void cache_forget(cached_t * c)
+{
+    if (c->alloc) {
+        fence();   /* a copy out of it may still be queued */
+        cache_free(c->alloc);
+        g_cache_bytes -= c->bytes;
+    }
+    lv_memzero(c, sizeof(*c));
+    g_stats.image_cache_bytes = (uint32_t)g_cache_bytes;
+}
+
+static bool image_constant(const lv_image_dsc_t * img)
+{
+    if (img->header.flags & LV_IMAGE_FLAGS_MODIFIABLE) {
+        return false;
+    }
+    if (g_constant_cb) {
+        return g_constant_cb(img);
+    }
+#if defined(ESP_PLATFORM)
+    return esp_ptr_in_drom(img->data);
+#else
+    return false;
+#endif
+}
+
+static int slot_rank(const cached_t * c)
+{
+    return c->data == NULL ? 0 : c->alloc == NULL ? 1 : 2;
+}
+
+/* The slot for this picture at this rotation; a free or the least recently
+ * used one for a picture not seen before, emptied. NULL when it is not to be
+ * cached at all. */
+static cached_t * cache_slot(const lv_image_dsc_t * img, int32_t sstride, lv_display_rotation_t rot)
+{
+    if (g_cache_budget == 0 || rot == LV_DISPLAY_ROTATION_0 || !image_constant(img)) {
+        return NULL;
+    }
+    cached_t * victim = NULL;
+    for (int i = 0; i < LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS; i++) {
+        cached_t * c = &g_cache[i];
+        if (c->data == img->data && c->w == img->header.w && c->h == img->header.h &&
+                c->stride == (uint32_t)sstride && c->cf == img->header.cf && c->rot == rot) {
+            return c;
+        }
+        /* An empty slot first, then a picture only seen once, then a turned
+         * one: in each, the one drawn longest ago. */
+        if (victim == NULL || slot_rank(c) < slot_rank(victim) ||
+                (slot_rank(c) == slot_rank(victim) && c->used < victim->used)) {
+            victim = c;
+        }
+    }
+    cache_forget(victim);
+    victim->data = img->data;
+    victim->w = img->header.w;
+    victim->h = img->header.h;
+    victim->stride = (uint32_t)sstride;
+    victim->cf = img->header.cf;
+    victim->rot = rot;
+    return victim;
+}
+
+/* Make room for `bytes` by forgetting the least recently used turned
+ * pictures, never `keep`. */
+static bool cache_room(size_t bytes, const cached_t * keep)
+{
+    if (bytes > g_cache_budget) {
+        return false;
+    }
+    while (g_cache_bytes + bytes > g_cache_budget) {
+        cached_t * old = NULL;
+        for (int i = 0; i < LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS; i++) {
+            cached_t * c = &g_cache[i];
+            if (c == keep || c->alloc == NULL) {
+                continue;
+            }
+            if (old == NULL || c->used < old->used) {
+                old = c;
+            }
+        }
+        if (old == NULL) {
+            return false;
+        }
+        cache_forget(old);
+    }
+    return true;
+}
+
+/* Turn the whole picture into its slot, once. False when it cannot be kept:
+ * then it is drawn turned, as before. */
+static bool cache_fill(cached_t * c, const ortho_t * o, const lv_image_dsc_t * img, int32_t sstride,
+                       const lv_area_t * up, const lv_area_t * whole)
+{
+    const int32_t px = lv_color_format_get_size(c->cf);
+    const size_t row = (size_t)lv_area_get_width(whole) * (size_t)px;
+    /* One row more than the picture, in whole cache lines: the PPA writes
+     * only into rows it can invalidate whole lines of, and is told the buffer
+     * is that row taller so the picture's own last row is one of them. */
+    lv_area_t room = *whole;
+    room.y2++;
+    const size_t bytes = ((row * (size_t)lv_area_get_height(&room) + TILE_ALIGN - 1) & ~(size_t)(TILE_ALIGN - 1)) + TILE_ALIGN;
+    if (!cache_room(bytes, c)) {
+        c->no_room = true;
+        return false;
+    }
+    void * a = cache_alloc(bytes);
+    if (a == NULL) {
+        c->no_room = true;
+        return false;
+    }
+    c->alloc = a;
+    c->nat = tile_aligned(a);
+    c->bytes = bytes;
+    g_cache_bytes += bytes;
+    turn_or_cpu(o, c->cf, px, c->nat, (int32_t)row, &room, (uint8_t *)img->data, sstride, up, whole, true);
+    g_stats.image_cache_builds++;
+    g_stats.image_cache_bytes = (uint32_t)g_cache_bytes;
+    return true;
+}
+
+/* A picture drawn from its turned copy: true when it was. */
+static bool try_cached(lv_draw_task_t * t, const ortho_t * o, const lv_image_dsc_t * img, int32_t sstride,
+                       const lv_area_t * parts, int32_t np)
+{
+    lv_display_rotation_t rot;
+    if (!ortho_rotation(o, &rot)) {
+        return false;
+    }
+    cached_t * c = cache_slot(img, sstride, rot);
+    if (c == NULL || c->no_room) {
+        return false;
+    }
+    lv_area_t whole;
+    ortho_area(o, &t->area, &whole);
+    if (c->alloc == NULL) {
+        if (c->used == 0) {  /* seen for the first time: drawn turned, remembered */
+            c->used = ++g_cache_clock;
+            return false;
+        }
+        if (!cache_fill(c, o, img, sstride, &t->area, &whole)) {
+            return false;
+        }
+    } else {
+        g_stats.images_cached++;
+    }
+    c->used = ++g_cache_clock;
+
+    lv_layer_t * target = t->target_layer;
+    lv_draw_buf_t * nb = target->draw_buf;
+    const int32_t px = lv_color_format_get_size(nb->header.cf);
+    for (int32_t i = 0; i < np; i++) {
+        straight_or_cpu(nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area, c->nat,
+                        lv_area_get_width(&whole) * px, &whole, &parts[i]);
+    }
+    /* Drawn alone, so nothing else waits for these before LVGL takes the
+     * buffer back -- in partial mode, to send it to the panel. */
+    fence();
+    return true;
+}
+
 static bool try_image(lv_draw_task_t * t, const ortho_t * o, const lv_area_t * todo)
 {
     const lv_image_dsc_t * img;
@@ -1286,20 +1561,19 @@ static bool try_image(lv_draw_task_t * t, const ortho_t * o, const lv_area_t * t
         const int32_t sstride = img->header.stride ? (int32_t)img->header.stride
                                 : lv_area_get_width(&whole) * px;
         for (int32_t i = 0; i < np; i++) {
-            const lv_area_t * nat = &parts[i];
-            const uint8_t * s = img->data + (intptr_t)(nat->y1 - whole.y1) * sstride +
-                                (intptr_t)(nat->x1 - whole.x1) * px;
-            uint8_t * dst = nb->data + (intptr_t)(nat->y1 - target->buf_area.y1) * nb->header.stride +
-                            (intptr_t)(nat->x1 - target->buf_area.x1) * px;
-            copy_straight(dst, nb->header.stride, s, sstride, lv_area_get_width(nat) * px,
-                          lv_area_get_height(nat));
+            straight_or_cpu(nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area, img->data,
+                            sstride, &whole, &parts[i]);
         }
+        fence();   /* the frame is the application's again once the task is finished */
         g_stats.images_native++;
         return true;
     }
 
     const int32_t sstride = img->header.stride ? (int32_t)img->header.stride
                             : (int32_t)img->header.w * px;
+    if (try_cached(t, o, img, sstride, parts, np)) {
+        return true;
+    }
     for (int32_t i = 0; i < np; i++) {
         turn_or_cpu(o, nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area,
                     (uint8_t *)img->data, sstride, &t->area, &parts[i], true);
@@ -1657,6 +1931,7 @@ static int32_t delete_cb(lv_draw_unit_t * draw_unit)
 {
     ortho_unit_t * u = (ortho_unit_t *)draw_unit;
     fence();
+    lv_draw_ortho_image_cache_drop(NULL);
     if (g_helper.on) {
         helper_stop_thread();
         g_helper.on = false;
@@ -1792,9 +2067,43 @@ void lv_draw_ortho_native_area(lv_display_t * disp, const lv_area_t * area, lv_a
     lv_display_rotate_area(disp, native_area);
 }
 
+void lv_draw_ortho_image_cache_drop(const void * data)
+{
+    for (int i = 0; i < LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS; i++) {
+        if (g_cache[i].data == NULL) {
+            continue;
+        }
+        if (data == NULL || g_cache[i].data == data) {
+            cache_forget(&g_cache[i]);
+        }
+    }
+}
+
+void lv_draw_ortho_set_image_cache(size_t bytes)
+{
+    g_cache_budget = bytes;
+    if (bytes == 0) {
+        lv_draw_ortho_image_cache_drop(NULL);
+        return;
+    }
+    /* Shrunk: what no longer fits goes, least recently used first. Grown: a
+     * picture that did not fit before may now. */
+    cache_room(0, NULL);
+    for (int i = 0; i < LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS; i++) {
+        g_cache[i].no_room = false;
+    }
+}
+
+void lv_draw_ortho_set_image_constant_cb(lv_draw_ortho_constant_cb_t cb)
+{
+    g_constant_cb = cb;
+    lv_draw_ortho_image_cache_drop(NULL);
+}
+
 void lv_draw_ortho_reset_stats(void)
 {
     lv_memzero(&g_stats, sizeof(g_stats));
+    g_stats.image_cache_bytes = (uint32_t)g_cache_bytes;
 }
 
 #endif /* LV_USE_DRAW_ORTHO */

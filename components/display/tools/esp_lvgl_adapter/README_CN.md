@@ -677,6 +677,7 @@ static void panel_wake_cb(void *user_data)
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
 | `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9：以面板原生方向绘制旋转后的 `DOUBLE_DIRECT` 显示（见旋转限制） |
+| `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | 不可变旋转图像的可选 PSRAM 预算，默认为 0（关闭） |
 
 **默认任务栈大小**：
 - LVGL 适配器任务栈：8KB
@@ -707,6 +708,22 @@ static void panel_wake_cb(void *user_data)
   - 旋转由 LVGL 在软件层面处理
   - 支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局
   - 无需额外配置，直接通过 `rotation` 参数设置
+
+### 重复绘制不可变图像
+
+`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` 为不透明、无缩放且像素位于
+flash 的图像设置 PSRAM 预算。首次正常绘制，第二次生成旋转后的副本，之后直接拷贝，
+适合重复刷新的背景。动态视频和摄像头帧不会因此提速。
+
+默认为 0（关闭）。例如 `2048` 表示所有显示共享最多 2 MiB 的对齐像素分配，包含行和
+对齐填充。缓存按最近使用顺序淘汰；内存分配失败或图像超出预算时回退到正常绘制路径。
+缓存使用 PSRAM，为绘制图块保留内部 RAM，并在 `lv_deinit()` 时释放。
+标记为 `LV_IMAGE_FLAGS_MODIFIABLE` 的图像始终不进入缓存。
+
+双核绘制时，若一对图块都包含文字，则串行绘制，避免同时调用不可重入的字体回调；
+其他图块对仍并行绘制。目标测试配置为 `sdkconfig.ci.rotate_in_draw_cache`，Unity 标签为
+`[ortho_cache]`。无需硬件的像素对比和回归测试见
+[host runner](test_apps/host_ortho/README.md)。
 
 ### 缓冲与渲染模式
 
