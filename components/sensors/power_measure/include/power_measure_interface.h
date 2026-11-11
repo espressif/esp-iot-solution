@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -13,6 +13,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**
+ * @brief Power measure device handle
+ */
+typedef struct power_measure_dev_t *power_measure_handle_t;
+
+/**
+ * @brief Threshold events reported after a successful voltage or current read
+ */
+typedef enum {
+    POWER_MEASURE_EVENT_OVERCURRENT,  /*!< Absolute current exceeds the configured threshold */
+    POWER_MEASURE_EVENT_OVERVOLTAGE,  /*!< Voltage exceeds the configured threshold */
+    POWER_MEASURE_EVENT_UNDERVOLTAGE, /*!< Voltage is below the configured threshold */
+} power_measure_event_t;
 
 /**
  * @brief Power measure driver interface
@@ -153,6 +167,13 @@ struct power_measure_driver_t {
      * @return ESP_OK on success, ESP_ERR_NOT_SUPPORTED if not supported
      */
     esp_err_t (*get_power_multiplier)(power_measure_driver_t *driver, float *multiplier);
+
+    const struct power_measure_config_s *config; /*!< Device-owned common configuration for threshold detection */
+    /** Optional callback, invoked synchronously on each successful read outside a threshold.
+     *  value is the measured voltage (V) or signed current (A). There is no background polling.
+     */
+    void (*event_cb)(power_measure_handle_t handle, power_measure_event_t event, float value, void *user_data);
+    void *user_data;                 /*!< User context passed to event_cb */
 };
 
 #ifdef __cplusplus

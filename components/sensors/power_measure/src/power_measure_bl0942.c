@@ -151,6 +151,7 @@ esp_err_t power_measure_new_bl0942_device(const power_measure_config_t *config,
     ESP_RETURN_ON_FALSE(dev, ESP_ERR_NO_MEM, TAG, "Memory allocation failed");
 
     dev->config = *config;
+    dev->base.config = &dev->config;
     dev->bl0942_config = *bl0942_config;
 
     dev->base.init = bl0942_driver_init;

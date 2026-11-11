@@ -89,13 +89,16 @@ components/sensors/power_measure/
 - **Overcurrent Protection**: Configurable current threshold monitoring
 - **Overvoltage Protection**: High voltage detection and alerting
 - **Undervoltage Protection**: Low voltage detection and alerting
-- **Event-driven Architecture**: Real-time safety event notifications
+- **Threshold Alerts**: Each successful `power_measure_get_voltage()` or `power_measure_get_current()` compares the calibrated reading against enabled thresholds for BL0937, BL0942, and INA236. Thresholds use V and A; 0 disables detection. Equality does not trigger an alert. Current detection uses absolute magnitude, including negative INA236 readings.
+- **Notifications**: An out-of-range read logs a warning and invokes the optional common `event_cb(handle, event, value, user_data)` callback synchronously. Events are `POWER_MEASURE_EVENT_OVERCURRENT`, `POWER_MEASURE_EVENT_OVERVOLTAGE`, and `POWER_MEASURE_EVENT_UNDERVOLTAGE`. `value` retains the signed reading. Repeated out-of-range reads repeat the alert; failed or non-finite readings do not trigger it.
+- **Application Actions**: The component does not poll in the background or switch a relay. Applications must read periodically and implement any shutdown or other protection action in the callback. The callback runs in the caller's context and should return promptly.
+- **Callback Registration**: After creating the device, call `power_measure_set_event_callback(handle, event_cb, user_data)` to enable callbacks, or pass `NULL` as `event_cb` to unregister. Callbacks are disabled by default; the original four-field `power_measure_config_t` remains unchanged. Keep `user_data` valid until unregistered, and serialize registration, reads, and deletion of the same handle.
 
 ### Calibration & Accuracy
 
 - **Factory Calibration**: Initial calibration with known reference values
 - **Runtime Calibration**: Dynamic calibration during operation (BL0937 only)
-- **Multi-point Calibration**: Separate calibration for voltage, current, and power
+- **Multi-point Calibration**: Separate calibration for voltage, current, and power. BL0937 `kp` applies equally to active power and accumulated energy.
 
 ### Advanced Features
 
