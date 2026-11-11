@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 1.4.2 - 2026-11-11
+
+### Bug Fix:
+* FOC:
+    * Fix build error on ESP-IDF release/v6.1.
+
 ## 1.4.1 - 2026-7-28
 
 ### Enhancements:
