@@ -13,6 +13,7 @@
 
 - Leave CONFIG UPDATE mode and restore the sealed state when a battery profile update fails.
 - Retry the device probe in `bq27220_create()` for up to 500 ms so creation does not fail while the gauge is still within its 250 ms power-up communication delay.
+- Fix intermittent `Data memory address timeout` on block reads. A block read issued before the gauge finished loading the selected block made it advance to the next 32-byte block, so every retry failed and a matching profile was rewritten. The driver now polls only the address echo before reading the block and reselects the block if it changes.
 - Limit OperationStatus() polling to two reads per second as required by the datasheet, and skip redundant status reads in profile checks.
 - Retry `bq27220_unseal()` for up to 8 s because the gauge rejects unseal keys for up to about 5 s after a profile update. Previously, `bq27220_create()` could fail if the ESP restarted shortly after a profile update.
 

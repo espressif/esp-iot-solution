@@ -123,6 +123,14 @@ static esp_err_t bq27220_read_dm_block(bq27220_handle_t bq_handle, uint16_t addr
     uint16_t echoed_address = 0;
     for (uint8_t i = 0; i < BQ27220_DM_READY_POLL_COUNT; ++i) {
         esp_rom_delay_us(BQ27220_DM_READY_POLL_US);
+        // Poll only the address echo: a longer read before the block is loaded makes the gauge advance to the next block
+        ret = i2c_bus_read_bytes(bq_data->i2c_device_handle, COMMAND_SELECT_SUBCLASS, 2, buffer);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Read data memory address 0x%04x failed", address);
+        esp_rom_delay_us(BQ27220_I2C_PACKET_GAP_US);
+        echoed_address = (uint16_t)buffer[0] | ((uint16_t)buffer[1] << 8);
+        if (echoed_address != address) {
+            continue;
+        }
         ret = i2c_bus_read_bytes(bq_data->i2c_device_handle, COMMAND_SELECT_SUBCLASS, size + 2, buffer);
         ESP_RETURN_ON_ERROR(ret, TAG, "Read data memory block 0x%04x failed", address);
         esp_rom_delay_us(BQ27220_I2C_PACKET_GAP_US);
@@ -131,6 +139,9 @@ static esp_err_t bq27220_read_dm_block(bq27220_handle_t bq_handle, uint16_t addr
             memcpy(data, &buffer[2], size);
             return ESP_OK;
         }
+        ESP_LOGW(TAG, "Data memory block 0x%04x changed to 0x%04x during read, reselecting", address, echoed_address);
+        ret = i2c_bus_write_bytes(bq_data->i2c_device_handle, COMMAND_SELECT_SUBCLASS, sizeof(select), select);
+        ESP_RETURN_ON_ERROR(ret, TAG, "Reselect data memory block 0x%04x failed", address);
     }
     ESP_LOGE(TAG, "Data memory address timeout: requested=0x%04x echoed=0x%04x", address, echoed_address);
     return ESP_ERR_TIMEOUT;

@@ -6,7 +6,7 @@ documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/se
 issues: https://github.com/espressif/esp-iot-solution/issues
 dependencies:
   espressif/i2c_bus:
-    version: "^1.4"
+    version: "^1.5"
     public: true
   idf: '>=4.4'
   cmake_utilities: "0.*"
