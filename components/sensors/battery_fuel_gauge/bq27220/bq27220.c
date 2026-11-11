@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 #include <assert.h>
+#include <inttypes.h>
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -21,10 +22,24 @@ static const char *TAG = "bq27220";
 // device id
 #define BQ27220_DEVICE_ID 0x0220
 #define delay_ms(x) vTaskDelay(pdMS_TO_TICKS(x))
+// The gauge may not respond for up to 250 ms (tPUCD) after power-up
+#define BQ27220_PROBE_TIMEOUT_MS 500
+#define BQ27220_PROBE_RETRY_MS 100
 #define BQ27220_CFG_UPDATE_ENTER_DELAY_MS 1100
-#define BQ27220_CFG_UPDATE_EXIT_SETTLE_MS 2000
-#define BQ27220_CFG_UPDATE_POLL_MS 20
-#define BQ27220_CFG_UPDATE_POLL_COUNT 100
+#define BQ27220_CFG_UPDATE_TIMEOUT_MS 2000
+#define BQ27220_CFG_UPDATE_EXIT_TIMEOUT_MS 3000
+#define BQ27220_FULL_ACCESS_TIMEOUT_MS 2000
+// OperationStatus reads return invalid data right after a subcommand
+#define BQ27220_STATUS_CONFIRM_DELAY_MS 10
+// The datasheet limits each standard command to two reads per second
+#define BQ27220_STATUS_POLL_MS 500
+// The gauge rejects unseal keys for up to about 5 s after EXIT_CFG_UPDATE_REINIT
+#define BQ27220_UNSEAL_TIMEOUT_MS 8000
+
+#define BQ27220_OP_STATUS_SEC_MASK (0x3u << 1)
+#define BQ27220_OP_STATUS_SEC(sec) ((uint16_t)(sec) << 1)
+#define BQ27220_OP_STATUS_INITCOMP (1u << 5)
+#define BQ27220_OP_STATUS_CFGUPDATE (1u << 10)
 #define BQ27220_DM_BLOCK_MAX_SIZE 32
 #define BQ27220_DM_ACCESS_DELAY_MS 10
 #define BQ27220_DM_READY_POLL_US 1000
@@ -183,38 +198,74 @@ uint16_t bq27220_get_parameter_u16(bq27220_handle_t bq_handle, uint16_t address)
     return value;
 }
 
+// Poll OperationStatus until (status & mask) == value
+static esp_err_t bq27220_wait_status(bq27220_handle_t handle, uint16_t mask, uint16_t value, uint32_t timeout_ms, const char *what)
+{
+    uint16_t raw_status = 0;
+    for (uint32_t waited_ms = 0; ; waited_ms += BQ27220_STATUS_POLL_MS) {
+        ESP_RETURN_ON_ERROR(bq27220_read_u16_checked(handle, COMMAND_OPERATION_STATUS, &raw_status), TAG, "Read OperationStatus while waiting for %s failed", what);
+        if ((raw_status & mask) == value) {
+            if (waited_ms > 0) {
+                ESP_LOGI(TAG, "%s confirmed after %" PRIu32 " ms, OperationStatus=0x%04x", what, waited_ms, raw_status);
+            }
+            return ESP_OK;
+        }
+        if (waited_ms >= timeout_ms) {
+            break;
+        }
+        delay_ms(BQ27220_STATUS_POLL_MS);
+    }
+    ESP_LOGE(TAG, "Timed out waiting for %s, OperationStatus=0x%04x", what, raw_status);
+    return ESP_ERR_TIMEOUT;
+}
+
+// Only call this when the gauge is known to be unsealed: SEALED sent while sealed rejects unseal keys for several seconds
+static esp_err_t bq27220_seal_from_unsealed(bq27220_handle_t bq_handle)
+{
+    ESP_RETURN_ON_ERROR(bq27220_control(bq_handle, CONTROL_SEALED), TAG, "Send SEALED failed");
+    delay_ms(BQ27220_STATUS_CONFIRM_DELAY_MS);
+    esp_err_t ret = bq27220_wait_status(bq_handle, BQ27220_OP_STATUS_SEC_MASK, BQ27220_OP_STATUS_SEC(OPERATION_STATUS_SEC_SEALED), CONFIG_BQ27220_SEAL_SETTLE_MS, "SEALED");
+    return ret == ESP_OK ? ESP_OK : ESP_FAIL;
+}
+
 esp_err_t bq27220_seal(bq27220_handle_t bq_handle)
 {
     ESP_RETURN_ON_FALSE(bq_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     operation_status_t status = {};
     bq27220_get_operation_status(bq_handle, &status);
-    if (status.SEC != OPERATION_STATUS_SEC_SEALED) {
-        bq27220_control(bq_handle, CONTROL_SEALED);
-    }
-    delay_ms(CONFIG_BQ27220_SEAL_SETTLE_MS);
-    bq27220_get_operation_status(bq_handle, &status);
     if (status.SEC == OPERATION_STATUS_SEC_SEALED) {
         return ESP_OK;
     }
-    return ESP_FAIL;
+    return bq27220_seal_from_unsealed(bq_handle);
 }
 
 esp_err_t bq27220_unseal(bq27220_handle_t bq_handle)
 {
     ESP_RETURN_ON_FALSE(bq_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     operation_status_t status = {};
+    // Unseal keys sent while unsealed count as wrong full-access keys and block FULL ACCESS for several seconds
     bq27220_get_operation_status(bq_handle, &status);
-    if (status.SEC != OPERATION_STATUS_SEC_SEALED) {
-        return ESP_OK; // Already unsealed
-    }
-    bq27220_control(bq_handle, UNSEALKEY1);
-    delay_ms(10);
-    bq27220_control(bq_handle, UNSEALKEY2);
-    delay_ms(10);
-    bq27220_get_operation_status(bq_handle, &status);
-    if (status.SEC == OPERATION_STATUS_SEC_UNSEALED) {
+    if (status.SEC == OPERATION_STATUS_SEC_UNSEALED || status.SEC == OPERATION_STATUS_SEC_FULL) {
         return ESP_OK;
     }
+    for (uint32_t waited_ms = 0; ; waited_ms += BQ27220_STATUS_POLL_MS) {
+        bq27220_control(bq_handle, UNSEALKEY1);
+        delay_ms(10);
+        bq27220_control(bq_handle, UNSEALKEY2);
+        delay_ms(10);
+        bq27220_get_operation_status(bq_handle, &status);
+        if (status.SEC == OPERATION_STATUS_SEC_UNSEALED || status.SEC == OPERATION_STATUS_SEC_FULL) {
+            if (waited_ms > 0) {
+                ESP_LOGI(TAG, "Unseal accepted after %" PRIu32 " ms of retries", waited_ms);
+            }
+            return ESP_OK;
+        }
+        if (waited_ms >= BQ27220_UNSEAL_TIMEOUT_MS) {
+            break;
+        }
+        delay_ms(BQ27220_STATUS_POLL_MS);
+    }
+    ESP_LOGE(TAG, "Unseal rejected, SEC=%u", status.SEC);
     return ESP_FAIL;
 }
 
@@ -224,14 +275,9 @@ static esp_err_t bq27220_enter_full_access(bq27220_handle_t bq_handle)
     ESP_RETURN_ON_ERROR(bq27220_control(bq_handle, FULLACCESSKEY), TAG, "First full-access key failed");
     delay_ms(10);
     ESP_RETURN_ON_ERROR(bq27220_control(bq_handle, FULLACCESSKEY), TAG, "Second full-access key failed");
-    delay_ms(1000);
-
-    uint16_t raw_status = 0;
-    ESP_RETURN_ON_ERROR(bq27220_read_u16_checked(bq_handle, COMMAND_OPERATION_STATUS, &raw_status), TAG, "Read full-access status failed");
-    operation_status_t status = {};
-    memcpy(&status, &raw_status, sizeof(status));
-    ESP_RETURN_ON_FALSE(status.SEC == OPERATION_STATUS_SEC_FULL, ESP_FAIL, TAG, "Full access rejected, SEC=%u", status.SEC);
-    return ESP_OK;
+    delay_ms(BQ27220_STATUS_CONFIRM_DELAY_MS);
+    esp_err_t ret = bq27220_wait_status(bq_handle, BQ27220_OP_STATUS_SEC_MASK, BQ27220_OP_STATUS_SEC(OPERATION_STATUS_SEC_FULL), BQ27220_FULL_ACCESS_TIMEOUT_MS, "FULL ACCESS");
+    return ret == ESP_OK ? ESP_OK : ESP_FAIL;
 }
 
 #define BQ27220_PROFILE_FIELD_COUNT 26
@@ -354,24 +400,6 @@ static void bq27220_get_profile_fields(const bq27220_config_t *config, bq27220_p
     assert(i == BQ27220_PROFILE_FIELD_COUNT);
 }
 
-static esp_err_t bq27220_wait_cfg_update(bq27220_handle_t handle, bool expected)
-{
-    for (uint32_t i = 0; i < BQ27220_CFG_UPDATE_POLL_COUNT; ++i) {
-        uint16_t raw_status = 0;
-        ESP_RETURN_ON_ERROR(bq27220_read_u16_checked(handle, COMMAND_OPERATION_STATUS, &raw_status), TAG,
-                            "Read operation status while waiting for CFGUPDATE failed");
-        operation_status_t status = {};
-        memcpy(&status, &raw_status, sizeof(status));
-        if (status.CFGUPDATE == expected) {
-            ESP_LOGI(TAG, "CFGUPDATE=%u confirmed, OperationStatus=0x%04x", expected, raw_status);
-            return ESP_OK;
-        }
-        delay_ms(BQ27220_CFG_UPDATE_POLL_MS);
-    }
-    ESP_LOGE(TAG, "Timed out waiting for CFGUPDATE=%u", expected);
-    return ESP_ERR_TIMEOUT;
-}
-
 static esp_err_t bq27220_write_profile(bq27220_handle_t handle, const bq27220_config_t *config)
 {
     bq27220_profile_field_t fields[BQ27220_PROFILE_FIELD_COUNT];
@@ -426,12 +454,74 @@ static esp_err_t bq27220_verify_profile(bq27220_handle_t handle, const bq27220_c
     return ESP_OK;
 }
 
+esp_err_t bq27220_update_profile(bq27220_handle_t bq_handle, const gauging_config_t *cfg, const parameter_cedv_t *cedv)
+{
+    ESP_RETURN_ON_FALSE(bq_handle != NULL && cfg != NULL && cedv != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid profile update arguments");
+    bq27220_config_t profile = {
+        .cfg = cfg,
+        .cedv = cedv,
+    };
+    bool cfg_update_active = false;
+    esp_err_t ret = bq27220_unseal(bq_handle);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to unseal for profile update");
+
+    // Skip CONFIG UPDATE and gauge reinitialization when the stored profile already matches
+    ret = bq27220_verify_profile(bq_handle, &profile, false);
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Skip battery profile update: verification=full");
+        ESP_RETURN_ON_ERROR(bq27220_seal_from_unsealed(bq_handle), TAG, "Failed to seal after profile check");
+        return ESP_OK;
+    }
+    ESP_LOGW(TAG, "Stored battery profile requires update: %s", esp_err_to_name(ret));
+    ret = ESP_OK;
+
+    ESP_LOGW(TAG, "Start updating battery profile");
+    ESP_GOTO_ON_ERROR(bq27220_enter_full_access(bq_handle), restore_security, TAG, "Failed to enter full access");
+    ESP_GOTO_ON_ERROR(bq27220_control(bq_handle, CONTROL_ENTER_CFG_UPDATE), restore_security, TAG, "Failed to request CONFIG UPDATE mode");
+    cfg_update_active = true;
+    delay_ms(BQ27220_CFG_UPDATE_ENTER_DELAY_MS);
+    ESP_GOTO_ON_ERROR(bq27220_wait_status(bq_handle, BQ27220_OP_STATUS_CFGUPDATE, BQ27220_OP_STATUS_CFGUPDATE, BQ27220_CFG_UPDATE_TIMEOUT_MS, "CONFIG UPDATE entry"),
+                      restore_security, TAG, "Failed to enter CONFIG UPDATE mode");
+    ESP_GOTO_ON_ERROR(bq27220_write_profile(bq_handle, &profile), restore_security, TAG, "Battery profile write failed");
+    ESP_GOTO_ON_ERROR(bq27220_verify_profile(bq_handle, &profile, true), restore_security, TAG, "Battery profile immediate verification failed");
+    ESP_GOTO_ON_ERROR(bq27220_control(bq_handle, CONTROL_EXIT_CFG_UPDATE_REINIT), restore_security, TAG, "Failed to exit CONFIG UPDATE mode");
+    delay_ms(BQ27220_STATUS_CONFIRM_DELAY_MS);
+    // Also require INITCOMP so an all-zero read while the gauge is busy is not taken as CFGUPDATE cleared.
+    // The unseal lockout that follows reinitialization is absorbed by bq27220_unseal() retries.
+    ESP_GOTO_ON_ERROR(bq27220_wait_status(bq_handle, BQ27220_OP_STATUS_CFGUPDATE | BQ27220_OP_STATUS_INITCOMP, BQ27220_OP_STATUS_INITCOMP, BQ27220_CFG_UPDATE_EXIT_TIMEOUT_MS, "gauge reinitialization"),
+                      restore_security, TAG, "CONFIG UPDATE exit did not complete");
+    cfg_update_active = false;
+
+restore_security:
+    if (cfg_update_active) {
+        esp_err_t exit_ret = bq27220_control(bq_handle, CONTROL_EXIT_CFG_UPDATE);
+        if (exit_ret == ESP_OK) {
+            delay_ms(BQ27220_STATUS_CONFIRM_DELAY_MS);
+            exit_ret = bq27220_wait_status(bq_handle, BQ27220_OP_STATUS_CFGUPDATE, 0, BQ27220_CFG_UPDATE_TIMEOUT_MS, "CONFIG UPDATE exit");
+        }
+        if (exit_ret != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to leave CONFIG UPDATE mode after profile update error: %s", esp_err_to_name(exit_ret));
+        }
+    }
+    esp_err_t seal_ret = bq27220_seal(bq_handle);
+    if (seal_ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to seal after profile update: %s", esp_err_to_name(seal_ret));
+        if (ret == ESP_OK) {
+            ret = seal_ret;
+        }
+    }
+    if (ret == ESP_OK) {
+        ESP_LOGI(TAG, "Battery profile update success: verification=full");
+    }
+    return ret;
+}
+
 bq27220_handle_t bq27220_create(const bq27220_config_t *config)
 {
     ESP_RETURN_ON_FALSE(config != NULL, NULL, TAG, "Invalid config");
     ESP_RETURN_ON_FALSE(config->i2c_bus != NULL, NULL, TAG, "Invalid i2c_bus");
-    ESP_RETURN_ON_FALSE(config->cedv != NULL, NULL, TAG, "Invalid cedv");
-    ESP_RETURN_ON_FALSE(config->cfg != NULL, NULL, TAG, "Invalid gauging config");
+    ESP_RETURN_ON_FALSE(config->skip_profile_init || config->cedv != NULL, NULL, TAG, "Invalid cedv");
+    ESP_RETURN_ON_FALSE(config->skip_profile_init || config->cfg != NULL, NULL, TAG, "Invalid gauging config");
 
     esp_err_t ret = ESP_OK;
     bq27220_data_t *handle = (bq27220_data_t *)calloc(1, sizeof(bq27220_data_t));
@@ -442,7 +532,14 @@ bq27220_handle_t bq27220_create(const bq27220_config_t *config)
     handle->i2c_device_handle = i2c_bus_device_create(config->i2c_bus, BQ27220_I2C_ADDRESS, 0);
     ESP_GOTO_ON_FALSE(handle->i2c_device_handle, 0, err, TAG, "i2c_bus_device_create failed");
 
-    uint16_t data = bq27220_read_control_data(handle, CONTROL_DEVICE_NUMBER);
+    uint16_t data = 0;
+    for (uint32_t waited_ms = 0; ; waited_ms += BQ27220_PROBE_RETRY_MS) {
+        data = bq27220_read_control_data(handle, CONTROL_DEVICE_NUMBER);
+        if (data == BQ27220_DEVICE_ID || waited_ms >= BQ27220_PROBE_TIMEOUT_MS) {
+            break;
+        }
+        delay_ms(BQ27220_PROBE_RETRY_MS);
+    }
     ESP_GOTO_ON_FALSE(data == BQ27220_DEVICE_ID, 0, err, TAG, "Invalid Device Number %04x != 0x0220", data);
 
     data = bq27220_get_fw_version(handle);
@@ -450,33 +547,14 @@ bq27220_handle_t bq27220_create(const bq27220_config_t *config)
     data = bq27220_get_hw_version(handle);
     ESP_LOGI(TAG, "Hardware Version %04x", data);
 
-    ESP_GOTO_ON_ERROR(bq27220_unseal(handle), err, TAG, "Failed to unseal");
-
-    ret = bq27220_verify_profile(handle, config, false);
-    if (ret == ESP_OK) {
-        ESP_LOGI(TAG, "Skip battery profile update: verification=full");
-        ESP_GOTO_ON_ERROR(bq27220_seal(handle), err, TAG, "Failed to seal after profile check");
+    if (config->skip_profile_init) {
+        ESP_LOGW(TAG, "Battery profile initialization skipped");
         return handle;
     }
-    ESP_LOGW(TAG, "Stored battery profile requires update: %s", esp_err_to_name(ret));
-    ESP_LOGW(TAG, "Start updating battery profile");
-    ESP_GOTO_ON_ERROR(bq27220_enter_full_access(handle), err, TAG, "Failed to enter full access");
-    ESP_GOTO_ON_ERROR(bq27220_control(handle, CONTROL_ENTER_CFG_UPDATE), err, TAG, "Failed to request CONFIG UPDATE mode");
-    delay_ms(BQ27220_CFG_UPDATE_ENTER_DELAY_MS);
-    ESP_GOTO_ON_ERROR(bq27220_wait_cfg_update(handle, true), exit_cfg_update, TAG, "Failed to enter CONFIG UPDATE mode");
-    ESP_GOTO_ON_ERROR(bq27220_write_profile(handle, config), exit_cfg_update, TAG, "Battery profile write failed");
-    ESP_GOTO_ON_ERROR(bq27220_verify_profile(handle, config, true), exit_cfg_update, TAG, "Battery profile immediate verification failed");
-    ESP_GOTO_ON_ERROR(bq27220_control(handle, CONTROL_EXIT_CFG_UPDATE_REINIT), err, TAG, "Failed to exit CONFIG UPDATE mode");
-    delay_ms(BQ27220_CFG_UPDATE_EXIT_SETTLE_MS);
-    ESP_GOTO_ON_ERROR(bq27220_wait_cfg_update(handle, false), err, TAG, "CONFIG UPDATE exit did not complete");
-    ESP_GOTO_ON_ERROR(bq27220_seal(handle), err, TAG, "Failed to seal after profile update");
-    ESP_LOGI(TAG, "Battery profile update success: verification=full");
-    return handle;
 
-exit_cfg_update:
-    if (bq27220_control(handle, CONTROL_EXIT_CFG_UPDATE) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to leave CONFIG UPDATE mode after write error");
-    }
+    ret = bq27220_update_profile(handle, config->cfg, config->cedv);
+    ESP_GOTO_ON_ERROR(ret, err, TAG, "Failed to update battery profile");
+    return handle;
 err:
     if (handle->i2c_device_handle) {
         i2c_bus_device_delete(&handle->i2c_device_handle);
