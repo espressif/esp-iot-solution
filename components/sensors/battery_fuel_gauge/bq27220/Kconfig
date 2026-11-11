@@ -1,10 +1,11 @@
 menu "BQ27220 Configuration"
 
     config BQ27220_SEAL_SETTLE_MS
-        int "Seal settle time (ms)"
+        int "Seal confirmation timeout (ms)"
         range 0 10000
         default 2000
         help
-            Time to wait after sealing before accessing the gauge again.
+            Maximum time to wait for OperationStatus()[SEC] to report SEALED after sending the SEALED subcommand.
+            The driver returns as soon as SEALED is confirmed, and returns immediately if the gauge is already sealed.
 
 endmenu

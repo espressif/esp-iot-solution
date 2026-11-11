@@ -14,6 +14,7 @@
 #include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "driver/gpio.h"
 #include "bq27220.h"
 
@@ -205,6 +206,70 @@ TEST_CASE("bq27220 basic information query test", "[voltage][percent][charge_rat
 {
     test_bq27220_init();
     test_bq27220_print_info(bq27220);
+    test_bq27220_deinit();
+}
+
+TEST_CASE("bq27220 fast creation skips profile initialization", "[bq27220]")
+{
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 400 * 1000,
+    };
+    i2c_bus_handle_t fast_i2c_bus = i2c_bus_create(I2C_NUM_0, &conf);
+    TEST_ASSERT_NOT_NULL(fast_i2c_bus);
+    bq27220_config_t config = {
+        .i2c_bus = fast_i2c_bus,
+        .skip_profile_init = true,
+    };
+
+    int64_t start_us = esp_timer_get_time();
+    bq27220_handle_t fast_handle = bq27220_create(&config);
+    uint32_t elapsed_ms = (uint32_t)((esp_timer_get_time() - start_us) / 1000);
+    TEST_ASSERT_NOT_NULL(fast_handle);
+    TEST_ASSERT_LESS_THAN_UINT32(1000, elapsed_ms);
+    ESP_LOGI(TAG, "Fast creation completed in %lu ms", (unsigned long)elapsed_ms);
+
+    TEST_ASSERT_EQUAL(ESP_OK, bq27220_delete(fast_handle));
+    TEST_ASSERT_EQUAL(ESP_OK, i2c_bus_delete(&fast_i2c_bus));
+}
+
+TEST_CASE("bq27220 deferred profile update skips matching profile", "[bq27220]")
+{
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 400 * 1000,
+    };
+    i2c_bus = i2c_bus_create(I2C_NUM_0, &conf);
+    TEST_ASSERT_NOT_NULL(i2c_bus);
+    bq27220_config_t config = {
+        .i2c_bus = i2c_bus,
+        .skip_profile_init = true,
+    };
+    bq27220 = bq27220_create(&config);
+    TEST_ASSERT_NOT_NULL(bq27220);
+
+    // The first call may rewrite a mismatched profile, the second one absorbs the unseal lockout after reinitialization
+    TEST_ASSERT_EQUAL(ESP_OK, bq27220_update_profile(bq27220, &default_config, &default_cedv));
+    TEST_ASSERT_EQUAL(ESP_OK, bq27220_update_profile(bq27220, &default_config, &default_cedv));
+    profile_update_start_count = 0;
+    previous_log_vprintf = esp_log_set_vprintf(test_log_vprintf);
+    int64_t start_us = esp_timer_get_time();
+    esp_err_t ret = bq27220_update_profile(bq27220, &default_config, &default_cedv);
+    uint32_t elapsed_ms = (uint32_t)((esp_timer_get_time() - start_us) / 1000);
+    esp_log_set_vprintf(previous_log_vprintf);
+    TEST_ASSERT_EQUAL(ESP_OK, ret);
+    TEST_ASSERT_EQUAL_UINT32(0, profile_update_start_count);
+    TEST_ASSERT_LESS_THAN_UINT32(500, elapsed_ms);
+    ESP_LOGI(TAG, "Matching profile check completed in %lu ms", (unsigned long)elapsed_ms);
+
     test_bq27220_deinit();
 }
 
