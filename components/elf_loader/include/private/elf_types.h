@@ -273,6 +273,8 @@ typedef struct esp_elf {
     bool init_reverse;                  /*!< legacy .ctors run in reverse order */
     bool fini_reverse;                  /*!< .fini_array runs in reverse order */
     bool init_done;                     /*!< startup callbacks already invoked */
+    bool fini_done;                     /*!< image finalized; entry cannot run again */
+    bool lifecycle_busy;                /*!< entry or lifecycle callbacks are executing */
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
     uint32_t        text_off;           /*!< .text symbol offset */

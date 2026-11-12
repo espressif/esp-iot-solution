@@ -298,6 +298,12 @@ reverse order (or legacy `.dtors` in forward order) before freeing the image,
 but only if initialization ran. Calling the ELF entry point repeatedly does not
 repeat static construction. These callbacks run in the calling task.
 
+For host-managed cleanup before unloading, call `esp_elf_finalize(&elf)` after the entry point returns. It runs finalization arrays while retaining image allocations, symbol tables and MMU mappings. Drain module-owned exit callbacks, then call `esp_elf_deinit(&elf)` to release the image. Direct `esp_elf_deinit()` calls remain supported.
+
+Finalization runs once. Repeated calls return zero; deinitialization does not repeat callbacks. Never-executed images become finalized without running callbacks. `esp_elf_request()` rejects finalized images with `-EINVAL`. Release the image before loading another one. `esp_elf_finalize(NULL)` returns `-EINVAL`.
+
+Stop module-owned tasks and externally serialize access to each ELF object. Reentrant `esp_elf_request()` and `esp_elf_finalize()` calls return `-EBUSY`. Reentrant `esp_elf_deinit()` calls log an error and retain the image; retry after the outer call returns. Entry points and callbacks must return normally. Non-local exits bypass lifecycle state restoration.
+
 **C++ runtime dependencies are not bundled into the loader.** The
 `project_elf()` link uses `-nostdlib`: unresolved C++ runtime entry points
 (e.g. `operator new/delete` and `__cxa_pure_virtual`) must be exported by the
@@ -428,8 +434,11 @@ exported function: adding a symbol name cannot provide missing implementation.
 
 Do not indiscriminately add internal FreeRTOS or ESP-IDF functions such as
 `esp_crosscore_int_send_yield` to the public libc table. Internal functions can
-change across ESP-IDF versions and should be exported only when the application's
-specific ABI and dependencies require them.
+change across ESP-IDF versions and should be exported only when the application's specific ABI and dependencies require them.
+
+### Inspecting compiled exports offline
+
+Read `g_esp_elf_static_symbol_registry` to discover which compiled tables the loader actually exports, in resolver order. The registry covers enabled libc, ESP-IDF and customer tables; runtime registrations and dynamic shared objects are intentionally excluded because they can only be resolved on a running firmware. Each table entry uses `ESP_ELFSYM_END` and names match the ELF symbol table exactly. Offline tooling can enumerate addresses from linked firmware and verify they remain file-backed, without executing target code.
 
 ### Adding the Component to Your Project
 

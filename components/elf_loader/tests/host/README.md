@@ -35,6 +35,18 @@ configurations. The host Python runner selects the appropriate GNU or macOS
 linker option for dead-section removal. ESP32-S2 MMU span arithmetic is also
 tested for unaligned allocation bases and multi-page executable pools.
 
+Lifecycle tests cover explicit finalization, idempotence, legacy sentinels, never-executed images, finalized-image rejection and reentrancy. Allocation and MMU checks verify retention until deinitialization. `idf_runtime` covers the two-phase lifecycle on ESP32-S3 and ESP32-P4 hardware.
+
+Compiled symbol registry tests cover all 16 combinations of libc, ESP-IDF,
+customer exports and dynamic shared-object lookup. They verify registry table
+contents, NULL termination, duplicate-name precedence and reuse of registered
+symbol-table slots.
+
+On Linux, a CMake integration test includes the actual component link rules,
+builds an application that never references the compiled symbol registry, and
+verifies that the registry is retained with `-u` and dropped without it under
+LTO and `--gc-sections`.
+
 For ESP-IDF cross-compilation, build the freestanding ELF fixture in
 `components/elf_loader/tests/idf_cpp_lifecycle` with `idf.py set-target
 <target> build`; then inspect the resulting `elf_cpp_lifecycle.app.elf` for
@@ -79,7 +91,7 @@ For an optional sanitizer-backed mutation smoke test, compile the standalone
 macros used by the Python suite. It tests 4096 reproducible byte mutations
 per supplied ELF fixture, without executing embedded code.
 
-CI runs the 34-case Host suite in `check_elf_loader_host` and a separate
+CI runs the Host suite in `check_elf_loader_host` and a separate
 `check_elf_loader_ubsan` job that mutates both checked-in Xtensa and RISC-V
 ELF images 4096 times with UBSan instrumentation and abort-on-error enabled.
 
