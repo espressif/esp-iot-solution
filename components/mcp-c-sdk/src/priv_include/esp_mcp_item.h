@@ -159,6 +159,16 @@ typedef struct {
     bool client_cap_tasks_elicitation_create;
 } esp_mcp_session_state_t;
 
+typedef struct esp_mcp_session_node_s {
+    esp_mcp_session_state_t         state;
+    struct esp_mcp_session_node_s  *next;
+} esp_mcp_session_node_t;
+
+typedef struct {
+    char  session_id[32];
+    char  uri[128];
+} esp_mcp_resource_subscription_t;
+
 /**
  * @brief MCP structure (server-side MCP instance)
  *
@@ -176,8 +186,10 @@ typedef struct esp_mcp_s {
     SemaphoreHandle_t mutex;          /*!< Mutex to serialize request handling */
     SemaphoreHandle_t resource_sub_mutex; /*!< Protects resource_subscriptions[] and count */
     SemaphoreHandle_t req_id_mutex;       /*!< Protects recent_request_ids[] and cursor */
+    SemaphoreHandle_t session_mutex;     /*!< Protects session nodes and state snapshots */
     esp_mcp_session_state_t default_session_state; /*!< Lifecycle/capabilities for transports without session ids */
-    esp_mcp_session_state_t session_states[ESP_MCP_MAX_SESSION_STATES]; /*!< Lifecycle/capabilities keyed by MCP-Session-Id */
+    esp_mcp_session_node_t *session_states; /*!< Individually allocated named sessions */
+    size_t session_states_count;           /*!< Number of active named sessions */
     // Server metadata for initialize response (GAP-03, GAP-04)
     char *server_title;               /*!< Human-readable server title (nullable) */
     char *server_description;         /*!< Server description (nullable) */
@@ -219,17 +231,14 @@ typedef struct esp_mcp_s {
 
     // Session-scoped resource subscriptions
     size_t resource_subscriptions_count;
-    struct {
-        char session_id[32];
-        char uri[128];
-    } resource_subscriptions[CONFIG_MCP_RESOURCE_SUBSCRIPTIONS_MAX];
+    esp_mcp_resource_subscription_t *resource_subscriptions;
     // Recent request-id cache for session-level duplicate detection.
     size_t recent_request_id_cursor;
     struct {
         bool used;
         char session_id[32];
         char request_id[64];
-    } recent_request_ids[64];
+    } recent_request_ids[CONFIG_MCP_RECENT_REQUEST_IDS_MAX];
 
     // Generic _meta storage for unknown fields
     char *request_meta_json;

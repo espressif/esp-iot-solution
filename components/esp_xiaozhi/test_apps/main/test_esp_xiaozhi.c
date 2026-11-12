@@ -13,6 +13,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 #include "esp_system.h"
+#include "esp_heap_caps.h"
 
 #include "esp_xiaozhi_chat.h"
 
@@ -90,6 +91,12 @@ void setUp(void)
     }
     ESP_ERROR_CHECK(ret);
 
+    const char *namespaces[] = {"mqtt", "websocket"};
+    for (size_t i = 0; i < sizeof(namespaces) / sizeof(namespaces[0]); ++i) {
+        nvs_handle_t handle = 0;
+        ESP_ERROR_CHECK(nvs_open(namespaces[i], NVS_READWRITE, &handle));
+        nvs_close(handle);
+    }
     before_free_8bit = esp_get_free_heap_size();
     before_free_32bit = esp_get_free_internal_heap_size();
 }
@@ -546,6 +553,33 @@ TEST_CASE("esp_xiaozhi_start_returns_not_found_when_mqtt_endpoint_missing", "[es
 
     ret = esp_mcp_destroy(mcp);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
+}
+
+TEST_CASE("chat - vision query follows configuration and context is released", "[xiaozhi_memory]")
+{
+    esp_xiaozhi_chat_config_t config = ESP_XIAOZHI_CHAT_DEFAULT_CONFIG();
+    esp_xiaozhi_chat_handle_t chat = 0;
+    size_t before = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    TEST_ASSERT_EQUAL(ESP_OK, esp_xiaozhi_chat_init(&config, &chat));
+    size_t allocated = before - heap_caps_get_free_size(MALLOC_CAP_8BIT);
+    printf("XIAOZHI_MEMORY vision=%d chat_heap=%u\n",
+#if CONFIG_XIAOZHI_VISION_ENABLE
+           1,
+#else
+           0,
+#endif
+           (unsigned)allocated);
+    char url[16];
+    char token[16];
+#if CONFIG_XIAOZHI_VISION_ENABLE
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_STATE,
+                      esp_xiaozhi_chat_get_vision_explain(chat, url, sizeof(url), token, sizeof(token)));
+#else
+    TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED,
+                      esp_xiaozhi_chat_get_vision_explain(chat, url, sizeof(url), token, sizeof(token)));
+#endif
+    TEST_ASSERT_EQUAL(ESP_OK, esp_xiaozhi_chat_deinit(chat));
+    TEST_ASSERT_EQUAL(before, heap_caps_get_free_size(MALLOC_CAP_8BIT));
 }
 
 void app_main(void)

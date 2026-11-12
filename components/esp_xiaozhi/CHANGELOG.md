@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.5
+
+### Added
+
+- **Optional vision endpoint storage**: Add `CONFIG_XIAOZHI_VISION_ENABLE`, enabled by default. Disabling it saves 1024 bytes per chat context; `esp_xiaozhi_chat_get_vision_explain()` returns `ESP_ERR_NOT_SUPPORTED`. Standalone camera and video APIs are unchanged.
+
+### Changed
+
+- **MCP dependency**: Require `mcp-c-sdk` `^2.1.0` for memory optimizations and session cleanup fixes.
+
 ## v0.1.4
 
 ### Fixed
