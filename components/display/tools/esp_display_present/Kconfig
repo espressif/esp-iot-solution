@@ -1,0 +1,37 @@
+menu "Display presenter"
+config ESP_DISPLAY_PRESENT_GRAM_BACKGROUND
+    bool "Experimental zero-copy GRAM background submission"
+    default n
+    help
+        Use the existing engine backend worker for synchronous internal DMA tile paths.
+        Rotated and PSRAM tiles retain their existing async-copy scheduling.
+        Adds the backend worker task when the synchronous GRAM path would not have one.
+        Source tiles remain borrowed until real transfer completion.
+
+config ESP_DISPLAY_PRESENT_GRAM_BACKGROUND_PRIORITY
+    int "GRAM backend worker task priority"
+    depends on ESP_DISPLAY_PRESENT_GRAM_BACKGROUND
+    range 1 24
+    default 7
+    help
+        Priority of the existing engine backend worker for experimental GRAM submission.
+        Choose relative to the producer: a lower-priority backend worker can introduce
+        command refill gaps while rendering continues. The board comparison
+        uses producer priority 6 and backend worker priority 7.
+
+config PV2_LEGACY_CALLBACK_JOIN
+    bool
+    default y
+    select ESP_IPC_ENABLE if !ESP_SYSTEM_SINGLE_CORE_MODE
+    help
+        Borrowed display callbacks require a cross-core join before freeing
+        their context. Enable the IDF IPC dependency as part of this component.
+
+config PV2_LEGACY_RGB_BOUNCE_CONFIRMED
+    bool "Application confirms borrowed RGB panel uses bounce buffers"
+    default n
+    help
+        For older RGB drivers without a framebuffer capability query, enable
+        only if the borrowed panel was created with RGB bounce buffers. When
+        the query is available, the driver-reported configuration is used.
+endmenu

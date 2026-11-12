@@ -1,0 +1,9 @@
+/build*/
+/dist/
+**/__pycache__/
+*.pyc
+/dev/**/build*/
+/dev/**/managed_components/
+/dev/**/sdkconfig
+/dev/**/sdkconfig.old
+/dev/test_apps/boards/deps/

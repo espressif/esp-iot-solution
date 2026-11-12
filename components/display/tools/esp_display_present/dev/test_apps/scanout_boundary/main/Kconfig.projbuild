@@ -1,0 +1,21 @@
+menu "V2 scanout boundary test"
+config BOUNDARY_RAW_RGB
+    bool "Characterize raw RGB driver (no V2 safety claim)"
+    depends on IDF_TARGET_ESP32S3
+    default n
+config BOUNDARY_NO_BOUNCE
+    bool "RGB direct framebuffer DMA"
+    depends on BOUNDARY_RAW_RGB
+    default n
+config BOUNDARY_ON_DEMAND
+    bool "RGB refresh_on_demand"
+    depends on BOUNDARY_RAW_RGB && BOUNDARY_NO_BOUNCE
+    default n
+config BOUNDARY_INJECT_RESTART
+    bool "Request RGB restart explicitly (not an organic underrun)"
+    depends on IDF_TARGET_ESP32S3 && !BOUNDARY_ON_DEMAND
+    default n
+config BOUNDARY_STRESS
+    bool "Run external-memory copy pressure task"
+    default n
+endmenu

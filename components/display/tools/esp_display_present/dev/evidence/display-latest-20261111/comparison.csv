@@ -1,0 +1,241 @@
+board,implementation,mode,rotation,status,origin,condition,reason,lvgl_fps,transport_fps,internal_before_open_remaining_bytes,internal_after_open_remaining_bytes,internal_after_run_remaining_bytes,internal_after_close_remaining_bytes,psram_before_open_remaining_bytes,psram_after_open_remaining_bytes,psram_after_run_remaining_bytes,psram_after_close_remaining_bytes
+s3-rgb,present,DOUBLE_FULL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,25,23.2,286467,241495,155079,264315,14482820,14482792,14255444,14482820
+s3-rgb,present,DOUBLE_FULL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,16,15.3,264315,241507,155315,264315,14482820,14021988,13794640,14482820
+s3-rgb,present,DOUBLE_FULL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,16,15.2,286467,241495,155903,264315,14482532,14021700,13807664,14482532
+s3-rgb,present,DOUBLE_FULL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,16,15.3,264315,241507,155243,264315,14482532,14021700,13759532,14482532
+s3-rgb,present,TRIPLE_FULL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,33,30.5,264315,241507,155715,264315,14482820,14482792,14255444,14482820
+s3-rgb,present,TRIPLE_FULL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,17,17.3,264315,241507,154599,264315,14482820,14021988,13807952,14482820
+s3-rgb,present,TRIPLE_FULL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,17,17.2,264315,241507,155127,264315,14482532,14021700,13794352,14482532
+s3-rgb,present,TRIPLE_FULL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,18,17.4,264315,241507,155615,264315,14482532,14021700,13759532,14482532
+s3-rgb,present,DOUBLE_DIRECT,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,36,31.6,264315,241507,161743,264315,14482820,14482792,14351708,14482820
+s3-rgb,present,DOUBLE_DIRECT,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,30,22.2,264315,241543,158327,264315,14482820,13555040,13389136,14482820
+s3-rgb,present,DOUBLE_DIRECT,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,32,22.7,264315,241543,157763,264315,14482532,13554752,13423668,14482532
+s3-rgb,present,DOUBLE_DIRECT,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,30,22.3,264315,241543,158183,264315,14482532,13554752,13423668,14482532
+s3-rgb,present,DOUBLE_PARTIAL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,28.3,264315,193367,137199,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,DOUBLE_PARTIAL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,38,25.9,264315,193367,139875,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,DOUBLE_PARTIAL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,27.9,264315,193367,141043,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,DOUBLE_PARTIAL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,38,26.0,264315,193367,140435,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,TRIPLE_PARTIAL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,46,31.6,264315,193367,138883,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,TRIPLE_PARTIAL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,43,29.2,264315,193367,140103,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,TRIPLE_PARTIAL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,45,31.2,264315,193367,141127,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,TRIPLE_PARTIAL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,43,29.2,264315,193367,140411,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,AUTO,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,46,31.5,264315,193367,137823,264315,14482820,14434660,14362460,14482820
+s3-rgb,present,AUTO,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,43,29.1,264315,193367,138891,264315,14482820,14434660,14362460,14482820
+s3-rgb,present,AUTO,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,46,31.1,264315,193367,139719,264315,14482532,14434372,14362172,14482532
+s3-rgb,present,AUTO,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,43,29.1,264315,193367,140731,264315,14482532,14434372,14362172,14482532
+s3-rgb,adapter,DOUBLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,26,,243483,235363,148491,240687,14475196,14475168,14247820,14475196
+s3-rgb,adapter,DOUBLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,15,,240687,235371,149251,240687,14475196,14475168,14247820,14475196
+s3-rgb,adapter,DOUBLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,16,,240687,235371,148607,240687,14475196,14475168,14213000,14475196
+s3-rgb,adapter,DOUBLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,15,,240687,235371,147803,240687,14475196,14475168,14295952,14475196
+s3-rgb,adapter,TRIPLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,37,,240687,235459,147911,240687,14475196,14475168,14261132,14475196
+s3-rgb,adapter,TRIPLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,15,,240687,235459,147899,240687,14475196,14475168,14282640,14475196
+s3-rgb,adapter,TRIPLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,17,,240687,235459,147899,240687,14475196,14475168,14261132,14475196
+s3-rgb,adapter,TRIPLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,15,,240687,235459,147847,240687,14475196,14475168,14295952,14475196
+s3-rgb,adapter,DOUBLE_DIRECT,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,42,,240687,235379,152655,240687,14475196,14475168,14330772,14475196
+s3-rgb,adapter,DOUBLE_DIRECT,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,26,,240687,235371,153059,240687,14475196,14475168,14344084,14475196
+s3-rgb,adapter,DOUBLE_DIRECT,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,29,,240687,235371,154907,240687,14475196,14475168,14344084,14475196
+s3-rgb,adapter,DOUBLE_DIRECT,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,26,,240687,235371,156003,240687,14475196,14475168,14330772,14475196
+s3-rgb,adapter,DOUBLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,42,,240687,187463,133943,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,DOUBLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,37,,240687,187463,133467,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,DOUBLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,42,,240687,187463,133235,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,DOUBLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,36,,240687,187463,134511,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,TRIPLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,47,,240687,187455,133891,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,TRIPLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,42,,240687,187455,132679,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,TRIPLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,47,,240687,187455,131943,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,TRIPLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,42,,240687,187455,133855,240687,14475196,14475168,14402968,14475196
+s3-rgb,adapter,AUTO,0,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s3-rgb,adapter,AUTO,90,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s3-rgb,adapter,AUTO,180,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s3-rgb,adapter,AUTO,270,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s31-rgb,present,DOUBLE_FULL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,33,30.7,409667,363479,273799,387295,13519568,13518544,13125292,13519568
+s31-rgb,present,DOUBLE_FULL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,23,19.7,387295,363471,268671,387295,13519568,12750540,12468912,13519568
+s31-rgb,present,DOUBLE_FULL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,21,20.1,409667,363479,274191,387295,13519312,12750284,12405164,13519312
+s31-rgb,present,DOUBLE_FULL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,23,19.7,387295,363471,268883,387295,13519312,12750284,12468656,13519312
+s31-rgb,present,TRIPLE_FULL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,37,34.1,387295,363471,273783,387295,13519568,13518544,13042340,13519568
+s31-rgb,present,TRIPLE_FULL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,32,27.3,387295,363471,268671,387295,13519568,12750540,12420780,13519568
+s31-rgb,present,TRIPLE_FULL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,30,28.4,387295,363471,274187,387295,13519312,12750284,12274080,13519312
+s31-rgb,present,TRIPLE_FULL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,32,27.2,387295,363471,268879,387295,13519312,12750284,12516788,13519312
+s31-rgb,present,DOUBLE_DIRECT,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,34,31.4,387295,363471,279447,387295,13519568,13518544,13256376,13519568
+s31-rgb,present,DOUBLE_DIRECT,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,34,24.5,387295,363515,276067,387295,13519568,11980488,11829944,13519568
+s31-rgb,present,DOUBLE_DIRECT,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,32,26.8,387295,363515,278351,387295,13519312,11980232,11718064,13519312
+s31-rgb,present,DOUBLE_DIRECT,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,34,24.2,387295,363515,276107,387295,13519312,11980232,11829688,13519312
+s31-rgb,present,DOUBLE_PARTIAL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,38,30.5,387295,283335,221575,387295,13519312,13436364,13321664,13519312
+s31-rgb,present,DOUBLE_PARTIAL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,39,26.4,387295,315335,258859,387295,13519312,13470156,13397956,13519312
+s31-rgb,present,DOUBLE_PARTIAL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,37,28.7,387295,283335,218655,387295,13519312,13436364,13321664,13519312
+s31-rgb,present,DOUBLE_PARTIAL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,39,26.4,387295,315335,258859,387295,13519312,13470156,13397956,13519312
+s31-rgb,present,TRIPLE_PARTIAL,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,32.4,387295,283335,221551,387295,13519312,13436364,13321664,13519312
+s31-rgb,present,TRIPLE_PARTIAL,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,28.1,387295,315335,258859,387295,13519312,13470156,13397956,13519312
+s31-rgb,present,TRIPLE_PARTIAL,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,40,31.2,409667,283351,222135,387307,13519696,13436748,13322048,13519696
+s31-rgb,present,TRIPLE_PARTIAL,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,28.1,387307,315351,258875,387307,13519696,13470540,13398340,13519696
+s31-rgb,present,AUTO,0,PASS,11-11 · 完整记录,XIP ON; no title overlay,,40,32.5,387295,283335,221403,387295,13519568,13436620,13321920,13519568
+s31-rgb,present,AUTO,90,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,28.2,387295,315335,258859,387295,13519568,13470412,13398212,13519568
+s31-rgb,present,AUTO,180,PASS,11-11 · 完整记录,XIP ON; no title overlay,,40,31.7,387307,283367,221543,387307,13519696,13436748,13322048,13519696
+s31-rgb,present,AUTO,270,PASS,11-11 · 完整记录,XIP ON; no title overlay,,41,28.2,387307,315351,258875,387307,13519696,13470540,13398340,13519696
+s31-rgb,adapter,DOUBLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,35,,365547,354823,265471,362147,13541968,13536028,13011692,13538748
+s31-rgb,adapter,DOUBLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,24,,362147,354831,260143,362147,13538748,13536028,13234432,13538748
+s31-rgb,adapter,DOUBLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,22,,362147,354831,265327,362147,13538748,13536028,13156088,13538748
+s31-rgb,adapter,DOUBLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,24,,362147,354831,260147,362147,13538748,13536028,13261572,13538748
+s31-rgb,adapter,TRIPLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,38,,362147,354919,265295,362147,13538748,13536028,13011692,13538748
+s31-rgb,adapter,TRIPLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,24,,362147,354919,260331,362147,13538748,13536028,13186300,13538748
+s31-rgb,adapter,TRIPLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,22,,362147,354919,265299,362147,13538748,13536028,13011692,13538748
+s31-rgb,adapter,TRIPLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,24,,362147,354919,259863,362147,13538748,13536028,13244160,13538748
+s31-rgb,adapter,DOUBLE_DIRECT,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,36,,362147,354839,270439,362147,13538748,13536028,13239040,13538748
+s31-rgb,adapter,DOUBLE_DIRECT,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,34,,362147,354831,268363,362147,13538748,13536028,13340424,13538748
+s31-rgb,adapter,DOUBLE_DIRECT,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,32,,362147,354831,271331,362147,13538748,13536028,13273860,13538748
+s31-rgb,adapter,DOUBLE_DIRECT,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,34,,362147,354831,269879,362147,13538748,13536028,13375244,13538748
+s31-rgb,adapter,DOUBLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,38,,362147,274907,211511,362147,13538748,13536028,13394700,13538748
+s31-rgb,adapter,DOUBLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,37,,362147,306907,255915,362147,13538748,13536028,13440788,13538748
+s31-rgb,adapter,DOUBLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,37,,362147,274907,211499,362147,13538748,13536028,13394700,13538748
+s31-rgb,adapter,DOUBLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,37,,362147,306907,255159,362147,13538748,13536028,13440788,13538748
+s31-rgb,adapter,TRIPLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,40,,362147,274887,211891,362147,13538748,13536028,13394700,13538748
+s31-rgb,adapter,TRIPLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,41,,362147,306887,255375,362147,13538748,13536028,13440788,13538748
+s31-rgb,adapter,TRIPLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,40,,362147,274887,211675,362147,13538748,13536028,13394700,13538748
+s31-rgb,adapter,TRIPLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,41,,362147,306887,252943,362147,13538748,13536028,13440788,13538748
+s31-rgb,adapter,AUTO,0,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s31-rgb,adapter,AUTO,90,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s31-rgb,adapter,AUTO,180,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s31-rgb,adapter,AUTO,270,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+p4-dsi,present,DOUBLE_FULL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,25,22.3,551111,504603,406687,528707,28914280,28913252,28485180,28914280
+p4-dsi,present,DOUBLE_FULL,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,21,16.1,528707,504595,408407,528707,28914280,27684448,27139628,28914280
+p4-dsi,present,DOUBLE_FULL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,19,17.3,528707,504595,406747,528707,28914280,27684448,27256376,28914280
+p4-dsi,present,DOUBLE_FULL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,21,16.1,528707,504595,408187,528707,28914280,27684448,27174448,28914280
+p4-dsi,present,TRIPLE_FULL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,34,29.2,528707,504595,406571,528707,28914280,28913252,28485180,28914280
+p4-dsi,present,TRIPLE_FULL,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,24,19.0,528707,504595,407987,528707,28914280,27684448,27145772,28914280
+p4-dsi,present,TRIPLE_FULL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,23,20.6,528707,504595,406711,528707,28914280,27684448,27256376,28914280
+p4-dsi,present,TRIPLE_FULL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,24,18.8,528707,504595,408607,528707,28914280,27684448,27178544,28914280
+p4-dsi,present,DOUBLE_DIRECT,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,37,31.4,528707,504595,410095,528707,28914280,28913252,28699216,28914280
+p4-dsi,present,DOUBLE_DIRECT,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,30,20.7,528707,504607,410443,528707,28914280,26439260,26135104,28914280
+p4-dsi,present,DOUBLE_DIRECT,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,32,22.7,528707,504607,407499,528707,28914280,26439260,26177092,28914280
+p4-dsi,present,DOUBLE_DIRECT,270,PASS,11-11 · PPA 修复后,clean IDF; PPA risk requests fall back to CPU,,30,20.5,551111,504635,410367,528699,28914792,26439772,26114620,28914792
+p4-dsi,present,DOUBLE_PARTIAL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,50,37.1,528707,402067,335067,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,DOUBLE_PARTIAL,90,PASS,11-11 · PPA 修复后,clean IDF; PPA risk requests fall back to CPU,,44,31.0,528699,444395,358223,528699,28914792,28853344,28774488,28914792
+p4-dsi,present,DOUBLE_PARTIAL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,49,36.0,528707,402067,335147,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,DOUBLE_PARTIAL,270,PASS,11-11 · PPA 修复后,clean IDF; PPA risk requests fall back to CPU,,44,30.9,528699,444395,358223,528699,28914792,28853344,28774488,28914792
+p4-dsi,present,TRIPLE_PARTIAL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,39.5,528707,402067,334631,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,TRIPLE_PARTIAL,90,PASS,11-11 · PPA 修复后,clean IDF; PPA risk requests fall back to CPU,,51,35.6,528699,444395,358223,528699,28914792,28853344,28774488,28914792
+p4-dsi,present,TRIPLE_PARTIAL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,52,38.6,528707,402067,335087,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,TRIPLE_PARTIAL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,35.4,528707,444435,358263,528707,28914280,28852832,28773976,28914280
+p4-dsi,present,AUTO,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,39.7,528707,402067,335055,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,AUTO,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,35.5,528707,444435,358263,528707,28914280,28852832,28773976,28914280
+p4-dsi,present,AUTO,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,52,38.8,528707,402067,334851,528707,28914280,28808800,28694100,28914280
+p4-dsi,present,AUTO,270,PASS,11-11 · PPA 修复后,clean IDF; PPA risk requests fall back to CPU,,51,35.6,528699,444395,358223,528699,28914792,28853344,28774488,28914792
+p4-dsi,adapter,DOUBLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,26,,506879,495323,398835,503411,28937012,28931076,28503004,28933800
+p4-dsi,adapter,DOUBLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,21,,503411,495339,399091,503411,28933800,28931076,28538336,28933800
+p4-dsi,adapter,DOUBLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,20,,503411,495339,397543,503411,28933800,28931076,28551136,28933800
+p4-dsi,adapter,DOUBLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,21,,503411,495339,398891,503411,28933800,28931076,28490716,28933800
+p4-dsi,adapter,TRIPLE_FULL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,34,,503411,495427,397623,503411,28933800,28931076,28551136,28933800
+p4-dsi,adapter,TRIPLE_FULL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,21,,503411,495427,399839,503411,28933800,28931076,28442584,28933800
+p4-dsi,adapter,TRIPLE_FULL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,20,,503411,495427,398207,503411,28933800,28931076,28634088,28933800
+p4-dsi,adapter,TRIPLE_FULL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,21,,503411,495427,399175,503411,28933800,28931076,28525536,28933800
+p4-dsi,adapter,DOUBLE_DIRECT,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,40,,503411,495347,399391,503411,28933800,28931076,28634088,28933800
+p4-dsi,adapter,DOUBLE_DIRECT,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,30,,503411,495339,403539,503411,28933800,28931076,28572644,28933800
+p4-dsi,adapter,DOUBLE_DIRECT,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,31,,503411,495339,402467,503411,28933800,28931076,28620776,28933800
+p4-dsi,adapter,DOUBLE_DIRECT,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,30,,503411,495339,402019,503411,28933800,28931076,28708848,28933800
+p4-dsi,adapter,DOUBLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,51,,503411,393031,326119,503411,28933800,28931076,28816376,28933800
+p4-dsi,adapter,DOUBLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,48,,503411,435431,380151,503411,28933800,28931076,28852220,28933800
+p4-dsi,adapter,DOUBLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,48,,503411,393031,326239,503411,28933800,28931076,28816376,28933800
+p4-dsi,adapter,DOUBLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,47,,503411,435431,381171,503411,28933800,28931076,28852220,28933800
+p4-dsi,adapter,TRIPLE_PARTIAL,0,PASS,已核对 adapter 基线,XIP ON; no title overlay,,53,,503411,393023,325703,503411,28933800,28931076,28816376,28933800
+p4-dsi,adapter,TRIPLE_PARTIAL,90,PASS,已核对 adapter 基线,XIP ON; no title overlay,,51,,503411,435423,377939,503411,28933800,28931076,28852220,28933800
+p4-dsi,adapter,TRIPLE_PARTIAL,180,PASS,已核对 adapter 基线,XIP ON; no title overlay,,52,,503411,393023,325599,503411,28933800,28931076,28816376,28933800
+p4-dsi,adapter,TRIPLE_PARTIAL,270,PASS,已核对 adapter 基线,XIP ON; no title overlay,,51,,503411,435423,378799,503411,28933800,28931076,28852220,28933800
+p4-dsi,adapter,AUTO,0,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+p4-dsi,adapter,AUTO,90,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+p4-dsi,adapter,AUTO,180,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+p4-dsi,adapter,AUTO,270,SKIP,已核对 adapter 基线,XIP ON; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+s31-qspi,present,TE_C1_T1,0,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,17,14.8,414919,318563,265483,392527,16774784,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T1,90,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,19,15.5,392527,318555,266323,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T1,180,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,18,15.5,392527,318555,267131,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T1,270,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,19,15.5,392527,318555,266915,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T2,0,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,20,15.9,392527,270283,216875,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T2,90,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,20,16.2,392527,270283,217783,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T2,180,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,19,16.0,392527,270283,217755,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C1_T2,270,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,19,16.1,392527,270283,216947,392527,16774284,16264352,16192152,16774284
+s31-qspi,present,TE_C2_T1,0,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,29,20.5,392527,318555,266111,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T1,90,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,29,20.4,392527,318555,266983,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T1,180,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,29,20.4,392527,318555,266895,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T1,270,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,28,20.2,392527,318555,266771,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T2,0,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,29,21.0,392527,270283,215979,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T2,90,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,30,21.1,392527,270283,216915,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T2,180,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,30,21.1,392527,270283,217451,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,TE_C2_T2,270,PASS,11-11 · 顶部标注复测,visual diagnostic with top title; no direct adapter delta,,30,21.1,392527,270283,217115,392527,16774284,15803540,15731340,16774284
+s31-qspi,present,ADAPTER_TE_SYNC_FULL,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_SYNC_FULL,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_SYNC_FULL,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_SYNC_FULL,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_FULL,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_FULL,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_FULL,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_FULL,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_BOUNCE,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_BOUNCE,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_BOUNCE,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,present,ADAPTER_TE_ASYNC_BOUNCE,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T1,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T1,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T1,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T1,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T2,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T2,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T2,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C1_T2,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T1,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T1,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T1,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T1,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T2,0,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T2,90,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T2,180,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,TE_C2_T2,270,UNPAIRED,,,另一实现采用独立原生配置；无一一等价项,,,,,,,,,,
+s31-qspi,adapter,ADAPTER_TE_SYNC_FULL,0,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,17,,371071,360159,276179,367647,16774784,16307612,16045444,16771108
+s31-qspi,adapter,ADAPTER_TE_SYNC_FULL,90,SKIP,11-09 · adapter 原生基线,clean IDF; no title overlay,adapter_sync_TE_has_no_software_rotation,,,,,,,,,,
+s31-qspi,adapter,ADAPTER_TE_SYNC_FULL,180,SKIP,11-09 · adapter 原生基线,clean IDF; no title overlay,adapter_sync_TE_has_no_software_rotation,,,,,,,,,,
+s31-qspi,adapter,ADAPTER_TE_SYNC_FULL,270,SKIP,11-09 · adapter 原生基线,clean IDF; no title overlay,adapter_sync_TE_has_no_software_rotation,,,,,,,,,,
+s31-qspi,adapter,ADAPTER_TE_ASYNC_FULL,0,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,23,,367647,356651,277411,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_FULL,90,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,22,,367647,356651,279075,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_FULL,180,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,22,,367647,356651,278567,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_FULL,270,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,22,,367647,356651,278611,367647,16771108,15846820,15680916,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_BOUNCE,0,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,20,,367647,325923,248443,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_BOUNCE,90,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,20,,367647,325923,247347,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_BOUNCE,180,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,19,,367647,325923,251575,367647,16771108,15846820,15715736,16771108
+s31-qspi,adapter,ADAPTER_TE_ASYNC_BOUNCE,270,PASS,11-11 · 顶部标注对照,clean IDF; matching top title overlay,,20,,367647,325923,251583,367647,16771108,15846820,15632784,16771108
+box3-spi,present,GRAM_T1_INTERNAL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,45,33.4,296631,234947,190411,274435,15868644,15836356,15803584,15868644
+box3-spi,present,GRAM_T1_INTERNAL,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,49,34.8,274435,210307,159527,274435,15868644,15844548,15844548,15868644
+box3-spi,present,GRAM_T1_INTERNAL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,50,39.4,274435,194307,149815,274435,15868644,15836356,15803584,15868644
+box3-spi,present,GRAM_T1_INTERNAL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,49,34.8,274435,210307,160327,274435,15868644,15844548,15844548,15868644
+box3-spi,present,GRAM_T2_INTERNAL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,52,42.6,274435,202547,158107,274435,15868644,15836356,15803584,15868644
+box3-spi,present,GRAM_T2_INTERNAL,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.9,274435,161895,111271,274435,15868644,15844548,15844548,15868644
+box3-spi,present,GRAM_T2_INTERNAL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,42.7,274435,129895,85035,274435,15868644,15836356,15803584,15868644
+box3-spi,present,GRAM_T2_INTERNAL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.9,274435,161895,112607,274435,15868644,15844548,15844548,15868644
+box3-spi,present,GRAM_T1_PSRAM,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,49,39.4,274435,226311,181839,274435,15868644,15804352,15771580,15868644
+box3-spi,present,GRAM_T1_PSRAM,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,48,34.9,274435,234311,184671,274435,15868644,15820544,15820544,15868644
+box3-spi,present,GRAM_T1_PSRAM,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,49,39.4,274435,226311,181819,274435,15868644,15804352,15771580,15868644
+box3-spi,present,GRAM_T1_PSRAM,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,48,34.8,274435,234311,184579,274435,15868644,15820544,15820544,15868644
+box3-spi,present,GRAM_T2_PSRAM,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,42.7,274435,193903,148883,274435,15868644,15772348,15739576,15868644
+box3-spi,present,GRAM_T2_PSRAM,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.8,274435,209903,159679,274435,15868644,15796540,15796540,15868644
+box3-spi,present,GRAM_T2_PSRAM,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,42.6,274435,193903,148691,274435,15868644,15772348,15739576,15868644
+box3-spi,present,GRAM_T2_PSRAM,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.8,274435,209903,159615,274435,15868644,15796540,15796540,15868644
+box3-spi,present,AUTO_T2_INTERNAL,0,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,52,42.5,274435,202547,158107,274435,15868644,15836356,15803584,15868644
+box3-spi,present,AUTO_T2_INTERNAL,90,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.9,274435,161895,111603,274435,15868644,15844548,15844548,15868644
+box3-spi,present,AUTO_T2_INTERNAL,180,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,53,42.8,274435,129895,85243,274435,15868644,15836356,15803584,15868644
+box3-spi,present,AUTO_T2_INTERNAL,270,PASS,11-11 · 当前版本完整补测,clean IDF; no title overlay,,51,37.9,274435,161895,111283,274435,15868644,15844548,15844548,15868644
+box3-spi,adapter,GRAM_T1_INTERNAL,0,PASS,11-09 · 单tile容量对齐,clean IDF; no title overlay,,47,,253327,213319,168959,250539,15927496,15927468,15894696,15927496
+box3-spi,adapter,GRAM_T1_INTERNAL,90,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T1_INTERNAL,180,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T1_INTERNAL,270,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_INTERNAL,0,PASS,11-09 · 最近归档,clean IDF; no title overlay,,52,,250651,181439,137007,250651,15927384,15927356,15894584,15927384
+box3-spi,adapter,GRAM_T2_INTERNAL,90,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_INTERNAL,180,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_INTERNAL,270,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T1_PSRAM,0,PASS,11-09 · 单tile容量对齐,clean IDF; no title overlay,,46,,250539,245339,168675,224935,15927496,15895464,15862692,15927496
+box3-spi,adapter,GRAM_T1_PSRAM,90,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T1_PSRAM,180,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T1_PSRAM,270,SKIP,11-09 · 单tile容量对齐,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_PSRAM,0,PASS,11-09 · 最近归档,clean IDF; no title overlay,,51,,225047,219847,168471,225047,15927384,15863348,15830576,15927384
+box3-spi,adapter,GRAM_T2_PSRAM,90,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_PSRAM,180,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,GRAM_T2_PSRAM,270,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_NONE_has_no_software_rotation,,,,,,,,,,
+box3-spi,adapter,AUTO_T2_INTERNAL,0,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+box3-spi,adapter,AUTO_T2_INTERNAL,90,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+box3-spi,adapter,AUTO_T2_INTERNAL,180,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,
+box3-spi,adapter,AUTO_T2_INTERNAL,270,SKIP,11-09 · 最近归档,clean IDF; no title overlay,adapter_has_no_AUTO_mode,,,,,,,,,,

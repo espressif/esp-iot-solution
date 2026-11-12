@@ -34,8 +34,13 @@ if(CONFIG_EXAMPLE_LCD_INTERFACE_QSPI)
     list(APPEND component_requires espressif__esp_lcd_touch_cst816s)
 endif()
 
-if(CONFIG_EXAMPLE_LCD_INTERFACE_RGB)
+if(CONFIG_EXAMPLE_LCD_INTERFACE_RGB AND NOT CONFIG_EXAMPLE_LCD_S3_EV_GC9503)
     list(APPEND component_requires espressif__esp_lcd_touch_gt1151)
+endif()
+
+if(CONFIG_EXAMPLE_LCD_S3_EV_GC9503)
+    list(APPEND component_requires espressif__esp_lcd_gc9503 espressif__esp_lcd_panel_io_additions espressif__esp_io_expander espressif__esp_io_expander_tca9554)
+    message(STATUS "hw_init: S3 LCD EV Board GC9503 480x480")
 endif()
 
 if(CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM)

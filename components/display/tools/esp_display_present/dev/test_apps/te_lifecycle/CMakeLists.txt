@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+set(ENV{IDF_COMPONENT_MANAGER} "0")
+get_filename_component(PRESENT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(EXTRA_COMPONENT_DIRS "${PRESENT_ROOT}" "${PRESENT_DEPS_DIR}")
+set(COMPONENTS main)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(present_te_lifecycle)
+target_link_options(${CMAKE_PROJECT_NAME}.elf PRIVATE "-Wl,--wrap=esp_lcd_panel_draw_bitmap" "-Wl,--wrap=esp_lcd_panel_io_register_event_callbacks" "-Wl,--wrap=esp_display_present_executor_run")

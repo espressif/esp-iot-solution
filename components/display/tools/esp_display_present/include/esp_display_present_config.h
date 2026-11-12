@@ -28,7 +28,7 @@ typedef enum {
 } esp_display_present_panel_t;
 
 typedef enum {
-    /** No tearing avoidance; single buffer or direct transfer. */
+    /** Panel-IO direct transfer without tearing avoidance. Unsupported for RGB/MIPI scanout. */
     ESP_DISPLAY_PRESENT_MODE_NONE = 0,
     /** Double buffering with full frame buffers. */
     ESP_DISPLAY_PRESENT_MODE_DOUBLE_FULL,
@@ -42,7 +42,8 @@ typedef enum {
     ESP_DISPLAY_PRESENT_MODE_TE_SYNC,
     /** Double buffering with partial/partition refresh. */
     ESP_DISPLAY_PRESENT_MODE_DOUBLE_PARTIAL,
-    /** Let esp_display_present choose from panel type, TE config and buffers. */
+    /** RGB/MIPI: prefer TRIPLE_PARTIAL with 3 FBs, DOUBLE_PARTIAL with 2; reject 1.
+     * Panel IO retains selection from valid TE configuration. */
     ESP_DISPLAY_PRESENT_MODE_AUTO,
 } esp_display_present_mode_t;
 
@@ -80,6 +81,7 @@ typedef struct {
     bool swap_bytes; /**< Whether RGB565 bytes are swapped on transfer. */
     bool te_enabled; /**< Whether TE synchronization is enabled. */
     esp_display_present_te_sync_config_t te_sync; /**< TE synchronization settings. */
+    bool spi_psram_dma_direct; /**< Must match the SPI IO creation flag. Fallback when driver memory query is unavailable; a successful query takes precedence. */
 } esp_display_present_hw_config_t;
 
 /**
@@ -96,18 +98,21 @@ typedef struct {
     uint8_t frame_buffer_count; /**< Number of valid framebuffer addresses. */
 } esp_display_present_fb_config_t;
 
-/** Shared producer drawbuf policy for every partition rendering mode. */
+/**
+ * Producer input-buffer policy. In PARTITION modes each draw buffer is one
+ * presenter tile; lines, buffers and in_psram configure that tile pool.
+ * A frontend may borrow the tiles or use its own separate draw buffer.
+ * TE compose images and panel framebuffers are separate from the tile pool.
+ */
 typedef struct {
-    uint16_t lines; /**< Preferred height of each partition draw buffer. */
+    uint16_t lines; /**< Preferred height of each input tile. */
     /**
-     * Number of partition draw buffers (1 or 2). 0 selects two for GRAM
-     * without TE, and for FB repair and TE only on multi-core targets whose
-     * internal DMA heap keeps 128 KiB free after both; two buffers overlap
-     * tile copies with rendering at the cost of one more buffer and a 4 KiB
-     * worker stack.
+     * Number of input tiles (1 or 2). 0 selects an automatic count based on
+     * the mode, target and available internal DMA memory. Creation may retry
+     * with one tile when an automatically selected pair cannot be allocated.
      */
     uint8_t buffers;
-    bool in_psram; /**< Allocate draw buffers in PSRAM when possible. */
+    bool in_psram; /**< Prefer PSRAM for input tiles when available. */
     /**
      * TE_SYNC full-screen compose buffers. 0/1 keeps the synchronous,
      * single-buffer path; 2 enables a rotating compose pool so composition

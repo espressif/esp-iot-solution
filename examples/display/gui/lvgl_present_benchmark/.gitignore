@@ -1,0 +1,7 @@
+/build*/
+/managed_components/
+/sdkconfig
+/sdkconfig.old
+/sdkconfig.p4
+/sdkconfig.s3save
+/dependencies.lock

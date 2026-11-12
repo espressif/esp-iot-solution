@@ -1,0 +1,52 @@
+{
+  "s3-rgb": {
+    "target": "esp32s3",
+    "mac": "90:e5:b1:d0:a9:d8",
+    "name": "S3 LCD EV R16 / GC9503 (16 MiB PSRAM)",
+    "interface": "rgb",
+    "width": 480,
+    "height": 480,
+    "flash_bytes": 16777216,
+    "boot_offset": 0
+  },
+  "p4-dsi": {
+    "target": "esp32p4",
+    "mac": "e8:f6:0a:e7:a7:8d",
+    "name": "P4 Function EV rev3 / EK79007",
+    "interface": "dsi",
+    "width": 1024,
+    "height": 600,
+    "flash_bytes": 16777216,
+    "boot_offset": 8192
+  },
+  "box3-spi": {
+    "target": "esp32s3",
+    "mac": "3c:84:27:05:ba:78",
+    "name": "ESP-BOX-3 / ILI9341",
+    "interface": "spi",
+    "width": 320,
+    "height": 240,
+    "flash_bytes": 16777216,
+    "boot_offset": 0
+  },
+  "s31-qspi": {
+    "target": "esp32s31",
+    "mac": "30:ed:a0:f4:0b:34",
+    "name": "S31 mosaico / CO5300 TE43",
+    "interface": "qspi",
+    "width": 480,
+    "height": 480,
+    "flash_bytes": 16777216,
+    "boot_offset": 8192
+  },
+  "s31-rgb": {
+    "target": "esp32s31",
+    "mac": "30:ed:a0:f3:f7:b8",
+    "name": "S31 Korvo-1 / stock RGB 800x480",
+    "interface": "rgb",
+    "width": 800,
+    "height": 480,
+    "flash_bytes": 16777216,
+    "boot_offset": 8192
+  }
+}

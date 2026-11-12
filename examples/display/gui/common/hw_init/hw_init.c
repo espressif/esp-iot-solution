@@ -13,6 +13,6 @@
 #error "No LCD interface selected! Please select one in menuconfig."
 #endif
 
-#if !HW_USE_TOUCH && !HW_USE_ENCODER
+#if !HW_USE_TOUCH && !HW_USE_ENCODER && !CONFIG_EXAMPLE_LCD_S3_EV_GC9503
 #error "No input device configured!"
 #endif

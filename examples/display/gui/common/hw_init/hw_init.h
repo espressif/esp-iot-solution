@@ -28,10 +28,17 @@ extern "C" {
 #define HW_USE_TOUCH    1
 #define HW_USE_ENCODER  0
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_RGB
+#if CONFIG_EXAMPLE_LCD_S3_EV_GC9503
+#define HW_LCD_H_RES    480
+#define HW_LCD_V_RES    480
+#define HW_USE_TOUCH    0
+#define HW_USE_ENCODER  0
+#else
 #define HW_LCD_H_RES    800
 #define HW_LCD_V_RES    480
 #define HW_USE_TOUCH    1
 #define HW_USE_ENCODER  0
+#endif
 #elif CONFIG_EXAMPLE_LCD_INTERFACE_SPI_WITH_PSRAM
 #define HW_LCD_H_RES    320
 #define HW_LCD_V_RES    240

@@ -1,0 +1,65 @@
+[
+  {
+    "board": "s3-rgb",
+    "present": {
+      "cases": 24,
+      "address_saved": 0,
+      "affected_cases": 0,
+      "release_active": 0,
+      "write_active": 0,
+      "confirm_wrong": 0,
+      "raced": 0
+    },
+    "adapter": {
+      "cases": 20,
+      "address_saved": 4,
+      "affected_cases": 2,
+      "release_active": 0,
+      "write_active": 2,
+      "confirm_wrong": 2,
+      "raced": 0
+    }
+  },
+  {
+    "board": "s31-rgb",
+    "present": {
+      "cases": 24,
+      "address_saved": 0,
+      "affected_cases": 0,
+      "release_active": 0,
+      "write_active": 0,
+      "confirm_wrong": 0,
+      "raced": 0
+    },
+    "adapter": {
+      "cases": 20,
+      "address_saved": 0,
+      "affected_cases": 0,
+      "release_active": 0,
+      "write_active": 0,
+      "confirm_wrong": 0,
+      "raced": 0
+    }
+  },
+  {
+    "board": "p4-dsi",
+    "present": {
+      "cases": 24,
+      "address_saved": 0,
+      "affected_cases": 0,
+      "release_active": 0,
+      "write_active": 0,
+      "confirm_wrong": 0,
+      "raced": 0
+    },
+    "adapter": {
+      "cases": 20,
+      "address_saved": 6,
+      "affected_cases": 5,
+      "release_active": 1,
+      "write_active": 4,
+      "confirm_wrong": 1,
+      "raced": 0
+    }
+  }
+]

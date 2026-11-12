@@ -1,0 +1,225 @@
+board,stage,version,scene,fps,render_ms,flush_ms,lvgl_cpu_percent
+P4,原复制版,V1,Empty screen,57,6,8,100
+P4,原复制版,V1,Moving wallpaper,40,15,8,100
+P4,原复制版,V1,Single rectangle,60,1,15,100
+P4,原复制版,V1,Multiple rectangles,60,4,11,100
+P4,原复制版,V1,Multiple RGB images,60,1,12,100
+P4,原复制版,V1,Multiple ARGB images,59,6,7,100
+P4,原复制版,V1,Rotated ARGB images,36,15,10,100
+P4,原复制版,V1,Multiple labels,57,10,3,100
+P4,原复制版,V1,Screen sized text,7,126,9,100
+P4,原复制版,V1,Multiple arcs,30,25,3,100
+P4,原复制版,V1,Containers,60,4,11,100
+P4,原复制版,V1,Containers with overlay,20,35,11,100
+P4,原复制版,V1,Containers with opa,59,5,10,100
+P4,原复制版,V1,Containers with opa_layer,39,18,6,100
+P4,原复制版,V1,Containers with scrolling,20,42,5,100
+P4,原复制版,V1,Widgets demo,20,93,7,100
+P4,原复制版,V2,Empty screen,17,21,32,100
+P4,原复制版,V2,Moving wallpaper,12,48,31,100
+P4,原复制版,V2,Single rectangle,60,2,8,100
+P4,原复制版,V2,Multiple rectangles,27,11,20,100
+P4,原复制版,V2,Multiple RGB images,29,10,19,100
+P4,原复制版,V2,Multiple ARGB images,23,21,16,100
+P4,原复制版,V2,Rotated ARGB images,27,22,10,100
+P4,原复制版,V2,Multiple labels,26,19,13,100
+P4,原复制版,V2,Screen sized text,4,154,34,100
+P4,原复制版,V2,Multiple arcs,12,44,33,100
+P4,原复制版,V2,Containers,40,11,10,100
+P4,原复制版,V2,Containers with overlay,11,47,28,100
+P4,原复制版,V2,Containers with opa,34,15,12,100
+P4,原复制版,V2,Containers with opa_layer,13,54,15,100
+P4,原复制版,V2,Containers with scrolling,8,80,32,100
+P4,原复制版,V2,Widgets demo,18,113,25,100
+S3,原复制版,V1,Empty screen,16,64,15,100
+S3,原复制版,V1,Moving wallpaper,6,125,19,100
+S3,原复制版,V1,Single rectangle,55,6,9,100
+S3,原复制版,V1,Multiple rectangles,20,38,14,100
+S3,原复制版,V1,Multiple RGB images,19,37,11,100
+S3,原复制版,V1,Multiple ARGB images,16,45,10,100
+S3,原复制版,V1,Rotated ARGB images,25,27,7,100
+S3,原复制版,V1,Multiple labels,17,44,19,100
+S3,原复制版,V1,Screen sized text,2,293,18,100
+S3,原复制版,V1,Multiple arcs,27,14,18,100
+S3,原复制版,V1,Containers,10,76,11,100
+S3,原复制版,V1,Containers with overlay,7,104,16,100
+S3,原复制版,V1,Containers with opa,8,84,18,100
+S3,原复制版,V1,Containers with opa_layer,7,104,12,100
+S3,原复制版,V1,Containers with scrolling,4,195,18,100
+S3,原复制版,V1,Widgets demo,2,357,18,100
+S3,原复制版,V2,Empty screen,12,48,39,100
+S3,原复制版,V2,Moving wallpaper,6,115,36,100
+S3,原复制版,V2,Single rectangle,57,5,9,100
+S3,原复制版,V2,Multiple rectangles,17,32,28,100
+S3,原复制版,V2,Multiple RGB images,15,34,19,100
+S3,原复制版,V2,Multiple ARGB images,14,41,21,100
+S3,原复制版,V2,Rotated ARGB images,27,25,6,100
+S3,原复制版,V2,Multiple labels,16,40,18,100
+S3,原复制版,V2,Screen sized text,2,276,36,100
+S3,原复制版,V2,Multiple arcs,27,13,16,100
+S3,原复制版,V2,Containers,10,71,16,100
+S3,原复制版,V2,Containers with overlay,7,101,25,100
+S3,原复制版,V2,Containers with opa,9,78,16,100
+S3,原复制版,V2,Containers with opa_layer,7,101,16,100
+S3,原复制版,V2,Containers with scrolling,4,181,38,100
+S3,原复制版,V2,Widgets demo,2,343,33,100
+S31,原复制版,V1,Empty screen,23,22,12,100
+S31,原复制版,V1,Moving wallpaper,15,46,15,100
+S31,原复制版,V1,Single rectangle,66,3,1,100
+S31,原复制版,V1,Multiple rectangles,46,12,6,100
+S31,原复制版,V1,Multiple RGB images,64,5,3,100
+S31,原复制版,V1,Multiple ARGB images,62,7,2,100
+S31,原复制版,V1,Rotated ARGB images,65,9,2,100
+S31,原复制版,V1,Multiple labels,37,17,5,100
+S31,原复制版,V1,Screen sized text,6,138,15,100
+S31,原复制版,V1,Multiple arcs,65,4,0,100
+S31,原复制版,V1,Containers,50,17,3,100
+S31,原复制版,V1,Containers with overlay,14,54,13,100
+S31,原复制版,V1,Containers with opa,47,18,3,100
+S31,原复制版,V1,Containers with opa_layer,33,27,3,100
+S31,原复制版,V1,Containers with scrolling,9,81,15,100
+S31,原复制版,V1,Widgets demo,4,167,14,100
+S31,原复制版,V2,Empty screen,17,25,22,100
+S31,原复制版,V2,Moving wallpaper,12,53,26,100
+S31,原复制版,V2,Single rectangle,66,2,2,100
+S31,原复制版,V2,Multiple rectangles,31,18,10,100
+S31,原复制版,V2,Multiple RGB images,58,7,4,100
+S31,原复制版,V2,Multiple ARGB images,52,9,4,100
+S31,原复制版,V2,Rotated ARGB images,64,9,3,100
+S31,原复制版,V2,Multiple labels,28,21,9,100
+S31,原复制版,V2,Screen sized text,5,144,25,100
+S31,原复制版,V2,Multiple arcs,63,4,2,100
+S31,原复制版,V2,Containers,45,17,5,100
+S31,原复制版,V2,Containers with overlay,13,55,17,100
+S31,原复制版,V2,Containers with opa,43,18,5,100
+S31,原复制版,V2,Containers with opa_layer,27,32,6,100
+S31,原复制版,V2,Containers with scrolling,8,87,25,100
+S31,原复制版,V2,Widgets demo,4,172,24,100
+P4,共享 tile,V1,Empty screen,57,7,8,100
+P4,共享 tile,V1,Moving wallpaper,36,15,11,100
+P4,共享 tile,V1,Single rectangle,60,1,15,100
+P4,共享 tile,V1,Multiple rectangles,60,4,11,100
+P4,共享 tile,V1,Multiple RGB images,60,1,12,100
+P4,共享 tile,V1,Multiple ARGB images,60,6,7,100
+P4,共享 tile,V1,Rotated ARGB images,33,16,11,100
+P4,共享 tile,V1,Multiple labels,58,10,3,100
+P4,共享 tile,V1,Screen sized text,7,126,9,100
+P4,共享 tile,V1,Multiple arcs,30,25,4,100
+P4,共享 tile,V1,Containers,60,4,11,100
+P4,共享 tile,V1,Containers with overlay,20,35,11,100
+P4,共享 tile,V1,Containers with opa,59,5,10,100
+P4,共享 tile,V1,Containers with opa_layer,39,18,6,100
+P4,共享 tile,V1,Containers with scrolling,20,42,5,100
+P4,共享 tile,V1,Widgets demo,20,92,7,100
+P4,共享 tile,V2,Empty screen,26,11,19,100
+P4,共享 tile,V2,Moving wallpaper,15,41,21,100
+P4,共享 tile,V2,Single rectangle,61,9,1,100
+P4,共享 tile,V2,Multiple rectangles,29,16,14,100
+P4,共享 tile,V2,Multiple RGB images,30,23,5,100
+P4,共享 tile,V2,Multiple ARGB images,28,25,5,100
+P4,共享 tile,V2,Rotated ARGB images,29,27,3,100
+P4,共享 tile,V2,Multiple labels,27,22,9,100
+P4,共享 tile,V2,Screen sized text,5,139,23,100
+P4,共享 tile,V2,Multiple arcs,15,40,20,100
+P4,共享 tile,V2,Containers,45,16,3,100
+P4,共享 tile,V2,Containers with overlay,13,50,15,100
+P4,共享 tile,V2,Containers with opa,42,17,2,100
+P4,共享 tile,V2,Containers with opa_layer,15,49,6,100
+P4,共享 tile,V2,Containers with scrolling,10,71,22,100
+P4,共享 tile,V2,Widgets demo,19,104,16,100
+S3,共享 tile,V1,Empty screen,16,64,16,100
+S3,共享 tile,V1,Moving wallpaper,6,122,22,100
+S3,共享 tile,V1,Single rectangle,55,6,9,100
+S3,共享 tile,V1,Multiple rectangles,20,37,13,100
+S3,共享 tile,V1,Multiple RGB images,18,37,12,100
+S3,共享 tile,V1,Multiple ARGB images,17,45,8,100
+S3,共享 tile,V1,Rotated ARGB images,25,28,7,100
+S3,共享 tile,V1,Multiple labels,17,38,20,100
+S3,共享 tile,V1,Screen sized text,2,295,19,100
+S3,共享 tile,V1,Multiple arcs,27,14,18,100
+S3,共享 tile,V1,Containers,10,74,11,100
+S3,共享 tile,V1,Containers with overlay,7,102,18,100
+S3,共享 tile,V1,Containers with opa,9,82,16,100
+S3,共享 tile,V1,Containers with opa_layer,7,104,13,100
+S3,共享 tile,V1,Containers with scrolling,4,193,18,100
+S3,共享 tile,V1,Widgets demo,2,350,18,100
+S3,共享 tile,V2,Empty screen,12,55,30,100
+S3,共享 tile,V2,Moving wallpaper,6,119,32,100
+S3,共享 tile,V2,Single rectangle,57,11,3,100
+S3,共享 tile,V2,Multiple rectangles,18,39,20,100
+S3,共享 tile,V2,Multiple RGB images,17,42,10,100
+S3,共享 tile,V2,Multiple ARGB images,13,56,9,100
+S3,共享 tile,V2,Rotated ARGB images,25,30,4,100
+S3,共享 tile,V2,Multiple labels,16,46,11,100
+S3,共享 tile,V2,Screen sized text,2,279,34,100
+S3,共享 tile,V2,Multiple arcs,27,26,3,100
+S3,共享 tile,V2,Containers,9,78,11,100
+S3,共享 tile,V2,Containers with overlay,7,101,14,100
+S3,共享 tile,V2,Containers with opa,9,86,11,100
+S3,共享 tile,V2,Containers with opa_layer,7,107,12,100
+S3,共享 tile,V2,Containers with scrolling,4,181,33,100
+S3,共享 tile,V2,Widgets demo,2,340,30,100
+S31,共享 tile,V1,Empty screen,24,19,14,100
+S31,共享 tile,V1,Moving wallpaper,14,50,16,100
+S31,共享 tile,V1,Single rectangle,65,3,1,100
+S31,共享 tile,V1,Multiple rectangles,46,12,6,100
+S31,共享 tile,V1,Multiple RGB images,63,5,3,100
+S31,共享 tile,V1,Multiple ARGB images,61,8,2,100
+S31,共享 tile,V1,Rotated ARGB images,64,10,2,100
+S31,共享 tile,V1,Multiple labels,38,16,6,100
+S31,共享 tile,V1,Screen sized text,6,139,14,100
+S31,共享 tile,V1,Multiple arcs,65,3,1,100
+S31,共享 tile,V1,Containers,52,15,4,100
+S31,共享 tile,V1,Containers with overlay,14,54,11,100
+S31,共享 tile,V1,Containers with opa,49,16,4,100
+S31,共享 tile,V1,Containers with opa_layer,32,28,5,100
+S31,共享 tile,V1,Containers with scrolling,9,78,18,100
+S31,共享 tile,V1,Widgets demo,4,167,14,100
+S31,共享 tile,V2,Empty screen,18,24,20,100
+S31,共享 tile,V2,Moving wallpaper,12,53,24,100
+S31,共享 tile,V2,Single rectangle,66,2,2,100
+S31,共享 tile,V2,Multiple rectangles,34,13,12,100
+S31,共享 tile,V2,Multiple RGB images,60,7,3,100
+S31,共享 tile,V2,Multiple ARGB images,55,10,2,100
+S31,共享 tile,V2,Rotated ARGB images,65,10,1,100
+S31,共享 tile,V2,Multiple labels,29,20,9,100
+S31,共享 tile,V2,Screen sized text,5,145,23,100
+S31,共享 tile,V2,Multiple arcs,64,4,2,100
+S31,共享 tile,V2,Containers,48,16,4,100
+S31,共享 tile,V2,Containers with overlay,13,55,16,100
+S31,共享 tile,V2,Containers with opa,44,18,4,100
+S31,共享 tile,V2,Containers with opa_layer,28,31,6,100
+S31,共享 tile,V2,Containers with scrolling,8,84,23,100
+S31,共享 tile,V2,Widgets demo,4,168,22,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Empty screen,57,6,8,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Moving wallpaper,38,15,9,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Single rectangle,60,1,14,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Multiple rectangles,60,4,10,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Multiple RGB images,60,1,12,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Multiple ARGB images,60,6,7,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Rotated ARGB images,34,15,11,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Multiple labels,58,10,3,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Screen sized text,7,128,8,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Multiple arcs,30,25,4,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Containers,60,4,11,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Containers with overlay,20,35,11,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Containers with opa,60,6,9,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Containers with opa_layer,34,20,8,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Containers with scrolling,19,43,5,100
+P4,DMA2D＋后台 service＋延后取 tile,V1,Widgets demo,19,92,7,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Empty screen,53,9,3,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Moving wallpaper,30,25,3,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Single rectangle,61,13,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Multiple rectangles,61,10,1,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Multiple RGB images,59,13,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Multiple ARGB images,59,12,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Rotated ARGB images,38,22,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Multiple labels,59,12,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Screen sized text,6,139,4,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Multiple arcs,22,35,3,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Containers,65,6,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Containers with overlay,20,40,4,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Containers with opa,65,7,0,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Containers with opa_layer,33,28,1,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Containers with scrolling,15,58,4,100
+P4,DMA2D＋后台 service＋延后取 tile,V2,Widgets demo,19,95,3,100

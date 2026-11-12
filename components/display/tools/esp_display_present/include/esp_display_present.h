@@ -35,8 +35,10 @@ extern "C" {
  * Query the minimum number of panel framebuffers before creating the panel.
  *
  * Set an explicit RGB, MIPI-DSI or IO panel type. Only panel type, mode,
- * rotation and TE configuration are read; handles, supplied framebuffers,
- * pixel format and draw-buffer settings are ignored. This query performs
+ * rotation, TE configuration and an optional AUTO frame_buffer_count hint
+ * are read; handles, framebuffer addresses, pixel format and draw-buffer
+ * settings are ignored. With no count hint, scanout AUTO recommends three
+ * framebuffers; creation resolves against the actual driver pool. This query performs
  * static policy validation without accessing hardware or allocating memory.
  *
  * IO/GRAM returns 0: draw buffers and TE compose buffers are separate.
@@ -136,13 +138,6 @@ typedef struct {
     size_t area_count; /**< Number of entries in @c areas. */
 } esp_display_presenter_submit_t;
 
-/** @brief Drawable logical region leased for the current frame. */
-typedef struct {
-    esp_display_presenter_surface_t surface; /**< Region pixel storage. */
-    uint16_t origin_x; /**< Logical X origin of the region. */
-    uint16_t origin_y; /**< Logical Y origin of the region. */
-} esp_display_presenter_region_t;
-
 /**
  * @brief Producer-neutral drawable buffer lease.
  *
@@ -209,9 +204,11 @@ esp_err_t esp_display_presenter_delete(
  * Reconfigure logical-to-physical rotation without changing panel scan mode.
  *
  * The producer must first stop submitting and quiesce the presenter. The
- * presenter object remains valid and keeps the same address; its target and
- * endpoint are rebuilt so all rotation-dependent storage and transforms are
- * updated consistently. On failure, the previous configuration is restored.
+ * presenter object and physical panel dimensions remain unchanged. Crossing
+ * between 0/180 and 90/270 swaps the logical width and height; query get_caps()
+ * again before rendering. Rotation-dependent producer storage and transforms
+ * are updated after pending work drains. On failure, the previous configuration
+ * remains valid.
  */
 esp_err_t esp_display_presenter_set_rotation(
     esp_display_presenter_t *presenter,
@@ -270,6 +267,16 @@ esp_err_t esp_display_presenter_get_state(
 esp_err_t esp_display_presenter_get_fault_reason(
     const esp_display_presenter_t *presenter,
     esp_display_present_fault_reason_t *out_reason);
+
+/**
+ * Read the original error behind the latched fault, before classification.
+ * ESP_OK means no fault has been recorded. The value is the first accepted
+ * operation or observation error that latched the fault; it is not reclassified
+ * and never cleared in place.
+ */
+esp_err_t esp_display_presenter_get_fault_error(
+    const esp_display_presenter_t *presenter,
+    esp_err_t *out_error);
 
 /** Map physical input coordinates into the logical render orientation. */
 esp_err_t esp_display_presenter_map_point(

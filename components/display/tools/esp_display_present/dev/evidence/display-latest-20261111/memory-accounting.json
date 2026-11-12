@@ -1,0 +1,411 @@
+{
+  "schema": 1,
+  "scope": "whole firmware, not component-exclusive",
+  "boards": {
+    "s3-rgb": {
+      "accounts": {
+        "present": {
+          "elf_sha256": "444ad148d6cb7a80de4c1fbf62f6a62ae3ef1a2cd4591531b88e1835f38d8e36",
+          "iram_bytes": 63744,
+          "dram_static_bytes": 19436,
+          "sram_sections_bytes": 83180,
+          "sections": {
+            ".iram0.vectors": 1028,
+            ".iram0.text": 62483,
+            ".dram0.dummy": 63744,
+            ".dram0.data": 15828,
+            ".noinit": 0,
+            ".dram0.bss": 3608,
+            ".iram0.text_end": 233,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 379179,
+              "internal_free": 297855,
+              "psram_total": 15869348,
+              "psram_free": 15866500,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 379179,
+              "internal_free": 286467,
+              "psram_total": 15869348,
+              "psram_free": 14482532,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        },
+        "adapter": {
+          "elf_sha256": "1fb5c015055893e866a245e28089d0ca4e91d3414bf2e68b6bc4bfe8c6beafee",
+          "iram_bytes": 62208,
+          "dram_static_bytes": 19612,
+          "sram_sections_bytes": 81820,
+          "sections": {
+            ".iram0.vectors": 1028,
+            ".iram0.text": 61119,
+            ".dram0.dummy": 62208,
+            ".dram0.data": 15812,
+            ".noinit": 0,
+            ".dram0.bss": 3800,
+            ".iram0.text_end": 61,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 380539,
+              "internal_free": 299215,
+              "psram_total": 15861940,
+              "psram_free": 15859164,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 380539,
+              "internal_free": 243483,
+              "psram_total": 15861940,
+              "psram_free": 14475196,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        }
+      },
+      "note": "取最近完整矩阵归档ELF；具体固件哈希随账目保留。"
+    },
+    "s31-rgb": {
+      "accounts": {
+        "present": {
+          "elf_sha256": "facd2c0c38f05d40961da9d873b3b99d6968c5fa3ba1931b92d399c9a7afe5ea",
+          "iram_bytes": 69120,
+          "dram_static_bytes": 25324,
+          "sram_sections_bytes": 94444,
+          "sections": {
+            ".iram0.text": 69038,
+            ".iram0.text_end": 82,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 17881,
+            ".noinit": 3,
+            ".dram0.bss": 7440,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 491623,
+              "internal_free": 410311,
+              "psram_total": 15827712,
+              "psram_free": 15824128,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 491623,
+              "internal_free": 409667,
+              "psram_total": 15827712,
+              "psram_free": 13519696,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        },
+        "adapter": {
+          "elf_sha256": "dce74a415f3e797058716341a3377b70478bad4d2fa990ed0f0cdd0c6aa0b9c1",
+          "iram_bytes": 68608,
+          "dram_static_bytes": 25584,
+          "sram_sections_bytes": 94192,
+          "sections": {
+            ".iram0.text": 68542,
+            ".iram0.text_end": 66,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 17901,
+            ".noinit": 3,
+            ".dram0.bss": 7672,
+            ".dram0.heap_start": 8
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 491879,
+              "internal_free": 410567,
+              "psram_total": 15849856,
+              "psram_free": 15846384,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 491879,
+              "internal_free": 365547,
+              "psram_total": 15849856,
+              "psram_free": 13541968,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        }
+      },
+      "note": "取最近完整矩阵归档ELF；具体固件哈希随账目保留。"
+    },
+    "p4-dsi": {
+      "accounts": {
+        "present": {
+          "elf_sha256": "de9609dc97202dc9281569e2888a0d9474e00b25b95c179b9a1ed0d29b433a8f",
+          "iram_bytes": 75392,
+          "dram_static_bytes": 25412,
+          "sram_sections_bytes": 100804,
+          "sections": {
+            ".iram0.text": 75388,
+            ".iram0.text_end": 4,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 18132,
+            ".noinit": 0,
+            ".dram0.bss": 7280,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 626391,
+              "internal_free": 542995,
+              "psram_total": 32604544,
+              "psram_free": 32600828,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 626391,
+              "internal_free": 551111,
+              "psram_total": 32604544,
+              "psram_free": 28914280,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        },
+        "adapter": {
+          "elf_sha256": "b2d343c89248ada44790c253dca9d7672ccde7e2faf606b07a42e601f2696c9c",
+          "iram_bytes": 75008,
+          "dram_static_bytes": 25660,
+          "sram_sections_bytes": 100668,
+          "sections": {
+            ".iram0.text": 74908,
+            ".iram0.text_end": 100,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 18140,
+            ".noinit": 0,
+            ".dram0.bss": 7520,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 626535,
+              "internal_free": 543139,
+              "psram_total": 32627200,
+              "psram_free": 32623560,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 626535,
+              "internal_free": 506879,
+              "psram_total": 32627200,
+              "psram_free": 28937012,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        }
+      },
+      "note": "普通性能固件ELF与公共启动堆实测；整套固件账目，不是组件独占。新旧复用项逐项注明来源。"
+    },
+    "s31-qspi": {
+      "accounts": {
+        "present": {
+          "elf_sha256": "fa764a0d21022fa8e47da6bfc6e1f759bea182748ac5543f50d504625d2d6bb1",
+          "iram_bytes": 70656,
+          "dram_static_bytes": 22360,
+          "sram_sections_bytes": 93016,
+          "sections": {
+            ".iram0.text": 70638,
+            ".iram0.text_end": 18,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 14789,
+            ".noinit": 3,
+            ".dram0.bss": 7568,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 493047,
+              "internal_free": 411815,
+              "psram_total": 16777216,
+              "psram_free": 16774784,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 493047,
+              "internal_free": 414919,
+              "psram_total": 16777216,
+              "psram_free": 16774784,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        },
+        "adapter": {
+          "elf_sha256": "a84deccc9eed999d5944de6de7b5faf7ac5cb64121d440b4102bffc7e82e40af",
+          "iram_bytes": 70016,
+          "dram_static_bytes": 22480,
+          "sram_sections_bytes": 92496,
+          "sections": {
+            ".iram0.text": 69940,
+            ".iram0.text_end": 76,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".iram0.end": 0,
+            ".dram0.dummy": 0,
+            ".dram0.data": 14797,
+            ".noinit": 3,
+            ".dram0.bss": 7680,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 493575,
+              "internal_free": 412343,
+              "psram_total": 16777216,
+              "psram_free": 16774784,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 493575,
+              "internal_free": 371071,
+              "psram_total": 16777216,
+              "psram_free": 16774784,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        }
+      },
+      "note": "普通性能固件ELF与公共启动堆实测；整套固件账目，不是组件独占。新旧复用项逐项注明来源。"
+    },
+    "box3-spi": {
+      "accounts": {
+        "present": {
+          "elf_sha256": "dee9ec59f17878ca6666455270e0f4921245aa39ec3226d1473e79cdb12fd835",
+          "iram_bytes": 71680,
+          "dram_static_bytes": 19228,
+          "sram_sections_bytes": 90908,
+          "sections": {
+            ".iram0.vectors": 1028,
+            ".iram0.text": 70527,
+            ".dram0.dummy": 71680,
+            ".dram0.data": 15652,
+            ".noinit": 0,
+            ".dram0.bss": 3576,
+            ".iram0.text_end": 125,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 371451,
+              "internal_free": 277939,
+              "psram_total": 15871492,
+              "psram_free": 15868644,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 371451,
+              "internal_free": 296631,
+              "psram_total": 15871492,
+              "psram_free": 15868644,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        },
+        "adapter": {
+          "elf_sha256": "735fa25826449ae7b925af3a57a03dfa96b8e55b49ab21a6a9d1c903551eafc3",
+          "iram_bytes": 70400,
+          "dram_static_bytes": 19436,
+          "sram_sections_bytes": 89836,
+          "sections": {
+            ".iram0.vectors": 1028,
+            ".iram0.text": 69163,
+            ".dram0.dummy": 70400,
+            ".dram0.data": 15652,
+            ".noinit": 0,
+            ".dram0.bss": 3784,
+            ".iram0.text_end": 209,
+            ".iram0.data": 0,
+            ".iram0.bss": 0,
+            ".dram0.heap_start": 0
+          },
+          "suite_baselines": {
+            "before_init": {
+              "internal_total": 372523,
+              "internal_free": 279011,
+              "psram_total": 15930308,
+              "psram_free": 15927496,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            },
+            "after_init": {
+              "internal_total": 372523,
+              "internal_free": 253327,
+              "psram_total": 15930308,
+              "psram_free": 15927496,
+              "internal_min_free": 0,
+              "psram_min_free": 0
+            }
+          },
+          "jpeg_components": [],
+          "jpeg_symbols": []
+        }
+      },
+      "note": "普通性能固件ELF与公共启动堆实测；整套固件账目，不是组件独占。新旧复用项逐项注明来源。"
+    }
+  }
+}

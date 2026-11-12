@@ -8,9 +8,16 @@
 
 #if CONFIG_EXAMPLE_LCD_INTERFACE_RGB
 
+#include "esp_check.h"
 #include "esp_idf_version.h"
 #include "esp_lcd_panel_rgb.h"
 #include "driver/gpio.h"
+#if CONFIG_EXAMPLE_LCD_S3_EV_GC9503
+#include "driver/i2c_master.h"
+#include "esp_lcd_gc9503.h"
+#include "esp_lcd_panel_io_additions.h"
+#include "esp_io_expander_tca9554.h"
+#endif
 
 static const char *TAG = "hw_lcd_init";
 
@@ -85,9 +92,82 @@ static const char *TAG = "hw_lcd_init";
 #define HW_LCD_BOUNCE_BUFFER_HEIGHT             (20)
 
 static esp_lcd_panel_handle_t s_panel_handle;
+#if CONFIG_EXAMPLE_LCD_S3_EV_GC9503
+static i2c_master_bus_handle_t s_i2c_bus;
+static esp_io_expander_handle_t s_expander;
+#endif
 
 esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle, uint8_t frame_buffer_count, hw_rotation_t rotation)
 {
+#if CONFIG_EXAMPLE_LCD_S3_EV_GC9503
+    if (frame_buffer_count < 1 || frame_buffer_count > 3) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    (void)rotation;
+    ESP_LOGI(TAG, "Initialize GC9503 480x480 RGB panel");
+    gpio_config_t pins = {
+        .pin_bit_mask = 1ULL << 3,
+                             .mode = GPIO_MODE_OUTPUT,
+                             .pull_up_en = true,
+    };
+    ESP_RETURN_ON_ERROR(gpio_config(&pins), TAG, "VSYNC config");
+    ESP_RETURN_ON_ERROR(gpio_set_level(3, 1), TAG, "VSYNC high");
+    i2c_master_bus_config_t i2c = {
+        .i2c_port = 0,
+        .sda_io_num = 47,
+        .scl_io_num = 48,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
+    ESP_RETURN_ON_ERROR(i2c_new_master_bus(&i2c, &s_i2c_bus), TAG, "I2C");
+    ESP_RETURN_ON_ERROR(esp_io_expander_new_i2c_tca9554(s_i2c_bus, 0x20, &s_expander), TAG, "expander");
+    spi_line_config_t lines = {
+        .cs_io_type = IO_TYPE_EXPANDER,
+        .cs_expander_pin = IO_EXPANDER_PIN_NUM_1,
+        .scl_io_type = IO_TYPE_EXPANDER,
+        .scl_expander_pin = IO_EXPANDER_PIN_NUM_2,
+        .sda_io_type = IO_TYPE_EXPANDER,
+        .sda_expander_pin = IO_EXPANDER_PIN_NUM_3,
+        .io_expander = s_expander,
+    };
+    esp_lcd_panel_io_3wire_spi_config_t io_cfg = GC9503_PANEL_IO_3WIRE_SPI_CONFIG(lines, 0);
+    esp_lcd_panel_io_handle_t panel_io = NULL;
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_3wire_spi(&io_cfg, &panel_io), TAG, "panel IO");
+    esp_lcd_rgb_panel_config_t rgb = {
+        .clk_src = LCD_CLK_SRC_PLL160M,
+        .dma_burst_size = 64,
+        .data_width = 16,
+        .in_color_format = LCD_COLOR_FMT_RGB565,
+        .de_gpio_num = 17,
+        .pclk_gpio_num = 9,
+        .vsync_gpio_num = 3,
+        .hsync_gpio_num = 46,
+        .disp_gpio_num = -1,
+        .data_gpio_nums = {10, 11, 12, 13, 14, 21, 8, 18, 45, 38, 39, 40, 41, 42, 2, 1},
+        .timings = GC9503_480_480_PANEL_60HZ_RGB_TIMING(),
+        .flags.fb_in_psram = true,
+        .num_fbs = frame_buffer_count,
+        .bounce_buffer_size_px = HW_LCD_H_RES * 10,
+    };
+    gc9503_vendor_config_t vendor = {
+        .rgb_config = &rgb,
+        .flags.auto_del_panel_io = true,
+    };
+    esp_lcd_panel_dev_config_t device = {
+        .reset_gpio_num = -1,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = 18,
+        .vendor_config = &vendor,
+    };
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_gc9503(panel_io, &device, &s_panel_handle), TAG, "GC9503");
+    ESP_RETURN_ON_ERROR(esp_lcd_panel_init(s_panel_handle), TAG, "panel init");
+    *panel_handle = s_panel_handle;
+    if (io_handle) {
+        *io_handle = NULL;
+    }
+    return ESP_OK;
+#else
     if (frame_buffer_count < 1 || frame_buffer_count > 3) {
         return ESP_ERR_INVALID_ARG;
     }
@@ -155,6 +235,7 @@ esp_err_t hw_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_han
     }
 
     return ESP_OK;
+#endif
 }
 
 esp_err_t hw_lcd_deinit(void)
@@ -164,6 +245,16 @@ esp_err_t hw_lcd_deinit(void)
         esp_lcd_panel_del(s_panel_handle);
         s_panel_handle = NULL;
     }
+#if CONFIG_EXAMPLE_LCD_S3_EV_GC9503
+    if (s_expander) {
+        esp_io_expander_del(s_expander);
+        s_expander = NULL;
+    }
+    if (s_i2c_bus) {
+        i2c_del_master_bus(s_i2c_bus);
+        s_i2c_bus = NULL;
+    }
+#endif
 
     return ESP_OK;
 }

@@ -1,0 +1,28 @@
+name: Present host regression
+on:
+  pull_request:
+    paths:
+      - 'components/display/tools/esp_display_present/**'
+      - 'components/display/tools/esp_lv_present/**'
+      - '.github/workflows/present-host.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sanitize: [false, true]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure, build and test
+        working-directory: components/display/tools/esp_display_present
+        env:
+          SANITIZE: ${{ matrix.sanitize }}
+        run: |
+          if [ "$SANITIZE" = true ]; then
+            python3 dev/tools/dev.py test --sanitize
+          else
+            python3 dev/tools/dev.py test
+          fi

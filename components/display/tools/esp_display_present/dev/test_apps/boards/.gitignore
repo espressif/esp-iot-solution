@@ -1,0 +1,11 @@
+/deps/
+/artifacts/
+/build*/
+/sdkconfig
+/sdkconfig.old
+/sdkconfig.s3*
+/sdkconfig.p4*
+
+__pycache__/
+
+/sdkconfig.s31*

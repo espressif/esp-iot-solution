@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(ENV{IDF_COMPONENT_MANAGER} "0")
+set(COMPONENTS main)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(present_rgb_events)

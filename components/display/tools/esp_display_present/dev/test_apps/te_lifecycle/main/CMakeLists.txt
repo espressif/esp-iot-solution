@@ -1,0 +1,5 @@
+set(PRESENT_BOARD "$ENV{PRESENT_TEST_PRESENT_BOARD}")
+set(PRESENT_IMPLEMENTATION "$ENV{PRESENT_TEST_PRESENT_IMPLEMENTATION}")
+set(PRESENT_CASE_DIR "$ENV{PRESENT_TEST_PRESENT_CASE_DIR}")
+set(PRESENT_ROOT "$ENV{PRESENT_TEST_PRESENT_ROOT}")
+idf_component_register(SRCS main.c "../../boards/main/board_qspi.c" INCLUDE_DIRS "../../boards/main" PRIV_INCLUDE_DIRS "${PRESENT_ROOT}/src" REQUIRES esp_display_present esp_lcd esp_timer esp_psram esp_driver_gpio esp_driver_spi efuse esp_mm esp_lcd_co5300)

@@ -1,14 +1,25 @@
+## Unreleased — unified presentation engine
+
+- Fix fault classification at the presenter facade: only an original
+  `ESP_ERR_TIMEOUT` is reported as `ESP_DISPLAY_PRESENT_FAULT_TRANSFER_TIMEOUT`.
+  Other accepted transfer/copy failures now report the new
+  `ESP_DISPLAY_PRESENT_FAULT_TRANSFER_FAILED`, and the new
+  `esp_display_presenter_get_fault_error()` returns the original error before
+  classification. This changes the reported reason for non-timeout failures;
+  applications must not treat the new reason as a timeout. The classification
+  contract and matrix are documented in `STATE_MACHINE.md` and covered by
+  `fault_classification_matrix` in `dev/tests/test_legacy_facade.c`.
+- Keep the main presenter API and component name, backed by one internal engine.
+- Remove the superseded implementation and private-source dependencies.
+- Require multi-framebuffer scanout for RGB/MIPI; reject NONE and single-FB
+  configurations. AUTO selects double/triple PARTIAL against the actual pool.
+- Remove full-screen placeholder canvases for LVGL FULL/native DIRECT.
+- Move the former public geometry interfaces to internal headers; consumers of
+  those interfaces require migration.
+- See `COMPATIBILITY.md`, `docs/MODE_ARCHITECTURE.md` and `MIGRATION_STATUS.md`
+  for current contracts. Historical migration records are under `dev/history/`.
+
 # Changelog
-
-## 1.2.2 - 2026-11-10
-
-- Fix PPA rotation buffer alignment, capacity, strides and dimension checks.
-- Fix TE input setup and automatic polarity detection.
-
-## 1.2.1 - 2026-11-09
-
-- Bound GRAM draw-buffer acquisition to the transfer timeout, retain DMA-owned buffers
-  when completion callbacks are missing, and expose the resulting presenter fault.
 
 ## 1.2.0 - 2026-10-27
 
