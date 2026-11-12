@@ -233,7 +233,7 @@ static void button_handler(button_dev_t *btn)
 
             /** Calling callbacks for BUTTON_LONG_PRESS_START based on press_time */
             uint32_t pressed_time = iot_button_get_pressed_time(btn);
-            if (btn->cb_info[BUTTON_LONG_PRESS_START]) {
+            if (btn->cb_info[BUTTON_LONG_PRESS_START] && btn->count[0] < btn->size[BUTTON_LONG_PRESS_START]) {
                 button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_START];
                 uint16_t time = cb_info[btn->count[0]].event_args.long_press.press_time;
                 if (btn->long_press_ticks * TICKS_INTERVAL > time) {
@@ -258,7 +258,7 @@ static void button_handler(button_dev_t *btn)
             }
 
             /** Updating counter for BUTTON_LONG_PRESS_UP press_time */
-            if (btn->cb_info[BUTTON_LONG_PRESS_UP]) {
+            if (btn->cb_info[BUTTON_LONG_PRESS_UP] && btn->count[1] + 1 < btn->size[BUTTON_LONG_PRESS_UP]) {
                 button_cb_info_t *cb_info = btn->cb_info[BUTTON_LONG_PRESS_UP];
                 uint16_t time = cb_info[btn->count[1] + 1].event_args.long_press.press_time;
                 if (btn->long_press_ticks * TICKS_INTERVAL > time) {
