@@ -970,13 +970,38 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     void *lvgl_secondary = (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
                             pub->te_sync.pipeline != ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL) ?
                            NULL : cfg->draw_buf_secondary;
-    lv_display_set_buffers(disp,
-                           cfg->draw_buf_primary,
-                           lvgl_secondary,
-                           buf_bytes,
-                           render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL ? LV_DISPLAY_RENDER_MODE_FULL :
-                           render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT ? LV_DISPLAY_RENDER_MODE_DIRECT :
-                           LV_DISPLAY_RENDER_MODE_PARTIAL);
+    
+    const bool is_mipi_dsi = (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
+    const lv_display_render_mode_t lv_render_mode =
+        render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL
+            ? LV_DISPLAY_RENDER_MODE_FULL
+        : render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT
+            ? LV_DISPLAY_RENDER_MODE_DIRECT
+            : LV_DISPLAY_RENDER_MODE_PARTIAL;
+
+    /* MIPI DSI: use a packed stride (rotated width * bytes-per-pixel) so the
+     * LVGL draw buffer is already compact and the flush path can skip the
+     * per-row compaction copy.
+     *
+     * ESP-IDF DPI driver expects the source buffer to be compact:
+     *   "please note, we assume the user provided draw_buffer is compact,
+     *    but the destination is a sub-window of the frame buffer, so we need
+     *    to skip the stride"
+     * See dpi_panel_draw_bitmap_2d() in
+     *   esp-idf/components/esp_lcd/dsi/esp_lcd_panel_dpi.c
+     * Non-DSI interfaces and PARTIAL mode keep LVGL's auto stride. */
+    if (is_mipi_dsi && lv_render_mode != LV_DISPLAY_RENDER_MODE_PARTIAL) {
+        const uint32_t disp_w = (pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_90 ||
+                                 pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_270)
+                                    ? pub->profile.ver_res
+                                    : pub->profile.hor_res;
+        const uint32_t packed_stride = disp_w * lv_color_format_get_size(color_format);
+        lv_display_set_buffers_with_stride(
+            disp, cfg->draw_buf_primary, lvgl_secondary, buf_bytes, packed_stride, lv_render_mode);
+    } else {
+        lv_display_set_buffers(
+            disp, cfg->draw_buf_primary, lvgl_secondary, buf_bytes, lv_render_mode);
+    }
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
