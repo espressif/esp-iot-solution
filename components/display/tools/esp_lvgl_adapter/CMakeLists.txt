@@ -24,6 +24,14 @@ else()
 endif()
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
+if(CMAKE_BUILD_EARLY_EXPANSION)
+    # The final build list is not populated yet; these directories are already discovered.
+    idf_build_get_property(_adapter_component_dirs BUILD_COMPONENT_DIRS)
+    foreach(_adapter_component_dir IN LISTS _adapter_component_dirs)
+        get_filename_component(_adapter_component_name "${_adapter_component_dir}" NAME)
+        list(APPEND build_components "${_adapter_component_name}")
+    endforeach()
+endif()
 
 set(lvgl_name "")
 if("lvgl" IN_LIST build_components)
@@ -38,12 +46,35 @@ endif()
 
 set(lvgl_ver "")
 if(DEFINED ENV{LVGL_VERSION} AND NOT "$ENV{LVGL_VERSION}" STREQUAL "")
-    set(lvgl_ver $ENV{LVGL_VERSION})
-else()
+    set(lvgl_ver "$ENV{LVGL_VERSION}")
+elseif("${lvgl_name}" IN_LIST build_components)
     idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION)
 endif()
 
+if("${lvgl_ver}" STREQUAL "" AND "${lvgl_name}" IN_LIST build_components AND
+   NOT CMAKE_BUILD_EARLY_EXPANSION)
+    # Local source components may have no manifest version. Only the major version
+    # is needed to select the LVGL bridge and integration hooks below.
+    idf_component_get_property(_adapter_lvgl_dir ${lvgl_name} COMPONENT_DIR)
+    foreach(_adapter_version_header IN ITEMS "include/lvgl/lv_version.h" "lv_version.h" "lvgl.h")
+        set(_adapter_version_header "${_adapter_lvgl_dir}/${_adapter_version_header}")
+        if(EXISTS "${_adapter_version_header}")
+            set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_adapter_version_header}")
+            file(STRINGS "${_adapter_version_header}" _adapter_major_line LIMIT_COUNT 1
+                 REGEX "^[ \t]*#[ \t]*define[ \t]+LVGL_VERSION_MAJOR[ \t]+[0-9]+")
+            if(_adapter_major_line MATCHES "LVGL_VERSION_MAJOR[ \t]+([0-9]+)")
+                set(lvgl_ver "${CMAKE_MATCH_1}.0.0")
+                break()
+            endif()
+        endif()
+    endforeach()
+    if("${lvgl_ver}" STREQUAL "")
+        message(WARNING "Cannot determine LVGL version; assuming LVGL 9. Set LVGL_VERSION for a custom LVGL source layout.")
+    endif()
+endif()
+
 if("${lvgl_ver}" STREQUAL "")
+    # Retain the v9 fallback for discovery and unrecognized custom source layouts.
     set(lvgl_ver "9.0.0")
 endif()
 
@@ -63,7 +94,6 @@ set(ADAPTER_PRIV_INCLUDES
 
 list(APPEND ADAPTER_PRIV_INCLUDES "src/input")
 
-list(APPEND ADAPTER_PRIV_REQ espressif__esp_lcd_touch)
 list(APPEND ADAPTER_SRCS
     "src/input/esp_lv_adapter_input_touch.c"
 )
@@ -88,7 +118,7 @@ else()
     list(APPEND ADAPTER_PRIV_INCLUDES "src/display/bridge/v9")
 endif()
 
-set(ADAPTER_REQ esp_lcd ${lvgl_name})
+set(ADAPTER_REQ esp_lcd ${lvgl_name} espressif__esp_lcd_touch)
 
 idf_component_register(
     SRCS ${ADAPTER_SRCS}
