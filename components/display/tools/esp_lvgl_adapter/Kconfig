@@ -9,7 +9,7 @@ config ESP_LVGL_ADAPTER_ENABLE_DECODER
     default n
 
 config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
-    bool "Draw a rotated DOUBLE_DIRECT display in the panel's orientation (LVGL v9)"
+    bool "Draw a rotated DOUBLE_DIRECT display in the panel's orientation (LVGL 9.5/9.6)"
     default n
     help
         With rotation 90, 180 or 270 and ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT,
@@ -29,11 +29,17 @@ config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
         wait is bounded; a PPA that stops answering falls back to the CPU.
 
         Requirements:
-        - LVGL v9 with CONFIG_LV_USE_MATRIX and CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX
+        - LVGL 9.5.x or 9.6.x with CONFIG_LV_USE_MATRIX and CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX
         - RGB or MIPI DSI panel, ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT
 
-        Other modes, rotation 0 and LVGL v8 are unchanged. Under this option,
-        dummy-draw frames are shown as the panel stores them (not rotated).
+        Object-style rotation and scaling use software bitmap layers on these
+        DOUBLE_DIRECT displays, including at screen rotation 0. Screen matrix
+        rotation remains accelerated. Layers require additional memory and
+        resampling time for transformed objects; this does not add support for
+        skew or arbitrary custom matrices. Other displays keep their policy.
+
+        Other rendering modes and LVGL v8 retain their existing behavior.
+        Dummy-draw frames are shown as the panel stores them (not rotated).
 
 config ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB
     int "PSRAM budget for images cached in the panel's orientation (KiB)"

@@ -1111,6 +1111,16 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     cfg->lv_disp = disp;
 
 #if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    /* Object-style transforms need LVGL's bitmap-layer path: the ortho unit
+     * only handles the display's signed-permutation matrix. Keep this local
+     * to software DOUBLE_DIRECT RGB/DSI displays, including rotation zero;
+     * other displays retain their matrix-capable backend's original path. */
+    if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT &&
+            pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
+            (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+             pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI)) {
+        lv_display_set_software_object_transforms(disp, true);
+    }
     if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
         display_manager_setup_rotate_in_draw(disp, draw_rotation);
     }

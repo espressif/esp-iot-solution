@@ -676,7 +676,7 @@ static void panel_wake_cb(void *user_data)
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
-| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9：以面板原生方向绘制旋转后的 `DOUBLE_DIRECT` 显示（见旋转限制） |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL 9.5/9.6：以面板原生方向绘制旋转后的 `DOUBLE_DIRECT` 显示（见旋转限制） |
 | `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | 不可变旋转图像的可选 PSRAM 预算，默认为 0（关闭） |
 
 **默认任务栈大小**：
@@ -697,7 +697,7 @@ static void panel_wake_cb(void *user_data)
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的帧缓冲中：不再先正向绘制再旋转拷贝。在三个帧缓冲中，LVGL 绘制到既未显示也未等待显示的那一个，因此一帧不必等到面板下一次刷新。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
+  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL 9.5/9.6，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的帧缓冲中：不再先正向绘制再旋转拷贝。在三个帧缓冲中，LVGL 绘制到既未显示也未等待显示的那一个，因此一帧不必等到面板下一次刷新。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射
@@ -708,6 +708,20 @@ static void panel_wake_cb(void *user_data)
   - 旋转由 LVGL 在软件层面处理
   - 支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局
   - 无需额外配置，直接通过 `rotation` 参数设置
+
+### 对象旋转与缩放
+
+rotation-in-draw 的兼容补丁支持 LVGL 9.5.x 和 9.6.x。对其他 LVGL 9 版本启用
+该选项会明确报错；关闭该选项时，适配器原有的版本兼容范围保持不变。
+
+对象样式的旋转和缩放（包括父对象及嵌套对象）使用 LVGL 软件位图图层，显示整体的
+矩阵旋转仍由 `lv_draw_ortho` 加速。该策略只为本适配器使用软件渲染的
+`DOUBLE_DIRECT` RGB/DSI 显示启用，也包括屏幕旋转为 0 的情况，因为矩阵变换编译选项
+是全局的。LVGL 中的逐显示策略默认关闭，其他显示保留原有渲染器的矩阵路径。
+
+自定义对象矩阵和 skew 保留原有路径；本补丁不增加通用仿射或 skew 的软件支持。
+变换对象的位图图层会增加内存和重采样开销，正确性测试不能作为性能提升测量。
+独立软件参考图像、硬件验证及复现步骤见 [host 测试](test_apps/host_ortho/README.md)。
 
 ### 重复绘制不可变图像
 

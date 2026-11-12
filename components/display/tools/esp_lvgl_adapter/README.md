@@ -250,7 +250,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **Frame Buffer Count Rules**:
 - Non-zero rotation (except `DOUBLE_PARTIAL`) or triple-buffer modes: **3** frame buffers
-- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9), rotated: **3**, as without the option; LVGL draws the next frame into the third while the panel waits for its refresh (with 2 it works, and each frame waits for that refresh)
+- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6), rotated: **3**, as without the option; LVGL draws the next frame into the third while the panel waits for its refresh (with 2 it works, and each frame waits for that refresh)
 - Double-buffer modes without rotation, and `DOUBLE_PARTIAL`: **2** frame buffers
 - Single-buffer mode: **1** frame buffer
 
@@ -682,7 +682,7 @@ Configure via `idf.py menuconfig`:
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
-| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL v9: draw a rotated `DOUBLE_DIRECT` display in the panel's orientation (see Rotation Limitations) |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL 9.5/9.6: draw a rotated `DOUBLE_DIRECT` display in the panel's orientation (see Rotation Limitations) |
 | `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | Optional PSRAM budget for immutable rotated images; zero disables it (default) |
 
 **Default Task Stack Size**:
@@ -703,7 +703,7 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
+  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
@@ -714,6 +714,27 @@ Configure via `idf.py menuconfig`:
   - Rotation is handled at the software level by LVGL
   - Supports both I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts
   - No additional configuration needed, just set via the `rotation` parameter
+
+### Object rotation and scaling
+
+The compatibility hooks support LVGL 9.5.x and 9.6.x. Enabling this option
+with another LVGL 9 version fails configuration explicitly; leaving it disabled
+retains the adapter's existing version compatibility.
+
+Object-style rotation and scale, including transformed parents and nested objects,
+use LVGL's software bitmap layers on this adapter's software `DOUBLE_DIRECT`
+RGB/DSI displays. This includes screen rotation 0: the matrix-transform build
+option is global, so an unrotated display also needs the object policy. The
+screen's matrix rotation still goes through `lv_draw_ortho`.
+
+The per-display policy defaults to false in LVGL and is enabled only for these
+adapter displays. Other displays keep their renderer's matrix path. Custom object
+matrices and skew stay on their existing path; general affine/skew software support
+is not added. Bitmap layers need additional memory and resampling time for
+transformed objects, so correctness checks are not speed measurements.
+
+Independent pixel regressions and hardware validation are documented in
+[the host tests](test_apps/host_ortho/README.md).
 
 ### Repeated images with rotation-in-draw
 

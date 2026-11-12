@@ -2,6 +2,10 @@
 
 ## v0.8.0 (unreleased)
 
+* Preserve object-style rotation/scaling with a per-display software-layer policy while retaining matrix-based screen rotation. Other displays keep the default matrix path; custom matrices and skew are not redirected into an unsupported bitmap path. Document LVGL 9.5/9.6 compatibility and the extra layer memory/resampling cost.
+* Bound rotated-image cache preparation to 128 KiB transfers under the existing 250 ms no-progress deadline, release LVGL's global OS mutex on teardown, and wait for remote worker execution to stop before owner deletion.
+* Add independent transformed-object pixel comparisons, per-display policy checks and negative controls, alongside the existing cache, FIFO, font and FreeRTOS shutdown regressions. Validate short transformed-object runs on Waveshare 7B and original Tab5 hardware.
+
 * Add an optional PSRAM cache for immutable images in rotation-in-draw (`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB`, zero/off by default). Repeated opaque, unscaled images are rotated once after warm-up and then copied straight. The bounded LRU includes allocation padding in its budget, excludes modifiable images, and frees its pixels at `lv_deinit()`.
 * Serialize only text drawing and consumption of glyph bitmaps with a dedicated mutex, since application font callbacks need not be reentrant; the rest of both tiles remains parallel. This replaces the coarse tile-pair guard that reduced dashboard FPS on Tab5 and Waveshare 7B.
 * Keep completed LVGL FreeRTOS worker tasks suspended until their owner deletes them, preventing a double task deletion during `lv_deinit()`; add a repeated lifecycle target test.

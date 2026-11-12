@@ -1493,7 +1493,29 @@ static bool cache_fill(cached_t * c, const ortho_t * o, const lv_image_dsc_t * i
     c->nat = tile_aligned(a);
     c->bytes = bytes;
     g_cache_bytes += bytes;
-    turn_or_cpu(o, c->cf, px, c->nat, (int32_t)row, &room, (uint8_t *)img->data, sstride, up, whole, true);
+    /* A cold flash image can take longer than the PPA's no-progress timeout
+     * as one full-screen transaction. Normal partial refreshes turn smaller
+     * bands, but the cache builder used to submit the whole image at once.
+     * Bound each preparation step to 128 KiB and wait between steps, so a
+     * large image makes observable progress without relaxing stall detection.
+     * Cut in source coordinates to keep consecutive source rows together. */
+    const int32_t max_pixels = (128 * 1024) / px;
+    const int32_t band_width = LV_MIN(lv_area_get_width(up), max_pixels);
+    for (int32_t x = up->x1; x <= up->x2; x += band_width) {
+        const int32_t w = LV_MIN(band_width, up->x2 - x + 1);
+        int32_t band_rows = max_pixels / w;
+        if (band_rows >= 16) {
+            band_rows &= ~15;
+        }
+        for (int32_t y = up->y1; y <= up->y2; y += band_rows) {
+            const lv_area_t band = {x, y, x + w - 1, LV_MIN(y + band_rows - 1, up->y2)};
+            lv_area_t native;
+            ortho_area(o, &band, &native);
+            turn_or_cpu(o, c->cf, px, c->nat, (int32_t)row, &room, (uint8_t *)img->data, sstride,
+                        up, &native, true);
+            fence();
+        }
+    }
     g_stats.image_cache_builds++;
     g_stats.image_cache_bytes = (uint32_t)g_cache_bytes;
     return true;

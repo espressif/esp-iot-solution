@@ -47,6 +47,11 @@ if("${lvgl_ver}" STREQUAL "")
     set(lvgl_ver "9.0.0")
 endif()
 
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0" AND
+   (lvgl_ver VERSION_LESS "9.5.0" OR NOT lvgl_ver VERSION_LESS "9.7.0"))
+    message(FATAL_ERROR "esp_lvgl_adapter: ROTATE_IN_DRAW supports LVGL 9.5.x and 9.6.x; disable this option for other LVGL versions")
+endif()
+
 set(ADAPTER_SRCS
     "src/adapter/esp_lv_adapter.c"
     "src/display/display_manager.c"
@@ -127,45 +132,21 @@ function(esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook)
     if(NOT CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW OR NOT lvgl_comp_dir OR lvgl_ver VERSION_LESS "9.0.0")
         return()
     endif()
-    # The patch may remain in a managed component after reconfiguration. Keep
-    # its behavior conditional so disabling ROTATE_IN_DRAW restores upstream.
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tools/patch_lvgl_thread_shutdown.py"
+                "${lvgl_comp_dir}/src/osal/lv_freertos.c"
+        RESULT_VARIABLE _thread_shutdown_result
+        OUTPUT_VARIABLE _thread_shutdown_status
+        ERROR_VARIABLE _thread_shutdown_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _thread_shutdown_result EQUAL 0)
+        message(FATAL_ERROR "esp_lvgl_adapter: cannot safely configure LVGL thread ownership: ${_thread_shutdown_error}")
+    endif()
+    # Managed sources may be reused when the option is disabled. Both the
+    # callback-return and delete barriers remain conditional on this flag.
     target_compile_definitions(${lvgl_comp_lib} PRIVATE ESP_LVGL_ADAPTER_THREAD_OWNER_DELETE=1)
-    set(_lv_freertos "${lvgl_comp_dir}/src/osal/lv_freertos.c")
-    if(NOT EXISTS "${_lv_freertos}")
-        return()
-    endif()
-    file(READ "${_lv_freertos}" _content)
-    string(FIND "${_content}" "esp_lvgl_adapter: owner deletes completed threads" _ready)
-    if(NOT _ready EQUAL -1)
-        return()
-    endif()
-    # LVGL's SW-unit destructor signals exit and then deletes the thread.
-    # A callback returning on the other core must not self-delete first:
-    # vTaskDelete(handle) would then use a freed TCB (observed at lv_deinit).
-    set(_old [[    pxThread->pvStartRoutine((void *)pxThread->pTaskArg);
-
-    vTaskDelete(NULL);]])
-    set(_new [[    pxThread->pvStartRoutine((void *)pxThread->pTaskArg);
-
-#if defined(ESP_PLATFORM) && defined(ESP_LVGL_ADAPTER_THREAD_OWNER_DELETE)
-    /* esp_lvgl_adapter: owner deletes completed threads. Keep the TCB and
-     * caps-allocated stack valid until lv_thread_delete() releases them. */
-    for(;;) {
-        vTaskSuspend(NULL);
-    }
-#else
-    vTaskDelete(NULL);
-#endif]])
-    string(FIND "${_content}" "${_old}" _found)
-    if(_found EQUAL -1)
-        # An upstream backend may already have changed its exit ownership.
-        # Do not rewrite an unrecognized implementation.
-        message(WARNING "esp_lvgl_adapter: LVGL FreeRTOS thread-return layout not recognized; check completed-thread ownership")
-        return()
-    endif()
-    string(REPLACE "${_old}" "${_new}" _content "${_content}")
-    file(WRITE "${_lv_freertos}" "${_content}")
-    message(STATUS "esp_lvgl_adapter: configured LVGL FreeRTOS completed-thread ownership")
+    message(STATUS "esp_lvgl_adapter: LVGL thread shutdown ${_thread_shutdown_status}")
 endfunction()
 
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
@@ -232,6 +213,48 @@ if("${lvgl_name}" IN_LIST build_components)
 endif()
 
 esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook()
+
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_comp_dir AND
+   lvgl_comp_lib AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0")
+    # Screen matrices are signed permutations; object-style transforms can
+    # be general affine matrices which neither ortho nor SW can execute.
+    # Install an explicit, default-off per-display policy. The display manager
+    # opts only its software DOUBLE_DIRECT RGB/DSI displays into bitmap layers.
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_lvgl_object_transforms.py"
+                "${lvgl_comp_dir}"
+        RESULT_VARIABLE _object_transform_result
+        OUTPUT_VARIABLE _object_transform_status
+        ERROR_VARIABLE _object_transform_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _object_transform_result EQUAL 0)
+        message(FATAL_ERROR "esp_lvgl_adapter: cannot configure object transform layers: ${_object_transform_error}")
+    endif()
+    message(STATUS "esp_lvgl_adapter: LVGL object-transform policy ${_object_transform_status}")
+endif()
+
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_comp_dir AND
+   lvgl_comp_lib AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0")
+    # LVGL 9.5/9.6 create a global OS mutex in lv_os_init(), but do not
+    # release it in lv_deinit(). FreeRTOS loses one semaphore per restart.
+    # Keep the inserted code conditional if a managed copy is later reused
+    # with ROTATE_IN_DRAW disabled; recognize an upstream cleanup and skip it.
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_lvgl_os_cleanup.py"
+                "${lvgl_comp_dir}/src/lv_init.c"
+        RESULT_VARIABLE _os_cleanup_result
+        OUTPUT_VARIABLE _os_cleanup_status
+        ERROR_VARIABLE _os_cleanup_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(_os_cleanup_result EQUAL 0)
+        target_compile_definitions(${lvgl_comp_lib} PRIVATE ESP_LVGL_ADAPTER_OS_MUTEX_CLEANUP=1)
+        message(STATUS "esp_lvgl_adapter: LVGL OS cleanup ${_os_cleanup_status}")
+    else()
+        message(WARNING "esp_lvgl_adapter: LVGL OS cleanup was not installed: ${_os_cleanup_error}")
+    endif()
+endif()
 
 function(esp_lv_adapter_target_compile_definitions target_name visibility)
     if("${target_name}" STREQUAL "")

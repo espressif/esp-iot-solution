@@ -655,9 +655,11 @@ void lv_draw_ortho_ppa_describe_stall(lv_draw_ortho_ppa_line_cb_t line, void * u
         return;
     }
     const uint8_t want = g_stuck_engine == 2 ? 2 : 0xFF;   /* 0xFF: either turn kind */
-    char buf[120];
-    snprintf(buf, sizeof(buf), "the %s engine: %u handed to it, %u finished", g_stuck_engine == 2 ? "fill" : "turning",
-             (unsigned)g_stuck_queued, (unsigned)g_stuck_done);
+    char buf[180];
+    const uint32_t done_now = g_stuck_engine == 2 ? g_fill_done : g_done;
+    snprintf(buf, sizeof(buf), "the %s engine: %u handed to it, %u finished at the %u ms deadline, %u finished now",
+             g_stuck_engine == 2 ? "fill" : "turning", (unsigned)g_stuck_queued, (unsigned)g_stuck_done,
+             (unsigned)LV_DRAW_ORTHO_PPA_TIMEOUT_MS, (unsigned)done_now);
     line(buf, user);
     const uint32_t first = g_trail_n > TRAIL ? g_trail_n - TRAIL : 0;
     const trail_t * last_done = NULL;

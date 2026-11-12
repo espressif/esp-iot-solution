@@ -9,6 +9,7 @@ controls; the fake PPA and font regression use the newer board-tested source.
 """
 
 import argparse
+import importlib.util
 import io
 import os
 from pathlib import Path
@@ -21,9 +22,96 @@ FIXTURES = '6cf0eed1277032489fd0281890b9a326c93f063f'
 CACHE_SUITE = '9db8952fc7f06438819fd4aaf28f5fb8a35a56b7'
 ADAPTER = Path(__file__).resolve().parents[2]
 UNIT = ADAPTER / 'src/display/rotate_in_draw'
+_cleanup_spec = importlib.util.spec_from_file_location('patch_lvgl_os_cleanup', ADAPTER / 'tools/patch_lvgl_os_cleanup.py')
+_cleanup = importlib.util.module_from_spec(_cleanup_spec)
+_cleanup_spec.loader.exec_module(_cleanup)
+_object_spec = importlib.util.spec_from_file_location('patch_lvgl_object_transforms', ADAPTER / 'tools/patch_lvgl_object_transforms.py')
+_object_policy = importlib.util.module_from_spec(_object_spec)
+_object_spec.loader.exec_module(_object_policy)
+
+MUTEX_SPY = r"""
+#if LV_USE_OS != LV_OS_NONE
+#include <stdatomic.h>
+#include "src/osal/lv_os_private.h"
+static _Atomic unsigned s_os_mutex_inits, s_os_mutex_deletes;
+lv_result_t __real_lv_mutex_init(lv_mutex_t *mutex);
+lv_result_t __real_lv_mutex_delete(lv_mutex_t *mutex);
+lv_result_t __wrap_lv_mutex_init(lv_mutex_t *mutex)
+{
+    const lv_result_t result = __real_lv_mutex_init(mutex);
+    if(result == LV_RESULT_OK) s_os_mutex_inits++;
+    return result;
+}
+lv_result_t __wrap_lv_mutex_delete(lv_mutex_t *mutex)
+{
+    const lv_result_t result = __real_lv_mutex_delete(mutex);
+    if(result == LV_RESULT_OK) s_os_mutex_deletes++;
+    return result;
+}
+#endif
+"""
 
 CLEANUP_CASE = r"""
 extern int g_p4_bad_geometry;
+extern uint32_t g_p4_slow_out_width, g_p4_slow_out_height, g_p4_slow_max_bytes;
+
+static void check_cache_progress(void)
+{
+    const lv_display_rotation_t rotations[] = {
+        LV_DISPLAY_ROTATION_90, LV_DISPLAY_ROTATION_180, LV_DISPLAY_ROTATION_270
+    };
+    for(unsigned k = 0; k < sizeof(rotations) / sizeof(rotations[0]); k++) {
+        const lv_display_rotation_t rot = rotations[k];
+        const bool quarter = rot != LV_DISPLAY_ROTATION_180;
+        const int nw = quarter ? 720 : 1280, nh = quarter ? 1280 : 720;
+        lv_draw_ortho_set_window(NULL, NULL);
+        lv_draw_ortho_ppa_init();
+        lv_draw_ortho_set_image_cache(4 * 1024 * 1024);
+        g_wall = image_of(1280, 720, LV_COLOR_FORMAT_RGB565, 29);
+        g_wall_constant = true;
+        lv_draw_ortho_set_image_constant_cb(wall_constant);
+        screen_t *screen = make_screen(nw, nh, LV_COLOR_FORMAT_RGB565, rot, true, true);
+        lv_obj_t *image = lv_image_create(lv_display_get_screen_active(screen->disp));
+        lv_image_set_src(image, g_wall);
+        lv_obj_set_pos(image, 0, 0);
+        /* Only a full-height output is the new cache, not the small partial
+         * display bands. At 4 bytes/us the full 1.8 MiB job needs 460 ms;
+         * bounded bands finish well inside the unchanged 250 ms watchdog. */
+        g_p4_slow_out_width = (uint32_t)nw;
+        g_p4_slow_out_height = (uint32_t)nh;
+        g_p4_slow_max_bytes = 0;
+        for(int i = 0; i < 3; i++) {
+            lv_obj_invalidate(image);
+            lv_refr_now(screen->disp);
+        }
+        const lv_draw_ortho_stats_t st = *lv_draw_ortho_get_stats();
+        uint8_t *expected = malloc((size_t)screen->stride * nh);
+        turn_buffer(g_wall->data, expected, 1280, 720, g_wall->header.stride,
+                    screen->stride, rot, LV_COLOR_FORMAT_RGB565);
+        const bool pixels_ok = memcmp(expected, screen->buf, (size_t)screen->stride * nh) == 0;
+        g_cases++;
+        if(!st.turner_failed && st.images_cached > 0 && pixels_ok &&
+           g_p4_slow_max_bytes > 0 && g_p4_slow_max_bytes <= 128 * 1024)
+            printf("  ok    cache preparation at %d: slow transactions make progress, peak %u bytes, pixels match\n",
+                   (int)rot, g_p4_slow_max_bytes);
+        else {
+            printf("  FAIL  cache preparation progress at %d: failed=%u peak=%u cached=%u pixels=%d\n",
+                   (int)rot, st.turner_failed, g_p4_slow_max_bytes, st.images_cached, pixels_ok);
+            g_failures++;
+        }
+        g_p4_slow_out_height = 0;
+        if(st.turner_failed) p4fake_reset(); /* discard a mutant's timed-out DMA before freeing its buffers */
+        free(expected);
+        drop_screen(screen);
+        lv_draw_ortho_set_image_cache(0);
+        lv_draw_ortho_set_image_constant_cb(NULL);
+        lv_draw_ortho_ppa_deinit();
+        free((void *)g_wall->data);
+        free(g_wall);
+        g_wall = NULL;
+        g_wall_constant = false;
+    }
+}
 
 static void check_padded_cache_geometry(void)
 {
@@ -78,6 +166,15 @@ static void check_cache_deinit(void)
     const bool held = lv_draw_ortho_get_stats()->image_cache_bytes > 0;
     drop_screen(screen);
     lv_deinit();
+#if LV_USE_OS != LV_OS_NONE
+    g_cases++;
+    if(s_os_mutex_inits == s_os_mutex_deletes)
+        printf("  ok    lv_deinit releases all OS mutexes (%u created, %u deleted)\n", s_os_mutex_inits, s_os_mutex_deletes);
+    else {
+        printf("  FAIL  OS mutex lifecycle: %u created, %u deleted\n", s_os_mutex_inits, s_os_mutex_deletes);
+        g_failures++;
+    }
+#endif
     g_cases++;
     if(held && lv_draw_ortho_get_stats()->image_cache_bytes == 0)
         printf("  ok    lv_deinit releases cached pixel allocations\n");
@@ -121,16 +218,52 @@ def stage(reference, work):
     assert code.count(before) == 1
     code = code.replace(before, 'if((size_t)op->out.pic_w * op->out.pic_h * px > op->out.buffer_size) { g_p4_bad_geometry++; return ESP_ERR_INVALID_ARG; }')
     code = code.replace('esp_err_t ppa_do_scale_rotate_mirror(', 'int g_p4_bad_geometry;\n\nesp_err_t ppa_do_scale_rotate_mirror(', 1)
+    original_delay = '''void esp_rom_delay_us(uint32_t us)
+{
+    (void)us;
+    finish_one();
+}'''
+    timed_delay = '''uint32_t g_p4_slow_out_width, g_p4_slow_out_height, g_p4_slow_max_bytes;
+static int g_slow_qid;
+static uint32_t g_slow_remaining;
+
+void esp_rom_delay_us(uint32_t us)
+{
+    if(g_p4_slow_out_height && g_count && !g_queue[g_head].is_fill &&
+       g_queue[g_head].op.out.pic_w >= g_p4_slow_out_width &&
+       g_queue[g_head].op.out.pic_h >= g_p4_slow_out_height &&
+       g_queue[g_head].op.rotation_angle != PPA_SRM_ROTATION_ANGLE_0) {
+        const ppa_srm_oper_config_t *op = &g_queue[g_head].op;
+        const uint32_t bytes = op->in.block_w * op->in.block_h * 2;
+        if(bytes > g_p4_slow_max_bytes) g_p4_slow_max_bytes = bytes;
+        if(g_slow_qid != g_queue[g_head].qid) {
+            g_slow_qid = g_queue[g_head].qid;
+            g_slow_remaining = bytes / 4;
+        }
+        if(g_slow_remaining > us) {
+            g_slow_remaining -= us;
+            return;
+        }
+    }
+    finish_one();
+}'''
+    assert code.count(original_delay) == 1
+    code = code.replace(original_delay, timed_delay)
     fake.write_text(code)
     current = git(reference, 'show', f"{FIXTURES}:test/main.c").decode()
     main = git(reference, 'show', f"{CACHE_SUITE}:test/main.c").decode()
+    # Reference displays keep LVGL's original policy. Subject displays use
+    # the same explicit opt-in as the adapter, including screen rotation 0.
+    needle = '    if(matrix) lv_display_set_matrix_rotation(s.disp, true);'
+    assert main.count(needle) == 1
+    main = main.replace(needle, '    if(matrix) lv_display_set_software_object_transforms(s.disp, true);\n' + needle)
     start = current.index('/* A font whose engine')
     end = current.index('/* The same scenes with the PPA', start)
     font = current[start:end]
     font = font.replace('    lv_draw_ortho_set_tile_width(256);\n', '')
     font = font.replace('    lv_draw_ortho_set_tile_width(0);\n', '')
     main = main.replace('/* The same scenes with the PPA', font + '/* The same scenes with the PPA', 1)
-    main = main.replace('int main(int argc, char ** argv)', CLEANUP_CASE + '\nint main(int argc, char ** argv)', 1)
+    main = main.replace('int main(int argc, char ** argv)', MUTEX_SPY + CLEANUP_CASE + '\nint main(int argc, char ** argv)', 1)
     # The fixture deliberately submits unsafe transfers to validate its fake
     # hardware. Count only the adapter's submissions after that calibration.
     main = main.replace('    check_fake_ppa_against_the_board();', '    check_fake_ppa_against_the_board();\n    g_p4_short = 0;', 1)
@@ -139,6 +272,7 @@ def stage(reference, work):
 #if LV_USE_OS != LV_OS_NONE
     if(g_two_cores) check_font_one_core();
 #endif
+    check_cache_progress();
     check_padded_cache_geometry();
     g_cases++;
     if(lv_draw_ortho_ppa_dig734(464, 70, LV_DISPLAY_ROTATION_90, 16, 1, 1) && g_p4_short == 0)
@@ -155,11 +289,20 @@ def stage(reference, work):
     (work / 'test/main.c').write_text(main)
 
 
-def build(work, lvgl, mode, sanitize):
+def build(work, lvgl, mode, sanitize, patch_os=True):
     flags = '-O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer' if sanitize else '-O2 -g'
     if mode == 'mt':
-        flags += ' -DLV_USE_OS=1'
+        flags += ' -DLV_USE_OS=1 -Wl,--wrap=lv_mutex_init -Wl,--wrap=lv_mutex_delete'
+    flags += ' -DESP_LVGL_ADAPTER_OS_MUTEX_CLEANUP=1'
     folder = 'build-' + mode + ('-asan' if sanitize else '')
+    subprocess.run(['make', '-C', str(work / 'test'), f"LVGL={lvgl}", f"BUILD={folder}",
+                    f"{folder}/lvgl-src/.patched"], check=True)
+    if patch_os:
+        _cleanup.patch(work / 'test' / folder / 'lvgl-src/src/lv_init.c')
+    if _object_policy.patch(work / 'test' / folder / 'lvgl-src') == 'patched':
+        # The display private structure gained a field: rebuild every LVGL
+        # translation unit, including lv_init's display-list node sizing.
+        (work / 'test' / folder / 'lvgl-src/.patched').touch()
     subprocess.run(['make', '-C', str(work / 'test'), '-j2', f"LVGL={lvgl}", f"BUILD={folder}",
                     f"CFLAGS={flags}", f"{folder}/ortho_test"], check=True)
     return work / 'test' / folder / 'ortho_test'
@@ -172,6 +315,9 @@ def run_tests(work, args):
         binary = build(work, args.lvgl, mode, args.sanitize)
         subprocess.run([str(binary), *(['--cores'] if mode == 'mt' else [])], check=True, env=env,
                        cwd=work / 'test')
+    from transforms import run_transform_tests
+    run_transform_tests(work, work / 'test' / ('build-plain-asan' if args.sanitize else 'build-plain') / 'lvgl-src',
+                        sanitize=args.sanitize)
     if not args.mutants:
         return
     unit = work / 'components/lvgl_ortho'
@@ -181,6 +327,7 @@ def run_tests(work, args):
         ('font guard', 'lv_draw_ortho.c', 'const bool text = j->t->type == LV_DRAW_DSC_TYPE_LABEL || j->t->type == LV_DRAW_DSC_TYPE_LETTER;', 'const bool text = false;', 'font was asked'),
         ('FIFO margin', 'lv_draw_ortho_ppa.c', 'left < 2 * FIFO_BITS', 'left < FIFO_BITS', 'FIFO safety margin'),
         ('padded cache geometry', 'lv_draw_ortho_ppa.c', 'op.out.pic_h = out_h;', 'op.out.pic_h = dst->h;', 'FAIL  padded cache geometry'),
+        ('cache preparation progress', 'lv_draw_ortho.c', 'const int32_t max_pixels = (128 * 1024) / px;', 'const int32_t max_pixels = INT32_MAX / px;', 'FAIL  cache preparation progress'),
         ('cache teardown', 'lv_draw_ortho.c', '    lv_draw_ortho_image_cache_drop(NULL);\n    if (g_helper.on)', '    if (g_helper.on)', 'cached pixel allocations survive'),
     ]
     for name, filename, before, after, expected in mutations:
@@ -196,6 +343,23 @@ def run_tests(work, args):
         if result.returncode == 0 or expected not in result.stdout:
             raise RuntimeError(f"Regression test did not catch {name}: {result.stdout[-1500:]}")
         print(f"caught mutant: {name}", flush=True)
+    # Exercise the shipped LVGL init/deinit, not a model of its resource use.
+    init = work / 'test' / ('build-mt-asan' if args.sanitize else 'build-mt') / 'lvgl-src/src/lv_init.c'
+    original = init.read_text()
+    needle = '    lv_mutex_delete(&LV_GLOBAL_DEFAULT()->lv_general_mutex);'
+    assert original.count(needle) == 1
+    (unit / 'lv_draw_ortho.c').write_text(source)
+    (unit / 'lv_draw_ortho_ppa.c').write_text(ppa)
+    try:
+        init.write_text(original.replace(needle, '    /* mutant: global mutex leaked */'))
+        binary = build(work, args.lvgl, 'mt', args.sanitize, patch_os=False)
+        result = subprocess.run([str(binary), '--cores'], capture_output=True, text=True, env=env,
+                                timeout=120, cwd=work / 'test')
+        if result.returncode == 0 or 'FAIL  OS mutex lifecycle' not in result.stdout:
+            raise RuntimeError('Regression test did not catch global OS mutex leak: ' + result.stdout[-1500:])
+        print('caught mutant: global OS mutex cleanup', flush=True)
+    finally:
+        init.write_text(original)
 
 
 def main():
