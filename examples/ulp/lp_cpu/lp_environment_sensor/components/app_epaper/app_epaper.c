@@ -5,6 +5,8 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -155,30 +157,43 @@ static esp_err_t paint_set_pixel(epaper_handle_t epaper_handle, uint16_t x_point
         return ESP_FAIL;
     }
     epaper_panel_t *panel = (epaper_panel_t *) epaper_handle;
-    uint16_t X = 0;
-    uint16_t Y = 0;
-    uint32_t addr = 0;
-    uint8_t rdata = 0;
-    switch (panel->paint.rotate) {
-    case 0:
+    uint16_t X;
+    uint16_t Y;
+    uint32_t addr;
+    uint8_t rdata;
 
+    if (panel->paint.image == NULL) {
+        return ESP_FAIL;
+    }
+    if (panel->paint.rotate == ROTATE_0 || panel->paint.rotate == ROTATE_180) {
+        if (x_point >= panel->paint.height_memory || y_point >= panel->paint.width_memory) {
+            return ESP_OK;
+        }
+    } else if (x_point >= panel->paint.width_memory || y_point >= panel->paint.height_memory) {
+        return ESP_OK;
+    }
+    switch (panel->paint.rotate) {
+    case ROTATE_0:
         X = panel->paint.width_memory - y_point - 1;
         Y = x_point;
         break;
-    case 90:
+    case ROTATE_90:
         X = panel->paint.width_memory - x_point - 1;
         Y = panel->paint.height_memory - y_point - 1;
         break;
-    case 180:
+    case ROTATE_180:
         X = y_point;
         Y = panel->paint.height_memory - x_point - 1;
         break;
-    case 270:
+    case ROTATE_270:
         X = x_point;
         Y = y_point;
         break;
     default:
-        break;
+        return ESP_FAIL;
+    }
+    if (X >= panel->paint.width_memory || Y >= panel->paint.height_memory) {
+        return ESP_OK;
     }
     addr = X / 8 + Y * panel->paint.width_byte;
     rdata = panel->paint.image[addr];
@@ -207,6 +222,9 @@ static esp_err_t epaper_clear_display(epaper_panel_t *panel, uint16_t color)
 
 void epaper_draw_point(epaper_handle_t epaper_handle, uint16_t x_point, uint16_t y_point, uint16_t color)
 {
+    if (x_point == 0 || y_point == 0) {
+        return;
+    }
     esp_err_t ret = paint_set_pixel(epaper_handle, x_point - 1, y_point - 1, color);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "draw point failed");
@@ -270,13 +288,16 @@ void epaper_print_char(epaper_handle_t epaper_handle, uint16_t x, uint16_t y, ui
 {
     uint16_t i, m, temp, size2, chr1;
     uint16_t x0, y0;
+    if (chr < ' ' || chr > '~') {
+        return;
+    }
+    chr1 = chr - ' ';
     x += 1, y += 1, x0 = x, y0 = y;
     if (size == 8) {
         size2 = 6;
     } else {
         size2 = (size / 8 + ((size % 8) ? 1 : 0)) * (size / 2);
     }
-    chr1 = chr - ' ';
     for (i = 0; i < size2; i++) {
         if (size == 8) {
             temp = asc2_0806[chr1][i];
@@ -294,18 +315,14 @@ void epaper_print_char(epaper_handle_t epaper_handle, uint16_t x, uint16_t y, ui
             return;
         }
         for (m = 0; m < 8; m++) {
-            if (temp & 0x01) {
-                epaper_draw_point(epaper_handle, x, y, color);
-            } else {
-                epaper_draw_point(epaper_handle, x, y, !color);
-            }
+            epaper_draw_point(epaper_handle, x, y, (temp & 0x01) ? color : !color);
             temp >>= 1;
             y++;
         }
         x++;
         if ((size != 8) && ((x - x0) == size / 2)) {
             x = x0;
-            y0 = y0 + 8;
+            y0 += 8;
         }
         y = y0;
     }
@@ -313,11 +330,13 @@ void epaper_print_char(epaper_handle_t epaper_handle, uint16_t x, uint16_t y, ui
 
 void epaper_print_string(epaper_handle_t epaper_handle, uint16_t x, uint16_t y, char *chr, uint16_t size, uint16_t color)
 {
+    if (chr == NULL) {
+        return;
+    }
     while (*chr != '\0') {
-
         epaper_print_char(epaper_handle, x, y, *chr, size, color);
         chr++;
-        x += size / 2;
+        x += (size == 8) ? 6 : size / 2;
     }
 }
 
@@ -351,6 +370,21 @@ void epaper_print_chinese(epaper_handle_t epaper_handle, uint16_t x, uint16_t y,
     uint16_t m, temp;
     uint16_t x0, y0;
     uint16_t i, size3 = (size / 8 + ((size % 8) ? 1 : 0)) * size;
+    size_t glyph_count;
+    if (size == 16) {
+        glyph_count = sizeof(Hzk1) / sizeof(Hzk1[0]);
+    } else if (size == 24) {
+        glyph_count = sizeof(Hzk2) / sizeof(Hzk2[0]);
+    } else if (size == 32) {
+        glyph_count = sizeof(Hzk3) / sizeof(Hzk3[0]);
+    } else if (size == 64) {
+        glyph_count = sizeof(Hzk4) / sizeof(Hzk4[0]);
+    } else {
+        return;
+    }
+    if (num >= glyph_count) {
+        return;
+    }
     x += 1, y += 1, x0 = x, y0 = y;
     for (i = 0; i < size3; i++) {
         if (size == 16) {
@@ -359,24 +393,18 @@ void epaper_print_chinese(epaper_handle_t epaper_handle, uint16_t x, uint16_t y,
             temp = Hzk2[num][i];
         } else if (size == 32) {
             temp = Hzk3[num][i];
-        } else if (size == 64) {
-            temp = Hzk4[num][i];
         } else {
-            return;
+            temp = Hzk4[num][i];
         }
         for (m = 0; m < 8; m++) {
-            if (temp & 0x01) {
-                epaper_draw_point(epaper_handle, x, y, color);
-            } else {
-                epaper_draw_point(epaper_handle, x, y, !color);
-            }
+            epaper_draw_point(epaper_handle, x, y, (temp & 0x01) ? color : !color);
             temp >>= 1;
             y++;
         }
         x++;
         if ((x - x0) == size) {
             x = x0;
-            y0 = y0 + 8;
+            y0 += 8;
         }
         y = y0;
     }
@@ -529,6 +557,7 @@ esp_err_t epaper_delete(epaper_handle_t *epaper_handle)
         ESP_LOGE(TAG, "Failed to remove SPI device");
         return ret;
     }
+    free(panel->screen_buffer);
     free(panel);
     *epaper_handle = NULL;
     return ESP_OK;
@@ -537,10 +566,28 @@ esp_err_t epaper_delete(epaper_handle_t *epaper_handle)
 esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_data)
 {
     esp_err_t ret;
-    int temp_decimal_part = (display_data.temp - (int)display_data.temp) * 10 + 0.5;
-    int hum_decimal_part = (display_data.hum - (int)display_data.hum) * 10 + 0.5;
-
-    epaper_print_number(paper, 10, 16, display_data.temp, 2, 80, BLACK);
+    epaper_panel_t *panel = (epaper_panel_t *)paper;
+    if (panel == NULL || panel->screen_buffer == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    display_data.city = display_data.city ? display_data.city : "";
+    display_data.district = display_data.district ? display_data.district : "";
+    display_data.text = display_data.text ? display_data.text : "";
+    display_data.week = display_data.week ? display_data.week : "";
+    display_data.wind_class = display_data.wind_class ? display_data.wind_class : "";
+    display_data.wind_dir = display_data.wind_dir ? display_data.wind_dir : "";
+    display_data.uptime = display_data.uptime ? display_data.uptime : "";
+    epaper_clear_display(panel, WHITE);
+    int temp_tenths = (int)(display_data.temp * 10.0f + (display_data.temp >= 0 ? 0.5f : -0.5f));
+    int hum_decimal_part = (int)((display_data.hum - (int)display_data.hum) * 10.0f + 0.5f);
+    int temp_whole = temp_tenths / 10;
+    int temp_decimal_part = temp_tenths % 10;
+    uint32_t temp_abs = temp_whole < 0 ? (uint32_t)(-(int64_t)temp_whole) : (uint32_t)temp_whole;
+    if (temp_tenths < 0) {
+        temp_decimal_part = -temp_decimal_part;
+        epaper_print_string(paper, 2, 16, "-", 80, BLACK);
+    }
+    epaper_print_number(paper, temp_tenths < 0 ? 42 : 10, 16, temp_abs, 2, 80, BLACK);
     epaper_print_string(paper, 89, 48, ".", 24, BLACK);
     epaper_print_number(paper, 89 + 8, 51, temp_decimal_part, 1, 24, BLACK);
     epaper_print_string(paper, 90, 23, "o", 8, BLACK);
@@ -685,8 +732,9 @@ esp_err_t epaper_display(epaper_handle_t paper, epaper_display_data_t display_da
 
     char uptime_str[12];
     uint8_t index = 0;
+    size_t uptime_len = strlen(display_data.uptime);
     for (int i = 0; i < 8; i++) {
-        uptime_str[index] = display_data.uptime[i];
+        uptime_str[index] = i < uptime_len ? display_data.uptime[i] : ' ';
         index++;
         if (index == 4) {
             uptime_str[index] = '/';
