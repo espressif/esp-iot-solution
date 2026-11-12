@@ -80,6 +80,10 @@ dependencies:
 - **LVGL**: 8.x or 9.x (auto-detected)
 - **Optional dependencies**: Required only if corresponding Kconfig options are enabled
 
+Local `components/lvgl` sources without version metadata are detected from standard
+headers. A non-empty `LVGL_VERSION` environment variable overrides detection;
+unrecognized source layouts warn and fall back to LVGL 9.
+
 ### Build and Run
 
 ```sh
@@ -229,7 +233,7 @@ Choose the configuration macro based on your display interface:
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (with PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 | SPI/I2C/I80/QSPI (without PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
-| MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
+| MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 
 **Notes**:
 - MIPI DSI and RGB support framebuffer-based tearing modes
@@ -268,6 +272,7 @@ Choose the appropriate tearing mode based on your use case:
 
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
+- LVGL 9.0/9.1 reject FULL/DIRECT panel frame buffers when automatic stride alignment would add row padding; use LVGL 9.2 or later for these configurations
 - OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; high-performance TE supports adapter rotation, while other configurations require panel orientation and matching touch mapping
 - MONO (Monochrome) interface **supports software rotation** (0°/90°/180°/270°) with pixel-level rotation handled by LVGL
 - `TE_SYNC` mode requires a panel TE signal connected to an ESP GPIO. Use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` for the standard mode, or `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG` to overlap LVGL rendering with TE-synchronized transfer. The high-performance mode requires PSRAM and additional full-frame memory; compatible interfaces in `examples/display/gui/common` enable it by default
@@ -293,6 +298,16 @@ Default `buffer_height` for each interface (see `esp_lv_adapter_display.h`):
 | RGB | 50 | Medium stripe height |
 | OTHER with PSRAM | `ver_res` (full height) | Full-height partial refresh, better throughput |
 | OTHER without PSRAM | 10 | Small stripe to save RAM |
+
+#### Draw-buffer Memory Placement
+
+RGB/MIPI DSI `DOUBLE_PARTIAL` and `TRIPLE_PARTIAL` always use one LVGL draw buffer
+in **internal SRAM**, regardless of `profile.use_psram`. Rendered stripes are copied
+or rotated into panel frame buffers, whose placement is set during `esp_lcd`
+initialization.
+
+Pixel storage is `hor_res × buffer_height × bytes_per_pixel`: 480 × 50 × 2 = 48,000
+bytes for RGB565. Reduce `buffer_height` if SRAM allocation fails.
 
 #### Tuning Tips
 

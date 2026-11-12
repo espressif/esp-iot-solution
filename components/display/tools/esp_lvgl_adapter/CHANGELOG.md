@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.7.8 (2026-11-12)
+
+* Fix local LVGL detection and public touch dependencies.
+* Fix LVGL v9 panel framebuffer stride and dummy-draw buffer sizing.
+* Clarify partial-buffer SRAM usage and the MONO config macro.
+
 ## v0.7.7 (2026-11-10)
 
 * Fix LVGL v9 async TE RGB565 rotation cache coherency and fuse PPA byte swapping.

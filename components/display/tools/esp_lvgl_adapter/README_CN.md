@@ -76,6 +76,9 @@ dependencies:
 - **LVGL**：8.x 或 9.x（自动适配版本）
 - **可选依赖**：根据启用的功能需要满足相应的组件依赖
 
+本地 `components/lvgl` 缺少版本元数据时，从标准头文件识别主版本。
+非空的 `LVGL_VERSION` 环境变量可覆盖识别结果；无法识别的源码布局会警告并回退到 LVGL 9。
+
 ### 构建与运行
 
 ```sh
@@ -225,7 +228,7 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (带 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 | SPI/I2C/I80/QSPI (无 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
-| MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
+| MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 
 **注意**：
 - MIPI DSI 和 RGB 支持基于帧缓冲的防撕裂模式
@@ -264,6 +267,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
+- LVGL 9.0/9.1 在自动 stride 对齐会增加行尾填充时，不支持使用面板帧缓冲区的 FULL/DIRECT 模式；此类配置需使用 LVGL 9.2 或更高版本
 - OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；高性能 TE 支持 adapter 旋转，其他配置需使用面板方向并同步调整触摸映射
 - MONO (单色显示) 接口**支持软件旋转**（0°/90°/180°/270°），通过 LVGL 进行像素级旋转处理
 - `TE_SYNC` 模式要求面板提供 TE 信号并连接到 ESP GPIO。标准模式使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG`；如需让 LVGL 渲染与 TE 同步传输重叠，使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG`。高性能模式需要 PSRAM 和额外的整帧内存；`examples/display/gui/common` 中兼容的接口默认启用该模式
@@ -289,6 +293,15 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 | RGB | 50 | 中等条带高度 |
 | OTHER + PSRAM | `ver_res` (整屏高度) | 整屏高度分区，吞吐更高 |
 | OTHER 无 PSRAM | 10 | 小条带以节省 RAM |
+
+#### 绘图缓冲区的内存位置
+
+RGB/MIPI DSI 的 `DOUBLE_PARTIAL` 和 `TRIPLE_PARTIAL` 始终使用**一个片内 SRAM LVGL 绘图缓冲区**，
+不受 `profile.use_psram` 影响。条带渲染后复制或旋转到面板帧缓冲区，
+后者的内存位置由 `esp_lcd` 初始化配置决定。
+
+像素数据占用 `hor_res × buffer_height × 每像素字节数` 字节：RGB565 的
+480 × 50 × 2 = 48,000 字节。若 SRAM 分配失败，可减小 `buffer_height`。
 
 #### 调优建议
 
