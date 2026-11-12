@@ -204,6 +204,25 @@ In this context:
         args.long_press.press_time = 5000;
         iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_START, &args, button_long_press_2_cb, NULL);
 
+Long press hold count
+^^^^^^^^^^^^^^^^^^^^^
+
+Use `iot_button_get_long_press_hold_cnt()` in the
+:cpp:enumerator:`BUTTON_LONG_PRESS_HOLD` callback to read the number of hold
+triggers during the current long press. The counter increments before each
+callback and resets when the button is released. The callback interval is
+configured by `CONFIG_BUTTON_LONG_PRESS_HOLD_SERIAL_TIME_MS` (20 ms by default).
+
+.. code:: c
+
+    static void button_long_press_hold_cb(void *arg, void *usr_data)
+    {
+        uint16_t count = iot_button_get_long_press_hold_cnt((button_handle_t)arg);
+        ESP_LOGI(TAG, "BUTTON_LONG_PRESS_HOLD count: %u", (unsigned int)count);
+    }
+
+    iot_button_register_cb(gpio_btn, BUTTON_LONG_PRESS_HOLD, NULL, button_long_press_hold_cb, NULL);
+
 Dynamically Modifying Default Button Values
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
