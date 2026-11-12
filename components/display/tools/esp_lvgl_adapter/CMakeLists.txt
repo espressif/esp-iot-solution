@@ -123,6 +123,51 @@ if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS)
     idf_component_optional_requires(PUBLIC espressif__esp_lv_fs esp_lv_fs)
 endif()
 
+function(esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook)
+    if(NOT CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW OR NOT lvgl_comp_dir OR lvgl_ver VERSION_LESS "9.0.0")
+        return()
+    endif()
+    # The patch may remain in a managed component after reconfiguration. Keep
+    # its behavior conditional so disabling ROTATE_IN_DRAW restores upstream.
+    target_compile_definitions(${lvgl_comp_lib} PRIVATE ESP_LVGL_ADAPTER_THREAD_OWNER_DELETE=1)
+    set(_lv_freertos "${lvgl_comp_dir}/src/osal/lv_freertos.c")
+    if(NOT EXISTS "${_lv_freertos}")
+        return()
+    endif()
+    file(READ "${_lv_freertos}" _content)
+    string(FIND "${_content}" "esp_lvgl_adapter: owner deletes completed threads" _ready)
+    if(NOT _ready EQUAL -1)
+        return()
+    endif()
+    # LVGL's SW-unit destructor signals exit and then deletes the thread.
+    # A callback returning on the other core must not self-delete first:
+    # vTaskDelete(handle) would then use a freed TCB (observed at lv_deinit).
+    set(_old [[    pxThread->pvStartRoutine((void *)pxThread->pTaskArg);
+
+    vTaskDelete(NULL);]])
+    set(_new [[    pxThread->pvStartRoutine((void *)pxThread->pTaskArg);
+
+#if defined(ESP_PLATFORM) && defined(ESP_LVGL_ADAPTER_THREAD_OWNER_DELETE)
+    /* esp_lvgl_adapter: owner deletes completed threads. Keep the TCB and
+     * caps-allocated stack valid until lv_thread_delete() releases them. */
+    for(;;) {
+        vTaskSuspend(NULL);
+    }
+#else
+    vTaskDelete(NULL);
+#endif]])
+    string(FIND "${_content}" "${_old}" _found)
+    if(_found EQUAL -1)
+        # An upstream backend may already have changed its exit ownership.
+        # Do not rewrite an unrecognized implementation.
+        message(WARNING "esp_lvgl_adapter: LVGL FreeRTOS thread-return layout not recognized; check completed-thread ownership")
+        return()
+    endif()
+    string(REPLACE "${_old}" "${_new}" _content "${_content}")
+    file(WRITE "${_lv_freertos}" "${_content}")
+    message(STATUS "esp_lvgl_adapter: configured LVGL FreeRTOS completed-thread ownership")
+endfunction()
+
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
     idf_component_optional_requires(PUBLIC espressif__freetype freetype)
 endif()
@@ -185,6 +230,8 @@ if("${lvgl_name}" IN_LIST build_components)
             "${lvgl_comp_dir}/src")
     endif()
 endif()
+
+esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook()
 
 function(esp_lv_adapter_target_compile_definitions target_name visibility)
     if("${target_name}" STREQUAL "")

@@ -327,6 +327,20 @@ TEST_CASE("adapter basic demo", "[adapter][basic]")
     ESP_LOGI(TAG, "Basic adapter test completed");
 }
 
+#if LV_USE_OS == LV_OS_FREERTOS
+TEST_CASE("adapter render threads can be stopped repeatedly", "[adapter][render_thread_lifecycle]")
+{
+    /* setUp/tearDown create and destroy LVGL for each invocation. The SW
+     * threads are idle on an ortho display, yet their exit signal can race
+     * their owner's delete on the other core. Run this case repeatedly. */
+    vTaskDelay(pdMS_TO_TICKS(20));
+    TEST_ESP_OK(esp_lv_adapter_lock(pdMS_TO_TICKS(LVGL_LOCK_TIMEOUT_MS)));
+    lv_obj_invalidate(lv_display_get_screen_active(s_disp));
+    lv_refr_now(s_disp);
+    esp_lv_adapter_unlock();
+}
+#endif
+
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_DECODER
 TEST_CASE("adapter image decode", "[adapter][decode]")
 {

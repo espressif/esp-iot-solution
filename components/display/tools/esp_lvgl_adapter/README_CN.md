@@ -720,8 +720,11 @@ flash 的图像设置 PSRAM 预算。首次正常绘制，第二次生成旋转�
 缓存使用 PSRAM，为绘制图块保留内部 RAM，并在 `lv_deinit()` 时释放。
 标记为 `LV_IMAGE_FLAGS_MODIFIABLE` 的图像始终不进入缓存。
 
-双核绘制时，若一对图块都包含文字，则串行绘制，避免同时调用不可重入的字体回调；
-其他图块对仍并行绘制。目标测试配置为 `sdkconfig.ci.rotate_in_draw_cache`，Unity 标签为
+双核绘制时，仅用独立互斥锁保护每次文字绘制及其字形位图的使用，避免同时调用不可重入的
+字体回调；两个图块中的其他绘制仍并行进行。启用 rotation-in-draw 时，适配器还让已返回的 LVGL FreeRTOS 工作任务
+保持挂起，由所属绘制单元统一删除，避免退出时重复删除同一个任务句柄。
+`[render_thread_lifecycle]` 目标测试由 pytest 重复执行 16 次，验证初始化与销毁流程。
+缓存目标测试配置为 `sdkconfig.ci.rotate_in_draw_cache`，Unity 标签为
 `[ortho_cache]`。无需硬件的像素对比和回归测试见
 [host runner](test_apps/host_ortho/README.md)。
 

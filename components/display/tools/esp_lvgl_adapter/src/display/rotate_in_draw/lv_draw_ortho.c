@@ -78,6 +78,8 @@ typedef struct {
     /* What a tile holds: LV_DRAW_ORTHO_TILE_BYTES, or a half or a quarter of
      * it when there are fewer blocks than tiles. */
     size_t tile_bytes;
+    lv_mutex_t text_mutex;   /* font callbacks/returned glyph data need not be reentrant */
+    bool text_mutex_ready;
 } ortho_unit_t;
 
 static ortho_unit_t * g_unit;
@@ -812,7 +814,17 @@ static void paint_tile(tile_work_t * w)
             continue;
         }
         if (lv_area_intersect(&clip, &j->t->clip_area, &w->tile)) {
+            /* Protect the complete text draw, including consumption of the
+             * bitmap returned by an application font. Only this task waits:
+             * fills, shadows and the rest of both tiles remain parallel. */
+            const bool text = j->t->type == LV_DRAW_DSC_TYPE_LABEL || j->t->type == LV_DRAW_DSC_TYPE_LETTER;
+            if (text && g_unit->text_mutex_ready) {
+                lv_mutex_lock(&g_unit->text_mutex);
+            }
             sw_execute_on(j->t, &tl, &j->t->area, &clip);
+            if (text && g_unit->text_mutex_ready) {
+                lv_mutex_unlock(&g_unit->text_mutex);
+            }
             if (lv_area_intersect(&drawn, &j->todo, &clip)) {
                 w->drawn += (uint64_t)lv_area_get_size(&drawn) * (uint64_t)w->px;
             }
@@ -937,6 +949,9 @@ static void * helper_main(void * arg)
 
 static bool helper_start_thread(void)
 {
+    if (!g_unit || !g_unit->text_mutex_ready) {
+        return false;
+    }
 #if ORTHO_HELPER == 1
     return true;
 #elif ORTHO_HELPER == 2
@@ -1043,17 +1058,6 @@ static void helper_join(void)
  * other core paints. Both are turned out after the join, in order. With four
  * tiles the pairs alternate, so a pair is painted while the PPA turns out
  * the last one. */
-static bool draws_text(const job_t * jobs, int32_t n, const lv_area_t * rect)
-{
-    for (int32_t i = 0; i < n; i++) {
-        const lv_draw_task_type_t type = jobs[i].t->type;
-        if ((type == LV_DRAW_DSC_TYPE_LABEL || type == LV_DRAW_DSC_TYPE_LETTER) && job_touches(&jobs[i], rect)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ortho_t * o, const lv_area_t rect[2])
 {
     int32_t base = 0;
@@ -1063,10 +1067,9 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
     }
     tile_work_t w[2];
     bool ok[2];
-    const bool helped = !(draws_text(jobs, n, &rect[0]) && draws_text(jobs, n, &rect[1]));
     wait_ticket(&u->ticket[base + 1]);
     ok[1] = prep_tile(jobs, n, o, &rect[1], u->tile[base + 1], u->tile_bytes, &w[1]);
-    if (ok[1] && helped) {
+    if (ok[1]) {
         helper_paint(&w[1]);
     }
     wait_ticket(&u->ticket[base]);
@@ -1075,12 +1078,8 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
         paint_tile(&w[0]);
     }
     if (ok[1]) {
-        if (helped) {
-            helper_join();
-            g_stats.tiles_other_core++;
-        } else {
-            paint_tile(&w[1]);
-        }
+        helper_join();
+        g_stats.tiles_other_core++;
     }
     if (ok[0]) {
         finish_tile(o, &w[0], &u->ticket[base]);
@@ -1936,6 +1935,10 @@ static int32_t delete_cb(lv_draw_unit_t * draw_unit)
         helper_stop_thread();
         g_helper.on = false;
     }
+    if (u->text_mutex_ready) {
+        lv_mutex_delete(&u->text_mutex);
+        u->text_mutex_ready = false;
+    }
     for (int i = 0; i < 4; i++) {
         if (u->tile_alloc[i]) {
             tile_free(u->tile_alloc[i]);
@@ -1955,6 +1958,7 @@ void lv_draw_ortho_init(void)
         return;
     }
     ortho_unit_t * u = lv_draw_create_unit(sizeof(ortho_unit_t));
+    u->text_mutex_ready = lv_mutex_init(&u->text_mutex) == LV_RESULT_OK;
     u->base.name = "ORTHO";
     u->base.evaluate_cb = evaluate;
     u->base.dispatch_cb = dispatch;

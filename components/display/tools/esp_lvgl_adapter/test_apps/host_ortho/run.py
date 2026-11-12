@@ -23,6 +23,45 @@ ADAPTER = Path(__file__).resolve().parents[2]
 UNIT = ADAPTER / 'src/display/rotate_in_draw'
 
 CLEANUP_CASE = r"""
+extern int g_p4_bad_geometry;
+
+static void check_padded_cache_geometry(void)
+{
+    lv_draw_ortho_set_window(NULL, NULL);
+    lv_draw_ortho_ppa_init();
+    lv_draw_ortho_set_image_cache(4 * 1024 * 1024);
+    g_wall = image_of(1280, 720, LV_COLOR_FORMAT_RGB565, 23);
+    g_wall_constant = true;
+    lv_draw_ortho_set_image_constant_cb(wall_constant);
+    screen_t *screen = make_screen(720, 1280, LV_COLOR_FORMAT_RGB565, LV_DISPLAY_ROTATION_270, true, false);
+    lv_obj_t *scr = lv_display_get_screen_active(screen->disp);
+    lv_obj_t *image = lv_image_create(scr);
+    lv_image_set_src(image, g_wall);
+    lv_obj_set_pos(image, 0, 0);
+    const int rejected = g_p4_bad_geometry;
+    lv_refr_now(screen->disp);
+    lv_draw_ortho_reset_stats();
+    lv_obj_invalidate(scr);
+    lv_refr_now(screen->disp);
+    const lv_draw_ortho_stats_t *st = lv_draw_ortho_get_stats();
+    g_cases++;
+    if(g_p4_bad_geometry == rejected && st->image_cache_builds > 0 && st->bytes_handed > 0)
+        printf("  ok    padded cache geometry: 720 RGB565 pixels by 1281 allocated rows accepted by the PPA\n");
+    else {
+        printf("  FAIL  padded cache geometry: %d refusals, %u builds, %llu DMA bytes\n",
+               g_p4_bad_geometry - rejected, st->image_cache_builds, (unsigned long long)st->bytes_handed);
+        g_failures++;
+    }
+    drop_screen(screen);
+    lv_draw_ortho_set_image_cache(0);
+    lv_draw_ortho_set_image_constant_cb(NULL);
+    lv_draw_ortho_ppa_deinit();
+    free((void *)g_wall->data);
+    free(g_wall);
+    g_wall = NULL;
+    g_wall_constant = false;
+}
+
 static void check_cache_deinit(void)
 {
     lv_draw_ortho_set_turner(NULL, NULL);
@@ -74,6 +113,15 @@ def stage(reference, work):
     target = work / 'components/lvgl_ortho'
     for path in UNIT.glob('lv_draw_ortho*.[ch]'):
         shutil.copyfile(path, target / path.name)
+    # Match the actual IDF check; the fixture allowed an extra cache line and
+    # therefore missed a 720-pixel-wide cache's padded final row on hardware.
+    fake = work / 'test/p4stub/p4fake.c'
+    code = fake.read_text()
+    before = 'if((size_t)op->out.pic_w * op->out.pic_h * px > op->out.buffer_size + 128) return ESP_ERR_INVALID_ARG;'
+    assert code.count(before) == 1
+    code = code.replace(before, 'if((size_t)op->out.pic_w * op->out.pic_h * px > op->out.buffer_size) { g_p4_bad_geometry++; return ESP_ERR_INVALID_ARG; }')
+    code = code.replace('esp_err_t ppa_do_scale_rotate_mirror(', 'int g_p4_bad_geometry;\n\nesp_err_t ppa_do_scale_rotate_mirror(', 1)
+    fake.write_text(code)
     current = git(reference, 'show', f"{FIXTURES}:test/main.c").decode()
     main = git(reference, 'show', f"{CACHE_SUITE}:test/main.c").decode()
     start = current.index('/* A font whose engine')
@@ -91,6 +139,7 @@ def stage(reference, work):
 #if LV_USE_OS != LV_OS_NONE
     if(g_two_cores) check_font_one_core();
 #endif
+    check_padded_cache_geometry();
     g_cases++;
     if(lv_draw_ortho_ppa_dig734(464, 70, LV_DISPLAY_ROTATION_90, 16, 1, 1) && g_p4_short == 0)
         printf("  ok    exact-FIFO block guarded and all submitted transfers keep their margin\n");
@@ -129,8 +178,9 @@ def run_tests(work, args):
     source = (unit / 'lv_draw_ortho.c').read_text()
     ppa = (unit / 'lv_draw_ortho_ppa.c').read_text()
     mutations = [
-        ('font guard', 'lv_draw_ortho.c', 'const bool helped = !(draws_text(jobs, n, &rect[0]) && draws_text(jobs, n, &rect[1]));', 'const bool helped = (draws_text(jobs, n, &rect[0]) || true);', 'font was asked'),
+        ('font guard', 'lv_draw_ortho.c', 'const bool text = j->t->type == LV_DRAW_DSC_TYPE_LABEL || j->t->type == LV_DRAW_DSC_TYPE_LETTER;', 'const bool text = false;', 'font was asked'),
         ('FIFO margin', 'lv_draw_ortho_ppa.c', 'left < 2 * FIFO_BITS', 'left < FIFO_BITS', 'FIFO safety margin'),
+        ('padded cache geometry', 'lv_draw_ortho_ppa.c', 'op.out.pic_h = out_h;', 'op.out.pic_h = dst->h;', 'FAIL  padded cache geometry'),
         ('cache teardown', 'lv_draw_ortho.c', '    lv_draw_ortho_image_cache_drop(NULL);\n    if (g_helper.on)', '    if (g_helper.on)', 'cached pixel allocations survive'),
     ]
     for name, filename, before, after, expected in mutations:

@@ -323,7 +323,7 @@ static uint32_t turn(const lv_draw_ortho_pic_t * src, const lv_area_t * block, c
     }
     const uint32_t px = lv_color_format_get_size(cf);
     /* The PPA counts a row as pic_w pixels: no padding in a stride. */
-    if (src->stride != src->w * px || dst->stride != dst->w * px) {
+    if (dst->stride == 0 || src->stride != src->w * px || dst->stride != dst->w * px) {
         return 0;
     }
     if (((uintptr_t)dst->buf % LINE) != 0) {
@@ -336,6 +336,11 @@ static uint32_t turn(const lv_draw_ortho_pic_t * src, const lv_area_t * block, c
     /* The driver invalidates whole rows of the output from dy, rounded to the
      * line: they have to lie inside the buffer it is told about. */
     const uint32_t size = (dst->stride * dst->h) & ~(uint32_t)(LINE - 1);
+    /* buffer_size is rounded DOWN to whole cache lines. Do not still claim
+     * the dummy/padded last row when it no longer fits: at 720 RGB565 pixels
+     * per row, a cache buffer 1281 rows high loses 32 bytes here. The IDF
+     * driver rejects that pic_w/pic_h even though the requested 1280 rows fit. */
+    const uint32_t out_h = size / dst->stride;
     uintptr_t a = (uintptr_t)dst->buf + (uintptr_t)dy * dst->stride;
     uintptr_t b = a + (uintptr_t)rows * dst->stride;
     if (b > (uintptr_t)dst->buf + size) {
@@ -372,7 +377,7 @@ static uint32_t turn(const lv_draw_ortho_pic_t * src, const lv_area_t * block, c
     op.out.buffer = dst->buf;
     op.out.buffer_size = size;
     op.out.pic_w = dst->w;
-    op.out.pic_h = dst->h;
+    op.out.pic_h = out_h;
     op.out.srm_cm = cm;
     op.rotation_angle = ppa_angle(rot);
     op.scale_x = 1.0f;
@@ -416,7 +421,7 @@ static uint32_t turn(const lv_draw_ortho_pic_t * src, const lv_area_t * block, c
         }
         ++g_queued;
         note(0, g_queued, src->buf, src->w, src->h, op.in.block_offset_x, op.in.block_offset_y, p->w, p->h, dst->buf,
-             dst->w, dst->h, op.out.block_offset_x, op.out.block_offset_y, rot, px * 8, 1.0f, 1.0f);
+             dst->w, out_h, op.out.block_offset_x, op.out.block_offset_y, rot, px * 8, 1.0f, 1.0f);
     }
     return g_queued;
 }

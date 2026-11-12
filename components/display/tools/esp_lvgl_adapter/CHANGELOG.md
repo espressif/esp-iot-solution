@@ -3,7 +3,9 @@
 ## v0.8.0 (unreleased)
 
 * Add an optional PSRAM cache for immutable images in rotation-in-draw (`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB`, zero/off by default). Repeated opaque, unscaled images are rotated once after warm-up and then copied straight. The bounded LRU includes allocation padding in its budget, excludes modifiable images, and frees its pixels at `lv_deinit()`.
-* Serialize pairs of tiles that both draw text, since application font callbacks need not be reentrant; other tile pairs still use both cores.
+* Serialize only text drawing and consumption of glyph bitmaps with a dedicated mutex, since application font callbacks need not be reentrant; the rest of both tiles remains parallel. This replaces the coarse tile-pair guard that reduced dashboard FPS on Tab5 and Waveshare 7B.
+* Keep completed LVGL FreeRTOS worker tasks suspended until their owner deletes them, preventing a double task deletion during `lv_deinit()`; add a repeated lifecycle target test.
+* Match PPA output height to the aligned-down buffer size, fixing rejection of the Tab5's 720-pixel-wide cache buffer with a padded last row. Tighten the fake SDK geometry check and add a regression for that exact shape.
 * Keep a full FIFO of additional margin when deciding which PPA transfers need splitting, including the exact-FIFO geometry observed hanging on a Tab5. Prefer macro-block-sized pieces or CPU fallback, and report the queued/completed geometry on a PPA timeout.
 * Add a reproducible host regression runner using the adapter's actual sources, and a cache-enabled ESP32-P4 Unity/pytest configuration.
 

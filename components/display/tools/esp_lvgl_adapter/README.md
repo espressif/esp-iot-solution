@@ -731,12 +731,19 @@ Cached pixels use PSRAM, preserving internal RAM for rendering tiles, and are
 freed when LVGL is deinitialized. Images marked `LV_IMAGE_FLAGS_MODIFIABLE`
 are always excluded.
 
-With two rendering cores, pairs of tiles that both draw text run serially so
-application font callbacks need not be reentrant. Other tile pairs remain parallel.
+With two rendering cores, a dedicated mutex serializes each text draw, including
+consumption of its glyph bitmaps, so application font callbacks need not be
+reentrant. Other drawing in both tiles remains parallel.
+
+With rotation-in-draw enabled, the adapter also keeps completed LVGL FreeRTOS worker tasks suspended until
+their owner deletes them. This prevents a returning SW worker from deleting its
+own task just before the SW-unit destructor deletes the same handle.
 
 The cache-enabled target test uses `sdkconfig.ci.rotate_in_draw_cache` and the
 `[ortho_cache]` Unity tag. For pixel comparisons and regression reproduction
-without a board, see [the host runner](test_apps/host_ortho/README.md).
+without a board, see [the host runner](test_apps/host_ortho/README.md). The
+`[render_thread_lifecycle]` target test is run 16 times by its pytest case to
+exercise repeated adapter initialization and teardown.
 
 ### Buffering and Render Modes
 

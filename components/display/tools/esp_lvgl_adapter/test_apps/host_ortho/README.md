@@ -27,8 +27,8 @@ checks the additional FIFO margin, reproduces the exact-depth stall, and checks
 CPU fallback after a timeout. A font callback spy checks concurrent calls;
 `lv_deinit()` must release cached pixels.
 
-`--mutants` temporarily removes each of the font guard, FIFO margin and cache
-cleanup in the **staged test copy** and requires the corresponding regression
+`--mutants` temporarily removes each of the font guard, FIFO margin, padded-cache
+geometry fix and cache cleanup in the **staged test copy** and requires the corresponding regression
 to fail. Repository sources remain unchanged. `--sanitize` enables AddressSanitizer
 and UndefinedBehaviorSanitizer; fixture-wide leak detection is disabled because
 the historical scene suite retains test images, while the explicit cache teardown
