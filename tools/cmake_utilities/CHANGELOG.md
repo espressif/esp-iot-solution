@@ -1,3 +1,7 @@
+## v1.4.1 - 2026-11-11
+
+* gen_custom_ota: the ddelta v3 header CRC covers the whole base firmware file, not the first 4KB. The bootloader rejects a mismatch before erasing the other app slot.
+
 ## v1.4.0 - 2026-11-04
 
 * gen_custom_ota: add v3 ddelta packing (`-d ddelta -b base.bin`) via the `esp_ddelta` extension. Pure compression output is unchanged.

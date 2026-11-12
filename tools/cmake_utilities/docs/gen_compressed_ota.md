@@ -42,9 +42,9 @@ python3 gen_custom_ota.py -hv v3 -i simple_ota.bin --add_app_header
 
 ## How to generate a diff patch
 
-`gen_diff_ota` and `esp_ddelta` require cmake_utilities >=1.4.0. The bootloader that applies the patch is bootloader_support_plus >=0.7.0.
+`gen_diff_ota` and `esp_ddelta` require cmake_utilities >=1.4.1. The bootloader that applies the patch is bootloader_support_plus >=0.8.0.
 
-Keep `version.txt` as the version of each release, and keep that release's app binary. `-b` (and the base `gen_diff_ota` builds) must be the firmware running on the device. A newer build cannot stand in for it.
+Keep `version.txt` as the version of each release, and keep that release's app binary. `-b` (and the base `gen_diff_ota` builds) must be the firmware running on the device. A newer build cannot stand in for it. The v3 header stores a CRC32 of that whole base file. The bootloader rejects the patch before erasing the other app slot when the bytes do not match.
 
 `include(gen_diff_ota)` adds `idf.py gen_diff_ota`. The target compiles the project and uses `build/<project>.bin` as the base. `DIFF_OTA_NEW_FILE` is the firmware the patch should produce. The path is relative to the project directory unless absolute. Copy the new firmware aside before running the command: the build overwrites `build/<project>.bin`.
 

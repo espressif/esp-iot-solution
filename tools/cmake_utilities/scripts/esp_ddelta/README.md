@@ -147,7 +147,7 @@ The next 10 bytes are used only with `-d ddelta`:
 
 | Offset | Length | Contents |
 | --- | --- | --- |
-| 6 | 4 | `base_len`, little-endian. Length of the old firmware covered by the CRC, usually 4096 |
+| 6 | 4 | `base_len`, little-endian. Length of the old firmware covered by the CRC. New patches set this to the whole base file |
 | 10 | 4 | `base_crc32`, little-endian. CRC32 of the first `base_len` bytes of the old firmware |
 | 14 | 2 | 0 |
 

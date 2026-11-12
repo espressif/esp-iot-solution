@@ -23,17 +23,12 @@ import lzma
 binary_compress_type = {'none': 0, 'xz':1}
 binary_delta_type = {'none': 0, 'ddelta': 1}
 header_version = {'v1': 1, 'v2': 2, 'v3': 3}
-# CRC of this prefix of the base firmware is stored in the v3 reserved field.
-BASE_APP_CHECK_SIZE = 4096
-
 SCRIPT_VERSION = '1.0.0'
 ORIGIN_APP_IMAGE_HEADER_LEN = 288   # sizeof(esp_image_header_t) + sizeof(esp_image_segment_header_t) + sizeof(esp_app_desc_t). See esp_app_format.h
 # esp_https_ota (IDF 5.x/6.x) reads IMAGE_HEADER_SIZE (1024) bytes before the
 # response may finish. A short ddelta patch can be smaller than that, so pad the
 # final downloadable file. Trailing bytes are outside header.length / MD5.
 MIN_HTTPS_OTA_IMAGE_SIZE = 1024
-# At present, we calculate the checksum of the first 4KB data of the old app.
-OLD_APP_CHECK_DATA_SIZE = 4096
 
 # v1 compressed data header:
 # Note: Encryption_type field is deprecated, the field is reserved for compatibility.
@@ -72,7 +67,7 @@ OLD_APP_CHECK_DATA_SIZE = 4096
 # |------|---------|---------|----------|------------|-----------|----------------|----------------|--------------|------------|
 # | Size | 4 bytes | 1 byte  | 4 bits	| 4 bits     | 8+2 bytes |  4 bytes	      |   16 bytes	   |  4 bytes     |            |
 # delta_type occupies the high 4 bits of the compress byte (0=none, 1=ddelta).
-# The 10-byte reserved field is: uint32 base_len, uint32 base_crc32, 2 zero bytes.
+# The 10-byte reserved field is: uint32 base_len (whole base file), uint32 base_crc32, 2 zero bytes.
 # Pure compression keeps the historical reserved filler so existing v3 images stay valid.
 # |------|---------|---------|----------|------------|-----------|----------------|----------------|--------------|------------|
 # | Data | String  | integer |          |            |           | little-endian  |   byte string  | little-endian|            |
@@ -174,11 +169,22 @@ def import_esp_ddelta():
     return esp_ddelta
 
 def base_app_crc(base_file):
+    """CRC32 of the whole base file. The length is stored so the bootloader
+    rejects a different or corrupt base before erasing the destination slot."""
+    crc = 0
+    total = 0
     with open(base_file, 'rb') as base_f:
-        data = base_f.read(BASE_APP_CHECK_SIZE)
-    if len(data) == 0:
+        while True:
+            data = base_f.read(64 * 1024)
+            if not data:
+                break
+            crc = binascii.crc32(data, crc) & 0xffffffff
+            total += len(data)
+    if total == 0:
         raise Exception('base firmware is empty')
-    return len(data), binascii.crc32(data) & 0xffffffff
+    if total > 0xffffffff:
+        raise Exception('base firmware is larger than 4 GiB')
+    return total, crc
 
 def main():
     parser = argparse.ArgumentParser()
@@ -288,7 +294,7 @@ def main():
             bin_data += struct.pack('32s', firmware_ver.encode())
         else:
             # 10-byte reserved field. Pure compression keeps the historical filler.
-            # ddelta stores base_len (u32) + base_crc32 (u32) + 2 zero bytes.
+            # ddelta stores base_len (u32, whole base file) + base_crc32 (u32) + 2 zero bytes.
             if delta_type == 'ddelta':
                 base_len, base_crc = base_app_crc(base_file)
                 bin_data += struct.pack('<II', base_len, base_crc)

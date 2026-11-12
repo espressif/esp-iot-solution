@@ -143,7 +143,7 @@ idf.py -DDIFF_OTA_NEW_FILE=backup/simple_ota.bin gen_diff_ota
 
 | 偏移 | 长度 | 内容 |
 | --- | --- | --- |
-| 6 | 4 | `base_len`，小端。旧固件参与 CRC 的长度，一般为 4096 |
+| 6 | 4 | `base_len`，小端。旧固件参与 CRC 的长度。新补丁为整份 base 文件 |
 | 10 | 4 | `base_crc32`，小端。旧固件前 `base_len` 字节的 CRC32 |
 | 14 | 2 | 0 |
 
