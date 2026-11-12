@@ -14,6 +14,9 @@
 bme280_handle_t bme280_create(i2c_bus_handle_t bus, uint8_t dev_addr)
 {
     bme280_dev_t *sens = (bme280_dev_t *) calloc(1, sizeof(bme280_dev_t));
+    if (sens == NULL) {
+        return NULL;
+    }
     sens->i2c_dev = i2c_bus_device_create(bus, dev_addr, i2c_bus_get_current_clk_speed(bus));
     if (sens->i2c_dev == NULL) {
         free(sens);
@@ -249,7 +252,9 @@ esp_err_t bme280_take_forced_measurement(bme280_handle_t sensor)
             return ESP_FAIL;
         }
         while (data & 0x08) {
-            i2c_bus_read_byte(sens->i2c_dev, BME280_REGISTER_STATUS, &data);
+            if (i2c_bus_read_byte(sens->i2c_dev, BME280_REGISTER_STATUS, &data) != ESP_OK) {
+                return ESP_FAIL;
+            }
             vTaskDelay(10 / portTICK_RATE_MS);
         }
     }
