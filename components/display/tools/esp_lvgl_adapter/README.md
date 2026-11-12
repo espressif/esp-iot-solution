@@ -294,6 +294,22 @@ Default `buffer_height` for each interface (see `esp_lv_adapter_display.h`):
 | OTHER with PSRAM | `ver_res` (full height) | Full-height partial refresh, better throughput |
 | OTHER without PSRAM | 10 | Small stripe to save RAM |
 
+#### Draw-buffer Memory Placement
+
+For RGB/MIPI DSI displays in `DOUBLE_PARTIAL` or `TRIPLE_PARTIAL` mode, the adapter
+allocates the partial LVGL draw buffer in **internal RAM**, even when
+`profile.use_psram` is `true`. This buffer is separate from the panel frame buffers
+provided by `esp_lcd`; configuring those frame buffers in PSRAM does not move the
+partial draw buffer out of internal RAM.
+
+The partial draw buffer uses `hor_res × buffer_height × bytes_per_pixel` bytes.
+For example, a 480-pixel-wide RGB565 display with `buffer_height = 50` needs 48,000
+bytes of internal RAM for this buffer. Reduce `buffer_height` if that allocation
+fails; enabling `use_psram` alone does not change this allocation policy.
+
+Modes that reuse the panel's frame buffers retain the memory placement selected
+when the panel was initialized.
+
 #### Tuning Tips
 
 - **Increase `buffer_height`**:
