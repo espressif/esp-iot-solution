@@ -406,6 +406,34 @@ void app_main(void)
         lp_core_init();
     } else if (cause == ESP_SLEEP_WAKEUP_ULP) {
         printf("wake up by ULP.\n");
+#if CONFIG_UPDATE_WEATHER_DATA
+        if (ulp_sensor_data_valid == 0 && ulp_weather_data_update == 1) {
+            xEventGroupClearBits(esp_ths_event_group, WEATHER_DATA_UPDATE_BIT);
+            xTaskCreate(http_task, "http_task", 1024 * 8, NULL, 10, NULL);
+            EventBits_t weather_bits = xEventGroupWaitBits(
+                esp_ths_event_group,
+                WEATHER_DATA_UPDATE_BIT | WIFI_UNAVAILABLE | WIFI_CONNECT_FAIL_BIT,
+                pdTRUE,
+                pdFALSE,
+                portMAX_DELAY);
+            if (weather_bits & WEATHER_DATA_UPDATE_BIT) {
+                ESP_LOGI(TAG, "Weather data get done.");
+            } else if (weather_bits & WIFI_UNAVAILABLE) {
+                ESP_LOGE(TAG, "Weather data get failed.");
+            } else {
+                ESP_LOGE(TAG, "Wi-Fi connection failed.");
+            }
+            ulp_weather_data_update = 0;
+            ulp_measure_times = 0;
+            ulp_sensor_data_report = 0;
+            goto enter_deep_sleep;
+        }
+#endif
+        /* A failed LP sample must not be consumed as a stale or zero value. */
+        if (ulp_sensor_data_valid == 0) {
+            ulp_sensor_data_report = 0;
+            goto enter_deep_sleep;
+        }
         float *temp = (float*)(&ulp_temp);
         float *hum = (float *)(&ulp_hum);
         bool weather_data_report = false;
@@ -468,8 +496,10 @@ void app_main(void)
         }
 #endif
         ulp_sensor_data_report = 0;
+        ulp_sensor_data_valid = 0;
         printf("wake up by ULP.\n");
     }
+enter_deep_sleep:
     /* Setup wakeup triggers */
     ESP_ERROR_CHECK(esp_sleep_enable_ulp_wakeup());
     /* Enter Deep Sleep */
