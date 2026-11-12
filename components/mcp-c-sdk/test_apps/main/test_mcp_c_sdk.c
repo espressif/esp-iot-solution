@@ -96,7 +96,7 @@ static esp_mcp_value_t test_tool_callback_multi(const esp_mcp_property_list_t *p
 static SemaphoreHandle_t thread_test_mutex;
 static int thread_test_counter = 0;
 static const int THREAD_TEST_ITERATIONS = 100;
-static const int THREAD_TEST_THREADS = 4;
+#define THREAD_TEST_THREADS 4
 static bool relax_memory_check;
 static char s_last_emit_message[1024];
 static char s_last_emit_session_id[64];
@@ -1115,9 +1115,9 @@ TEST_CASE("test_http_client_auth_api_rejects_non_http_transport", "[mcp][http][a
     esp_mcp_mgr_handle_t handle = 0;
     ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
 
-    TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, esp_mcp_mgr_http_client_set_bearer_token(handle, "token"));
+    TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED, esp_mcp_mgr_set_bearer_token(handle, "token"));
     TEST_ASSERT_EQUAL(ESP_ERR_NOT_SUPPORTED,
-                      esp_mcp_mgr_http_client_set_auth_callback(handle, test_http_auth_callback, NULL));
+                      esp_mcp_mgr_set_auth_callback(handle, test_http_auth_callback, NULL));
 
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
@@ -1142,11 +1142,11 @@ TEST_CASE("test_http_client_auth_api_accepts_http_client_transport", "[mcp][http
     esp_mcp_mgr_handle_t handle = 0;
     ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
 
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_bearer_token(handle, "token"));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_bearer_token(handle, "token"));
     TEST_ASSERT_EQUAL(ESP_OK,
-                      esp_mcp_mgr_http_client_set_auth_callback(handle, test_http_auth_callback, NULL));
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_bearer_token(handle, NULL));
-    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_http_client_set_auth_callback(handle, NULL, NULL));
+                      esp_mcp_mgr_set_auth_callback(handle, test_http_auth_callback, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_bearer_token(handle, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_mgr_set_auth_callback(handle, NULL, NULL));
 
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
@@ -3149,6 +3149,66 @@ TEST_CASE("test_tools_list_invalid_limit_non_positive", "[mcp][protocol][tools][
 
 // ========== tools/call Deep Tests ==========
 
+static int s_default_count_calls;
+static int s_default_count_value;
+
+static esp_mcp_value_t test_tool_callback_default_count(const esp_mcp_property_list_t *properties)
+{
+    s_default_count_calls++;
+    s_default_count_value = esp_mcp_property_list_get_property_int(properties, "count");
+    return esp_mcp_value_create_int(s_default_count_value);
+}
+
+TEST_CASE("test_tools_call_uses_declared_default", "[mcp][protocol][tools][call]")
+{
+    esp_mcp_t *mcp = NULL;
+    ESP_ERROR_CHECK(esp_mcp_create(&mcp));
+    esp_mcp_tool_t *tool = esp_mcp_tool_create("default_tool", "Default argument test", test_tool_callback_default_count);
+    TEST_ASSERT_NOT_NULL(tool);
+    esp_mcp_property_t *prop = esp_mcp_property_create_with_int_and_range("count", 42, 0, 100);
+    TEST_ASSERT_NOT_NULL(prop);
+    ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
+    ESP_ERROR_CHECK(esp_mcp_add_tool(mcp, tool));
+
+    int test_config = 12345;
+    esp_mcp_mgr_config_t config = {
+        .transport = mock_transport,
+        .config = &test_config,
+        .instance = mcp
+    };
+    esp_mcp_mgr_handle_t handle = 0;
+    ESP_ERROR_CHECK(esp_mcp_mgr_init(config, &handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_register_endpoint(handle, "mcp_server", mcp));
+    ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
+    mcp_test_send_initialize(handle);
+
+    const char *requests[] = {
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"default_tool\",\"arguments\":{}},\"id\":3}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"default_tool\"},\"id\":4}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"default_tool\",\"arguments\":{\"count\":0}},\"id\":5}",
+    };
+    const int expected[] = {42, 42, 0};
+    s_default_count_calls = 0;
+    for (size_t i = 0; i < sizeof(requests) / sizeof(requests[0]); i++) {
+        uint8_t *outbuf = NULL;
+        uint16_t outlen = 0;
+        MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)requests[i], strlen(requests[i]), &outbuf, &outlen));
+        TEST_ASSERT_NOT_NULL(outbuf);
+        bool is_error = false;
+        cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+        TEST_ASSERT_NOT_NULL(root);
+        TEST_ASSERT_FALSE(is_error);
+        TEST_ASSERT_EQUAL_INT(i + 1, s_default_count_calls);
+        TEST_ASSERT_EQUAL_INT(expected[i], s_default_count_value);
+        cJSON_Delete(root);
+        ESP_ERROR_CHECK(esp_mcp_mgr_req_destroy_response(handle, outbuf));
+    }
+
+    ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
+    ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
+    ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
+}
+
 TEST_CASE("test_tools_call_parameter_validation", "[mcp][protocol][tools][call]")
 {
     esp_mcp_t *mcp = NULL;
@@ -3519,7 +3579,7 @@ TEST_CASE("test_tools_call_missing_parameter", "[mcp][protocol][tools][call]")
     esp_mcp_tool_t *tool = esp_mcp_tool_create("test_tool", "Test tool", test_tool_callback_bool);
     TEST_ASSERT_NOT_NULL(tool);
 
-    esp_mcp_property_t *prop = esp_mcp_property_create_with_bool("enabled", true);
+    esp_mcp_property_t *prop = esp_mcp_property_create("enabled", ESP_MCP_PROPERTY_TYPE_BOOLEAN);
     TEST_ASSERT_NOT_NULL(prop);
     ESP_ERROR_CHECK(esp_mcp_tool_add_property(tool, prop));
 
@@ -3538,27 +3598,33 @@ TEST_CASE("test_tools_call_missing_parameter", "[mcp][protocol][tools][call]")
     ESP_ERROR_CHECK(esp_mcp_mgr_start(handle));
     mcp_test_send_initialize(handle);
 
-    const char *tools_call_msg = "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{}},\"id\":3}";
-    uint8_t *outbuf = NULL;
-    uint16_t outlen = 0;
+    const char *requests[] = {
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\",\"arguments\":{}},\"id\":3}",
+        "{\"jsonrpc\":\"2.0\",\"method\":\"tools/call\",\"params\":{\"name\":\"test_tool\"},\"id\":4}",
+    };
+    for (size_t i = 0; i < sizeof(requests) / sizeof(requests[0]); i++) {
+        const char *tools_call_msg = requests[i];
+        uint8_t *outbuf = NULL;
+        uint16_t outlen = 0;
 
-    MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
-    TEST_ASSERT_NOT_NULL(outbuf);
+        MCP_TEST_REQ_HANDLE(esp_mcp_mgr_req_handle(handle, "mcp_server", (const uint8_t *)tools_call_msg, strlen(tools_call_msg), &outbuf, &outlen));
+        TEST_ASSERT_NOT_NULL(outbuf);
 
-    bool is_error = false;
-    cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
-    TEST_ASSERT_NOT_NULL(root);
+        bool is_error = false;
+        cJSON *root = validate_and_parse_response(outbuf, outlen, &is_error);
+        TEST_ASSERT_NOT_NULL(root);
 
-    cJSON *error = cJSON_GetObjectItem(root, "error");
-    TEST_ASSERT_NOT_NULL(error);
+        cJSON *error = cJSON_GetObjectItem(root, "error");
+        TEST_ASSERT_NOT_NULL(error);
 
-    cJSON *code = cJSON_GetObjectItem(error, "code");
-    TEST_ASSERT_NOT_NULL(code);
-    TEST_ASSERT_TRUE(cJSON_IsNumber(code));
-    TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
+        cJSON *code = cJSON_GetObjectItem(error, "code");
+        TEST_ASSERT_NOT_NULL(code);
+        TEST_ASSERT_TRUE(cJSON_IsNumber(code));
+        TEST_ASSERT_EQUAL_INT(-32602, code->valueint);
 
-    cJSON_Delete(root);
-    esp_mcp_mgr_req_destroy_response(handle, outbuf);
+        cJSON_Delete(root);
+        esp_mcp_mgr_req_destroy_response(handle, outbuf);
+    }
     ESP_ERROR_CHECK(esp_mcp_mgr_stop(handle));
     ESP_ERROR_CHECK(esp_mcp_mgr_deinit(handle));
     ESP_ERROR_CHECK(esp_mcp_destroy(mcp));
