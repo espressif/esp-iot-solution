@@ -44,8 +44,8 @@ typedef struct {
     uint8_t  magic[4];             /*!< The magic num of compressed firmware, default is BOOTLOADER_CUSTOM_OTA_HEADER_MAGIC */
     uint8_t  version;              /*!< Custom ota header version */
     uint8_t  compress_type: 4;     /*!< The compression algorithm used by the compression firmware */
-    uint8_t  reserved_4b: 4;       /*!< reserved 4 bits */
-    uint8_t  reserved[10];         /*!< Reserved */
+    uint8_t  delta_type: 4;        /*!< Diff algorithm. 0 = none, 1 = ddelta. Pure compression keeps this 0 */
+    uint8_t  reserved[10];         /*!< ddelta: u32 base_len (whole base file), u32 base_crc32, 2 zero bytes. Pure compression keeps the historical filler */
     uint32_t length;               /*!< The length of compressed firmware(or compressed patch) */
     uint8_t  md5[16];              /*!< The MD5 of compressed firmware(or compressed patch) */
     uint32_t crc32;                /*!< The CRC32 of the header */

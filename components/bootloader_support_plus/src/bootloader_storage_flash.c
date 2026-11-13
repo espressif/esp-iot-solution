@@ -129,16 +129,22 @@ int bootloader_storage_flash_input(void *buf, int size)
     bool encryption = false;
     static uint32_t write_count = 0;
 
-    if (custom_ota_config->dst_offset + size < custom_ota_config->dst_size) {
-        if (bootloader_custom_flash_encryption_enabled()) {
-            encryption = true;
-        }
-        if (bootloader_storage_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption) != ESP_OK) {
-            ESP_LOGE(TAG, "error");
-            return 0;
-        }
-        custom_ota_config->dst_offset += size;
+    if (size < 0) {
+        return 0;
     }
+    if ((uint32_t)size > custom_ota_config->dst_size - custom_ota_config->dst_offset) {
+        ESP_LOGE(TAG, "write exceeds destination partition");
+        return 0;
+    }
+
+    if (bootloader_custom_flash_encryption_enabled()) {
+        encryption = true;
+    }
+    if (bootloader_storage_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption) != ESP_OK) {
+        ESP_LOGE(TAG, "error");
+        return 0;
+    }
+    custom_ota_config->dst_offset += size;
 
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
     if (!(write_count % 25)) { // The current buffer for writing data is 4KB, so a maximum of 4KB can be written at one time. We feed the watchdog here every 25 times
@@ -168,16 +174,22 @@ int bootloader_storage_flash_input(void *buf, int size)
     bool encryption = false;
     static uint32_t write_count = 0;
 
-    if (custom_ota_config->dst_offset + size < custom_ota_config->dst_size) {
-        uint32_t dst_addr = custom_ota_config->dst_addr + custom_ota_config->dst_offset;
-        ESP_LOGD(TAG, "write buffer %x to %x, len %d", buf, dst_addr, size);
-        if (bootloader_custom_flash_encryption_enabled()) {
-            encryption = true;
-        }
-        bootloader_custom_sync_int_cache();
-        bootloader_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption);
-        custom_ota_config->dst_offset += size;
+    if (size < 0) {
+        return 0;
     }
+    if ((uint32_t)size > custom_ota_config->dst_size - custom_ota_config->dst_offset) {
+        ESP_LOGE(TAG, "write exceeds destination partition");
+        return 0;
+    }
+
+    uint32_t dst_addr = custom_ota_config->dst_addr + custom_ota_config->dst_offset;
+    ESP_LOGD(TAG, "write buffer %x to %x, len %d", buf, dst_addr, size);
+    if (bootloader_custom_flash_encryption_enabled()) {
+        encryption = true;
+    }
+    bootloader_custom_sync_int_cache();
+    bootloader_flash_write(custom_ota_config->dst_addr + custom_ota_config->dst_offset, buf, size, encryption);
+    custom_ota_config->dst_offset += size;
 
 #ifdef CONFIG_BOOTLOADER_WDT_ENABLE
     if (!(write_count % 25)) { // The current buffer for writing data is 4KB, so a maximum of 4KB can be written at one time. We feed the watchdog here every 25 times
