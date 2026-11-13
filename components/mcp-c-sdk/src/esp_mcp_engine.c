@@ -38,6 +38,7 @@ static const char *TAG = "esp_mcp_engine";
 #define MCP_PROTO_LATEST_KNOWN "2025-11-25"
 #define MCP_PROTO_DEFAULT "2025-03-26"
 
+static void esp_mcp_resource_subscriptions_trim_unlocked(esp_mcp_t *mcp);
 static esp_err_t esp_mcp_reply_result(esp_mcp_t *mcp, const cJSON *id, const char *result);
 static esp_err_t esp_mcp_reply_invalid_params(esp_mcp_t *mcp,
                                               const cJSON *id,
@@ -277,15 +278,22 @@ static void esp_mcp_emit_resource_updated(esp_mcp_t *mcp, const char *uri)
     }
     bool matched_any = false;
     bool broadcast_default = false;
-    size_t sid_cap = sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0]);
     size_t sid_size = sizeof(mcp->resource_subscriptions[0].session_id);
-    char *sid_snapshot = calloc(sid_cap, sid_size);
-    if (!sid_snapshot) {
+    esp_mcp_resource_sub_lock(mcp);
+    size_t sid_cap = mcp->resource_subscriptions_count;
+    if (sid_cap == 0) {
+        esp_mcp_resource_sub_unlock(mcp);
         cJSON_free(s);
         return;
     }
+    char *sid_snapshot = calloc(sid_cap, sid_size);
+    if (!sid_snapshot) {
+        esp_mcp_resource_sub_unlock(mcp);
+        cJSON_free(s);
+        ESP_LOGE(TAG, "Notify resource failed: no memory for subscribers");
+        return;
+    }
     size_t nsid = 0;
-    esp_mcp_resource_sub_lock(mcp);
     for (size_t i = 0; i < mcp->resource_subscriptions_count; ++i) {
         if (strcmp(mcp->resource_subscriptions[i].uri, uri) != 0) {
             continue;
@@ -685,10 +693,9 @@ static esp_mcp_session_state_t *esp_mcp_session_state_find(esp_mcp_t *mcp, const
     if (!(mcp && session_id && session_id[0])) {
         return NULL;
     }
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used &&
-                strcmp(mcp->session_states[i].session_id, session_id) == 0) {
-            return &mcp->session_states[i];
+    for (esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            return &node->state;
         }
     }
     return NULL;
@@ -700,10 +707,9 @@ static const esp_mcp_session_state_t *esp_mcp_session_state_find_const(const esp
     if (!(mcp && session_id && session_id[0])) {
         return NULL;
     }
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used &&
-                strcmp(mcp->session_states[i].session_id, session_id) == 0) {
-            return &mcp->session_states[i];
+    for (const esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            return &node->state;
         }
     }
     return NULL;
@@ -719,24 +725,28 @@ static esp_mcp_session_state_t *esp_mcp_get_session_state(esp_mcp_t *mcp,
         return &mcp->default_session_state;
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        NULL, TAG, "Get session failed: session mutex unavailable");
     esp_mcp_session_state_t *state = esp_mcp_session_state_find(mcp, session_id);
-    if (state || !create) {
-        return state;
-    }
-
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used) {
-            continue;
+    if (!state && create) {
+        if (mcp->session_states_count < ESP_MCP_MAX_SESSION_STATES) {
+            esp_mcp_session_node_t *node = calloc(1, sizeof(*node));
+            if (node) {
+                node->state.used = true;
+                esp_mcp_copy_str(node->state.session_id, sizeof(node->state.session_id), session_id);
+                node->next = mcp->session_states;
+                mcp->session_states = node;
+                mcp->session_states_count++;
+                state = &node->state;
+            } else {
+                ESP_LOGE(TAG, "Create session failed: no memory");
+            }
+        } else {
+            ESP_LOGW(TAG, "Create session failed: capacity %u reached", (unsigned)ESP_MCP_MAX_SESSION_STATES);
         }
-        memset(&mcp->session_states[i], 0, sizeof(mcp->session_states[i]));
-        mcp->session_states[i].used = true;
-        snprintf(mcp->session_states[i].session_id,
-                 sizeof(mcp->session_states[i].session_id),
-                 "%s",
-                 session_id);
-        return &mcp->session_states[i];
     }
-    return NULL;
+    xSemaphoreGive(mcp->session_mutex);
+    return state;
 }
 
 static const esp_mcp_session_state_t *esp_mcp_get_session_state_const(const esp_mcp_t *mcp,
@@ -749,6 +759,20 @@ static const esp_mcp_session_state_t *esp_mcp_get_session_state_const(const esp_
         return &mcp->default_session_state;
     }
     return esp_mcp_session_state_find_const(mcp, session_id);
+}
+
+static bool esp_mcp_copy_session_state(esp_mcp_t *mcp, const char *session_id,
+                                       esp_mcp_session_state_t *snapshot)
+{
+    if (!mcp || xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+    const esp_mcp_session_state_t *state = esp_mcp_get_session_state_const(mcp, session_id);
+    if (state) {
+        *snapshot = *state;
+    }
+    xSemaphoreGive(mcp->session_mutex);
+    return state != NULL;
 }
 
 static esp_mcp_session_state_t *esp_mcp_get_request_session_state(esp_mcp_t *mcp, bool create)
@@ -788,19 +812,33 @@ static esp_err_t esp_mcp_emit_log_message(esp_mcp_t *mcp,
     ESP_RETURN_ON_FALSE(mcp && level && jsonrpc_message, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
 
     if (mcp->request_session_id[0]) {
-        const esp_mcp_session_state_t *state =
-            esp_mcp_get_session_state_const(mcp, mcp->request_session_id);
-        if (!esp_mcp_session_allows_log_level(state, level)) {
+        esp_mcp_session_state_t snapshot = {0};
+        bool found = esp_mcp_copy_session_state(mcp, mcp->request_session_id, &snapshot);
+        if (!esp_mcp_session_allows_log_level(found ? &snapshot : NULL, level)) {
             return ESP_OK;
         }
         return esp_mcp_emit_message(mcp, mcp->request_session_id, jsonrpc_message);
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Log failed: session mutex unavailable");
+    size_t count = mcp->session_states_count;
+    esp_mcp_session_state_t *snapshots = count ? calloc(count, sizeof(*snapshots)) : NULL;
+    if (count && !snapshots) {
+        xSemaphoreGive(mcp->session_mutex);
+        ESP_LOGE(TAG, "Log failed: no memory for session snapshots");
+        return ESP_ERR_NO_MEM;
+    }
+    size_t index = 0;
+    for (esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        snapshots[index++] = node->state;
+    }
+    xSemaphoreGive(mcp->session_mutex);
     bool has_named_sessions = false;
     esp_err_t last_ret = ESP_OK;
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        const esp_mcp_session_state_t *state = &mcp->session_states[i];
-        if (!(state->used && state->received_initialize_request)) {
+    for (size_t i = 0; i < count; ++i) {
+        const esp_mcp_session_state_t *state = &snapshots[i];
+        if (!state->received_initialize_request) {
             continue;
         }
         has_named_sessions = true;
@@ -812,12 +850,15 @@ static esp_err_t esp_mcp_emit_log_message(esp_mcp_t *mcp,
             last_ret = emit_ret;
         }
     }
+    free(snapshots);
 
     if (has_named_sessions) {
         return last_ret;
     }
 
-    if (!esp_mcp_session_allows_log_level(&mcp->default_session_state, level)) {
+    esp_mcp_session_state_t snapshot = {0};
+    bool found = esp_mcp_copy_session_state(mcp, NULL, &snapshot);
+    if (!esp_mcp_session_allows_log_level(found ? &snapshot : NULL, level)) {
         return ESP_OK;
     }
     return esp_mcp_emit_message(mcp, NULL, jsonrpc_message);
@@ -1470,14 +1511,18 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
                 }
                 mcp->resource_subscriptions_count--;
             }
+            esp_mcp_resource_subscriptions_trim_unlocked(mcp);
             esp_mcp_resource_sub_unlock(mcp);
         }
         esp_mcp_req_id_lock(mcp);
         esp_mcp_forget_request_ids_for_session(mcp, esp_mcp_request_session_or_default(mcp));
         esp_mcp_req_id_unlock(mcp);
+        ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                            ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
         session_state->require_initialized_notification = false;
         session_state->received_initialized_notification = false;
         session_state->received_initialize_request = false;
+        xSemaphoreGive(mcp->session_mutex);
     }
 
     mcp->client_initialized = false;
@@ -1497,6 +1542,8 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
                                             "params.protocolVersion");
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
     esp_mcp_session_state_reset_lifecycle(session_state);
     if (strcmp(negotiated_protocol_version, MCP_PROTO_LATEST_KNOWN) > 0) {
         ESP_LOGW(TAG,
@@ -1512,6 +1559,7 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
     if (capabilities_param && cJSON_IsObject(capabilities_param)) {
         esp_mcp_parse_capabilities(session_state, capabilities_param);
     }
+    xSemaphoreGive(mcp->session_mutex);
 
     const esp_app_desc_t *app_desc = esp_app_get_description();
     cJSON *message = cJSON_CreateObject();
@@ -1624,7 +1672,10 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
         cJSON_free(message_str);
     }
     cJSON_Delete(message);
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
     session_state->received_initialize_request = true;
+    xSemaphoreGive(mcp->session_mutex);
 
     return ESP_OK;
 }
@@ -2599,6 +2650,21 @@ static esp_err_t esp_mcp_handle_resources_read(esp_mcp_t *mcp, const cJSON *para
     return r;
 }
 
+static void esp_mcp_resource_subscriptions_trim_unlocked(esp_mcp_t *mcp)
+{
+    if (mcp->resource_subscriptions_count == 0) {
+        free(mcp->resource_subscriptions);
+        mcp->resource_subscriptions = NULL;
+        return;
+    }
+    esp_mcp_resource_subscription_t *subscriptions =
+        realloc(mcp->resource_subscriptions,
+                mcp->resource_subscriptions_count * sizeof(*subscriptions));
+    if (subscriptions) {
+        mcp->resource_subscriptions = subscriptions;
+    }
+}
+
 static bool esp_mcp_resource_subscription_contains_unlocked(esp_mcp_t *mcp, const char *session_id, const char *uri)
 {
     if (!mcp || !session_id || !uri) {
@@ -2623,12 +2689,22 @@ static esp_err_t esp_mcp_resource_subscription_add(esp_mcp_t *mcp, const char *s
         esp_mcp_resource_sub_unlock(mcp);
         return ESP_OK;
     }
-    size_t max_subscriptions = sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0]);
+    size_t max_subscriptions = CONFIG_MCP_RESOURCE_SUBSCRIPTIONS_MAX;
     if (mcp->resource_subscriptions_count >= max_subscriptions) {
         esp_mcp_resource_sub_unlock(mcp);
+        ESP_LOGW(TAG, "Subscribe failed: capacity %u reached", (unsigned)max_subscriptions);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    size_t idx = mcp->resource_subscriptions_count;
+    esp_mcp_resource_subscription_t *subscriptions =
+        realloc(mcp->resource_subscriptions, (idx + 1) * sizeof(*subscriptions));
+    if (!subscriptions) {
+        esp_mcp_resource_sub_unlock(mcp);
+        ESP_LOGE(TAG, "Subscribe failed: no memory for subscription");
         return ESP_ERR_NO_MEM;
     }
-    size_t idx = mcp->resource_subscriptions_count++;
+    mcp->resource_subscriptions = subscriptions;
+    mcp->resource_subscriptions_count++;
     esp_mcp_copy_str(mcp->resource_subscriptions[idx].session_id, sizeof(mcp->resource_subscriptions[idx].session_id), session_id);
     esp_mcp_copy_str(mcp->resource_subscriptions[idx].uri, sizeof(mcp->resource_subscriptions[idx].uri), uri);
     esp_mcp_resource_sub_unlock(mcp);
@@ -2650,6 +2726,7 @@ static esp_err_t esp_mcp_resource_subscription_remove(esp_mcp_t *mcp, const char
                        sizeof(mcp->resource_subscriptions[j - 1]));
             }
             mcp->resource_subscriptions_count--;
+            esp_mcp_resource_subscriptions_trim_unlocked(mcp);
             esp_mcp_resource_sub_unlock(mcp);
             return ESP_OK;
         }
@@ -2787,13 +2864,13 @@ static esp_err_t esp_mcp_handle_resources_subscribe(esp_mcp_t *mcp, const cJSON 
         return esp_mcp_reply_error_with_kv(mcp, MCP_ERROR_CODE_INVALID_REQUEST, MCP_ERROR_MESSAGE_INVALID_REQUEST, id, "reason", "missing_session");
     }
     esp_err_t ret = esp_mcp_resource_subscription_add(mcp, mcp->request_session_id, uri->valuestring);
-    if (ret == ESP_ERR_NO_MEM) {
+    if (ret == ESP_ERR_INVALID_SIZE) {
         cJSON *data = cJSON_CreateObject();
         if (data) {
             cJSON_AddStringToObject(data, "reason", "subscription_limit_reached");
             cJSON_AddNumberToObject(data,
                                     "limit",
-                                    (double)(sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0])));
+                                    (double)CONFIG_MCP_RESOURCE_SUBSCRIPTIONS_MAX);
             cJSON_AddStringToObject(data, "uri", uri->valuestring);
         }
         esp_err_t rr = esp_mcp_reply_error_ex(mcp, MCP_ERROR_CODE_INTERNAL_ERROR, "Maximum subscriptions reached", id, data);
@@ -2801,6 +2878,10 @@ static esp_err_t esp_mcp_handle_resources_subscribe(esp_mcp_t *mcp, const cJSON 
             cJSON_Delete(data);
         }
         return rr;
+    }
+    if (ret == ESP_ERR_NO_MEM) {
+        return esp_mcp_reply_internal_error_with_method(mcp, id, "resources/subscribe",
+                                                        "subscription allocation failed");
     }
     if (ret != ESP_OK) {
         return esp_mcp_reply_error_with_kv(mcp, MCP_ERROR_CODE_INTERNAL_ERROR, MCP_ERROR_MESSAGE_INTERNAL_ERROR, id, "uri", uri->valuestring);
@@ -3090,8 +3171,11 @@ static esp_err_t esp_mcp_handle_logging_set_level(esp_mcp_t *mcp, const cJSON *p
     }
     esp_mcp_session_state_t *session_state = esp_mcp_get_request_session_state(mcp, true);
     if (session_state) {
+        ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                            ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
         session_state->has_log_level = true;
         esp_mcp_copy_str(session_state->log_level, sizeof(session_state->log_level), normalized_level);
+        xSemaphoreGive(mcp->session_mutex);
     }
     esp_mcp_copy_str(mcp->log_level, sizeof(mcp->log_level), normalized_level);
     return esp_mcp_reply_result(mcp, id, "{}");
@@ -3446,7 +3530,13 @@ esp_err_t esp_mcp_create(esp_mcp_t **mcp)
     }
 
     temp_mcp->req_id_mutex = xSemaphoreCreateMutex();
-    if (!temp_mcp->req_id_mutex) {
+    if (temp_mcp->req_id_mutex) {
+        temp_mcp->session_mutex = xSemaphoreCreateMutex();
+    }
+    if (!temp_mcp->req_id_mutex || !temp_mcp->session_mutex) {
+        if (temp_mcp->req_id_mutex) {
+            vSemaphoreDelete(temp_mcp->req_id_mutex);
+        }
         vSemaphoreDelete(temp_mcp->resource_sub_mutex);
         vSemaphoreDelete(temp_mcp->mutex);
         esp_mcp_prompt_list_destroy((esp_mcp_prompt_list_t *)temp_mcp->prompts);
@@ -3454,6 +3544,7 @@ esp_err_t esp_mcp_create(esp_mcp_t **mcp)
         esp_mcp_task_store_destroy((esp_mcp_task_store_t *)temp_mcp->tasks);
         esp_mcp_tool_list_destroy(temp_mcp->tools);
         free(temp_mcp);
+        ESP_LOGE(TAG, "Create failed: no memory for request/session mutexes");
         return ESP_ERR_NO_MEM;
     }
 
@@ -3513,6 +3604,12 @@ esp_err_t esp_mcp_destroy(esp_mcp_t *mcp)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Error destroying tool list: %s", esp_err_to_name(ret));
     }
+    while (mcp->session_states) {
+        esp_mcp_session_node_t *node = mcp->session_states;
+        mcp->session_states = node->next;
+        free(node);
+    }
+    free(mcp->resource_subscriptions);
 
     if (mcp->mbuf.outbuf) {
         cJSON_free(mcp->mbuf.outbuf);
@@ -3564,6 +3661,9 @@ esp_err_t esp_mcp_destroy(esp_mcp_t *mcp)
         mcp->req_id_mutex = NULL;
     }
 
+    if (mcp->session_mutex) {
+        vSemaphoreDelete(mcp->session_mutex);
+    }
     if (mcp->mutex) {
         if (mutex_held) {
             (void)xSemaphoreGive(mcp->mutex);
@@ -3583,7 +3683,7 @@ esp_err_t esp_mcp_free_response(esp_mcp_t *mcp, uint8_t *outbuf)
     if (!outbuf) {
         return ESP_OK;
     }
-    free(outbuf);
+    cJSON_free(outbuf);
     return ESP_OK;
 }
 
@@ -3673,24 +3773,15 @@ esp_err_t esp_mcp_handle_message(esp_mcp_t *mcp, const uint8_t *inbuf, uint16_t 
         mutex_held = true;
     }
 
-    // Reuse existing parser which fills legacy mbuf, then copy into independent buffer.
     ret = esp_mcp_parse_message(mcp, (const char *)inbuf);
-    uint8_t *tmp = NULL;
-    uint16_t tmplen = 0;
-    // Even when parser returns an error code, it may have produced a valid JSON-RPC error payload.
-    // Always drain mbuf so transport can return protocol-level errors to the caller.
-    (void)esp_mcp_get_mbuf(mcp, &tmp, &tmplen);
-    if (tmp && tmplen > 0) {
-        uint8_t *copy = (uint8_t *)calloc(1, (size_t)tmplen + 1);
-        if (copy) {
-            memcpy(copy, tmp, tmplen);
-            *outbuf = copy;
-            *outlen = tmplen;
-        } else {
-            ret = ESP_ERR_NO_MEM;
-        }
-        (void)esp_mcp_remove_mbuf(mcp, tmp);
-    }
+    /* Error returns can still carry a JSON-RPC error response. Detach ownership
+     * under the engine lock so the next request cannot overwrite this buffer.
+     */
+    *outbuf = mcp->mbuf.outbuf;
+    *outlen = mcp->mbuf.outlen;
+    mcp->mbuf.outbuf = NULL;
+    mcp->mbuf.outlen = 0;
+    mcp->mbuf.id = 0;
 
 cleanup:
     if (mcp->mutex && mutex_held) {
@@ -3826,6 +3917,10 @@ const char *esp_mcp_get_request_session_id(const esp_mcp_t *mcp)
 esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id)
 {
     ESP_RETURN_ON_FALSE(mcp && session_id && session_id[0], ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(xSemaphoreGetMutexHolder(mcp->mutex) != xTaskGetCurrentTaskHandle(),
+                        ESP_ERR_INVALID_STATE, TAG, "Clear session failed: engine mutex is held by current task");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Clear session failed: engine mutex unavailable");
     esp_mcp_resource_sub_lock(mcp);
     for (size_t i = 0; i < mcp->resource_subscriptions_count;) {
         if (strcmp(mcp->resource_subscriptions[i].session_id, session_id) == 0) {
@@ -3839,14 +3934,29 @@ esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id)
         }
         i++;
     }
+    esp_mcp_resource_subscriptions_trim_unlocked(mcp);
     esp_mcp_resource_sub_unlock(mcp);
     esp_mcp_req_id_lock(mcp);
     esp_mcp_forget_request_ids_for_session(mcp, session_id);
     esp_mcp_req_id_unlock(mcp);
-    esp_mcp_session_state_t *state = esp_mcp_session_state_find(mcp, session_id);
-    if (state) {
-        memset(state, 0, sizeof(*state));
+    if (xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) != pdTRUE) {
+        xSemaphoreGive(mcp->mutex);
+        ESP_LOGE(TAG, "Clear session failed: session mutex unavailable");
+        return ESP_ERR_INVALID_STATE;
     }
+    esp_mcp_session_node_t **link = &mcp->session_states;
+    while (*link) {
+        esp_mcp_session_node_t *node = *link;
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            *link = node->next;
+            mcp->session_states_count--;
+            free(node);
+            break;
+        }
+        link = &node->next;
+    }
+    xSemaphoreGive(mcp->session_mutex);
+    xSemaphoreGive(mcp->mutex);
     return ESP_OK;
 }
 
@@ -3924,7 +4034,10 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         if (!strcmp(method_str, "notifications/initialized")) {
             esp_mcp_session_state_t *mutable_state = esp_mcp_get_request_session_state(mcp, true);
             if (mutable_state) {
+                ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                                    ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
                 mutable_state->received_initialized_notification = true;
+                xSemaphoreGive(mcp->session_mutex);
             }
         } else if (!strcmp(method_str, "notifications/cancelled")) {
             // Best-effort store cancellation info for long-running operations/tasks
@@ -4403,7 +4516,8 @@ static esp_err_t esp_mcp_emit_server_request_with_request_id(esp_mcp_t *mcp,
     ESP_RETURN_ON_FALSE(request_id && request_id[0], ESP_ERR_INVALID_ARG, TAG, "Invalid request id");
     ESP_RETURN_ON_FALSE(mcp->mgr_ctx, ESP_ERR_INVALID_STATE, TAG, "Manager context not set");
     ESP_RETURN_ON_ERROR(esp_mcp_parse_request_capability_hints(params_json, &hints), TAG, "Invalid params_json");
-    session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    session_state = esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     if (!(session_state && session_state->received_initialize_request)) {
         return ESP_ERR_NOT_SUPPORTED;
     }
@@ -4557,7 +4671,9 @@ esp_err_t esp_mcp_request_sampling_with_tools(esp_mcp_t *mcp,
                                               size_t out_request_id_len)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
 
     cJSON *params = NULL;
@@ -4627,7 +4743,9 @@ esp_err_t esp_mcp_request_elicitation(esp_mcp_t *mcp,
                                       char *out_request_id,
                                       size_t out_request_id_len)
 {
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
 
     cJSON *params = NULL;
@@ -4664,7 +4782,9 @@ esp_err_t esp_mcp_request_elicitation_url(esp_mcp_t *mcp,
                                           size_t out_request_id_len)
 {
     ESP_RETURN_ON_FALSE(mcp && url, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
     ESP_RETURN_ON_FALSE(session_state->client_cap_elicitation_url, ESP_ERR_NOT_SUPPORTED, TAG, "Client does not support URL elicitation");
     char request_id[33] = {0};

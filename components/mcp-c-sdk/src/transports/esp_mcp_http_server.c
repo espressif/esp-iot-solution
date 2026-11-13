@@ -1778,11 +1778,12 @@ static esp_mcp_http_session_t *esp_mcp_http_session_find_locked(esp_mcp_http_ser
     return NULL;
 }
 
-static void esp_mcp_http_session_sweep_expired_locked(esp_mcp_http_server_item_t *mcp_http)
+static esp_mcp_http_session_t *esp_mcp_http_session_sweep_expired_locked(esp_mcp_http_server_item_t *mcp_http)
 {
     if (!mcp_http) {
-        return;
+        return NULL;
     }
+    esp_mcp_http_session_t *expired = NULL;
     int64_t now_ms = esp_timer_get_time() / 1000;
     esp_mcp_http_session_t **pp = &mcp_http->sessions;
     while (*pp) {
@@ -1793,7 +1794,6 @@ static void esp_mcp_http_session_sweep_expired_locked(esp_mcp_http_server_item_t
                     (void)httpd_sess_trigger_close(mcp_http->httpd, client->sockfd);
                 }
             }
-            (void)esp_mcp_mgr_clear_session_state(mcp_http->handle, drop->session_id);
             esp_mcp_sse_hist_msg_t **pp_hist = &mcp_http->sse_history_head;
             while (*pp_hist) {
                 if (strcmp((*pp_hist)->session_id, drop->session_id) == 0) {
@@ -1808,7 +1808,8 @@ static void esp_mcp_http_session_sweep_expired_locked(esp_mcp_http_server_item_t
                 pp_hist = &(*pp_hist)->next;
             }
             *pp = drop->next;
-            free(drop);
+            drop->next = expired;
+            expired = drop;
             continue;
         }
         pp = &(*pp)->next;
@@ -1816,6 +1817,22 @@ static void esp_mcp_http_session_sweep_expired_locked(esp_mcp_http_server_item_t
     mcp_http->sse_history_tail = NULL;
     for (esp_mcp_sse_hist_msg_t *it = mcp_http->sse_history_head; it; it = it->next) {
         mcp_http->sse_history_tail = it;
+    }
+    return expired;
+}
+
+static void esp_mcp_http_session_clear_expired(esp_mcp_http_server_item_t *mcp_http,
+                                               esp_mcp_http_session_t *expired)
+{
+    /* Engine callbacks can emit SSE messages, so never take the engine mutex while holding sse_mutex. */
+    while (expired) {
+        esp_mcp_http_session_t *drop = expired;
+        expired = drop->next;
+        esp_err_t ret = esp_mcp_mgr_clear_session_state(mcp_http->handle, drop->session_id);
+        if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "Clear expired session failed: %s", esp_err_to_name(ret));
+        }
+        free(drop);
     }
 }
 
@@ -1866,7 +1883,7 @@ static esp_err_t esp_mcp_http_resolve_session_id(httpd_req_t *req,
     if (!mcp_http->sse_mutex || xSemaphoreTake(mcp_http->sse_mutex, portMAX_DELAY) != pdTRUE) {
         return ESP_ERR_INVALID_STATE;
     }
-    esp_mcp_http_session_sweep_expired_locked(mcp_http);
+    esp_mcp_http_session_t *expired = esp_mcp_http_session_sweep_expired_locked(mcp_http);
     esp_err_t ret = ESP_OK;
     if (provided) {
         esp_mcp_http_session_t *sess = esp_mcp_http_session_find_locked(mcp_http, out_session_id);
@@ -1884,6 +1901,7 @@ static esp_err_t esp_mcp_http_resolve_session_id(httpd_req_t *req,
         }
     }
     xSemaphoreGive(mcp_http->sse_mutex);
+    esp_mcp_http_session_clear_expired(mcp_http, expired);
     return ret;
 }
 
@@ -3393,7 +3411,6 @@ static esp_err_t esp_mcp_http_delete_handler(httpd_req_t *req)
     }
     bool removed = esp_mcp_http_session_remove_locked(mcp_http, session_id);
     if (removed) {
-        (void)esp_mcp_mgr_clear_session_state(mcp_http->handle, session_id);
         esp_mcp_sse_hist_msg_t **pp_hist = &mcp_http->sse_history_head;
         mcp_http->sse_history_tail = NULL;
         while (*pp_hist) {
@@ -3422,6 +3439,11 @@ static esp_err_t esp_mcp_http_delete_handler(httpd_req_t *req)
         return ESP_ERR_NOT_FOUND;
     }
 
+    /* Match the engine-to-SSE lock order used when a request callback sends a notification. */
+    esp_err_t ret = esp_mcp_mgr_clear_session_state(mcp_http->handle, session_id);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Clear deleted session failed: %s", esp_err_to_name(ret));
+    }
     httpd_resp_set_status(req, HTTPD_200);
     return httpd_resp_send(req, NULL, 0);
 }

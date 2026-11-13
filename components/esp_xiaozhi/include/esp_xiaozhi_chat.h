@@ -388,6 +388,7 @@ esp_err_t esp_xiaozhi_chat_send_abort_speaking(esp_xiaozhi_chat_handle_t chat_hd
  *       - ESP_OK                  On success; url and token are complete copies
  *       - ESP_ERR_INVALID_ARG     If chat_hd is 0, url is NULL, url_size is 0,
  *                                 or token is not NULL and token_size is 0
+ *       - ESP_ERR_NOT_SUPPORTED   If CONFIG_XIAOZHI_VISION_ENABLE is disabled
  *       - ESP_ERR_INVALID_STATE   If this chat has not received a vision URL
  *       - ESP_ERR_INVALID_SIZE    If url or token buffer is too small
  */

@@ -38,6 +38,7 @@ typedef struct esp_mcp_s esp_mcp_t;
  * @brief Create an MCP instance
  *
  * Allocates and initializes a new MCP instance.
+ * Named sessions and resource subscriptions allocate on first use.
  *
  * @param[out] mcp Pointer to store the created MCP instance (must not be NULL)
  * @return
@@ -291,9 +292,17 @@ const char *esp_mcp_get_request_session_id(const esp_mcp_t *mcp);
 /**
  * @brief Clear session-scoped runtime state
  *
+ * Releases the named session state and its resource subscriptions. Serialized with
+ * esp_mcp_handle_message(). Calls from synchronous engine callbacks return
+ * ESP_ERR_INVALID_STATE without changing session state. Clear after message handling
+ * returns, or from another task that does not block the callback.
+ *
  * @param[in] mcp MCP instance
- * @param[in] session_id Target session id (nullable)
- * @return ESP_OK on success
+ * @param[in] session_id Non-empty target session id
+ * @return
+ *       - ESP_OK                 On success, including an unknown session
+ *       - ESP_ERR_INVALID_ARG    If mcp or session_id is NULL, or session_id is empty
+ *       - ESP_ERR_INVALID_STATE  If called from a synchronous engine callback or a state mutex cannot be acquired
  */
 esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id);
 
@@ -527,6 +536,9 @@ esp_err_t esp_mcp_request_tasks_list(esp_mcp_t *mcp,
  * This is a low-level helper that processes a single incoming MCP JSON-RPC message.
  * If the input is a request, it produces a JSON-RPC response (UTF-8 JSON).
  * If the input is a notification or response, it produces no output (outbuf==NULL).
+ * The returned buffer belongs to the caller and remains valid across subsequent
+ * requests. Release it exactly once with esp_mcp_free_response(), including when
+ * a protocol error payload accompanies a non-ESP_OK return value.
  *
  * @param[in]  mcp     MCP instance
  * @param[in]  inbuf   Input buffer (UTF-8 JSON)

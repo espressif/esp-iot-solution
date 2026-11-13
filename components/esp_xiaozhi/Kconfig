@@ -1,4 +1,12 @@
 menu "Xiaozhi Assistant"
+    config XIAOZHI_VISION_ENABLE
+        bool "Store chat vision explain endpoints"
+        default y
+        help
+            Store vision endpoints received through MCP. Disabling this removes 1024
+            bytes from each chat context; chat vision queries return
+            ESP_ERR_NOT_SUPPORTED. Standalone camera/video APIs are unchanged.
+
     config XIAOZHI_OTA_URL
         string "Default OTA URL"
         default "https://api.tenclass.net/xiaozhi/ota/"
