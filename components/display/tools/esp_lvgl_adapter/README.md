@@ -254,6 +254,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **Frame Buffer Count Rules**:
 - Non-zero rotation (except `DOUBLE_PARTIAL`) or triple-buffer modes: **3** frame buffers
+- `DOUBLE_DIRECT` with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6), rotated: **3**, as without the option; LVGL draws the next frame into the third while the panel waits for its refresh (with 2 it works, and each frame waits for that refresh)
 - Double-buffer modes without rotation, and `DOUBLE_PARTIAL`: **2** frame buffers
 - Single-buffer mode: **1** frame buffer
 
@@ -700,6 +701,8 @@ Configure via `idf.py menuconfig`:
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL 9.5/9.6: draw a rotated `DOUBLE_DIRECT` display in the panel's orientation (see Rotation Limitations) |
+| `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | Optional PSRAM budget for immutable rotated images; zero disables it (default) |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB
@@ -719,6 +722,7 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
+  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation, avoiding a separate rotation of the completed upright frame. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into an upright tile, preferably in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
@@ -729,6 +733,75 @@ Configure via `idf.py menuconfig`:
   - Rotation is handled at the software level by LVGL
   - Supports both I1 horizontal tiled (HTILED) and vertical tiled (VTILED) layouts
   - No additional configuration needed, just set via the `rotation` parameter
+
+### Object rotation and scaling
+
+The compatibility hooks support LVGL 9.5.x and 9.6.x. Enabling this option
+with another LVGL 9 version fails configuration explicitly; leaving it disabled
+retains the adapter's existing version compatibility.
+
+Object-style rotation and scale, including transformed parents and nested objects,
+use LVGL's software bitmap layers on this adapter's software `DOUBLE_DIRECT`
+RGB/DSI displays. This includes screen rotation 0: the matrix-transform build
+option is global, so an unrotated display also needs the object policy. The
+screen's matrix rotation still goes through `lv_draw_ortho`.
+
+The per-display policy defaults to false in LVGL and is enabled only for these
+adapter displays. Other displays keep their renderer's matrix path. Custom object
+matrices and skew stay on their existing path; general affine/skew software support
+is not added. Bitmap layers need additional memory and resampling time for
+transformed objects, so correctness checks are not speed measurements.
+
+Independent pixel regressions and hardware validation are documented in
+[the host tests](test_apps/host_ortho/README.md).
+
+### Working memory and compatibility hooks
+
+The default tile allocation block is 128 KiB. The PPA/two-core pipeline requests
+up to four blocks plus alignment padding; when fewer internal blocks are
+available, it shares them into smaller tiles. The first block can fall back to
+PSRAM. Worker stacks, the adapter task stack and transformed-object bitmap layers
+add memory beyond these tiles. The optional image-cache budget below covers
+aligned cached pixels, not total renderer memory. Check both peak memory and the
+largest free internal block with the application's fonts, images and widgets.
+
+Three build-time helpers adapt supported LVGL 9.5/9.6 sources: object-layer
+selection, FreeRTOS worker ownership and global OS-mutex cleanup. Their changes
+are guarded by adapter build definitions and installed atomically for reused
+component caches. These hooks use LVGL internals and require review when upgrading
+LVGL. Performance depends on the workload and memory contention; avoiding the
+final frame-rotation pass does not remove tile transfers or DIRECT-buffer
+synchronization. See the host tests for exact and bounded pixel-comparison cases.
+
+### Repeated images with rotation-in-draw
+
+`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` sets a maximum PSRAM
+budget for opaque, unscaled images whose pixels are in flash. The first draw
+uses the normal path; the second builds a rotated copy, and later draws copy
+that buffer without another rotation. This targets repeatedly redrawn backgrounds.
+It does not increase the frame rate of changing video or camera images.
+
+The cache is off by default. For example, `2048` allows at most 2 MiB of aligned
+pixel allocations, shared across displays. A 1280x720 RGB565 background needs
+about 1.76 MiB plus row/alignment padding. Least recently used images are evicted;
+allocation failure or an image exceeding the budget uses the normal path.
+Cached pixels use PSRAM, preserving internal RAM for rendering tiles, and are
+freed when LVGL is deinitialized. Images marked `LV_IMAGE_FLAGS_MODIFIABLE`
+are always excluded.
+
+With two rendering cores, a dedicated mutex serializes each text draw, including
+consumption of its glyph bitmaps, so application font callbacks need not be
+reentrant. Other drawing in both tiles remains parallel.
+
+With rotation-in-draw enabled, the adapter also keeps completed LVGL FreeRTOS worker tasks suspended until
+their owner deletes them. This prevents a returning SW worker from deleting its
+own task just before the SW-unit destructor deletes the same handle.
+
+The cache-enabled target test uses `sdkconfig.ci.rotate_in_draw_cache` and the
+`[ortho_cache]` Unity tag. For pixel comparisons and regression reproduction
+without a board, see [the host runner](test_apps/host_ortho/README.md). The
+`[render_thread_lifecycle]` target test is run 16 times by its pytest case to
+exercise repeated adapter initialization and teardown.
 
 ### Buffering and Render Modes
 
@@ -752,6 +825,7 @@ Configure via `idf.py menuconfig`:
 ### PPA/DMA2D Acceleration
 
 - `profile.enable_ppa_accel` enables PPA drawing only for that display. Unowned offscreen tasks use software; set the draw descriptor's `base.obj` to its owning object when drawing to a canvas.
+- On a display rotated with `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`, `enable_ppa_accel` is ignored (with a warning): `lv_draw_ortho` already uses the PPA there to rotate each tile and fill plain rectangles.
 - LVGL v9 accelerates straight ARGB8888 images onto RGB565/RGB888 and large single-color A8 masks. Non-normal blend modes, images with separate masks and premultiplied formats use software.
 - Measured size cutoffs keep small draws and SRAM copies/fills on software; large PSRAM copies remain eligible. LVGL v8 also uses software for byte-swapped RGB565, transparent targets and custom pixel callbacks.
 - Shared drawing clients and previous blend handlers are released or restored when the last accelerated display is removed.

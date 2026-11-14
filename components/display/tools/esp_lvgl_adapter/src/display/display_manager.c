@@ -35,6 +35,18 @@
 #include "display_te_sync.h"
 #include "display_manager.h"
 
+/* A rotated DOUBLE_DIRECT display drawn in the panel's orientation (see the
+ * ESP_LVGL_ADAPTER_ROTATE_IN_DRAW Kconfig option). */
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && LVGL_VERSION_MAJOR >= 9
+#define ESP_LV_ADAPTER_ROTATE_IN_DRAW 1
+#include "lv_draw_ortho.h"
+#if SOC_PPA_SUPPORTED
+#include "lv_draw_ortho_ppa.h"
+#endif
+#else
+#define ESP_LV_ADAPTER_ROTATE_IN_DRAW 0
+#endif
+
 /*********************
  *      TYPEDEFS
  *********************/
@@ -593,7 +605,9 @@ static esp_err_t display_manager_redirect_dummy_draw_buffer(esp_lv_adapter_displ
     if (!cfg->dummy_draw_buf_primary) {
 #if LVGL_VERSION_MAJOR >= 9
         lv_color_format_t color_format = lv_display_get_color_format(node->lv_disp);
-        size_t draw_buf_pixels = lv_display_get_horizontal_resolution(node->lv_disp);
+        /* LVGL binds buffers in the original orientation, even when matrix
+         * rotation swaps the logical resolution reported to applications. */
+        size_t draw_buf_pixels = node->lv_disp->hor_res;
         size_t draw_buf_bytes = lv_draw_buf_width_to_stride(draw_buf_pixels, color_format);
 #else
         size_t draw_buf_pixels = cfg->base.profile.hor_res ? cfg->base.profile.hor_res : 1;
@@ -872,6 +886,107 @@ static void display_manager_flush_cb_v8(lv_disp_drv_t *drv,
  *   INTERNAL NODE MANAGEMENT
  **********************/
 
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+static bool display_manager_rotates_in_draw(const esp_lv_adapter_display_config_t *pub)
+{
+    return pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT &&
+           pub->profile.rotation != ESP_LV_ADAPTER_ROTATE_0 &&
+           pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
+           (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+            pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI);
+}
+
+/* The adapter turns clockwise and LVGL counter-clockwise: the adapter's 90 is
+ * LVGL's 270, as the PPA angles of the rotating flush paths already show. */
+static lv_display_rotation_t display_manager_lvgl_rotation(esp_lv_adapter_rotation_t rotation)
+{
+    switch (rotation) {
+    case ESP_LV_ADAPTER_ROTATE_90:
+        return LV_DISPLAY_ROTATION_270;
+    case ESP_LV_ADAPTER_ROTATE_180:
+        return LV_DISPLAY_ROTATION_180;
+    case ESP_LV_ADAPTER_ROTATE_270:
+        return LV_DISPLAY_ROTATION_90;
+    default:
+        return LV_DISPLAY_ROTATION_0;
+    }
+}
+
+/**
+ * @brief Let LVGL draw the display in the panel's orientation
+ *
+ * LVGL hands each draw task a matrix for the rotation, and lv_draw_ortho draws
+ * through it: widgets go through LVGL's software renderer into an upright tile
+ * in internal RAM, and the tile is turned into the frame buffer (by the PPA
+ * where there is one). The display itself keeps the panel's size; LVGL swaps
+ * the logical resolution, and syncs the two buffers in the panel's
+ * orientation (refr_sync_areas).
+ */
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB > 0 || \
+    (LV_DRAW_SW_DRAW_UNIT_CNT > 1 && LV_USE_OS != LV_OS_NONE && CONFIG_FREERTOS_NUMBER_OF_CORES > 1)
+/* Cache state and the helper belong to LVGL's task. In particular, changing
+ * the cache budget must not evict a buffer while another task draws it. */
+static void display_manager_ortho_options_cb(void *arg)
+{
+    LV_UNUSED(arg);
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB > 0
+    lv_draw_ortho_set_image_cache((size_t)CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB * 1024);
+    ESP_LOGI(TAG, "rotate in draw: %u KiB budget for immutable rotated images",
+             CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB);
+#endif
+#if LV_DRAW_SW_DRAW_UNIT_CNT > 1 && LV_USE_OS != LV_OS_NONE && CONFIG_FREERTOS_NUMBER_OF_CORES > 1
+    if (lv_draw_ortho_set_cores(2)) {
+        ESP_LOGI(TAG, "rotate in draw: tiles painted on both cores");
+    } else {
+        ESP_LOGW(TAG, "rotate in draw: the second core's task could not be started, one core paints");
+    }
+#endif
+}
+#endif
+
+/**
+ * @brief Take the third panel buffer of a display rotated in draw
+ *
+ * A rotated display is given three panel buffers
+ * (esp_lv_adapter_get_required_frame_buffer_count()), and drawn in the panel's
+ * orientation it uses all three: LVGL draws the next frame into the third
+ * while the panel waits for its refresh to show this one. The rest of the
+ * DOUBLE_DIRECT setup asks for two, and finds them among these. A panel made
+ * with two still works, and each frame then waits for that refresh.
+ */
+static void display_manager_fetch_third_buffer(esp_lv_adapter_display_node_t *node, lv_color_format_t color_format)
+{
+    if (display_manager_fetch_panel_frame_buffers(node, 3, lv_color_format_get_size(color_format))) {
+        return;
+    }
+    ESP_LOGW(TAG, "rotate in draw: the panel has two frame buffers, so each frame waits for its refresh;"
+             " made with esp_lv_adapter_get_required_frame_buffer_count() it has three");
+}
+
+static void display_manager_setup_rotate_in_draw(lv_display_t *disp, esp_lv_adapter_rotation_t rotation)
+{
+    /* lv_deinit() deletes every draw unit, lv_draw_ortho's included, so the
+     * unit is asked for again with each display: both calls do nothing while
+     * it exists, and create it again after LVGL has been restarted. */
+    lv_draw_ortho_init();
+#if SOC_PPA_SUPPORTED
+    esp_err_t err = lv_draw_ortho_ppa_init();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "rotate in draw: no PPA client (%s), the CPU turns the tiles", esp_err_to_name(err));
+    }
+#endif
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB > 0 || \
+    (LV_DRAW_SW_DRAW_UNIT_CNT > 1 && LV_USE_OS != LV_OS_NONE && CONFIG_FREERTOS_NUMBER_OF_CORES > 1)
+    /* LVGL was given more than one draw thread, which lv_draw_ortho replaces
+     * on this display: it paints every other tile on the second core instead. */
+    lv_async_call(display_manager_ortho_options_cb, NULL);
+#endif
+    lv_display_set_rotation(disp, display_manager_lvgl_rotation(rotation));
+    lv_display_set_matrix_rotation(disp, true);
+    ESP_LOGI(TAG, "rotation %d drawn in the panel's orientation", (int)rotation);
+}
+#endif
+
 /**
  * @brief Initialize a display node with LVGL and bridge setup
  */
@@ -884,6 +999,16 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     cfg->mono_layout = pub->profile.mono_layout;
     cfg->mono_buf = NULL;
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    /* The panel pipeline below is then the unrotated DOUBLE_DIRECT one; LVGL is
+     * given the rotation once the display exists. */
+    const esp_lv_adapter_rotation_t draw_rotation =
+        display_manager_rotates_in_draw(pub) ? pub->profile.rotation : ESP_LV_ADAPTER_ROTATE_0;
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        cfg->base.profile.rotation = ESP_LV_ADAPTER_ROTATE_0;
+    }
+#endif
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FPS_STATS
     /* Initialize FPS statistics */
@@ -961,6 +1086,12 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
         return false;
     }
 
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        display_manager_fetch_third_buffer(node, color_format);
+    }
+#endif
+
     if (!display_manager_prepare_buffers(node, render_mode, color_format)) {
         lv_display_delete(disp);
         node->lv_disp = NULL;
@@ -974,6 +1105,22 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
+
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    /* Object-style transforms need LVGL's bitmap-layer path: the ortho unit
+     * only handles the display's signed-permutation matrix. Keep this local
+     * to software DOUBLE_DIRECT RGB/DSI displays, including rotation zero;
+     * other displays retain their matrix-capable backend's original path. */
+    if (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT &&
+            pub->profile.mono_layout == ESP_LV_ADAPTER_MONO_LAYOUT_NONE &&
+            (pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_RGB ||
+             pub->profile.interface == ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI)) {
+        lv_display_set_software_object_transforms(disp, true);
+    }
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        display_manager_setup_rotate_in_draw(disp, draw_rotation);
+    }
+#endif
 
     if (mono_enabled && !display_manager_alloc_mono_buffer(cfg, &pub->profile)) {
         display_manager_free_draw_buffers(node);
@@ -1001,7 +1148,21 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
                             LV_EVENT_INVALIDATE_AREA, NULL);
 
 #if CONFIG_SOC_PPA_SUPPORTED
-    if (pub->profile.enable_ppa_accel) {
+    bool ppa_accel = pub->profile.enable_ppa_accel;
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (ppa_accel && draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        /* lv_draw_ortho already drives the PPA on this display: it turns every
+         * tile and fills plain rectangles. The PPA blend handlers would run on
+         * those same tiles, through LVGL's software renderer, and put two
+         * drivers of the PPA under one refresh -- never run on a board, and an
+         * LVGL PPA draw unit beside lv_draw_ortho was seen to stall the PPA on
+         * an ESP32-P4. Not registering the display keeps the handlers off its
+         * tasks; other displays keep their setting. */
+        ESP_LOGW(TAG, "enable_ppa_accel is ignored on a display rotated in draw: lv_draw_ortho drives the PPA there");
+        ppa_accel = false;
+    }
+#endif
+    if (ppa_accel) {
         /* PPA acceleration assumes draw unit count is forced to 1 via configuration. */
         lvgl_port_ppa_v9_init(disp);
 #if defined(LV_DRAW_SW_DRAW_UNIT_CNT) && (LV_DRAW_SW_DRAW_UNIT_CNT > 1)
@@ -1389,16 +1550,18 @@ static bool display_manager_set_buffers_v9(esp_lv_adapter_display_node_t *node,
     /* Panel framebuffers are packed, including the buffer used as a rotation source. */
     if (lv_mode != LV_DISPLAY_RENDER_MODE_PARTIAL &&
             display_manager_is_panel_frame_buffer(node, cfg->draw_buf_primary)) {
-        uint32_t width = lv_display_get_horizontal_resolution(disp);
+        /* The packed panel layout stays native after matrix rotation. This
+         * helper is also called when buffers are rebound after dummy draw. */
+        uint32_t width = disp->hor_res;
         uint32_t stride = width * lv_color_format_get_size(color_format);
 #if LV_VERSION_CHECK(9, 3, 0)
         lv_display_set_buffers_with_stride(disp, cfg->draw_buf_primary, secondary,
                                            buf_bytes, stride, lv_mode);
 #elif LV_VERSION_CHECK(9, 2, 0)
         /* LVGL 9.2 preserves an explicit stride, but has no raw-buffer helper yet. */
-        if (lv_draw_buf_init(&disp->_static_buf1, width, lv_display_get_vertical_resolution(disp),
+        if (lv_draw_buf_init(&disp->_static_buf1, width, disp->ver_res,
                              color_format, stride, cfg->draw_buf_primary, buf_bytes) != LV_RESULT_OK ||
-                (secondary && lv_draw_buf_init(&disp->_static_buf2, width, lv_display_get_vertical_resolution(disp),
+                (secondary && lv_draw_buf_init(&disp->_static_buf2, width, disp->ver_res,
                                                color_format, stride, secondary, buf_bytes) != LV_RESULT_OK)) {
             ESP_LOGE(TAG, "Failed to initialize packed draw buffers");
             return false;
