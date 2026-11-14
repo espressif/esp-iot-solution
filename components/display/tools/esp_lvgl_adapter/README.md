@@ -80,6 +80,10 @@ dependencies:
 - **LVGL**: 8.x or 9.x (auto-detected)
 - **Optional dependencies**: Required only if corresponding Kconfig options are enabled
 
+Local `components/lvgl` sources without version metadata are detected from standard
+headers. A non-empty `LVGL_VERSION` environment variable overrides detection;
+unrecognized source layouts warn and fall back to LVGL 9.
+
 ### Build and Run
 
 ```sh
@@ -229,7 +233,7 @@ Choose the configuration macro based on your display interface:
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (with PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 | SPI/I2C/I80/QSPI (without PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
-| MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
+| MONO (Monochrome) | `ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (i.e., `NONE`) |
 
 **Notes**:
 - MIPI DSI and RGB support framebuffer-based tearing modes
@@ -269,6 +273,7 @@ Choose the appropriate tearing mode based on your use case:
 
 **Important Limitations**:
 - RGB/MIPI DSI with `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
+- LVGL 9.0/9.1 reject FULL/DIRECT panel frame buffers when automatic stride alignment would add row padding; use LVGL 9.2 or later for these configurations
 - OTHER (SPI/I2C/I80/QSPI) interfaces support `NONE` and `TE_SYNC` modes; high-performance TE supports adapter rotation, while other configurations require panel orientation and matching touch mapping
 - MONO (Monochrome) interface **supports software rotation** (0°/90°/180°/270°) with pixel-level rotation handled by LVGL
 - `TE_SYNC` mode requires a panel TE signal connected to an ESP GPIO. Use `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG` for the standard mode, or `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG` to overlap LVGL rendering with TE-synchronized transfer. The high-performance mode requires PSRAM and additional full-frame memory; compatible interfaces in `examples/display/gui/common` enable it by default
@@ -294,6 +299,16 @@ Default `buffer_height` for each interface (see `esp_lv_adapter_display.h`):
 | RGB | 50 | Medium stripe height |
 | OTHER with PSRAM | `ver_res` (full height) | Full-height partial refresh, better throughput |
 | OTHER without PSRAM | 10 | Small stripe to save RAM |
+
+#### Draw-buffer Memory Placement
+
+RGB/MIPI DSI `DOUBLE_PARTIAL` and `TRIPLE_PARTIAL` always use one LVGL draw buffer
+in **internal SRAM**, regardless of `profile.use_psram`. Rendered stripes are copied
+or rotated into panel frame buffers, whose placement is set during `esp_lcd`
+initialization.
+
+Pixel storage is `hor_res × buffer_height × bytes_per_pixel`: 480 × 50 × 2 = 48,000
+bytes for RGB565. Reduce `buffer_height` if SRAM allocation fails.
 
 #### Tuning Tips
 
@@ -381,6 +396,10 @@ assert(touch != NULL);
 - `disp`: Associated LVGL display device
 - `touch_handle`: Touch handle created via `esp_lcd_touch` API
 - Default scale factors: x = 1.0, y = 1.0
+
+Both default and custom touch reads retry `ESP_ERR_NOT_FINISHED` up to three times, including in IRQ mode.
+Failed recovery cancels the contact without a click and suppresses it until a valid release.
+Return `ESP_OK` with zero points for a valid release; other read errors release the touch.
 
 To enable independent multi-touch control for discrete widgets on LVGL v9:
 
@@ -703,7 +722,7 @@ Configure via `idf.py menuconfig`:
 
 - **RGB/MIPI DSI**:
   - `TEAR_AVOID_MODE_NONE` **forbids rotation** (any non-zero rotation is rejected)
-  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation: nothing is drawn upright and copied rotated afterwards. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into a small tile in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
+  - With `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL 9.5/9.6, `DOUBLE_DIRECT`), LVGL draws the rotated UI straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation, avoiding a separate rotation of the completed upright frame. Of the three frame buffers, LVGL draws into the one neither on screen nor waiting to be, so a frame is not held back until the panel's next refresh. Requires `CONFIG_LV_USE_MATRIX` and `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`. Widgets are drawn by LVGL's software renderer into an upright tile, preferably in internal RAM, which the PPA rotates into the frame buffer while the CPU draws the next one (the CPU rotates on chips without a PPA). With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 on a dual-core chip, the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE` (32 KB with FreeType or ThorVG), because widgets are then drawn on that task rather than on LVGL's draw threads. Dummy-draw frames are shown as the panel stores them, not rotated
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
   - `NONE` and synchronous `TE_SYNC` do not apply adapter-side 90°/270° rotation; configure panel orientation and matching touch mapping
@@ -735,6 +754,24 @@ transformed objects, so correctness checks are not speed measurements.
 
 Independent pixel regressions and hardware validation are documented in
 [the host tests](test_apps/host_ortho/README.md).
+
+### Working memory and compatibility hooks
+
+The default tile allocation block is 128 KiB. The PPA/two-core pipeline requests
+up to four blocks plus alignment padding; when fewer internal blocks are
+available, it shares them into smaller tiles. The first block can fall back to
+PSRAM. Worker stacks, the adapter task stack and transformed-object bitmap layers
+add memory beyond these tiles. The optional image-cache budget below covers
+aligned cached pixels, not total renderer memory. Check both peak memory and the
+largest free internal block with the application's fonts, images and widgets.
+
+Three build-time helpers adapt supported LVGL 9.5/9.6 sources: object-layer
+selection, FreeRTOS worker ownership and global OS-mutex cleanup. Their changes
+are guarded by adapter build definitions and installed atomically for reused
+component caches. These hooks use LVGL internals and require review when upgrading
+LVGL. Performance depends on the workload and memory contention; avoiding the
+final frame-rotation pass does not remove tile transfers or DIRECT-buffer
+synchronization. See the host tests for exact and bounded pixel-comparison cases.
 
 ### Repeated images with rotation-in-draw
 
@@ -794,6 +831,7 @@ exercise repeated adapter initialization and teardown.
 - Shared drawing clients and previous blend handlers are released or restored when the last accelerated display is removed.
 - LVGL v9 PPA drawing requires `LV_DRAW_SW_DRAW_UNIT_CNT == 1`.
 - Rotation uses PPA when possible; otherwise CPU copy with cache-friendly blocks
+- Drawing and rotation automatically use software when output alignment, buffer capacity or dimensions do not meet PPA requirements; no extra configuration is needed.
 - **Effect**:
   - PPA reduces CPU load
   - Usually does not deliver noticeable FPS gains

@@ -28,10 +28,11 @@
  *    the frame buffer, instead of a copy and then a turn;
  *  - an image whose pixels are already stored in the panel's orientation
  *    (`LV_DRAW_ORTHO_IMAGE_FLAG_NATIVE`) is copied row by row with no turn at
- *    all -- which is what a video source can produce for free;
+ *    all, when the source already provides that pixel layout;
  *  - everything else (text, borders, shadows, arcs, masks, layers...) is drawn
- *    by LVGL's own software renderer into a small upright tile and put back
- *    turned, so its pixels are exactly the software renderer's.
+ *    by LVGL's own software renderer into an upright tile before the tile is
+ *    rotated into the frame buffer. Clipping and resampling equivalence is
+ *    covered by the version-specific pixel regressions.
  */
 
 #ifndef LV_DRAW_ORTHO_H

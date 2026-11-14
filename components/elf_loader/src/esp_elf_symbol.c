@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 #include <ctype.h>
 
-#if CONFIG_LIBC_PICOLIBC
+#if CONFIG_LIBC_PICOLIBC && CONFIG_ELF_LOADER_LIBC_SYMBOLS
 /*
  * picolibc compatibility wrappers.
  *
@@ -48,12 +48,8 @@ static const char * const s_picolibc_ctype_tbl = _ctype_b + _CTYPE_OFFSET;
 
 #include "rom/ets_sys.h"
 
-#include "esp_log.h"
 #include "esp_elf.h"
 
-#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
-#include "private/esp_dlmod.h"
-#endif
 #include "private/elf_symbol.h"
 
 extern int __ltdf2(double a, double b);
@@ -62,11 +58,10 @@ extern int __gtdf2(double a, double b);
 extern double __floatunsidf(unsigned int i);
 extern double __divdf3(double a, double b);
 
-static const char *TAG = "ELF_SYMBOL";
-
+#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
 /** @brief Libc public functions symbols look-up table */
 
-static const struct esp_elfsym g_esp_libc_elfsyms[] = {
+const struct esp_elfsym g_esp_libc_elfsyms[] = {
 
     /* string.h */
 
@@ -160,10 +155,12 @@ static const struct esp_elfsym g_esp_libc_elfsyms[] = {
 
     ESP_ELFSYM_END
 };
+#endif
 
+#ifdef CONFIG_ELF_LOADER_ESPIDF_SYMBOLS
 /** @brief ESP-IDF public functions symbols look-up table */
 
-static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
+const struct esp_elfsym g_esp_espidf_elfsyms[] = {
 
     /* sys/socket.h */
 
@@ -192,72 +189,4 @@ static const struct esp_elfsym g_esp_espidf_elfsyms[] = {
     ESP_ELFSYM_END
 };
 
-/**
- * @brief Find symbol address by name.
- *
- * @param sym_name - Symbol name
- *
- * @return Symbol address if success or 0 if failed.
- */
-uintptr_t elf_find_sym_default(const char *sym_name)
-{
-    if (!sym_name) {
-        ESP_LOGE(TAG, "Invalid parameter: sym_name is NULL");
-        return 0;
-    }
-
-    esp_elf_symbol_table_t *syms;
-
-#ifdef CONFIG_ELF_LOADER_LIBC_SYMBOLS
-    syms = g_esp_libc_elfsyms;
-    while (syms->name) {
-        if (!strcmp(syms->name, sym_name)) {
-            return (uintptr_t)syms->sym;
-        }
-
-        syms++;
-    }
-#else
-    syms = g_esp_libc_elfsyms;
-    (void)syms;
 #endif
-
-#ifdef CONFIG_ELF_LOADER_ESPIDF_SYMBOLS
-    syms = g_esp_espidf_elfsyms;
-    while (syms->name) {
-        if (!strcmp(syms->name, sym_name)) {
-            return (uintptr_t)syms->sym;
-        }
-
-        syms++;
-    }
-#else
-    syms = g_esp_espidf_elfsyms;
-    (void)syms;
-#endif
-
-#ifdef CONFIG_ELF_LOADER_CUSTOMER_SYMBOLS
-    extern const struct esp_elfsym g_customer_elfsyms[];
-
-    syms = g_customer_elfsyms;
-    while (syms->name) {
-        if (!strcmp(syms->name, sym_name)) {
-            return (uintptr_t)syms->sym;
-        }
-
-        syms++;
-    }
-
-#endif
-
-    uintptr_t sym_addr = esp_elf_find_symbol(sym_name);
-    if (sym_addr) {
-        return sym_addr;
-    }
-
-#if CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT
-    return (uintptr_t)dlmod_getaddr(sym_name);
-#else
-    return 0;
-#endif
-}

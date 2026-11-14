@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.2.0~2 - 2026-11-10
+
+### Examples:
+
+* Add bounded BLE link negotiation before creating SPP GATT sessions, with fallback to the current link settings on timeout.
+* Package the shared `ble_link_gate` helper with the ESP Flux examples and update their BLE Connection Manager dependency.
+
 ## v0.2.0~1 - 2026-11-02
 
 ### Change

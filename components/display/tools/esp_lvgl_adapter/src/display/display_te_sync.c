@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_timer.h"
+#include "esp_rom_sys.h"
 #include "driver/gpio.h"
 #include "display_te_sync.h"
 
@@ -278,7 +279,14 @@ static gpio_int_type_t detect_te_edge_type(const esp_lv_adapter_te_sync_config_t
     }
 
     /* Auto-detection: sample GPIO level to identify active state */
-    int idle_level = gpio_get_level(cfg->gpio_num);
+    /* Observe 32 ms: a single read can land inside the short TE pulse. */
+    unsigned high_samples = 0;
+    const unsigned sample_count = 640;
+    for (unsigned sample = 0; sample < sample_count; ++sample) {
+        high_samples += gpio_get_level(cfg->gpio_num) != 0;
+        esp_rom_delay_us(50);
+    }
+    int idle_level = high_samples > sample_count / 2;
     bool idle_high = (idle_level == 1);
 
     gpio_int_type_t start_edge = idle_high ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;

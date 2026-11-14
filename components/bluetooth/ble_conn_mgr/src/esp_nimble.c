@@ -287,7 +287,6 @@ SLIST_HEAD(esp_ble_conn_pending_list_t, esp_ble_conn_pending_t);
 typedef struct esp_ble_conn_link_t {
     SLIST_ENTRY(esp_ble_conn_link_t) next;
     uint16_t conn_handle;
-    uint16_t gatt_mtu;
     uint16_t disconnect_reason;
     uint8_t peer_addr[6];
     uint8_t peer_addr_type;
@@ -613,7 +612,6 @@ static esp_ble_conn_link_t *esp_ble_conn_link_add(uint16_t conn_handle, const bl
     }
 
     link->conn_handle = conn_handle;
-    link->gatt_mtu = GATT_DEF_BLE_MTU_SIZE;
     link->disconnect_reason = BLE_CONN_DISCONNECT_REASON_INVALID;
     link->last_read_rc = ESP_OK;
     link->last_notify_rc = ESP_OK;
@@ -3253,6 +3251,9 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
         case BLE_GAP_EVENT_CONN_UPDATE:
             rc = ble_gap_conn_find(event->conn_update.conn_handle, &desc);
             if (rc == 0) {
+                ESP_LOGD(TAG, "conn update, conn_handle=%d itvl_min=%d itvl_max=%d, latency=%d, supervision_timeout=%d",
+                    event->conn_update.conn_handle, (unsigned)desc.conn_itvl, (unsigned)desc.conn_itvl, (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout);
+
                 blecm_evt_conn_param_update_t cpe = {0};
                 cpe.conn_handle = event->conn_update.conn_handle;
                 cpe.status = event->conn_update.status;
@@ -3262,6 +3263,18 @@ static int esp_ble_conn_gap_event(struct ble_gap_event *event, void *arg)
                 cpe.params.supervision_timeout = desc.supervision_timeout;
                 esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE, &cpe, sizeof(cpe), portMAX_DELAY);
             }
+            break;
+        case BLE_GAP_EVENT_PHY_UPDATE_COMPLETE:
+            ESP_LOGD(TAG, "phy update, conn_handle=%d tx_phy=%d rx_phy=%d, status=%d", event->phy_updated.conn_handle,
+                (unsigned)event->phy_updated.tx_phy, (unsigned)event->phy_updated.rx_phy, (unsigned)event->phy_updated.status);
+
+            esp_ble_conn_event_data_t phy_event = {0};
+            phy_event.phy_update.conn_handle = event->phy_updated.conn_handle;
+            phy_event.phy_update.status = event->phy_updated.status;
+            phy_event.phy_update.tx_phy = event->phy_updated.tx_phy;
+            phy_event.phy_update.rx_phy = event->phy_updated.rx_phy;
+            esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_PHY_UPDATE_COMPLETE,
+                        &phy_event, sizeof(phy_event), portMAX_DELAY);
             break;
         case BLE_GAP_EVENT_ADV_COMPLETE:
 #if BLE_CONN_MGR_NIMBLE_USE_EXT_GAP
@@ -4082,19 +4095,11 @@ static void esp_ble_conn_disconnect_cb(struct ble_gap_event *event, void *arg)
 
 static void esp_ble_conn_set_mtu_cb(struct ble_gap_event *event, void *arg)
 {
-    esp_ble_conn_link_t *link = esp_ble_conn_link_find_by_handle(event->mtu.conn_handle);
-
-    if (link) {
-        link->gatt_mtu = event->mtu.value;
-        esp_ble_conn_link_unref(link);
-    }
-    {
-        blecm_evt_mtu_update_t mtu_ev = {0};
-        mtu_ev.conn_handle = event->mtu.conn_handle;
-        mtu_ev.channel_id = event->mtu.channel_id;
-        mtu_ev.mtu = event->mtu.value;
-        esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_MTU, &mtu_ev, sizeof(mtu_ev), portMAX_DELAY);
-    }
+    blecm_evt_mtu_update_t mtu_ev = {0};
+    mtu_ev.conn_handle = event->mtu.conn_handle;
+    mtu_ev.channel_id = event->mtu.channel_id;
+    mtu_ev.mtu = event->mtu.value;
+    esp_event_post(BLE_CONN_MGR_EVENTS, ESP_BLE_CONN_EVENT_MTU, &mtu_ev, sizeof(mtu_ev), portMAX_DELAY);
     (void)arg;
 }
 
@@ -5835,6 +5840,7 @@ esp_err_t esp_ble_conn_get_mtu(uint16_t *out_mtu)
 esp_err_t esp_ble_conn_get_mtu_by_handle(uint16_t conn_handle, uint16_t *out_mtu)
 {
     esp_ble_conn_link_t *link = NULL;
+    uint16_t att_mtu;
 
     if (!out_mtu || conn_handle == BLE_CONN_HANDLE_INVALID || conn_handle > BLE_CONN_HANDLE_MAX) {
         return ESP_ERR_INVALID_ARG;
@@ -5845,8 +5851,13 @@ esp_err_t esp_ble_conn_get_mtu_by_handle(uint16_t conn_handle, uint16_t *out_mtu
         return ESP_ERR_NOT_FOUND;
     }
 
-    *out_mtu = (link->gatt_mtu > 23) ? link->gatt_mtu : 23;
+    /* Read the current ATT bearer state instead of keeping a second MTU copy. */
+    att_mtu = ble_att_mtu(conn_handle);
     esp_ble_conn_link_unref(link);
+    if (att_mtu < BLE_ATT_MTU_DFLT) {
+        return ESP_ERR_NOT_FOUND;
+    }
+    *out_mtu = att_mtu;
     return ESP_OK;
 }
 

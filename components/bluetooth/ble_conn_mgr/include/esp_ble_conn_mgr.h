@@ -432,6 +432,7 @@ typedef enum {
     ESP_BLE_CONN_EVENT_PER_SUBEV_RESP       = 18,   /*!< PAwR: response received in a response slot; see esp_ble_conn_pawr_subev_resp_t */
     ESP_BLE_CONN_EVENT_PERIODIC_TRANSFER    = 19,   /*!< PAST: sync established via transfer; see esp_ble_conn_periodic_transfer_t */
     ESP_BLE_CONN_EVENT_CONNECT_FAILED        = 20,   /*!< Outgoing connection attempt failed before a handle was assigned */
+    ESP_BLE_CONN_EVENT_PHY_UPDATE_COMPLETE   = 21,   /*!< LE PHY update procedure completed; check phy_update.status */
 } esp_ble_conn_event_t;
 
 /**
@@ -801,6 +802,12 @@ typedef struct {
             int status;                                   /*!< Update status (0 on success, non-zero on failure) */
             esp_ble_conn_params_t params;                 /*!< Updated connection parameters */
         } conn_param_update;                               /*!< ESP_BLE_CONN_EVENT_CONN_PARAM_UPDATE */
+        struct {
+            uint16_t conn_handle;                         /*!< Connection handle */
+            int status;                                   /*!< 0 on success, non-zero on failure */
+            uint8_t tx_phy;                               /*!< Current TX PHY: esp_ble_conn_phy_t */
+            uint8_t rx_phy;                               /*!< Current RX PHY: esp_ble_conn_phy_t */
+        } phy_update;                                     /*!< ESP_BLE_CONN_EVENT_PHY_UPDATE_COMPLETE */
         esp_ble_conn_scan_result_t scan_result;           /*!< ESP_BLE_CONN_EVENT_SCAN_RESULT */
         struct {
             uint16_t conn_handle;                         /*!< Connection handle */

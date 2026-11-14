@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: CC0-1.0
  */
@@ -117,6 +117,7 @@ typedef struct {
     i2c_bus_handle_t i2c_bus;  // I2C bus handle
     const gauging_config_t *cfg;  // Pointer to the gauging_config_t structure
     const parameter_cedv_t *cedv;  // Pointer to the CEDV structure
+    bool skip_profile_init;  // Skip profile verification and update during creation
 } bq27220_config_t;
 
 typedef void *bq27220_handle_t;
@@ -129,6 +130,26 @@ typedef void *bq27220_handle_t;
  * @return bq27220_handle_t Handle to the BQ27220 device, or NULL if creation failed
  */
 bq27220_handle_t bq27220_create(const bq27220_config_t *config);
+
+/**
+ * @brief Verify the battery profile and write it only if the stored profile differs
+ *
+ * The learned full charge capacity is excluded from the comparison. If any other field differs, the profile is written and fully verified,
+ * which can take several seconds because the gauge must enter CONFIG UPDATE mode and reinitialize.
+ * The driver attempts to restore the sealed state before returning.
+ *
+ * @param bq_handle[in] Handle to the BQ27220 device
+ * @param cfg[in] Gauging configuration to write
+ * @param cedv[in] CEDV profile to write
+ *
+ * @return
+ *     - ESP_OK if successful
+ *     - ESP_ERR_INVALID_ARG if an argument is NULL
+ *     - ESP_ERR_TIMEOUT if a CONFIG UPDATE transition times out
+ *     - ESP_ERR_INVALID_STATE if profile verification fails
+ *     - ESP_FAIL if a security transition fails
+ */
+esp_err_t bq27220_update_profile(bq27220_handle_t bq_handle, const gauging_config_t *cfg, const parameter_cedv_t *cedv);
 
 /**
  * @brief Delete a BQ27220 handle
@@ -162,6 +183,9 @@ uint16_t bq27220_get_hw_version(bq27220_handle_t bq_handle);
 /**
  * @brief Seal the BQ27220 device to prevent unauthorized access to configuration data
  *
+ * @note The SEALED subcommand is only sent when the gauge is not sealed, because sending it to a sealed gauge makes the
+ *       gauge reject unseal keys for several seconds.
+ *
  * @param bq_handle[in] Handle to the BQ27220 device
  *
  * @return
@@ -173,6 +197,10 @@ esp_err_t bq27220_seal(bq27220_handle_t bq_handle);
 
 /**
  * @brief Unseal the BQ27220 device to allow access to configuration data
+ *
+ * @note Unseal keys are only sent when the gauge is sealed, because keys sent while unsealed block FULL ACCESS for several
+ *       seconds. The gauge rejects unseal keys for a few seconds after a battery profile update, so this function retries
+ *       for up to 8 s before returning ESP_FAIL.
  *
  * @param bq_handle[in] Handle to the BQ27220 device
  *

@@ -24,6 +24,14 @@ else()
 endif()
 
 idf_build_get_property(build_components BUILD_COMPONENTS)
+if(CMAKE_BUILD_EARLY_EXPANSION)
+    # The final build list is not populated yet; these directories are already discovered.
+    idf_build_get_property(_adapter_component_dirs BUILD_COMPONENT_DIRS)
+    foreach(_adapter_component_dir IN LISTS _adapter_component_dirs)
+        get_filename_component(_adapter_component_name "${_adapter_component_dir}" NAME)
+        list(APPEND build_components "${_adapter_component_name}")
+    endforeach()
+endif()
 
 set(lvgl_name "")
 if("lvgl" IN_LIST build_components)
@@ -38,16 +46,48 @@ endif()
 
 set(lvgl_ver "")
 if(DEFINED ENV{LVGL_VERSION} AND NOT "$ENV{LVGL_VERSION}" STREQUAL "")
-    set(lvgl_ver $ENV{LVGL_VERSION})
-else()
+    set(lvgl_ver "$ENV{LVGL_VERSION}")
+elseif("${lvgl_name}" IN_LIST build_components)
     idf_component_get_property(lvgl_ver ${lvgl_name} COMPONENT_VERSION)
 endif()
 
+if("${lvgl_ver}" STREQUAL "" AND "${lvgl_name}" IN_LIST build_components AND
+   NOT CMAKE_BUILD_EARLY_EXPANSION)
+    # Local source components may have no manifest version. Parse the complete
+    # source version because rotation-in-draw hooks support specific minors.
+    idf_component_get_property(_adapter_lvgl_dir ${lvgl_name} COMPONENT_DIR)
+    foreach(_adapter_version_header IN ITEMS "include/lvgl/lv_version.h" "lv_version.h" "lvgl.h")
+        set(_adapter_version_header "${_adapter_lvgl_dir}/${_adapter_version_header}")
+        if(EXISTS "${_adapter_version_header}")
+            set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_adapter_version_header}")
+            foreach(_adapter_version_part IN ITEMS MAJOR MINOR PATCH)
+                set(_adapter_version_${_adapter_version_part} "")
+                file(STRINGS "${_adapter_version_header}" _adapter_version_line LIMIT_COUNT 1
+                     REGEX "^[ \t]*#[ \t]*define[ \t]+LVGL_VERSION_${_adapter_version_part}[ \t]+[0-9]+")
+                if(_adapter_version_line MATCHES "LVGL_VERSION_${_adapter_version_part}[ \t]+([0-9]+)")
+                    set(_adapter_version_${_adapter_version_part} "${CMAKE_MATCH_1}")
+                endif()
+            endforeach()
+            if(NOT "${_adapter_version_MAJOR}" STREQUAL "" AND
+               NOT "${_adapter_version_MINOR}" STREQUAL "" AND
+               NOT "${_adapter_version_PATCH}" STREQUAL "")
+                set(lvgl_ver "${_adapter_version_MAJOR}.${_adapter_version_MINOR}.${_adapter_version_PATCH}")
+                break()
+            endif()
+        endif()
+    endforeach()
+    if("${lvgl_ver}" STREQUAL "")
+        message(WARNING "Cannot determine LVGL version; assuming LVGL 9. Set LVGL_VERSION for a custom LVGL source layout.")
+    endif()
+endif()
+
 if("${lvgl_ver}" STREQUAL "")
+    # Retain the v9 fallback for discovery and unrecognized custom source layouts.
     set(lvgl_ver "9.0.0")
 endif()
 
-if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0" AND
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND NOT CMAKE_BUILD_EARLY_EXPANSION AND
+   lvgl_ver VERSION_GREATER_EQUAL "9.0.0" AND
    (lvgl_ver VERSION_LESS "9.5.0" OR NOT lvgl_ver VERSION_LESS "9.7.0"))
     message(FATAL_ERROR "esp_lvgl_adapter: ROTATE_IN_DRAW supports LVGL 9.5.x and 9.6.x; disable this option for other LVGL versions")
 endif()
@@ -68,7 +108,6 @@ set(ADAPTER_PRIV_INCLUDES
 
 list(APPEND ADAPTER_PRIV_INCLUDES "src/input")
 
-list(APPEND ADAPTER_PRIV_REQ espressif__esp_lcd_touch)
 list(APPEND ADAPTER_SRCS
     "src/input/esp_lv_adapter_input_touch.c"
 )
@@ -102,7 +141,7 @@ if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND NOT lvgl_ver VERSION_LESS "9.0.0")
     endif()
 endif()
 
-set(ADAPTER_REQ esp_lcd ${lvgl_name})
+set(ADAPTER_REQ esp_lcd ${lvgl_name} espressif__esp_lcd_touch)
 
 idf_component_register(
     SRCS ${ADAPTER_SRCS}
@@ -173,6 +212,18 @@ if(_has_async_color_convert)
 endif()
 if(_has_frame_buf_complete_cb)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_LCD_DPI_HAS_FRAME_BUF_COMPLETE_CB=1)
+endif()
+
+if(CONFIG_SOC_PPA_SUPPORTED)
+    idf_component_get_property(_ppa_dir esp_driver_ppa COMPONENT_DIR)
+    set(_ppa_private_header "${_ppa_dir}/src/ppa_priv.h")
+    if(EXISTS "${_ppa_private_header}")
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_ppa_private_header}")
+        file(STRINGS "${_ppa_private_header}" _ppa_per_buffer_alignment REGEX "int_mem_align")
+        if(_ppa_per_buffer_alignment)
+            target_compile_definitions(${COMPONENT_LIB} PRIVATE ESP_PPA_HAS_PER_BUFFER_ALIGNMENT=1)
+        endif()
+    endif()
 endif()
 
 target_link_libraries(${COMPONENT_LIB} PUBLIC idf::${lvgl_name})

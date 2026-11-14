@@ -135,6 +135,9 @@ void ft_discard_worker_event(ft_instance_t *instance, ft_worker_event_t *event, 
     if (event->type == FT_WORK_GMP_PACKET) {
         free(event->data.packet.payload);
         event->data.packet.payload = NULL;
+    } else if (event->type == FT_WORK_WRITE_BLOCK) {
+        free(event->data.write_block.data);
+        event->data.write_block.data = NULL;
     } else if (event->type == FT_WORK_SEND_CMD) {
         free(event->data.send.src_path);
         free(event->data.send.remote_name);
@@ -840,6 +843,8 @@ static void free_event(ft_worker_event_t *event)
         event->data.send.sha256 = NULL;
     } else if (event->type == FT_WORK_GMP_PACKET) {
         free(event->data.packet.payload);
+    } else if (event->type == FT_WORK_WRITE_BLOCK) {
+        free(event->data.write_block.data);
     }
 }
 
@@ -856,6 +861,9 @@ static void complete_reply(ft_command_reply_t *reply, esp_err_t result)
 static bool receive_next_event(ft_instance_t *instance, ft_worker_event_t *event)
 {
     if (xQueueReceive(instance->urgent_queue, event, 0) == pdTRUE) {
+        return true;
+    }
+    if (xQueueReceive(instance->write_queue, event, 0) == pdTRUE) {
         return true;
     }
     return xQueueReceive(instance->event_queue, event, 0) == pdTRUE;
@@ -905,6 +913,9 @@ static void worker_task(void *arg)
                 break;
             case FT_WORK_GMP_PACKET:
                 handle_packet(instance, &event.data.packet);
+                break;
+            case FT_WORK_WRITE_BLOCK:
+                ft_receiver_write_block(instance, &event.data.write_block);
                 break;
             case FT_WORK_TIMEOUT:
                 handle_timeout(instance, &event.data.timeout);
@@ -1017,8 +1028,9 @@ esp_err_t esp_file_transfer_init(const esp_file_transfer_config_t *config)
     instance->event_queue_mutex = xSemaphoreCreateMutex();
     instance->event_queue = xQueueCreate(ESP_FT_EVENT_QUEUE_LEN, sizeof(ft_worker_event_t));
     instance->urgent_queue = xQueueCreate(ESP_FT_URGENT_QUEUE_LEN, sizeof(ft_worker_event_t));
+    instance->write_queue = xQueueCreate(ESP_FT_WRITE_QUEUE_LEN, sizeof(ft_worker_event_t));
     if (!instance->snapshot_mutex || !instance->abort_mutex || !instance->event_queue_mutex ||
-            !instance->event_queue || !instance->urgent_queue) {
+            !instance->event_queue || !instance->urgent_queue || !instance->write_queue) {
         err = ESP_ERR_NO_MEM;
         goto fail;
     }
@@ -1099,6 +1111,10 @@ fail:
         vQueueDelete(instance->urgent_queue);
         instance->urgent_queue = NULL;
     }
+    if (instance->write_queue) {
+        vQueueDelete(instance->write_queue);
+        instance->write_queue = NULL;
+    }
     if (instance->snapshot_mutex) {
         vSemaphoreDelete(instance->snapshot_mutex);
         instance->snapshot_mutex = NULL;
@@ -1177,10 +1193,15 @@ esp_err_t esp_file_transfer_deinit(void)
     while (xQueueReceive(instance->urgent_queue, &pending, 0) == pdTRUE) {
         free_event(&pending);
     }
+    while (xQueueReceive(instance->write_queue, &pending, 0) == pdTRUE) {
+        free_event(&pending);
+    }
     vQueueDelete(instance->event_queue);
     vQueueDelete(instance->urgent_queue);
+    vQueueDelete(instance->write_queue);
     instance->event_queue = NULL;
     instance->urgent_queue = NULL;
+    instance->write_queue = NULL;
 
     /* Mark uninitialized before destroying sync objects so concurrent abort
      * sees INVALID_STATE instead of touching freed mutexes. */

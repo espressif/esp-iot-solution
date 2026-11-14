@@ -14,6 +14,7 @@
 #include "esp_idf_version.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_rom_sys.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
@@ -338,7 +339,14 @@ static void IRAM_ATTR te_gpio_isr(void *arg)
 static gpio_int_type_t detect_blanking_start_edge(
     const esp_display_present_te_sync_config_t *cfg)
 {
-    int idle_level = gpio_get_level(cfg->gpio_num);
+    /* Observe 32 ms: a single read can land inside the short TE pulse. */
+    unsigned high_samples = 0;
+    const unsigned sample_count = 640;
+    for (unsigned sample = 0; sample < sample_count; ++sample) {
+        high_samples += gpio_get_level(cfg->gpio_num) != 0;
+        esp_rom_delay_us(50);
+    }
+    int idle_level = high_samples > sample_count / 2;
     bool idle_high = (idle_level == 1);
     gpio_int_type_t start_edge = idle_high ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;
 
@@ -396,12 +404,6 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
 
     ctx->cfg = *cfg;
     ctx->lock = (portMUX_TYPE)portMUX_INITIALIZER_UNLOCKED;
-    ctx->blanking_start_edge = detect_blanking_start_edge(cfg);
-    ctx->blanking_end_edge =
-        ctx->blanking_start_edge == GPIO_INTR_POSEDGE
-        ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;
-    ctx->sync_edge = prefer_refresh_end
-                     ? ctx->blanking_end_edge : ctx->blanking_start_edge;
 
     ctx->te_vsync_sem = xSemaphoreCreateCounting(1, 0);
     ESP_GOTO_ON_FALSE(ctx->te_vsync_sem, ESP_ERR_NO_MEM, fail, TAG, "failed to create TE semaphore");
@@ -423,13 +425,21 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
     const gpio_config_t gpio_cfg = {
         /* Capture both levels for timing diagnostics.  The ISR only releases
          * the VSYNC waiter for the configured synchronization edge. */
-        .intr_type = GPIO_INTR_ANYEDGE,
+        .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_INPUT,
         .pin_bit_mask = 1ULL << ctx->cfg.gpio_num,
                              .pull_down_en = GPIO_PULLDOWN_DISABLE,
                              .pull_up_en = GPIO_PULLUP_ENABLE,
     };
     ESP_GOTO_ON_ERROR(gpio_config(&gpio_cfg), fail, TAG, "gpio config failed");
+
+    /* Configure the input path before observing the TE waveform. */
+    ctx->blanking_start_edge = detect_blanking_start_edge(cfg);
+    ctx->blanking_end_edge =
+        ctx->blanking_start_edge == GPIO_INTR_POSEDGE
+        ? GPIO_INTR_NEGEDGE : GPIO_INTR_POSEDGE;
+    ctx->sync_edge = prefer_refresh_end
+                     ? ctx->blanking_end_edge : ctx->blanking_start_edge;
 
     ret = gpio_install_isr_service(ESP_INTR_FLAG_LOWMED);
     if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
@@ -438,6 +448,8 @@ esp_err_t esp_display_present_te_sync_create(const esp_display_present_te_sync_c
 
     ESP_GOTO_ON_ERROR(gpio_isr_handler_add(ctx->cfg.gpio_num, te_gpio_isr, ctx), fail, TAG, "add TE ISR failed");
     ctx->isr_registered = true;
+    ESP_GOTO_ON_ERROR(gpio_set_intr_type(ctx->cfg.gpio_num, GPIO_INTR_ANYEDGE), fail, TAG, "set TE interrupt type failed");
+    ESP_GOTO_ON_ERROR(gpio_intr_enable(ctx->cfg.gpio_num), fail, TAG, "enable TE interrupt failed");
 
     *out_ctx = ctx;
     ESP_LOGI(TAG,

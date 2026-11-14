@@ -1,0 +1,9 @@
+include src/*.c
+include src/*.h
+include third_party/libdivsufsort/lib/*.c
+include third_party/libdivsufsort/include/*.h
+include README.md
+include README_CN.md
+include NOTICE
+include pyproject.toml
+include setup.py

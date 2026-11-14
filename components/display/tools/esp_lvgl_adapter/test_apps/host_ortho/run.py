@@ -309,6 +309,8 @@ def build(work, lvgl, mode, sanitize, patch_os=True):
 
 
 def run_tests(work, args):
+    from check_cmake_version import run_cmake_checks
+    run_cmake_checks(work)
     stage(args.reference, work)
     env = dict(os.environ, ASAN_OPTIONS='detect_leaks=0')
     for mode in ('plain', 'mt'):
@@ -318,6 +320,9 @@ def run_tests(work, args):
     from transforms import run_transform_tests
     run_transform_tests(work, work / 'test' / ('build-plain-asan' if args.sanitize else 'build-plain') / 'lvgl-src',
                         sanitize=args.sanitize)
+    from check_display_buffers import run_display_buffer_tests
+    plain = work / 'test' / ('build-plain-asan' if args.sanitize else 'build-plain')
+    run_display_buffer_tests(work, plain / 'lvgl-src', plain / 'lvgl.a', work / 'test', args.sanitize)
     if not args.mutants:
         return
     unit = work / 'components/lvgl_ortho'

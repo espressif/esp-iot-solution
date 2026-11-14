@@ -17,11 +17,49 @@
 #include "freertos/timers.h"
 #include "nvs_flash.h"
 #include "host/ble_att.h"
+#include "host/ble_gap.h"
 #include "esp_ble_conn_mgr.h"
 #include "flux_gatt_session.h"
 #include "esp_flux_transport.h"
+#include "ble_link_gate.h"
 
 static const char *TAG = "spp server";
+static ble_link_gate_t g_link_gate;
+
+static const char *link_phy_name(uint8_t phy)
+{
+    switch (phy) {
+    case ESP_BLE_CONN_PHY_1M:
+        return "1M";
+    case ESP_BLE_CONN_PHY_2M:
+        return "2M";
+    case ESP_BLE_CONN_PHY_CODED:
+        return "Coded";
+    default:
+        return "unknown";
+    }
+}
+
+static void log_link_warn(const char *stage, uint16_t conn_handle)
+{
+    struct ble_gap_conn_desc desc;
+    uint8_t tx_phy = 0;
+    uint8_t rx_phy = 0;
+    esp_err_t phy_err = esp_ble_conn_get_phy(conn_handle, &tx_phy, &rx_phy);
+    const char *tx_name = phy_err == ESP_OK ? link_phy_name(tx_phy) : "unavailable";
+    const char *rx_name = phy_err == ESP_OK ? link_phy_name(rx_phy) : "unavailable";
+    uint16_t mtu = ble_att_mtu(conn_handle);
+
+    if (ble_gap_conn_find(conn_handle, &desc) == 0) {
+        ESP_LOGW(TAG, "%s conn=%u interval=%.2f ms latency=%u supervision=%u ms MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, desc.conn_itvl * 1.25f,
+                 (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout * 10,
+                 (unsigned)mtu, tx_name, rx_name);
+    } else {
+        ESP_LOGW(TAG, "%s conn=%u interval/latency/supervision unavailable MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, (unsigned)mtu, tx_name, rx_name);
+    }
+}
 
 /* 16 Bit SPP Service UUID */
 #define BLE_SVC_SPP_UUID16      0xABF0
@@ -44,6 +82,9 @@ static uint16_t s_pending_session_conn = BLE_CONN_HANDLE_INVALID;
 static gatt_session_t *g_session_instances[MAX_CONNECTIONS] = {0};
 static bool g_conn_params_ready[MAX_CONNECTIONS] = {0};
 static bool g_notify_enabled[MAX_CONNECTIONS] = {0};
+static bool g_transfer_link_logged[MAX_CONNECTIONS] = {0};
+static uint16_t s_notify_conn = BLE_CONN_HANDLE_INVALID;
+static bool s_notify_pending;
 static SemaphoreHandle_t g_sessions_mutex = NULL;
 static TimerHandle_t s_reconnect_timer = NULL;
 
@@ -118,6 +159,25 @@ static void spp_fill_test_buffer(uint8_t *buf, size_t size)
     }
 }
 
+static void log_transfer_link_once(uint16_t conn_handle)
+{
+    bool log_first = false;
+
+    sessions_lock();
+    for (int i = 0; i < MAX_CONNECTIONS; i++) {
+        if (g_session_instances[i] && g_session_instances[i]->conn_handle == conn_handle &&
+                !g_transfer_link_logged[i]) {
+            g_transfer_link_logged[i] = true;
+            log_first = true;
+            break;
+        }
+    }
+    sessions_unlock();
+    if (log_first) {
+        log_link_warn("First transfer activity", conn_handle);
+    }
+}
+
 static void gatt_session_complete_cb(gatt_session_t *session, uint8_t stream_id, esp_err_t status, const uint8_t *data, uint32_t size)
 {
     if (status == ESP_OK) {
@@ -136,6 +196,8 @@ static void gatt_session_complete_cb(gatt_session_t *session, uint8_t stream_id,
 
 static void gatt_data_received_cb(gatt_session_t *session, uint8_t stream_id, const uint8_t *data, uint32_t size)
 {
+    log_transfer_link_once(session->conn_handle);
+
     ESP_LOGW(TAG, "Session %d stream %d received data, Data Size: %" PRIu32 " bytes (%.2f KB)", session->conn_handle, stream_id, size, size / 1024.0f);
 
     // Note: Free the data pointer after use.
@@ -186,6 +248,7 @@ static void spp_tune_connection(uint16_t conn_handle)
 
 static bool spp_cache_local_chr_handle(void);
 static void spp_bind_pending_session(void);
+static void spp_destroy_session(uint16_t conn_handle);
 
 static void spp_create_session(uint16_t conn_handle)
 {
@@ -198,6 +261,9 @@ static void spp_create_session(uint16_t conn_handle)
     };
 
     if (conn_handle == BLE_CONN_HANDLE_INVALID) {
+        return;
+    }
+    if (!ble_link_gate_is_ready(&g_link_gate, conn_handle, BLE_ATT_MTU_DFLT)) {
         return;
     }
 
@@ -230,12 +296,19 @@ static void spp_create_session(uint16_t conn_handle)
     for (int i = 0; i < MAX_CONNECTIONS; i++) {
         if (!g_session_instances[i]) {
             g_session_instances[i] = session;
+            g_conn_params_ready[i] = true;
+            g_notify_enabled[i] = s_notify_conn == conn_handle && s_notify_pending;
+            g_transfer_link_logged[i] = false;
             ESP_LOGI(TAG, "GATT session created for conn_handle=%d, val_handle=0x%04X, mtu=%d",
                      conn_handle, ble_spp_svc_gatt_read_val_handle, mtu);
             if (s_pending_session_conn == conn_handle) {
                 s_pending_session_conn = BLE_CONN_HANDLE_INVALID;
             }
             sessions_unlock();
+            if (!ble_link_gate_is_ready(&g_link_gate, conn_handle, BLE_ATT_MTU_DFLT)) {
+                spp_destroy_session(conn_handle);
+                (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+            }
             return;
         }
     }
@@ -246,6 +319,12 @@ static void spp_create_session(uint16_t conn_handle)
 
 static void spp_destroy_session(uint16_t conn_handle)
 {
+    sessions_lock();
+    if (s_notify_conn == conn_handle) {
+        s_notify_conn = BLE_CONN_HANDLE_INVALID;
+        s_notify_pending = false;
+    }
+    sessions_unlock();
     if (s_pending_session_conn == conn_handle) {
         s_pending_session_conn = BLE_CONN_HANDLE_INVALID;
     }
@@ -257,6 +336,7 @@ static void spp_destroy_session(uint16_t conn_handle)
             g_session_instances[i] = NULL;
             g_conn_params_ready[i] = false;
             g_notify_enabled[i] = false;
+            g_transfer_link_logged[i] = false;
         }
         sessions_unlock();
         if (session_to_destroy) {
@@ -321,7 +401,27 @@ static void spp_bind_pending_session(void)
              conn_handle == BLE_CONN_HANDLE_INVALID)) {
         return;
     }
-    spp_create_session(conn_handle);
+    /* Session creation is handled by the link-ready task. */
+    s_pending_session_conn = conn_handle;
+}
+
+static void create_session_after_link_ready(void *arg)
+{
+    uint16_t conn_handle = (uint16_t)(uintptr_t)arg;
+    if (ble_link_gate_wait(&g_link_gate, conn_handle, BLE_ATT_MTU_DFLT,
+                           BLE_LINK_GATE_WAIT_MS)) {
+        for (int i = 0; i < 40; ++i) {
+            spp_create_session(conn_handle);
+            if (spp_find_session_idx_by_conn(conn_handle) >= 0) {
+                vTaskDelete(NULL);
+                return;
+            }
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
+    }
+    ESP_LOGW(TAG, "Link or session setup did not complete for conn=%u", conn_handle);
+    (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+    vTaskDelete(NULL);
 }
 
 static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
@@ -332,6 +432,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         return;
     }
 
+    ble_link_gate_on_event(&g_link_gate, id, event_data);
     switch (id) {
     case ESP_BLE_CONN_EVENT_STARTED: {
         bool adv_active = false;
@@ -354,8 +455,12 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (s_reconnect_timer) {
             xTimerStop(s_reconnect_timer, 0);
         }
+        ble_link_gate_begin(&g_link_gate, conn_handle);
         spp_tune_connection(conn_handle);
-        spp_create_session(conn_handle);
+        if (xTaskCreate(create_session_after_link_ready, "spp_srv_link", 4096,
+                        (void *)(uintptr_t)conn_handle, 5, NULL) != pdPASS) {
+            (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        }
         if (spp_active_session_count() < MAX_CONNECTIONS) {
             bool adv_active = false;
             if (!(esp_ble_conn_adv_is_active(&adv_active) == ESP_OK && adv_active)) {
@@ -377,6 +482,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         } else {
             ESP_LOGI(TAG, "Disconnected (conn_handle=%d)", conn_handle);
         }
+        ble_link_gate_end(&g_link_gate, conn_handle);
         spp_destroy_session(conn_handle);
         if (s_reconnect_timer) {
             xTimerStart(s_reconnect_timer, 0);
@@ -390,11 +496,11 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!conn_data) {
             break;
         }
-        spp_create_session(conn_data->write_conn_id);
         session = gatt_session_find_by_handle(conn_data->write_conn_id);
         if (session) {
             flux_session_t *flux = gatt_session_get_flux(session);
             if (flux && conn_data->data && conn_data->data_len) {
+                log_transfer_link_once(conn_data->write_conn_id);
                 flux_session_feed_data(flux, conn_data->data, conn_data->data_len);
             }
         }
@@ -408,7 +514,6 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
-        spp_create_session(evt->mtu_update.conn_handle);
         session = gatt_session_find_by_handle(evt->mtu_update.conn_handle);
         if (session) {
             gatt_session_set_mtu(session, evt->mtu_update.mtu);
@@ -424,20 +529,13 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         }
         idx = spp_find_session_idx_by_conn(evt->conn_param_update.conn_handle);
         if (idx < 0) {
-            spp_create_session(evt->conn_param_update.conn_handle);
-            idx = spp_find_session_idx_by_conn(evt->conn_param_update.conn_handle);
-        }
-        if (idx < 0) {
             break;
         }
         g_conn_params_ready[idx] = true;
-        ESP_LOGW(TAG, "Connection parameters ready for conn_handle=%d (interval=%.2fms)",
-                 evt->conn_param_update.conn_handle, evt->conn_param_update.params.itvl_min * 1.25f);
         break;
     }
     case ESP_BLE_CONN_EVENT_CCCD_UPDATE: {
         esp_ble_conn_cccd_update_t *cccd = event_data;
-        int idx;
 
         if (!cccd) {
             break;
@@ -446,15 +544,17 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
                 cccd->uuid.uuid16 != BLE_SVC_SPP_CHR_UUID16) {
             break;
         }
-        idx = spp_find_session_idx_by_conn(cccd->conn_handle);
-        if (idx < 0) {
-            spp_create_session(cccd->conn_handle);
-            idx = spp_find_session_idx_by_conn(cccd->conn_handle);
+        sessions_lock();
+        s_notify_conn = cccd->conn_handle;
+        s_notify_pending = cccd->notify_enable;
+        for (int i = 0; i < MAX_CONNECTIONS; ++i) {
+            if (g_session_instances[i] &&
+                    g_session_instances[i]->conn_handle == cccd->conn_handle) {
+                g_notify_enabled[i] = cccd->notify_enable;
+                break;
+            }
         }
-        if (idx < 0) {
-            break;
-        }
-        g_notify_enabled[idx] = cccd->notify_enable;
+        sessions_unlock();
         ESP_LOGI(TAG, "CCCD notify=%d for conn_handle=%d",
                  cccd->notify_enable, cccd->conn_handle);
         break;
@@ -505,6 +605,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID, app_ble_conn_event_handler, NULL));
     ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(ble_link_gate_init(&g_link_gate));
     ESP_ERROR_CHECK(esp_ble_conn_add_svc(&s_spp_svc));
     if (esp_ble_conn_start() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start BLE connection manager");
@@ -540,6 +641,7 @@ void app_main(void)
             ret = gatt_session_send(session, send_buffer, SPP_TEST_TRANSFER_SIZE, 0xFF, 80);
             sessions_unlock();
             if (ret == ESP_OK) {
+                log_transfer_link_once(conn_handle);
                 ESP_LOGI(TAG, "Started send to conn_handle=%d (%d bytes)", conn_handle, SPP_TEST_TRANSFER_SIZE);
             } else {
                 ESP_LOGW(TAG, "Failed to send to conn_handle=%d: %d", conn_handle, ret);

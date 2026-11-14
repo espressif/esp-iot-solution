@@ -76,6 +76,9 @@ dependencies:
 - **LVGL**：8.x 或 9.x（自动适配版本）
 - **可选依赖**：根据启用的功能需要满足相应的组件依赖
 
+本地 `components/lvgl` 缺少版本元数据时，从标准头文件识别主版本。
+非空的 `LVGL_VERSION` 环境变量可覆盖识别结果；无法识别的源码布局会警告并回退到 LVGL 9。
+
 ### 构建与运行
 
 ```sh
@@ -225,7 +228,7 @@ CONFIG_COMPILER_OPTIMIZATION_PERF=y
 | RGB | `ESP_LV_ADAPTER_DISPLAY_RGB_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT_RGB` |
 | SPI/I2C/I80/QSPI (带 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 | SPI/I2C/I80/QSPI (无 PSRAM) | `ESP_LV_ADAPTER_DISPLAY_SPI_WITHOUT_PSRAM_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
-| MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_PROFILE_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
+| MONO (单色显示) | `ESP_LV_ADAPTER_DISPLAY_SPI_MONO_DEFAULT_CONFIG(...)` | `ESP_LV_ADAPTER_TEAR_AVOID_MODE_DEFAULT` (即 `NONE`) |
 
 **注意**：
 - MIPI DSI 和 RGB 支持基于帧缓冲的防撕裂模式
@@ -265,6 +268,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **重要限制**：
 - RGB/MIPI DSI 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
+- LVGL 9.0/9.1 在自动 stride 对齐会增加行尾填充时，不支持使用面板帧缓冲区的 FULL/DIRECT 模式；此类配置需使用 LVGL 9.2 或更高版本
 - OTHER (SPI/I2C/I80/QSPI) 接口支持 `NONE` 和 `TE_SYNC` 模式；高性能 TE 支持 adapter 旋转，其他配置需使用面板方向并同步调整触摸映射
 - MONO (单色显示) 接口**支持软件旋转**（0°/90°/180°/270°），通过 LVGL 进行像素级旋转处理
 - `TE_SYNC` 模式要求面板提供 TE 信号并连接到 ESP GPIO。标准模式使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_DEFAULT_CONFIG`；如需让 LVGL 渲染与 TE 同步传输重叠，使用 `ESP_LV_ADAPTER_DISPLAY_SPI_WITH_PSRAM_TE_HIGH_PERFORMANCE_CONFIG`。高性能模式需要 PSRAM 和额外的整帧内存；`examples/display/gui/common` 中兼容的接口默认启用该模式
@@ -290,6 +294,15 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 | RGB | 50 | 中等条带高度 |
 | OTHER + PSRAM | `ver_res` (整屏高度) | 整屏高度分区，吞吐更高 |
 | OTHER 无 PSRAM | 10 | 小条带以节省 RAM |
+
+#### 绘图缓冲区的内存位置
+
+RGB/MIPI DSI 的 `DOUBLE_PARTIAL` 和 `TRIPLE_PARTIAL` 始终使用**一个片内 SRAM LVGL 绘图缓冲区**，
+不受 `profile.use_psram` 影响。条带渲染后复制或旋转到面板帧缓冲区，
+后者的内存位置由 `esp_lcd` 初始化配置决定。
+
+像素数据占用 `hor_res × buffer_height × 每像素字节数` 字节：RGB565 的
+480 × 50 × 2 = 48,000 字节。若 SRAM 分配失败，可减小 `buffer_height`。
 
 #### 调优建议
 
@@ -697,7 +710,7 @@ static void panel_wake_cb(void *user_data)
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
-  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL 9.5/9.6，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的帧缓冲中：不再先正向绘制再旋转拷贝。在三个帧缓冲中，LVGL 绘制到既未显示也未等待显示的那一个，因此一帧不必等到面板下一次刷新。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到内部 RAM 中的小图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
+  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL 9.5/9.6，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的帧缓冲中：避免对完整的正向帧再执行一次旋转拷贝。在三个帧缓冲中，LVGL 绘制到既未显示也未等待显示的那一个，因此一帧不必等到面板下一次刷新。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到优先使用内部 RAM 的正向图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射
@@ -722,6 +735,20 @@ rotation-in-draw 的兼容补丁支持 LVGL 9.5.x 和 9.6.x。对其他 LVGL 9 �
 自定义对象矩阵和 skew 保留原有路径；本补丁不增加通用仿射或 skew 的软件支持。
 变换对象的位图图层会增加内存和重采样开销，正确性测试不能作为性能提升测量。
 独立软件参考图像、硬件验证及复现步骤见 [host 测试](test_apps/host_ortho/README.md)。
+
+### 工作内存与兼容性钩子
+
+默认图块分配单元为 128 KiB。PPA 与双核流水线最多申请四个单元及对齐空间；
+内部内存不足时，将已有单元分成更小的图块。首个单元可回退到 PSRAM。
+工作任务栈、适配器任务栈和变换对象的位图图层还会额外使用内存。
+下述图像缓存预算只包含对齐后的缓存像素，并非渲染器总内存。
+应使用应用实际的字体、图像和控件检查内存峰值及最大空闲内部内存块。
+
+三个构建期辅助脚本分别适配 LVGL 9.5/9.6 的对象图层策略、FreeRTOS 工作任务所有权
+和全局 OS 互斥锁清理。改动由适配器编译定义控制，并以原子替换方式安装，
+适用于复用的组件缓存。这些钩子依赖 LVGL 内部实现，升级 LVGL 时需要重新检查。
+性能取决于工作负载和内存竞争；去掉最终整帧旋转并不消除图块传输或 DIRECT
+缓冲同步。像素完全一致及采用明确采样误差界限的测试范围见 host 测试。
 
 ### 重复绘制不可变图像
 
@@ -766,6 +793,7 @@ flash 的图像设置 PSRAM 预算。首次正常绘制，第二次生成旋转�
 - 启用 PPA 加速时，建议设置 `LV_DRAW_SW_DRAW_UNIT_CNT == 1`
 - 对于启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` 旋转的显示，`enable_ppa_accel` 会被忽略（并输出警告）：`lv_draw_ortho` 已使用 PPA 旋转每个图块并填充纯色矩形
 - 旋转操作优先使用 PPA；否则使用 CPU 拷贝路径（带缓存局部性的块拷贝）
+- 绘制与旋转的输出对齐、缓冲区容量或尺寸不满足 PPA 要求时，自动使用软件路径，无需额外配置。
 - **效果与预期**：
   - PPA 可显著降低 CPU 占用
   - 通常不会带来明显的 FPS 提升

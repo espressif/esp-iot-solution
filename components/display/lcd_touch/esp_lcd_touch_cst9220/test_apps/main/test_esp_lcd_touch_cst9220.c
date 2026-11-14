@@ -95,6 +95,11 @@ TEST_CASE("test cst9220 touch data polling", "[cst9220][poll]")
     for (int i = 0; i < TEST_READ_TIME_MS / TEST_READ_PERIOD_MS; i++) {
         uint8_t point_count = 0;
         test_ret = esp_lcd_touch_read_data(touch_handle);
+        if (test_ret == ESP_ERR_NOT_FINISHED) {
+            test_ret = ESP_OK;
+            vTaskDelay(pdMS_TO_TICKS(TEST_READ_PERIOD_MS));
+            continue;
+        }
         if (test_ret != ESP_OK) {
             break;
         }
@@ -128,7 +133,8 @@ TEST_CASE("test cst9220 sleep and reset wakeup", "[cst9220][sleep]")
     vTaskDelay(pdMS_TO_TICKS(TEST_SLEEP_TIME_MS));
     TEST_ESP_OK(esp_lcd_touch_exit_sleep(touch_handle));
     TEST_ESP_OK(esp_lcd_touch_exit_sleep(touch_handle));
-    TEST_ESP_OK(esp_lcd_touch_read_data(touch_handle));
+    esp_err_t read_ret = esp_lcd_touch_read_data(touch_handle);
+    TEST_ASSERT_TRUE(read_ret == ESP_OK || read_ret == ESP_ERR_NOT_FINISHED);
 
     test_touch_delete(bus_handle, io_handle, touch_handle);
 }

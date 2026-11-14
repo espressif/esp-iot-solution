@@ -62,6 +62,26 @@ typedef struct elf_source {
  */
 typedef const struct esp_elfsym esp_elf_symbol_table_t;
 
+/** @brief Compiled symbol registry layout version. */
+#define ESP_ELF_SYMBOL_REGISTRY_VERSION 1
+
+/** @brief Read-only compiled tables in default resolver order. */
+typedef struct esp_elf_symbol_registry {
+    uint32_t version;                          /*!< registry layout version */
+    uint32_t table_count;                      /*!< table count excluding NULL terminator */
+    esp_elf_symbol_table_t *const *tables;     /*!< NULL-terminated array of table pointers */
+} esp_elf_symbol_registry_t;
+
+/**
+ * @brief Compiled symbol registry for runtime and firmware inspection.
+ *
+ * @note Contains enabled libc, ESP-IDF and customer tables, in that order.
+ *       Entries use ESP_ELFSYM_END; the first matching name wins.
+ *       Runtime registrations, shared objects and custom resolvers are excluded.
+ *       Static storage; valid for the firmware lifetime.
+ */
+extern const esp_elf_symbol_registry_t g_esp_elf_static_symbol_registry;
+
 /**
  * @brief Open and load an ELF file into memory.
  *
@@ -169,8 +189,30 @@ int esp_elf_relocate_source(esp_elf_t *elf, const elf_source_t *src);
  * @param argv - Arguments value array
  *
  * @return ESP_OK if success or other if failed.
+ *
+ * @note Returns -EINVAL for NULL, missing entry or finalized images;
+ *       -EBUSY for reentrant lifecycle calls.
+ * @note Externally serialize calls on the same object. Entry and lifecycle
+ *       callbacks must return normally; non-local exits are unsupported.
  */
 int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
+
+/**
+ * @brief Finalize an ELF image without releasing its memory or MMU mappings.
+ *
+ * @param elf - Initialized ELF object. May be called after failed relocation;
+ *              callbacks are skipped if startup never ran.
+ *
+ * @return ESP_OK if success or other if failed.
+ *
+ * @note Returns -EINVAL for NULL; -EBUSY during entry or lifecycle callbacks.
+ * @note Runs callbacks once, in the calling task, only if startup ran.
+ *       Repeated calls succeed. Finalized images cannot execute again.
+ *       Call esp_elf_deinit() after host-managed cleanup to release the image.
+ * @note Quiesce module tasks and externally serialize object access.
+ *       Callbacks must return normally. Does not invoke __cxa_finalize.
+ */
+int esp_elf_finalize(esp_elf_t *elf);
 
 /**
  * @brief Deinitialize ELF object.
@@ -178,6 +220,10 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[]);
  * @param elf - ELF object pointer
  *
  * @return None
+ *
+ * @note Finalizes, frees and resets the object. NULL is accepted. Reentrant
+ *       calls log an error and retain the image; retry after execution returns.
+ *       Quiesce module tasks and externally serialize object access.
  */
 void esp_elf_deinit(esp_elf_t *elf);
 
@@ -247,7 +293,8 @@ int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table);
  * @param sym_name - Symbol name string to search
  *
  * @return Symbol address if found, 0 if not found.
- * @note Search order is reverse registration order (latest registered first).
+ * @note Searches slots from lowest to highest. Registration reuses the first
+ *       empty slot; unregistering a table does not reorder other slots.
  */
 uintptr_t esp_elf_find_symbol(const char *sym_name);
 

@@ -166,6 +166,9 @@ static size_t display_manager_ppa_alignment(void);
 static size_t display_manager_calc_draw_buf_bytes(const esp_lv_adapter_display_profile_t *profile,
                                                   size_t draw_buf_pixels,
                                                   lv_color_format_t color_format);
+static bool display_manager_set_buffers_v9(esp_lv_adapter_display_node_t *node,
+                                           lv_display_t *disp,
+                                           esp_lv_adapter_display_render_mode_t mode);
 #endif
 static bool display_manager_rebind_panel_draw_buffers(esp_lv_adapter_display_node_t *node);
 
@@ -600,13 +603,14 @@ static esp_err_t display_manager_redirect_dummy_draw_buffer(esp_lv_adapter_displ
     }
 
     if (!cfg->dummy_draw_buf_primary) {
-        size_t draw_buf_pixels = cfg->base.profile.hor_res ? cfg->base.profile.hor_res : 1;
 #if LVGL_VERSION_MAJOR >= 9
         lv_color_format_t color_format = lv_display_get_color_format(node->lv_disp);
-        size_t draw_buf_bytes = display_manager_calc_draw_buf_bytes(&cfg->base.profile,
-                                                                    draw_buf_pixels,
-                                                                    color_format);
+        /* LVGL binds buffers in the original orientation, even when matrix
+         * rotation swaps the logical resolution reported to applications. */
+        size_t draw_buf_pixels = node->lv_disp->hor_res;
+        size_t draw_buf_bytes = lv_draw_buf_width_to_stride(draw_buf_pixels, color_format);
 #else
+        size_t draw_buf_pixels = cfg->base.profile.hor_res ? cfg->base.profile.hor_res : 1;
         size_t draw_buf_bytes = draw_buf_pixels * sizeof(lv_color_t);
 #endif
         ESP_RETURN_ON_FALSE(draw_buf_bytes > 0, ESP_ERR_INVALID_STATE, TAG, "Dummy draw buffer size invalid");
@@ -1094,18 +1098,10 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
         return false;
     }
 
-    size_t buf_bytes = display_manager_calc_draw_buf_bytes(&pub->profile, cfg->draw_buf_pixels, color_format);
-
-    void *lvgl_secondary = (pub->tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
-                            pub->te_sync.pipeline != ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL) ?
-                           NULL : cfg->draw_buf_secondary;
-    lv_display_set_buffers(disp,
-                           cfg->draw_buf_primary,
-                           lvgl_secondary,
-                           buf_bytes,
-                           render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL ? LV_DISPLAY_RENDER_MODE_FULL :
-                           render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT ? LV_DISPLAY_RENDER_MODE_DIRECT :
-                           LV_DISPLAY_RENDER_MODE_PARTIAL);
+    if (!display_manager_set_buffers_v9(node, disp, render_mode)) {
+        lv_display_delete(disp);
+        return false;
+    }
 
     node->lv_disp = disp;
     cfg->lv_disp = disp;
@@ -1535,6 +1531,57 @@ static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *no
 }
 
 #if LVGL_VERSION_MAJOR >= 9
+static bool display_manager_set_buffers_v9(esp_lv_adapter_display_node_t *node,
+                                           lv_display_t *disp,
+                                           esp_lv_adapter_display_render_mode_t mode)
+{
+    esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    lv_color_format_t color_format = lv_display_get_color_format(disp);
+    size_t buf_bytes = display_manager_calc_draw_buf_bytes(&cfg->base.profile,
+                                                           cfg->draw_buf_pixels,
+                                                           color_format);
+    lv_display_render_mode_t lv_mode = mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL ? LV_DISPLAY_RENDER_MODE_FULL :
+                                       mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT ? LV_DISPLAY_RENDER_MODE_DIRECT :
+                                       LV_DISPLAY_RENDER_MODE_PARTIAL;
+    void *secondary = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
+                       cfg->base.te_sync.pipeline != ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL) ?
+                      NULL : cfg->draw_buf_secondary;
+
+    /* Panel framebuffers are packed, including the buffer used as a rotation source. */
+    if (lv_mode != LV_DISPLAY_RENDER_MODE_PARTIAL &&
+            display_manager_is_panel_frame_buffer(node, cfg->draw_buf_primary)) {
+        /* The packed panel layout stays native after matrix rotation. This
+         * helper is also called when buffers are rebound after dummy draw. */
+        uint32_t width = disp->hor_res;
+        uint32_t stride = width * lv_color_format_get_size(color_format);
+#if LV_VERSION_CHECK(9, 3, 0)
+        lv_display_set_buffers_with_stride(disp, cfg->draw_buf_primary, secondary,
+                                           buf_bytes, stride, lv_mode);
+#elif LV_VERSION_CHECK(9, 2, 0)
+        /* LVGL 9.2 preserves an explicit stride, but has no raw-buffer helper yet. */
+        if (lv_draw_buf_init(&disp->_static_buf1, width, disp->ver_res,
+                             color_format, stride, cfg->draw_buf_primary, buf_bytes) != LV_RESULT_OK ||
+                (secondary && lv_draw_buf_init(&disp->_static_buf2, width, disp->ver_res,
+                                               color_format, stride, secondary, buf_bytes) != LV_RESULT_OK)) {
+            ESP_LOGE(TAG, "Failed to initialize packed draw buffers");
+            return false;
+        }
+        lv_display_set_draw_buffers(disp, &disp->_static_buf1, secondary ? &disp->_static_buf2 : NULL);
+        lv_display_set_render_mode(disp, lv_mode);
+#else
+        /* LVGL 9.0/9.1 recomputes the stride while rendering FULL/DIRECT buffers. */
+        if (stride != lv_draw_buf_width_to_stride(width, color_format)) {
+            ESP_LOGE(TAG, "Packed panel buffers with stride padding require LVGL >= 9.2");
+            return false;
+        }
+        lv_display_set_buffers(disp, cfg->draw_buf_primary, secondary, buf_bytes, lv_mode);
+#endif
+    } else {
+        lv_display_set_buffers(disp, cfg->draw_buf_primary, secondary, buf_bytes, lv_mode);
+    }
+    return true;
+}
+
 static size_t display_manager_calc_draw_buf_bytes(const esp_lv_adapter_display_profile_t *profile,
                                                   size_t draw_buf_pixels,
                                                   lv_color_format_t color_format)
@@ -2275,26 +2322,8 @@ esp_err_t display_manager_rebind_draw_buffers(lv_display_t *disp)
 
 #if LVGL_VERSION_MAJOR >= 9
     esp_lv_adapter_display_render_mode_t render_mode = display_manager_pick_render_mode(cfg);
-    lv_color_format_t color_format = lv_display_get_color_format(disp);
-    size_t buf_bytes = display_manager_calc_draw_buf_bytes(&cfg->base.profile,
-                                                           cfg->draw_buf_pixels,
-                                                           color_format);
-
-    lv_display_render_mode_t lv_mode = LV_DISPLAY_RENDER_MODE_PARTIAL;
-    if (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_FULL) {
-        lv_mode = LV_DISPLAY_RENDER_MODE_FULL;
-    } else if (render_mode == ESP_LV_ADAPTER_DISPLAY_RENDER_MODE_DIRECT) {
-        lv_mode = LV_DISPLAY_RENDER_MODE_DIRECT;
-    }
-
-    void *lvgl_secondary = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
-                            cfg->base.te_sync.pipeline != ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL) ?
-                           NULL : cfg->draw_buf_secondary;
-    lv_display_set_buffers(disp,
-                           cfg->draw_buf_primary,
-                           lvgl_secondary,
-                           buf_bytes,
-                           lv_mode);
+    ESP_RETURN_ON_FALSE(display_manager_set_buffers_v9(node, disp, render_mode),
+                        ESP_ERR_NOT_SUPPORTED, TAG, "Failed to bind LVGL draw buffers");
 #else
     lv_color_t *lvgl_secondary = (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
                                   cfg->base.te_sync.pipeline != ESP_LV_ADAPTER_TE_PIPELINE_SYNC_FULL) ?

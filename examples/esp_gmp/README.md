@@ -6,7 +6,7 @@ Example projects based on [`components/esp_gmp`](../../components/esp_gmp).
 
 | Directory | Description |
 |-----------|-------------|
-| [`gmp_ota/`](gmp_ota/) | BLE GMP OTA: server writes the OTA partition directly; client manages firmware in SPIFFS |
+| [`gmp_ota/`](gmp_ota/README.md) | BLE GMP OTA: server writes the OTA partition directly; client manages firmware in SPIFFS |
 
 Protocol specification: [`SPEC.md`](../../components/esp_gmp/SPEC.md).
 

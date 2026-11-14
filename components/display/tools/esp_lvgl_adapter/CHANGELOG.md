@@ -15,6 +15,24 @@
 
 * Add `CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): a rotated `DOUBLE_DIRECT` display is drawn straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation and the `lv_draw_ortho` draw unit, instead of being drawn upright and copied rotated. Of its three frame buffers, LVGL draws the next frame into the one neither on screen nor waiting to be, so a frame is not rounded up to a whole number of panel refreshes; a panel made with two still works, and waits for each refresh. On chips with a PPA, the PPA rotates each drawn tile while the CPU draws the next, and fills plain rectangles; every PPA wait is bounded. With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE`, since that task then does the drawing. Off by default; other modes are unchanged. `profile.enable_ppa_accel` is ignored on a display rotated this way, which keeps a single PPA user per refresh.
 
+## v0.7.8 (2026-11-12)
+
+* Fix local LVGL detection and public touch dependencies.
+* Fix LVGL v9 panel framebuffer stride and dummy-draw buffer sizing.
+* Clarify partial-buffer SRAM usage and the MONO config macro.
+
+## v0.7.7 (2026-11-10)
+
+* Fix LVGL v9 async TE RGB565 rotation cache coherency and fuse PPA byte swapping.
+* Stabilize automatic TE polarity detection.
+* Retry skipped touch samples and cancel failed recovery without clicks in LVGL v8/v9.
+
+## v0.7.6 (2026-11-08)
+
+* Fix LVGL v8/v9 PPA output alignment and buffer capacity checks for drawing and rotation.
+* Fall back to software when dimensions exceed PPA limits.
+
+
 ## v0.7.5 (2026-11-03)
 
 * Fix LVGL v8/v9 PPA opacity, software fallback and display resource cleanup.

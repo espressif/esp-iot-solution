@@ -5,7 +5,7 @@ LVGL, comparing rendered pixels with LVGL's software renderer. It reuses pinned
 MIT-licensed fixtures from the same author's `ppa-alternative-` project instead
 of importing the standalone ESPHome component into this adapter.
 
-Requirements: Python 3.9+, Git, make, a C compiler, pthreads and zlib development
+Requirements: Python 3.9+, Git, CMake, make, a C compiler, pthreads and zlib development
 headers (`-lz`) on Linux. The Python runner uses only the standard library.
 Clone the fixtures and LVGL, then run from this directory:
 
@@ -20,6 +20,19 @@ The runner itself downloads nothing. Fixtures are pinned to
 `9db8952fc7f06438819fd4aaf28f5fb8a35a56b7`, before the standalone project's
 experimental split/tile-width controls. The newer fake PPA and font regression
 are retained. These commits must exist in the reference checkout.
+
+The runner also exercises the adapter's actual CMake discovery/version block
+with local and managed LVGL versions, early dependency discovery and the public
+touch dependency. Only IDF property access is stubbed; this is not a full IDF
+configuration. `check_cmake_version.py` runs those checks independently.
+
+`check_display_buffers.py` compiles the shipped buffer-binding and dummy-buffer
+helpers against the same real LVGL library and configuration used by the runner.
+It covers three panel geometries, four rotations, three pixel formats and
+FULL/DIRECT modes, including native stride after rebinding and the temporary
+PARTIAL buffer used during suspension. Negative controls restore each incorrect
+logical-width expression and must fail. This is a buffer-layout regression,
+not a simulated LCD or a hardware presentation test.
 
 Runs cover single-core and pthread rendering, 90/180/270-degree rotation,
 RGB565/XRGB8888, clipping, partial/direct buffers, image-cache hits, eviction,

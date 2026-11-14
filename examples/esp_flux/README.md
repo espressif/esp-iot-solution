@@ -1,5 +1,7 @@
 # BLE SPP Example
 
+**English** | [中文](README_CN.md)
+
 This example demonstrates how to combine the `ble_conn_mgr` component (connection management + GATT discovery) with the `esp_flux` component's `gatt_session` (reliable, fragmented data transfer) to implement a BLE Serial Port Profile (SPP)-like application.
 
 ## Overview
@@ -10,7 +12,7 @@ The BLE SPP example consists of two applications:
 2. **ble_spp_client** - BLE SPP client (central) that scans for SPP servers and connects to them
 
 Both applications demonstrate:
-- Multi-connection management (`ble_conn_mgr`)
+- Configurable connection management (`ble_conn_mgr`; one link per board by default)
 - GATT service discovery (`ble_conn_mgr`, client only — the server already knows its own handles)
 - Reliable data transmission with automatic fragmentation, SACK, and reassembly (`esp_flux` / `gatt_session`)
 - Auto-reconnect via an example FreeRTOS timer (server: re-advertise every 2 s; client: every 5 s, while a connection slot is free, `scan_stop` then `scan_start`)
@@ -61,6 +63,14 @@ idf.py monitor
    - Receive data from the client and log its size
    - Continuously send a fixed-size test buffer (`SPP_TEST_TRANSFER_SIZE`, ~4.3 KB) whenever its send session is idle
 
+You can use the [ESP BLE App](https://github.com/EspressifApps/esp-ble-app) on Android 12 or newer to debug `ble_spp_server`. Install [app-debug.apk](https://github.com/EspressifApps/esp-ble-app/releases/download/v0.0.1/app-debug.apk) from the [v0.0.1 release](https://github.com/EspressifApps/esp-ble-app/releases/tag/v0.0.1) and grant Bluetooth permissions. Open **Flux Data Transfer → Scan & Connect**, connect to `ble-spp-server`, then use **Transfer** to send text or a sample payload and **Logs** to inspect messages.
+
+Select **Flux Data Transfer** on the launcher. **Scan & Connect** finds the server; the Flux service filter is optional. **Transfer** offers sample payload sizes and a text field. The screenshots show the disconnected state, so the send controls are disabled.
+
+| App launcher | Scan & Connect | Transfer: sample or text payload |
+| --- | --- | --- |
+| <img src="ble_spp_server/image/main_page.png" alt="ESP BLE App launcher" width="220"> | <img src="ble_spp_server/image/flux_00.png" alt="Flux scan screen" width="220"> | <img src="ble_spp_server/image/flux_01.png" alt="Flux transfer screen" width="220"> |
+
 ### Running the Client
 
 1. Build and flash the `ble_spp_client` example
@@ -72,6 +82,8 @@ idf.py monitor
    - Once connection parameters are ready, the client also continuously sends the same fixed-size test buffer whenever its send session is idle
 
 ### Testing with Multiple Devices
+
+Both projects set `CONFIG_BLE_CONN_MGR_MAX_CONNECTIONS=1` by default. Increase it on a board before testing simultaneous connections to multiple peers.
 
 1. Flash `ble_spp_server` on one or more devices
 2. Flash `ble_spp_client` on one or more devices
@@ -91,9 +103,10 @@ The test transfer size is a compile-time constant in `main/main.c` on both the c
 Change this constant (and rebuild) to test different payload sizes. The send call also sets the sliding window and SACK threshold:
 
 ```c
-gatt_session_fragment_send(session, send_buffer, SPP_TEST_TRANSFER_SIZE, 0xFF, 80);
-//                                                                        ^window ^threshold%
+gatt_session_send(session, send_buffer, SPP_TEST_TRANSFER_SIZE, 0xFF, 80);
 ```
+
+Here `0xFF` means an unlimited window, and `80` is the SACK threshold percentage.
 
 ### Component Configuration
 

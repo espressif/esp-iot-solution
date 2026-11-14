@@ -26,25 +26,21 @@ receiver 以 peripheral 角色运行（`CONFIG_BLE_CONN_MGR_ROLE_PERIPHERAL`）�
 
 ## 构建
 
-先加载本地 ESP-IDF 环境：
-
-```bash
-source ~/workspace/esp/esp-idf/export.sh
-```
+先激活本机 ESP-IDF 环境，再从仓库根目录执行以下命令。
 
 构建 sender：
 
 ```bash
 cd examples/esp_file_transfer/sender_demo
-idf.py --preview set-target esp32-h4
+idf.py --preview set-target esp32h4
 idf.py build
 ```
 
-构建 receiver：
+接着构建 receiver：
 
 ```bash
-cd examples/esp_file_transfer/receiver_demo
-idf.py --preview set-target esp32-h4
+cd ../receiver_demo
+idf.py --preview set-target esp32h4
 idf.py build
 ```
 
@@ -58,16 +54,18 @@ idf.py flash monitor
 构建时生成并烧录 FATFS 镜像，不会在挂载失败时自动格式化。
 初始镜像包含 `/fatfs/send/demo.txt`。
 示例将单文件上限设置为 2 MiB，为约 2.375 MiB 的 FATFS 分区预留文件系统开销。
-如需验证取消或断链，可在构建 sender 前准备一个较大的文件：
+如需验证取消或断链，可在构建 sender 前从仓库根目录执行以下命令，准备一个较大的文件：
 
 ```bash
 cd examples/esp_file_transfer
 dd if=/dev/urandom of=sender_demo/storage/send/large.bin bs=1024 count=1024
 ```
 
+如果 sender 已构建，添加文件后需重新构建并烧录，使新的 FATFS 镜像写入开发板。
+
 ## 使用
 
-两块板启动后，sender 自动搜索并连接 receiver。开始验证前，确认两端均输出：
+以下双开发板流程需要启动两块板。sender 会自动搜索并连接 receiver。开始验证前，确认两端均输出：
 
 ```text
 File transfer link ready
@@ -216,3 +214,13 @@ Transfer cancelled
 | `ft config` | 显示接收目录、大小配置和链路状态。 |
 
 receiver 不需要 `receive` 命令。收到 metadata 后，接收状态机会自动启动。
+
+## 使用 Android App 调试 `receiver_demo`
+
+`receiver_demo` 以 `ESP-File-Transfer` 广播并通过 BLE 接收文件。也可以使用 [ESP BLE App](https://github.com/EspressifApps/esp-ble-app) 在 Android 12 及以上手机上代替 `sender_demo` 开发板调试。从 [v0.0.1 发布页](https://github.com/EspressifApps/esp-ble-app/releases/tag/v0.0.1)安装 [app-debug.apk](https://github.com/EspressifApps/esp-ble-app/releases/download/v0.0.1/app-debug.apk)，授予蓝牙权限并启动 `receiver_demo`。在 App 中打开 **GMP File Transfer → Scan & Connect**，连接 `ESP-File-Transfer`，再到 **Transfer** 中选择文件并点击 **Send File**。
+
+主界面用于进入文件传输程序；**Scan & Connect** 用于查找接收端，**Transfer** 用于选择待发送文件。截图展示的是未连接状态，连接后才能发送。
+
+| App 主界面 | Scan & Connect：扫描设备 | Transfer：选择文件 |
+| --- | --- | --- |
+| <img src="receiver_demo/image/main_page.png" alt="ESP BLE App 主界面" width="220"> | <img src="receiver_demo/image/file_00.png" alt="GMP 文件传输扫描界面" width="220"> | <img src="receiver_demo/image/file_01.png" alt="GMP 文件选择界面" width="220"> |

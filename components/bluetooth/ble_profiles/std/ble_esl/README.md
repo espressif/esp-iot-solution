@@ -61,8 +61,8 @@ Requires `CONFIG_BT_NIMBLE_ENC_ADV_DATA` (selected by the ESL Profile Kconfig).
 
 ## Examples
 
-- `examples/bluetooth/ble_profiles/ble_esl/ble_esl_tag`
-- `examples/bluetooth/ble_profiles/ble_esl/ble_esl_ap`
+- [BLE ESL Tag example](../../../../../examples/bluetooth/ble_profiles/ble_esl/README.md#tag-ble_esl_tag)
+- [BLE ESL Access Point example](../../../../../examples/bluetooth/ble_profiles/ble_esl/README.md#access-point-ble_esl_ap)
 
 ## Configuration
 

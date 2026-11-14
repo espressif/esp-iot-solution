@@ -4,9 +4,8 @@ menu "BLE ESL AP Product Example"
         prompt "AP operation mode"
         default ESL_AP_MODE_WITH_APP
         help
-            AP + phone app is the default for this profile backport (mode 2:
-            e-paper upload/display/refresh via the existing Android App).
-            Standalone auto-scan is optional and not required for mode 2.
+            AP + phone app is the default. The NUS gateway supports e-paper
+            upload, display, and refresh. Standalone auto-scan is optional.
 
         config ESL_AP_MODE_STANDALONE
             bool "Standalone AP (no phone gateway)"

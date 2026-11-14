@@ -255,6 +255,73 @@ esp_err_t esp_mcp_task_store_clear(esp_mcp_task_store_t *store)
     }
 }
 
+static bool esp_mcp_task_origin_matches(const esp_mcp_task_t *task, const char *session_id)
+{
+    const char *origin = task ? task->origin_session_id : "";
+    const char *key = session_id ? session_id : "";
+    return strcmp(origin, key) == 0;
+}
+
+esp_err_t esp_mcp_task_store_clear_session(esp_mcp_task_store_t *store, const char *session_id)
+{
+    ESP_RETURN_ON_FALSE(store, ESP_ERR_INVALID_ARG, TAG, "Invalid store");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(store->mutex, portMAX_DELAY) == pdTRUE, ESP_ERR_INVALID_STATE, TAG, "Mutex take failed");
+
+    esp_mcp_task_t *task = NULL;
+    SLIST_FOREACH(task, &store->tasks, next) {
+        if (esp_mcp_task_origin_matches(task, session_id) && !esp_mcp_task_is_terminal(task->status)) {
+            __atomic_store_n(&task->cancel_requested, true, __ATOMIC_RELEASE);
+        }
+    }
+    xSemaphoreGive(store->mutex);
+
+    for (int i = 0; i < 100; i++) {
+        bool all_done = true;
+        if (xSemaphoreTake(store->mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+            SLIST_FOREACH(task, &store->tasks, next) {
+                if (esp_mcp_task_origin_matches(task, session_id) &&
+                        (task->status == ESP_MCP_TASK_WORKING || task->status == ESP_MCP_TASK_CANCELLING)) {
+                    all_done = false;
+                    break;
+                }
+            }
+            xSemaphoreGive(store->mutex);
+        } else {
+            all_done = false;
+        }
+        if (all_done) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    for (;;) {
+        if (xSemaphoreTake(store->mutex, portMAX_DELAY) != pdTRUE) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        esp_mcp_task_t *prev = NULL;
+        esp_mcp_task_t *victim = NULL;
+        SLIST_FOREACH(task, &store->tasks, next) {
+            if (esp_mcp_task_origin_matches(task, session_id)) {
+                victim = task;
+                break;
+            }
+            prev = task;
+        }
+        if (!victim) {
+            xSemaphoreGive(store->mutex);
+            return ESP_OK;
+        }
+        if (prev) {
+            SLIST_NEXT(prev, next) = SLIST_NEXT(victim, next);
+        } else {
+            SLIST_REMOVE_HEAD(&store->tasks, next);
+        }
+        xSemaphoreGive(store->mutex);
+        (void)task_destroy(victim);
+    }
+}
+
 esp_err_t esp_mcp_task_store_destroy(esp_mcp_task_store_t *store)
 {
     ESP_RETURN_ON_FALSE(store, ESP_ERR_INVALID_ARG, TAG, "Invalid store");

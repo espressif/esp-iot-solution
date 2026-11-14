@@ -71,9 +71,18 @@ bq27220_config_t bq27220_cfg = {
     .i2c_bus = i2c_bus,
     .cfg = &default_config,
     .cedv = &default_cedv,
+    .skip_profile_init = false,
 };
 bq27220 = bq27220_create(&bq27220_cfg);
 
 ```
 
 During initialization, the driver verifies all non-learned fields in the configured battery profile. It skips CONFIG UPDATE when the stored profile matches, otherwise it writes the required data-memory ranges, waits for gauge reinitialization, verifies the complete profile, and seals the gauge. `bq27220_create()` returns `NULL` if communication, update, or verification fails.
+
+Set `skip_profile_init` to `true` to make `bq27220_create()` skip profile verification, security transitions, and Data Memory updates. This fast path only probes the device and leaves its security state unchanged. It is intended for gauges that were already configured or have the required profile in OTP. RAM profile values are lost after a gauge power-on reset.
+
+After fast creation, the profile can be explicitly checked and updated when the application is ready for the potentially blocking operation. It uses the same verification as `bq27220_create()` and skips CONFIG UPDATE when the stored profile already matches:
+
+``` c
+esp_err_t ret = bq27220_update_profile(bq27220, &default_config, &default_cedv);
+```

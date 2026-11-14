@@ -50,7 +50,7 @@ def first_section_of_type(data, kind):
         off = section(data, i)
         if u32(data, off + 4) == kind:
             return off
-    raise AssertionError(f"missing section type {kind}")
+    raise AssertionError(f'missing section type {kind}')
 
 
 def first_load_segment(data):
@@ -117,8 +117,8 @@ class ElfValidationTests(unittest.TestCase):
         cls.libs = {}
         cc = os.environ.get('CC', 'cc')
         for arch in FIXTURES:
-            output = Path(cls.build.name) / f"libvalidate_{arch}.so"
-            flags = [f"-DCONFIG_IDF_TARGET_ARCH_{arch.upper()}=1",
+            output = Path(cls.build.name) / f'libvalidate_{arch}.so'
+            flags = [f'-DCONFIG_IDF_TARGET_ARCH_{arch.upper()}=1',
                      '-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1']
             if arch == 'xtensa':
                 flags.append('-DCONFIG_ELF_LOADER_BUS_ADDRESS_MIRROR=1')
@@ -279,6 +279,56 @@ class ElfValidationTests(unittest.TestCase):
             '-o', str(executable),
         ], check=True)
         subprocess.run([str(executable)], check=True)
+
+    def test_compiled_symbol_registry_matches_resolver_precedence(self):
+        for configuration in range(16):
+            with self.subTest(configuration=configuration):
+                options = ('LIBC_SYMBOLS', 'ESPIDF_SYMBOLS', 'CUSTOMER_SYMBOLS')
+                flags = [f'-DCONFIG_ELF_LOADER_{name}=1'
+                         for bit, name in enumerate(options) if configuration & (1 << bit)]
+                if configuration & 8:
+                    flags.append('-DCONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT=1')
+                output = Path(self.build.name) / f'test_registry_{configuration}'
+                subprocess.run([
+                    os.environ.get('CC', 'cc'), '-std=c11', '-D_GNU_SOURCE',
+                    '-Wall', '-Wextra', '-Werror', '-Wno-pointer-to-int-cast',
+                    '-Wno-int-to-pointer-cast', '-Wno-format', '-Wno-unused-variable',
+                    '-Wno-unused-parameter', '-Wno-unused-but-set-variable',
+                    '-Wno-sign-compare', '-ffunction-sections', '-fdata-sections',
+                    HOST_GC_LINKER_FLAG, '-DCONFIG_IDF_TARGET_ARCH_RISCV=1', *flags,
+                    '-I', str(COMPONENT / 'tests/host/include'),
+                    '-I', str(COMPONENT / 'include'),
+                    str(COMPONENT / 'tests/host/symbols/test_registry.c'),
+                    str(COMPONENT / 'src/esp_elf_symbol_registry.c'),
+                    '-o', str(output),
+                ], check=True)
+                subprocess.run([str(output)], check=True)
+
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'Requires an ELF linker with LTO support')
+    def test_compiled_registry_retained_without_application_reference(self):
+        """Exercise the real CMake -u option with LTO and section GC."""
+        cmake = shutil.which('cmake')
+        nm = shutil.which('nm')
+        self.assertIsNotNone(cmake)
+        self.assertIsNotNone(nm)
+
+        project = COMPONENT / 'tests/host/symbols/registry_retention'
+        build = Path(self.build.name) / 'registry_retention'
+        subprocess.run([cmake, '-S', str(project), '-B', str(build)],
+                       check=True, capture_output=True, text=True)
+        result = subprocess.run([cmake, '--build', str(build), '--verbose'],
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('-flto', result.stdout)
+        self.assertIn('--gc-sections', result.stdout)
+        self.assertIn('-u g_esp_elf_static_symbol_registry', result.stdout)
+
+        def defined_symbols(program):
+            return subprocess.run([nm, '--defined-only', str(build / program)],
+                                  check=True, capture_output=True, text=True).stdout
+
+        self.assertIn('g_esp_elf_static_symbol_registry', defined_symbols('with_force'))
+        self.assertNotIn('g_esp_elf_static_symbol_registry', defined_symbols('without_force'))
 
     def test_vprintf_export_matches_available_libc_function(self):
         """Exercise the default export-table entry with the host C runtime."""

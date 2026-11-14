@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -57,8 +57,8 @@ typedef struct {
      * obtain raw touch points. All subsequent processing (coordinate scaling, gesture recognition,
      * @c lv_indev_data_t fill) continues unchanged.
      *
-     * Only invoked when new data should be read (IRQ mode: after semaphore is taken; polling
-     * mode: every LVGL indev scan).
+     * Invoked after an IRQ or during recovery from a skipped sample; polling mode reads on
+     * every LVGL indev scan.
      *
      * @param tp        ESP LCD touch handle
      * @param points    Output buffer for raw touch points (unscaled hardware coordinates)
@@ -66,6 +66,8 @@ typedef struct {
      * @param max_count Capacity of @p points buffer
      * @param user_ctx  User context
      * @return ESP_OK on success (adapter proceeds with normal data processing)
+     *         ESP_ERR_NOT_FINISHED when no usable sample is available (adapter preserves
+     *         state for up to three retries, then cancels the contact until a valid release)
      *         any other value is treated as a read error (adapter applies released state)
      */
     esp_err_t (*custom_touch_read)(esp_lcd_touch_handle_t tp,

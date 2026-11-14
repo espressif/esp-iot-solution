@@ -16,12 +16,52 @@
 #include "nvs_flash.h"
 
 #include "host/ble_att.h"
+#include "host/ble_gap.h"
 
 #include "esp_ble_conn_mgr.h"
+#include "esp_gmp_ft.h"
 #include "file_transfer_example_common.h"
 #include "flux_gatt_session.h"
+#include "ble_link_gate.h"
 
 static const char *TAG = "ft_sender_demo";
+static ble_link_gate_t s_link_gate;
+static void on_disconnected(uint16_t conn_handle);
+
+static const char *link_phy_name(uint8_t phy)
+{
+    switch (phy) {
+    case ESP_BLE_CONN_PHY_1M:
+        return "1M";
+    case ESP_BLE_CONN_PHY_2M:
+        return "2M";
+    case ESP_BLE_CONN_PHY_CODED:
+        return "Coded";
+    default:
+        return "unknown";
+    }
+}
+
+static void log_link_warn(const char *stage, uint16_t conn_handle)
+{
+    struct ble_gap_conn_desc desc;
+    uint8_t tx_phy = 0;
+    uint8_t rx_phy = 0;
+    esp_err_t phy_err = esp_ble_conn_get_phy(conn_handle, &tx_phy, &rx_phy);
+    const char *tx_name = phy_err == ESP_OK ? link_phy_name(tx_phy) : "unavailable";
+    const char *rx_name = phy_err == ESP_OK ? link_phy_name(rx_phy) : "unavailable";
+    uint16_t mtu = ble_att_mtu(conn_handle);
+
+    if (ble_gap_conn_find(conn_handle, &desc) == 0) {
+        ESP_LOGW(TAG, "%s conn=%u interval=%.2f ms latency=%u supervision=%u ms MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, desc.conn_itvl * 1.25f,
+                 (unsigned)desc.conn_latency, (unsigned)desc.supervision_timeout * 10,
+                 (unsigned)mtu, tx_name, rx_name);
+    } else {
+        ESP_LOGW(TAG, "%s conn=%u interval/latency/supervision unavailable MTU=%u PHY(tx/rx)=%s/%s",
+                 stage, (unsigned)conn_handle, (unsigned)mtu, tx_name, rx_name);
+    }
+}
 
 #define LL_PACKET_TIME      2120
 #define LL_PACKET_LENGTH    251
@@ -36,6 +76,7 @@ static gatt_session_t *s_session;
 static gatt_session_t *s_teardown_pending;
 static bool s_scan_pending;
 static bool s_tearing_down;
+static bool s_transfer_link_logged;
 static TickType_t s_scan_retry_at;
 static uint32_t s_generation;
 static portMUX_TYPE s_state_lock = portMUX_INITIALIZER_UNLOCKED;
@@ -196,8 +237,7 @@ static void activate_sender_link_task(void *arg)
         vTaskDelete(NULL);
         return;
     }
-    ESP_LOGI(TAG, "Sender link ready, conn=%u, mtu=%u",
-             conn_handle, gatt_session_get_mtu(session));
+    ESP_LOGI(TAG, "Sender link ready, conn=%u", conn_handle);
     vTaskDelete(NULL);
 }
 
@@ -297,6 +337,7 @@ static void on_disc_complete(uint16_t conn_handle)
     portENTER_CRITICAL(&s_state_lock);
     if (!s_session) {
         s_session = session;
+        s_transfer_link_logged = false;
         generation = ++s_generation;
         stored = true;
     }
@@ -304,6 +345,11 @@ static void on_disc_complete(uint16_t conn_handle)
     if (!stored) {
         ESP_LOGE(TAG, "session slot busy");
         teardown_session(session);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+        return;
+    }
+    if (!ble_link_gate_is_ready(&s_link_gate, conn_handle, 185)) {
+        on_disconnected(conn_handle);
         (void)esp_ble_conn_disconnect_by_handle(conn_handle);
         return;
     }
@@ -342,6 +388,18 @@ static void on_disc_complete(uint16_t conn_handle)
         teardown_session(session);
         (void)esp_ble_conn_disconnect_by_handle(conn_handle);
     }
+}
+
+static void create_session_after_link_ready(void *arg)
+{
+    uint16_t conn_handle = (uint16_t)(uintptr_t)arg;
+    if (ble_link_gate_wait(&s_link_gate, conn_handle, 185, BLE_LINK_GATE_WAIT_MS)) {
+        on_disc_complete(conn_handle);
+    } else {
+        ESP_LOGW(TAG, "Link setup did not complete for conn=%u", conn_handle);
+        (void)esp_ble_conn_disconnect_by_handle(conn_handle);
+    }
+    vTaskDelete(NULL);
 }
 
 static void on_disconnected(uint16_t conn_handle)
@@ -424,6 +482,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         return;
     }
 
+    ble_link_gate_on_event(&s_link_gate, id, event_data);
     switch (id) {
     case ESP_BLE_CONN_EVENT_STARTED:
         portENTER_CRITICAL(&s_state_lock);
@@ -438,6 +497,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         }
         ESP_LOGI(TAG, "Connected to " MACSTR " (conn=%u)",
                  MAC2STR(evt->connected.peer_addr), evt->connected.conn_handle);
+        ble_link_gate_begin(&s_link_gate, evt->connected.conn_handle);
         tune_connection(evt->connected.conn_handle);
         break;
     }
@@ -447,6 +507,7 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
+        ble_link_gate_end(&s_link_gate, evt->disconnected.conn_handle);
         on_disconnected(evt->disconnected.conn_handle);
         break;
     }
@@ -456,7 +517,10 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
         if (!evt) {
             break;
         }
-        on_disc_complete(evt->disc_complete.conn_handle);
+        if (xTaskCreate(create_session_after_link_ready, "ft_wait_link", 4096,
+                        (void *)(uintptr_t)evt->disc_complete.conn_handle, 5, NULL) != pdPASS) {
+            (void)esp_ble_conn_disconnect_by_handle(evt->disc_complete.conn_handle);
+        }
         break;
     }
     case ESP_BLE_CONN_EVENT_CONNECT_FAILED:
@@ -470,6 +534,21 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
          * separate copy which the application must free. */
         esp_ble_conn_data_t *conn_data = event_data;
         if (conn_data) {
+            bool log_first = false;
+            uint16_t conn_handle = conn_data->write_conn_id;
+            esp_file_transfer_status_t status;
+            if (conn_data->data && conn_data->data_len &&
+                    esp_file_transfer_get_status(&status) == ESP_OK && status.in_progress) {
+                portENTER_CRITICAL(&s_state_lock);
+                if (s_session && s_session->conn_handle == conn_handle && !s_transfer_link_logged) {
+                    s_transfer_link_logged = true;
+                    log_first = true;
+                }
+                portEXIT_CRITICAL(&s_state_lock);
+            }
+            if (log_first) {
+                log_link_warn("First transfer data received", conn_handle);
+            }
             free(conn_data->data);
             conn_data->data = NULL;
         }
@@ -490,8 +569,16 @@ static void app_ble_conn_event_handler(void *handler_args, esp_event_base_t base
     }
 }
 
-static void init_nvs(void)
+void app_main(void)
 {
+    esp_log_level_set("NimBLE", ESP_LOG_WARN);
+    esp_log_level_set("blecm_nimble", ESP_LOG_WARN);
+    esp_log_level_set("gatt_session", ESP_LOG_WARN);
+    esp_log_level_set("esp_flux", ESP_LOG_WARN);
+
+    esp_ble_conn_config_t config = {
+        .device_name = "ESP-File-Transfer-Sender",
+    };
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
             err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -499,21 +586,14 @@ static void init_nvs(void)
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
-}
 
-void app_main(void)
-{
-    esp_ble_conn_config_t config = {
-        .device_name = "ESP-File-Transfer-Sender",
-    };
-
-    init_nvs();
     ESP_ERROR_CHECK(file_transfer_example_init());
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(esp_event_handler_register(BLE_CONN_MGR_EVENTS, ESP_EVENT_ANY_ID,
                                                app_ble_conn_event_handler, NULL));
     ESP_ERROR_CHECK(esp_ble_conn_init(&config));
+    ESP_ERROR_CHECK(ble_link_gate_init(&s_link_gate));
     ESP_ERROR_CHECK(esp_ble_conn_register_scan_callback(scan_cb, NULL));
     if (esp_ble_conn_start() != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start BLE connection manager");

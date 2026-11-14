@@ -1328,7 +1328,14 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
     if (!elf || !(elf->entry)) {
         return -EINVAL;
     }
+    if (elf->lifecycle_busy) {
+        return -EBUSY;
+    }
+    if (elf->fini_done) {
+        return -EINVAL;
+    }
 
+    elf->lifecycle_busy = true;
     if (!elf->init_done) {
         elf->init_done = true;
         esp_elf_run_lifecycle_array(elf->preinit_array, elf->preinit_count, false);
@@ -1336,7 +1343,40 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
     }
 
     elf->entry(argc, argv);
+    elf->lifecycle_busy = false;
 
+    return 0;
+}
+
+/**
+ * @brief Execute ELF finalizers once, keeping the loaded image resident.
+ *
+ * @param elf - Initialized ELF object, including a failed-relocation image.
+ *
+ * @return 0 on success, -EINVAL for NULL, or -EBUSY while entry or callbacks run.
+ *
+ * @note Callbacks run in the caller's task only if startup ran. Finalization
+ *       retains the code/data allocations and executable MMU mappings until
+ *       esp_elf_deinit(). Access to the ELF object must be externally serialized.
+ */
+int esp_elf_finalize(esp_elf_t *elf)
+{
+    if (!elf) {
+        return -EINVAL;
+    }
+    if (elf->lifecycle_busy) {
+        return -EBUSY;
+    }
+    if (elf->fini_done) {
+        return 0;
+    }
+
+    elf->lifecycle_busy = true;
+    if (elf->init_done) {
+        esp_elf_run_lifecycle_array(elf->fini_array, elf->fini_count, elf->fini_reverse);
+    }
+    elf->fini_done = true;
+    elf->lifecycle_busy = false;
     return 0;
 }
 
@@ -1347,8 +1387,10 @@ int esp_elf_request(esp_elf_t *elf, int opt, int argc, char *argv[])
  *
  * @return None
  *
- * @note This function frees all resources allocated by esp_elf_relocate() and
- *       resets the structure to its initial state (same as after esp_elf_init()).
+ * @note Runs finalization callbacks (unless already finalized) before unmapping
+ *       executable memory, freeing allocations, and resetting the structure.
+ *       If entry or lifecycle callbacks are executing, logs an error and retains
+ *       the image; the caller must retry after execution returns.
  */
 void esp_elf_deinit(esp_elf_t *elf)
 {
@@ -1356,8 +1398,10 @@ void esp_elf_deinit(esp_elf_t *elf)
         return;
     }
 
-    if (elf->init_done) {
-        esp_elf_run_lifecycle_array(elf->fini_array, elf->fini_count, elf->fini_reverse);
+    int ret = esp_elf_finalize(elf);
+    if (ret) {
+        ESP_LOGE(TAG, "Cannot deinitialize an executing ELF, ret=%d", ret);
+        return;
     }
 
 #ifdef CONFIG_ELF_LOADER_SET_MMU
@@ -1631,7 +1675,7 @@ int esp_elf_unregister_symbol(esp_elf_symbol_table_t *symbol_table)
  * @param sym_name - Symbol name string to search
  *
  * @return Symbol address if found, 0 if not found.
- * @note Search order is registration order (earliest registered first).
+ * @note Searches slots from lowest to highest; registration reuses empty slots.
  */
 uintptr_t esp_elf_find_symbol(const char *sym_name)
 {
