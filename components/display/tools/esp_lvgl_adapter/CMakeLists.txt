@@ -53,17 +53,25 @@ endif()
 
 if("${lvgl_ver}" STREQUAL "" AND "${lvgl_name}" IN_LIST build_components AND
    NOT CMAKE_BUILD_EARLY_EXPANSION)
-    # Local source components may have no manifest version. Only the major version
-    # is needed to select the LVGL bridge and integration hooks below.
+    # Local source components may have no manifest version. Parse the complete
+    # source version because rotation-in-draw hooks support specific minors.
     idf_component_get_property(_adapter_lvgl_dir ${lvgl_name} COMPONENT_DIR)
     foreach(_adapter_version_header IN ITEMS "include/lvgl/lv_version.h" "lv_version.h" "lvgl.h")
         set(_adapter_version_header "${_adapter_lvgl_dir}/${_adapter_version_header}")
         if(EXISTS "${_adapter_version_header}")
             set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${_adapter_version_header}")
-            file(STRINGS "${_adapter_version_header}" _adapter_major_line LIMIT_COUNT 1
-                 REGEX "^[ \t]*#[ \t]*define[ \t]+LVGL_VERSION_MAJOR[ \t]+[0-9]+")
-            if(_adapter_major_line MATCHES "LVGL_VERSION_MAJOR[ \t]+([0-9]+)")
-                set(lvgl_ver "${CMAKE_MATCH_1}.0.0")
+            foreach(_adapter_version_part IN ITEMS MAJOR MINOR PATCH)
+                set(_adapter_version_${_adapter_version_part} "")
+                file(STRINGS "${_adapter_version_header}" _adapter_version_line LIMIT_COUNT 1
+                     REGEX "^[ \t]*#[ \t]*define[ \t]+LVGL_VERSION_${_adapter_version_part}[ \t]+[0-9]+")
+                if(_adapter_version_line MATCHES "LVGL_VERSION_${_adapter_version_part}[ \t]+([0-9]+)")
+                    set(_adapter_version_${_adapter_version_part} "${CMAKE_MATCH_1}")
+                endif()
+            endforeach()
+            if(NOT "${_adapter_version_MAJOR}" STREQUAL "" AND
+               NOT "${_adapter_version_MINOR}" STREQUAL "" AND
+               NOT "${_adapter_version_PATCH}" STREQUAL "")
+                set(lvgl_ver "${_adapter_version_MAJOR}.${_adapter_version_MINOR}.${_adapter_version_PATCH}")
                 break()
             endif()
         endif()
@@ -76,6 +84,12 @@ endif()
 if("${lvgl_ver}" STREQUAL "")
     # Retain the v9 fallback for discovery and unrecognized custom source layouts.
     set(lvgl_ver "9.0.0")
+endif()
+
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND NOT CMAKE_BUILD_EARLY_EXPANSION AND
+   lvgl_ver VERSION_GREATER_EQUAL "9.0.0" AND
+   (lvgl_ver VERSION_LESS "9.5.0" OR NOT lvgl_ver VERSION_LESS "9.7.0"))
+    message(FATAL_ERROR "esp_lvgl_adapter: ROTATE_IN_DRAW supports LVGL 9.5.x and 9.6.x; disable this option for other LVGL versions")
 endif()
 
 set(ADAPTER_SRCS
@@ -118,6 +132,15 @@ else()
     list(APPEND ADAPTER_PRIV_INCLUDES "src/display/bridge/v9")
 endif()
 
+# Rotation drawn in the panel's orientation (lv_draw_ortho), LVGL v9 only.
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND NOT lvgl_ver VERSION_LESS "9.0.0")
+    list(APPEND ADAPTER_SRCS "src/display/rotate_in_draw/lv_draw_ortho.c")
+    list(APPEND ADAPTER_PRIV_INCLUDES "src/display/rotate_in_draw")
+    if(${target} STREQUAL "esp32p4" OR ${target} STREQUAL "esp32s31")
+        list(APPEND ADAPTER_SRCS "src/display/rotate_in_draw/lv_draw_ortho_ppa.c")
+    endif()
+endif()
+
 set(ADAPTER_REQ esp_lcd ${lvgl_name} espressif__esp_lcd_touch)
 
 idf_component_register(
@@ -143,6 +166,27 @@ endif()
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS)
     idf_component_optional_requires(PUBLIC espressif__esp_lv_fs esp_lv_fs)
 endif()
+
+function(esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook)
+    if(NOT CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW OR NOT lvgl_comp_dir OR lvgl_ver VERSION_LESS "9.0.0")
+        return()
+    endif()
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tools/patch_lvgl_thread_shutdown.py"
+                "${lvgl_comp_dir}/src/osal/lv_freertos.c"
+        RESULT_VARIABLE _thread_shutdown_result
+        OUTPUT_VARIABLE _thread_shutdown_status
+        ERROR_VARIABLE _thread_shutdown_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _thread_shutdown_result EQUAL 0)
+        message(FATAL_ERROR "esp_lvgl_adapter: cannot safely configure LVGL thread ownership: ${_thread_shutdown_error}")
+    endif()
+    # Managed sources may be reused when the option is disabled. Both the
+    # callback-return and delete barriers remain conditional on this flag.
+    target_compile_definitions(${lvgl_comp_lib} PRIVATE ESP_LVGL_ADAPTER_THREAD_OWNER_DELETE=1)
+    message(STATUS "esp_lvgl_adapter: LVGL thread shutdown ${_thread_shutdown_status}")
+endfunction()
 
 if(CONFIG_ESP_LVGL_ADAPTER_ENABLE_FREETYPE)
     idf_component_optional_requires(PUBLIC espressif__freetype freetype)
@@ -216,6 +260,50 @@ if("${lvgl_name}" IN_LIST build_components)
             "${lvgl_comp_dir}"
             "${lvgl_comp_dir}/include"
             "${lvgl_comp_dir}/src")
+    endif()
+endif()
+
+esp_lv_adapter_ensure_lvgl_freertos_thread_exit_hook()
+
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_comp_dir AND
+   lvgl_comp_lib AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0")
+    # Screen matrices are signed permutations; object-style transforms can
+    # be general affine matrices which neither ortho nor SW can execute.
+    # Install an explicit, default-off per-display policy. The display manager
+    # opts only its software DOUBLE_DIRECT RGB/DSI displays into bitmap layers.
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_lvgl_object_transforms.py"
+                "${lvgl_comp_dir}"
+        RESULT_VARIABLE _object_transform_result
+        OUTPUT_VARIABLE _object_transform_status
+        ERROR_VARIABLE _object_transform_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(NOT _object_transform_result EQUAL 0)
+        message(FATAL_ERROR "esp_lvgl_adapter: cannot configure object transform layers: ${_object_transform_error}")
+    endif()
+    message(STATUS "esp_lvgl_adapter: LVGL object-transform policy ${_object_transform_status}")
+endif()
+
+if(CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW AND lvgl_comp_dir AND
+   lvgl_comp_lib AND lvgl_ver VERSION_GREATER_EQUAL "9.0.0")
+    # LVGL 9.5/9.6 create a global OS mutex in lv_os_init(), but do not
+    # release it in lv_deinit(). FreeRTOS loses one semaphore per restart.
+    # Keep the inserted code conditional if a managed copy is later reused
+    # with ROTATE_IN_DRAW disabled; recognize an upstream cleanup and skip it.
+    idf_build_get_property(_adapter_python PYTHON)
+    execute_process(
+        COMMAND "${_adapter_python}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/patch_lvgl_os_cleanup.py"
+                "${lvgl_comp_dir}/src/lv_init.c"
+        RESULT_VARIABLE _os_cleanup_result
+        OUTPUT_VARIABLE _os_cleanup_status
+        ERROR_VARIABLE _os_cleanup_error
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+    if(_os_cleanup_result EQUAL 0)
+        target_compile_definitions(${lvgl_comp_lib} PRIVATE ESP_LVGL_ADAPTER_OS_MUTEX_CLEANUP=1)
+        message(STATUS "esp_lvgl_adapter: LVGL OS cleanup ${_os_cleanup_status}")
+    else()
+        message(WARNING "esp_lvgl_adapter: LVGL OS cleanup was not installed: ${_os_cleanup_error}")
     endif()
 endif()
 

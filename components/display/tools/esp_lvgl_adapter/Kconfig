@@ -8,6 +8,56 @@ config ESP_LVGL_ADAPTER_ENABLE_DECODER
     bool "Enable esp_lv_decoder integration"
     default n
 
+config ESP_LVGL_ADAPTER_ROTATE_IN_DRAW
+    bool "Draw a rotated DOUBLE_DIRECT display in the panel's orientation (LVGL 9.5/9.6)"
+    default n
+    help
+        With rotation 90, 180 or 270 and ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT,
+        LVGL draws straight into the panel's frame buffers in the panel's own
+        orientation, through LVGL's matrix rotation, and the flush only switches
+        buffers. Nothing is drawn upright and copied turned afterwards.
+
+        The display keeps the three frame buffers a rotated display is given
+        (esp_lv_adapter_get_required_frame_buffer_count()): LVGL draws the next
+        frame into the third while the panel waits for its refresh to show this
+        one. A panel made with two still works, and each frame then waits for
+        that refresh.
+
+        Widgets are drawn by LVGL's software renderer into a small upright tile in
+        internal RAM; on chips with a PPA, the PPA turns each tile into the frame
+        buffer while the CPU draws the next, and fills plain rectangles. Every PPA
+        wait is bounded; a PPA that stops answering falls back to the CPU.
+
+        Requirements:
+        - LVGL 9.5.x or 9.6.x with CONFIG_LV_USE_MATRIX and CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX
+        - RGB or MIPI DSI panel, ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT
+
+        Object-style rotation and scaling use software bitmap layers on these
+        DOUBLE_DIRECT displays, including at screen rotation 0. Screen matrix
+        rotation remains accelerated. Layers require additional memory and
+        resampling time for transformed objects; this does not add support for
+        skew or arbitrary custom matrices. Other displays keep their policy.
+
+        Other rendering modes and LVGL v8 retain their existing behavior.
+        Dummy-draw frames are shown as the panel stores them (not rotated).
+
+config ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB
+    int "PSRAM budget for images cached in the panel's orientation (KiB)"
+    depends on ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && SPIRAM
+    range 0 32768
+    default 0
+    help
+        Keep immutable, opaque, unscaled images in their rotated orientation.
+        After warm-up, drawing the same image is a straight PPA copy instead
+        of another rotation. This is useful for repeated large backgrounds.
+        Only flash-backed pixels are cached automatically; modifiable images
+        and canvas/video buffers are never cached. Allocation failure or an
+        image exceeding the budget keeps the normal rendering path.
+
+        The budget is shared by displays using rotation-in-draw and includes
+        aligned pixel allocations. Zero disables the cache. Cached pixels are
+        allocated in PSRAM, preserving internal RAM for rendering tiles.
+
 config ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE
     bool "Set LVGL image cache to max (partial tear-avoid modes)"
     default n

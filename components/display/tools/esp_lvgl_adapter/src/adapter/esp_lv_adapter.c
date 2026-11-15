@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -691,6 +691,16 @@ esp_err_t esp_lv_adapter_start(void)
 
     /* Create LVGL worker task */
     uint32_t stack_size = s_ctx.config.task_stack_size ? s_ctx.config.task_stack_size : ESP_LV_ADAPTER_DEFAULT_STACK_SIZE;
+#if CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW && LVGL_VERSION_MAJOR >= 9
+    /* A display rotated in draw is drawn by lv_draw_ortho on this task, not on
+     * LVGL's draw threads, so this task needs the stack those threads are
+     * given: LVGL itself asks for 32 KB of it with FreeType or ThorVG. */
+    if (stack_size < LV_DRAW_THREAD_STACK_SIZE) {
+        ESP_LOGI(TAG, "LVGL task stack raised from %" PRIu32 " to %d bytes for ROTATE_IN_DRAW",
+                 stack_size, (int)LV_DRAW_THREAD_STACK_SIZE);
+        stack_size = LV_DRAW_THREAD_STACK_SIZE;
+    }
+#endif
     UBaseType_t task_priority = s_ctx.config.task_priority ? s_ctx.config.task_priority : ESP_LV_ADAPTER_DEFAULT_TASK_PRIORITY;
     BaseType_t task_ret;
     uint32_t caps = s_ctx.config.stack_in_psram

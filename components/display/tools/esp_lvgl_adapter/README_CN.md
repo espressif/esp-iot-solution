@@ -249,6 +249,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 
 **帧缓冲数量规则**：
 - 非 0° 旋转（`DOUBLE_PARTIAL` 除外）或三缓冲模式：需要 **3** 个帧缓冲
+- 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL v9）且旋转的 `DOUBLE_DIRECT`：与未启用时相同，需要 **3** 个帧缓冲；面板等待刷新时 LVGL 在第三个帧缓冲中绘制下一帧（只有 2 个时仍可工作，但每帧都要等待刷新）
 - 未旋转的双缓冲模式以及 `DOUBLE_PARTIAL`：需要 **2** 个帧缓冲
 - 单缓冲模式：需要 **1** 个帧缓冲
 
@@ -688,6 +689,8 @@ static void panel_wake_cb(void *user_data)
 | `ESP_LV_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
 | `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
 | `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
+| `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` | LVGL 9.5/9.6：以面板原生方向绘制旋转后的 `DOUBLE_DIRECT` 显示（见旋转限制） |
+| `ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` | 不可变旋转图像的可选 PSRAM 预算，默认为 0（关闭） |
 
 **默认任务栈大小**：
 - LVGL 适配器任务栈：8KB
@@ -707,6 +710,7 @@ static void panel_wake_cb(void *user_data)
 
 - **RGB/MIPI DSI**：
   - 在 `TEAR_AVOID_MODE_NONE` 下**不支持旋转**（任何非 0 旋转会被拒绝）
+  - 启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW`（LVGL 9.5/9.6，`DOUBLE_DIRECT`）后，LVGL 通过矩阵旋转直接以面板原生方向绘制到面板的帧缓冲中：避免对完整的正向帧再执行一次旋转拷贝。在三个帧缓冲中，LVGL 绘制到既未显示也未等待显示的那一个，因此一帧不必等到面板下一次刷新。需要 `CONFIG_LV_USE_MATRIX` 和 `CONFIG_LV_DRAW_TRANSFORM_USE_MATRIX`。控件由 LVGL 软件渲染器绘制到优先使用内部 RAM 的正向图块，CPU 绘制下一块时由 PPA 将其旋转写入帧缓冲（无 PPA 的芯片由 CPU 旋转）。在双核芯片上且 `LV_DRAW_SW_DRAW_UNIT_CNT` 大于 1 时，图块由两个核心共同绘制。LVGL 任务栈会提升到 `LV_DRAW_THREAD_STACK_SIZE`（使用 FreeType 或 ThorVG 时为 32 KB），因为此时控件在该任务中绘制，而不是在 LVGL 的绘制线程中。Dummy draw 的帧按面板存储方向显示，不做旋转
 
 - **OTHER (SPI/I2C/I80/QSPI)**：
   - `NONE` 和同步 `TE_SYNC` 不执行适配器侧 90°/270° 旋转；需配置面板方向并同步调整触摸映射
@@ -717,6 +721,53 @@ static void panel_wake_cb(void *user_data)
   - 旋转由 LVGL 在软件层面处理
   - 支持 I1 水平平铺 (HTILED) 和垂直平铺 (VTILED) 两种布局
   - 无需额外配置，直接通过 `rotation` 参数设置
+
+### 对象旋转与缩放
+
+rotation-in-draw 的兼容补丁支持 LVGL 9.5.x 和 9.6.x。对其他 LVGL 9 版本启用
+该选项会明确报错；关闭该选项时，适配器原有的版本兼容范围保持不变。
+
+对象样式的旋转和缩放（包括父对象及嵌套对象）使用 LVGL 软件位图图层，显示整体的
+矩阵旋转仍由 `lv_draw_ortho` 加速。该策略只为本适配器使用软件渲染的
+`DOUBLE_DIRECT` RGB/DSI 显示启用，也包括屏幕旋转为 0 的情况，因为矩阵变换编译选项
+是全局的。LVGL 中的逐显示策略默认关闭，其他显示保留原有渲染器的矩阵路径。
+
+自定义对象矩阵和 skew 保留原有路径；本补丁不增加通用仿射或 skew 的软件支持。
+变换对象的位图图层会增加内存和重采样开销，正确性测试不能作为性能提升测量。
+独立软件参考图像、硬件验证及复现步骤见 [host 测试](test_apps/host_ortho/README.md)。
+
+### 工作内存与兼容性钩子
+
+默认图块分配单元为 128 KiB。PPA 与双核流水线最多申请四个单元及对齐空间；
+内部内存不足时，将已有单元分成更小的图块。首个单元可回退到 PSRAM。
+工作任务栈、适配器任务栈和变换对象的位图图层还会额外使用内存。
+下述图像缓存预算只包含对齐后的缓存像素，并非渲染器总内存。
+应使用应用实际的字体、图像和控件检查内存峰值及最大空闲内部内存块。
+
+三个构建期辅助脚本分别适配 LVGL 9.5/9.6 的对象图层策略、FreeRTOS 工作任务所有权
+和全局 OS 互斥锁清理。改动由适配器编译定义控制，并以原子替换方式安装，
+适用于复用的组件缓存。这些钩子依赖 LVGL 内部实现，升级 LVGL 时需要重新检查。
+性能取决于工作负载和内存竞争；去掉最终整帧旋转并不消除图块传输或 DIRECT
+缓冲同步。像素完全一致及采用明确采样误差界限的测试范围见 host 测试。
+
+### 重复绘制不可变图像
+
+`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB` 为不透明、无缩放且像素位于
+flash 的图像设置 PSRAM 预算。首次正常绘制，第二次生成旋转后的副本，之后直接拷贝，
+适合重复刷新的背景。动态视频和摄像头帧不会因此提速。
+
+默认为 0（关闭）。例如 `2048` 表示所有显示共享最多 2 MiB 的对齐像素分配，包含行和
+对齐填充。缓存按最近使用顺序淘汰；内存分配失败或图像超出预算时回退到正常绘制路径。
+缓存使用 PSRAM，为绘制图块保留内部 RAM，并在 `lv_deinit()` 时释放。
+标记为 `LV_IMAGE_FLAGS_MODIFIABLE` 的图像始终不进入缓存。
+
+双核绘制时，仅用独立互斥锁保护每次文字绘制及其字形位图的使用，避免同时调用不可重入的
+字体回调；两个图块中的其他绘制仍并行进行。启用 rotation-in-draw 时，适配器还让已返回的 LVGL FreeRTOS 工作任务
+保持挂起，由所属绘制单元统一删除，避免退出时重复删除同一个任务句柄。
+`[render_thread_lifecycle]` 目标测试由 pytest 重复执行 16 次，验证初始化与销毁流程。
+缓存目标测试配置为 `sdkconfig.ci.rotate_in_draw_cache`，Unity 标签为
+`[ortho_cache]`。无需硬件的像素对比和回归测试见
+[host runner](test_apps/host_ortho/README.md)。
 
 ### 缓冲与渲染模式
 
@@ -740,6 +791,7 @@ static void panel_wake_cb(void *user_data)
 ### PPA/DMA2D 加速
 
 - 启用 PPA 加速时，建议设置 `LV_DRAW_SW_DRAW_UNIT_CNT == 1`
+- 对于启用 `ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` 旋转的显示，`enable_ppa_accel` 会被忽略（并输出警告）：`lv_draw_ortho` 已使用 PPA 旋转每个图块并填充纯色矩形
 - 旋转操作优先使用 PPA；否则使用 CPU 拷贝路径（带缓存局部性的块拷贝）
 - 绘制与旋转的输出对齐、缓冲区容量或尺寸不满足 PPA 要求时，自动使用软件路径，无需额外配置。
 - **效果与预期**：

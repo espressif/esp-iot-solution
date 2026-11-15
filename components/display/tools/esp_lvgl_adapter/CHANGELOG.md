@@ -1,5 +1,26 @@
 # ChangeLog
 
+## v0.8.0 (unreleased)
+
+* Keep a rotated-in-draw display's frame buffers in step in `lv_draw_ortho` instead of LVGL: LVGL's DIRECT-mode copies (`refr_sync_areas`) reach it through the buffers' `buf_copy_cb`, are written down, and only what the next frame does not draw is copied at its `LV_EVENT_RENDER_START`, by the PPA. A refresh with nothing to draw no longer copies what the next frame redraws; LVGL itself is not patched. LVGL's copies are identified by their area being an element of the display's own `sync_areas` list, so the bridge's repair of its third panel buffer is still made at once (now by the PPA). Buffers set again (dummy draw) are taken again at the next frame.
+* Draw a large picture whose pixels are in flash through the tiles, on both cores, instead of handing the flash to the PPA, which reads it more slowly than the CPU (measured: 224 vs 171 ms for a 1024x600 picture on a Waveshare 7B, 338 vs 239 ms for 1280x720 on a Tab5). The image cache reads such a picture with the CPU, once.
+* With two cores, cut an area that fits in one tile (and the odd tile of a larger one) into two tiles of equal height, one per core: a dashboard's cards, bars and sliders were drawn by the first core alone.
+* Stop reading back from the frame buffer every tile drawn inside a card: a card with a border has its background drawn a pixel inside its shadow, so the shadow was never recognised as hidden and every such tile was first turned back out of PSRAM by the PPA while the CPU waited (a three-card dashboard: 82,000 pixels turned a frame for 48,800 drawn on a Waveshare 7B). The part a rounded background or border certainly covers is now its cross, the rectangle less its four corners.
+* Sleep while the PPA works instead of polling it every 10 µs: its completion interrupt now gives a semaphore the waiting task takes (at most 10 ms a sleep, the 250 ms no-progress deadline unchanged), so the core is free for other tasks meanwhile. A dashboard spent about 2.6 ms of every frame polling on a Tab5.
+
+* Preserve object-style rotation/scaling with a per-display software-layer policy while retaining matrix-based screen rotation. Other displays keep the default matrix path; custom matrices and skew are not redirected into an unsupported bitmap path. Document LVGL 9.5/9.6 compatibility and the extra layer memory/resampling cost.
+* Bound rotated-image cache preparation to 128 KiB transfers under the existing 250 ms no-progress deadline, release LVGL's global OS mutex on teardown, and wait for remote worker execution to stop before owner deletion.
+* Add independent transformed-object pixel comparisons, per-display policy checks and negative controls, alongside the existing cache, FIFO, font and FreeRTOS shutdown regressions. Validate short transformed-object runs on Waveshare 7B and original Tab5 hardware.
+
+* Add an optional PSRAM cache for immutable images in rotation-in-draw (`CONFIG_ESP_LVGL_ADAPTER_ROTATE_IMAGE_CACHE_SIZE_KB`, zero/off by default). Repeated opaque, unscaled images are rotated once after warm-up and then copied straight. The bounded LRU includes allocation padding in its budget, excludes modifiable images, and frees its pixels at `lv_deinit()`.
+* Serialize only text drawing and consumption of glyph bitmaps with a dedicated mutex, since application font callbacks need not be reentrant; the rest of both tiles remains parallel. This replaces the coarse tile-pair guard that reduced dashboard FPS on Tab5 and Waveshare 7B.
+* Keep completed LVGL FreeRTOS worker tasks suspended until their owner deletes them, preventing a double task deletion during `lv_deinit()`; add a repeated lifecycle target test.
+* Match PPA output height to the aligned-down buffer size, fixing rejection of the Tab5's 720-pixel-wide cache buffer with a padded last row. Tighten the fake SDK geometry check and add a regression for that exact shape.
+* Keep a full FIFO of additional margin when deciding which PPA transfers need splitting, including the exact-FIFO geometry observed hanging on a Tab5. Prefer macro-block-sized pieces or CPU fallback, and report the queued/completed geometry on a PPA timeout.
+* Add a reproducible host regression runner using the adapter's actual sources, and a cache-enabled ESP32-P4 Unity/pytest configuration.
+
+* Add `CONFIG_ESP_LVGL_ADAPTER_ROTATE_IN_DRAW` (LVGL v9): a rotated `DOUBLE_DIRECT` display is drawn straight into the panel's frame buffers in the panel's orientation, through LVGL's matrix rotation and the `lv_draw_ortho` draw unit, instead of being drawn upright and copied rotated. Of its three frame buffers, LVGL draws the next frame into the one neither on screen nor waiting to be, so a frame is not rounded up to a whole number of panel refreshes; a panel made with two still works, and waits for each refresh. On chips with a PPA, the PPA rotates each drawn tile while the CPU draws the next, and fills plain rectangles; every PPA wait is bounded. With `LV_DRAW_SW_DRAW_UNIT_CNT` above 1 the tiles are painted on both cores. The LVGL task's stack is raised to `LV_DRAW_THREAD_STACK_SIZE`, since that task then does the drawing. Off by default; other modes are unchanged. `profile.enable_ppa_accel` is ignored on a display rotated this way, which keeps a single PPA user per refresh.
+
 ## v0.7.8 (2026-11-12)
 
 * Fix local LVGL detection and public touch dependencies.
@@ -16,6 +37,7 @@
 
 * Fix LVGL v8/v9 PPA output alignment and buffer capacity checks for drawing and rotation.
 * Fall back to software when dimensions exceed PPA limits.
+
 
 ## v0.7.5 (2026-11-03)
 
