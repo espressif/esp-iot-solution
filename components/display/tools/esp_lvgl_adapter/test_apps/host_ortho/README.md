@@ -16,7 +16,7 @@ python3 run.py --reference /tmp/ppa-fixtures --lvgl /tmp/lvgl --mutants
 ```
 
 The runner itself downloads nothing. Fixtures are pinned to
-`5ab16014f76ff6b8176b62d69a5dc443dbb34058`; the base scene suite is pinned to
+`ec9b554dada999b5211088a690940a26e2769d40`; the base scene suite is pinned to
 `9db8952fc7f06438819fd4aaf28f5fb8a35a56b7`, before the standalone project's
 experimental split/tile-width controls. The newer fake PPA and font regression
 are retained, with the fixtures' dashboard on two cores, pictures in flash and

@@ -18,7 +18,7 @@ import subprocess
 import tarfile
 import tempfile
 
-FIXTURES = '5ab16014f76ff6b8176b62d69a5dc443dbb34058'
+FIXTURES = 'ec9b554dada999b5211088a690940a26e2769d40'
 CACHE_SUITE = '9db8952fc7f06438819fd4aaf28f5fb8a35a56b7'
 ADAPTER = Path(__file__).resolve().parents[2]
 UNIT = ADAPTER / 'src/display/rotate_in_draw'
@@ -358,7 +358,7 @@ def run_tests(work, args):
         ('cache filled from the flash by the PPA', 'lv_draw_ortho.c', '    if (in_flash(img)) {\n        /* Read once', '    if (0) {\n        /* Read once', 'read the picture in the flash'),
         ('empty refresh copies dropped', 'lv_draw_ortho.c', '            sync_behind(d, &a);', '            if (disp->inv_p) {\n                sync_behind(d, &a);\n            }', 'differs from one buffer'),
         ('frame areas not turned', 'lv_draw_ortho.c', '        if (lv_display_get_matrix_rotation(disp)) {\n            lv_display_rotate_area(disp, &drawn[nd]);\n        }', '', 'differs from one buffer'),
-        ('adapter copy written down', 'lv_draw_ortho.c', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && sync_area_of_lvgl(disp, dest_area)) {', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && !disp->rendering_in_progress) {', 'another copy at the frame'),
+        ('adapter copy written down', 'lv_draw_ortho.c', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && sync_area_of_lvgl(disp, dest_area)) {', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && (!disp->rendering_in_progress || sync_area_of_lvgl(disp, dest_area))) {', 'another copy at the frame'),
     ]
     for name, filename, before, after, expected in mutations:
         (unit / 'lv_draw_ortho.c').write_text(source)
