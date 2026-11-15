@@ -1089,6 +1089,27 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
     }
 }
 
+/* Whether LVGL's software renderer draws any of the jobs differently where
+ * a tile cuts it: a picture or a layer it resamples -- scaled, rotated or
+ * skewed -- comes out a level different on some pixels near the cut. In the
+ * transformed-object suite (test_apps/host_ortho), a scaled picture cut in
+ * two for the second core put 602 pixels one level off LVGL's own. */
+static bool cut_shows(const job_t * jobs, int32_t n)
+{
+    for (int32_t i = 0; i < n; i++) {
+        const lv_draw_task_t * t = jobs[i].t;
+        if (t->type != LV_DRAW_DSC_TYPE_IMAGE && t->type != LV_DRAW_DSC_TYPE_LAYER) {
+            continue;
+        }
+        const lv_draw_image_dsc_t * d = t->draw_dsc;
+        if (d->rotation != 0 || d->scale_x != LV_SCALE_NONE || d->scale_y != LV_SCALE_NONE || d->skew_x != 0 ||
+                d->skew_y != 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void draw_jobs(ortho_unit_t * u, const job_t * jobs, int32_t n, const ortho_t * o)
 {
     const lv_color_format_t cf = jobs[0].t->target_layer->draw_buf->header.cf;
@@ -1127,6 +1148,26 @@ static void draw_jobs(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
     }
 
     const bool two = g_helper.on && u->tile[1];
+    /* The second core paints the second tile of a pair, so an area that fits
+     * in one tile -- a card of a dashboard, a bar, a slider -- was all the
+     * first core's, and so was the odd tile at the end of a larger one. Such
+     * an area is cut into an even number of tiles of equal height instead:
+     * each core draws half of it. Not below LV_DRAW_ORTHO_PAIR_MIN_PX, where
+     * a second turn and a second pass over the tasks cost more than half the
+     * drawing saves. (On a Waveshare 7B and a Tab5, a dashboard of three cards
+     * drew 5 areas a frame, nearly all of one tile: this engine at 49 and 35
+     * frames a second against 61 and 49 for the stock adapter, whose two
+     * software units share every area.) Not where a cut shows (cut_shows):
+     * those keep the tiles they always had. */
+    if (two && !cut_shows(jobs, n)) {
+        const int32_t h = lv_area_get_height(&box);
+        const int32_t cols = (w + tw - 1) / tw;
+        const int32_t rows = (h + th - 1) / th;
+        if (((int64_t)rows * cols) % 2 == 1 && h >= 2 &&
+                (int64_t)lv_area_get_size(&box) / ((int64_t)rows * cols) >= LV_DRAW_ORTHO_PAIR_MIN_PX) {
+            th = (h + rows) / (rows + 1);   /* h over rows + 1 tiles, rounded up */
+        }
+    }
     lv_area_t held[2];
     int32_t nheld = 0;
     for (int32_t y = box.y1; y <= box.y2; y += th) {
@@ -1286,16 +1327,42 @@ static bool plain_image(const lv_draw_task_t * t, const lv_image_dsc_t ** src_ou
 
 static uint8_t * tile_aligned(void * p);
 
+/* A picture whose pixels are in the flash is read through the same cache
+ * whoever reads it, and the turner gets less out of it than the CPU. Measured
+ * on the same 1024x600 RGB565 picture drawn whole with nothing kept, on a
+ * Waveshare 7B at 180 (flash in DIO at 40 MHz): the PPA handed the flash
+ * itself took 224 ms a picture; the CPU read it into RAM and drew it in 171,
+ * the 7 MB/s the flash gives. On a Tab5 at 270, 1280x720: 338 ms against 239.
+ * So the turner is never handed the flash: such a picture is drawn like
+ * anything else, by the CPU into tiles of internal RAM -- on both cores when
+ * there are two -- and the turner turns the tiles while the next are drawn.
+ * lv_draw_ortho_set_flash_cb() says which pictures those are, for a platform
+ * that is not an ESP32. */
+static lv_draw_ortho_constant_cb_t g_flash_cb;
+
+static bool in_flash(const lv_image_dsc_t * img)
+{
+    if (g_flash_cb) {
+        return g_flash_cb(img);
+    }
+#if defined(ESP_PLATFORM)
+    return esp_ptr_in_drom(img->data);
+#else
+    return false;
+#endif
+}
+
 /* A straight copy of a native rectangle from `src` (a buffer holding the
  * native area `src_area`) into the frame buffer, by the turner at angle 0 when
- * there is one -- the PPA is a DMA copy then, where the CPU would read and
- * write every line through its cache into PSRAM. Queued like a turn; the CPU
- * does it after everything queued when there is no turner or it declines. */
+ * there is one and `by_turner` -- the PPA is a DMA copy then, where the CPU
+ * would read and write every line through its cache into PSRAM. Queued like a
+ * turn; the CPU does it after everything queued when there is no turner or it
+ * declines. */
 static void straight_or_cpu(lv_color_format_t cf, int32_t px, uint8_t * dst, int32_t dst_stride,
                             const lv_area_t * dst_buf_area, const uint8_t * src, int32_t src_stride,
-                            const lv_area_t * src_area, const lv_area_t * rect)
+                            const lv_area_t * src_area, const lv_area_t * rect, bool by_turner)
 {
-    if (g_turn) {
+    if (g_turn && by_turner) {
         const lv_draw_ortho_pic_t s = {(void *)src, (uint32_t)src_stride, (uint32_t)(src_stride / px),
                                        (uint32_t)lv_area_get_height(src_area)
                                       };
@@ -1467,6 +1534,31 @@ static bool cache_room(size_t bytes, const cached_t * keep)
     return true;
 }
 
+/* Whether the cache will draw this picture, now or once it has turned it: a
+ * picture it may keep and has not found too big, on a display that is
+ * turned. Asks only; cache_slot is what remembers. */
+static bool cache_takes(const lv_draw_task_t * t, const lv_image_dsc_t * img)
+{
+    ortho_t o;
+    lv_display_rotation_t rot;
+    if (g_cache_budget == 0 || !image_constant(img)) {
+        return false;
+    }
+    if (!ortho_from_matrix(&t->matrix, &o) || !ortho_rotation(&o, &rot) || rot == LV_DISPLAY_ROTATION_0) {
+        return false;
+    }
+    const uint32_t sstride = img->header.stride ? img->header.stride
+                             : img->header.w * (uint32_t)lv_color_format_get_size(img->header.cf);
+    for (int i = 0; i < LV_DRAW_ORTHO_IMAGE_CACHE_SLOTS; i++) {
+        const cached_t * c = &g_cache[i];
+        if (c->data == img->data && c->w == img->header.w && c->h == img->header.h && c->stride == sstride &&
+                c->cf == img->header.cf && c->rot == rot) {
+            return !c->no_room;
+        }
+    }
+    return true;   /* not seen yet */
+}
+
 /* Turn the whole picture into its slot, once. False when it cannot be kept:
  * then it is drawn turned, as before. */
 static bool cache_fill(cached_t * c, const ortho_t * o, const lv_image_dsc_t * img, int32_t sstride,
@@ -1501,6 +1593,15 @@ static bool cache_fill(cached_t * c, const ortho_t * o, const lv_image_dsc_t * i
      * Cut in source coordinates to keep consecutive source rows together. */
     const int32_t max_pixels = (128 * 1024) / px;
     const int32_t band_width = LV_MIN(lv_area_get_width(up), max_pixels);
+    if (in_flash(img)) {
+        /* Read once, by whoever reads the flash fastest (see in_flash): the
+         * CPU, which no transaction timeout watches. */
+        fence();
+        move_turned(o, px, c->nat, (int32_t)row, &room, (uint8_t *)img->data, sstride, up, whole, true);
+        g_stats.image_cache_builds++;
+        g_stats.image_cache_bytes = (uint32_t)g_cache_bytes;
+        return true;
+    }
     for (int32_t x = up->x1; x <= up->x2; x += band_width) {
         const int32_t w = LV_MIN(band_width, up->x2 - x + 1);
         int32_t band_rows = max_pixels / w;
@@ -1553,7 +1654,7 @@ static bool try_cached(lv_draw_task_t * t, const ortho_t * o, const lv_image_dsc
     const int32_t px = lv_color_format_get_size(nb->header.cf);
     for (int32_t i = 0; i < np; i++) {
         straight_or_cpu(nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area, c->nat,
-                        lv_area_get_width(&whole) * px, &whole, &parts[i]);
+                        lv_area_get_width(&whole) * px, &whole, &parts[i], true);
     }
     /* Drawn alone, so nothing else waits for these before LVGL takes the
      * buffer back -- in partial mode, to send it to the panel. */
@@ -1581,9 +1682,10 @@ static bool try_image(lv_draw_task_t * t, const ortho_t * o, const lv_area_t * t
         ortho_area(o, &t->area, &whole);
         const int32_t sstride = img->header.stride ? (int32_t)img->header.stride
                                 : lv_area_get_width(&whole) * px;
+        const bool by_turner = !in_flash(img);
         for (int32_t i = 0; i < np; i++) {
             straight_or_cpu(nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area, img->data,
-                            sstride, &whole, &parts[i]);
+                            sstride, &whole, &parts[i], by_turner);
         }
         fence();   /* the frame is the application's again once the task is finished */
         g_stats.images_native++;
@@ -1594,6 +1696,11 @@ static bool try_image(lv_draw_task_t * t, const ortho_t * o, const lv_area_t * t
                             : (int32_t)img->header.w * px;
     if (try_cached(t, o, img, sstride, parts, np)) {
         return true;
+    }
+    if (in_flash(img)) {
+        /* Not for the turner (see in_flash): through the tiles. */
+        g_stats.images_flash++;
+        return false;
     }
     for (int32_t i = 0; i < np; i++) {
         turn_or_cpu(o, nb->header.cf, px, nb->data, nb->header.stride, &target->buf_area,
@@ -1654,6 +1761,17 @@ static bool task_todo(const lv_draw_task_t * t, const ortho_t * o, lv_area_t * t
 #ifndef LV_DRAW_ORTHO_ALONE_BYTES
 #define LV_DRAW_ORTHO_ALONE_BYTES (32 * 1024)
 #endif
+/* A picture big enough to go alone, with its pixels in the flash. */
+static bool big_in_flash(const lv_draw_task_t * t)
+{
+    const lv_image_dsc_t * img;
+    if (!plain_image(t, &img) || (img->header.flags & LV_DRAW_ORTHO_IMAGE_FLAG_NATIVE)) {
+        return false;
+    }
+    return (int64_t)img->header.w * img->header.h * lv_color_format_get_size(img->header.cf) >=
+           LV_DRAW_ORTHO_ALONE_BYTES && in_flash(img);
+}
+
 static bool fast_alone(const lv_draw_task_t * t)
 {
     const lv_image_dsc_t * img;
@@ -1669,8 +1787,17 @@ static bool fast_alone(const lv_draw_task_t * t)
     if (img->header.flags & LV_DRAW_ORTHO_IMAGE_FLAG_NATIVE) {
         return true;
     }
-    return (int64_t)img->header.w * img->header.h * lv_color_format_get_size(img->header.cf) >=
-           LV_DRAW_ORTHO_ALONE_BYTES;
+    if ((int64_t)img->header.w * img->header.h * lv_color_format_get_size(img->header.cf) <
+            LV_DRAW_ORTHO_ALONE_BYTES) {
+        return false;
+    }
+    /* A picture in the flash goes through the tiles (see in_flash), and is
+     * drawn there with its neighbours, in one run -- alone only for the
+     * cache: to be remembered, turned into it once, and copied out of it. */
+    if (in_flash(img) && !cache_takes(t, img)) {
+        return false;
+    }
+    return true;
 }
 
 static void execute_alone(ortho_unit_t * u, lv_draw_task_t * t)
@@ -1816,6 +1943,9 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
         if (u->jobs[i].todo.x2 < u->jobs[i].todo.x1) {
             continue;
         }
+        if (g_fast && big_in_flash(c)) {
+            g_stats.images_flash++;   /* drawn in the tiles, see in_flash */
+        }
         u->jobs[m] = u->jobs[i];
         find_hole(&u->jobs[m]);
         m++;
@@ -1835,6 +1965,455 @@ static int32_t dispatch(lv_draw_unit_t * draw_unit, lv_layer_t * layer)
     return n;
 }
 
+/* ------------------------------------------------------------------------ */
+/* LVGL's copies between frame buffers                                      */
+/* ------------------------------------------------------------------------ */
+
+/* With two or three frame buffers in DIRECT mode, LVGL brings the buffer it
+ * is about to draw into up to date at the start of every refresh
+ * (refr_sync_areas in lv_refr.c): what the last frame drew, less what this
+ * one is about to draw, copied from the buffer last shown -- by the CPU,
+ * through its cache, PSRAM into PSRAM. And it does so before it knows whether
+ * there is anything to draw at all: a refresh with nothing invalid still
+ * copies everything the last frame drew. Measured through esp_lvgl_adapter's
+ * PR 818 on the boards, a picture changing every frame and LVGL's own timer
+ * refreshing in between: 13.2 ms a frame of such copies on a Waveshare 7B,
+ * 20.7 on a Tab5 -- for areas the next frame redrew whole anyway.
+ *
+ * LVGL makes every one of those copies through lv_draw_buf_copy(), which
+ * calls the DESTINATION buffer's own buf_copy_cb, and the frame buffers' are
+ * whatever they are given. So the copies are taken over there, without
+ * touching LVGL: each is only written down as an area that buffer is behind
+ * by. When a buffer is about to be drawn into (LV_EVENT_RENDER_START, after
+ * LVGL's sync, before anything is drawn), what it is behind by, less what
+ * this frame draws, is copied from the buffer shown last -- by the turner at
+ * angle 0 (the PPA) when there is one. A refresh with nothing to draw sends
+ * no LV_EVENT_RENDER_START, so what it was behind by waits for the next
+ * frame, and is subtracted from it.
+ *
+ * Why that is right: the buffer shown last always holds the whole of the
+ * latest frame, because it was brought up to date this way before it was
+ * drawn into, and what a refresh draws it draws whole -- LVGL's own sync
+ * rests on that same assumption when it subtracts the areas about to be
+ * drawn. With three buffers it is what makes the third one's copies, which
+ * LVGL makes a frame early, wait for the frame that draws into it. */
+#ifndef LV_DRAW_ORTHO_SYNC_AREAS
+#define LV_DRAW_ORTHO_SYNC_AREAS 32
+#endif
+/* Pieces of a subtraction; past it the areas are copied unsubtracted, which
+ * copies more than needed and is never wrong. */
+#define SYNC_PIECES 64
+
+typedef struct {
+    lv_display_t * disp;
+    lv_draw_buf_t * buf[3];
+    const lv_draw_buf_handlers_t * orig[3];
+    lv_draw_buf_handlers_t handlers[3];   /* the buffer's own, buf_copy_cb ours */
+    lv_area_t behind[3][LV_DRAW_ORTHO_SYNC_AREAS];
+    uint8_t n[3];
+    bool whole[3];                        /* behind by more than the list holds: everywhere */
+} sync_t;
+
+static sync_t g_sync;
+/* The display our two event callbacks are on: they stay there, inert, once
+ * the copies are given back from inside an event, where LVGL's list of them
+ * may not be changed. */
+static lv_display_t * g_sync_hooked;
+
+static int sync_index(const lv_draw_buf_t * b)
+{
+    if (b == NULL) {
+        return -1;
+    }
+    for (int i = 0; i < 3; i++) {
+        if (g_sync.buf[i] == b) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/* Native area of a whole buffer. */
+static void sync_whole_area(const lv_draw_buf_t * b, lv_area_t * a)
+{
+    lv_area_set(a, 0, 0, (int32_t)b->header.w - 1, (int32_t)b->header.h - 1);
+}
+
+/* Buffer `i` is behind by `area`. */
+static void sync_behind(int i, const lv_area_t * area)
+{
+    if (g_sync.whole[i]) {
+        return;
+    }
+    uint8_t m = 0;
+    for (uint8_t k = 0; k < g_sync.n[i]; k++) {
+        if (lv_area_is_in(area, &g_sync.behind[i][k], 0)) {
+            return;    /* already there */
+        }
+        if (lv_area_is_in(&g_sync.behind[i][k], area, 0)) {
+            continue;    /* inside the new one: dropped */
+        }
+        g_sync.behind[i][m++] = g_sync.behind[i][k];
+    }
+    g_sync.n[i] = m;
+    if (m == LV_DRAW_ORTHO_SYNC_AREAS) {
+        g_sync.whole[i] = true;
+        g_sync.n[i] = 0;
+        return;
+    }
+    g_sync.behind[i][g_sync.n[i]++] = *area;
+}
+
+/* Whether `area` is one of the areas LVGL is syncing: refr_sync_areas hands
+ * each element of its own list to lv_draw_buf_copy() as both areas. Another
+ * copy between the same buffers -- esp_lvgl_adapter's own, bringing a third
+ * panel buffer up to date at LV_EVENT_RENDER_START -- passes areas of its own,
+ * and must be made at once. */
+static bool sync_area_of_lvgl(lv_display_t * disp, const lv_area_t * area)
+{
+    for (const lv_area_t * a = lv_ll_get_head(&disp->sync_areas); a; a = lv_ll_get_next(&disp->sync_areas, a))
+        if (a == area) {
+            return true;
+        }
+    return false;
+}
+
+static bool sync_alike(const lv_draw_buf_t * a, const lv_draw_buf_t * b)
+{
+    return a->header.w == b->header.w && a->header.h == b->header.h && a->header.cf == b->header.cf &&
+           a->header.stride == b->header.stride && a->data && b->data;
+}
+
+static void sync_copy_cb(lv_draw_buf_t * dest, const lv_area_t * dest_area, const lv_draw_buf_t * src,
+                         const lv_area_t * src_area)
+{
+    const int d = sync_index(dest), s = sync_index(src);
+    LV_ASSERT(d >= 0);   /* only our buffers have this callback */
+    lv_display_t * disp = g_sync.disp;
+    const bool same_place = s >= 0 && s != d && dest_area && dest_area == src_area && sync_alike(dest, src);
+    /* LVGL's own sync, on our display: written down, not done. */
+    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && sync_area_of_lvgl(disp, dest_area)) {
+        lv_area_t a, whole;
+        sync_whole_area(dest, &whole);
+        if (lv_area_intersect(&a, dest_area, &whole)) {
+            sync_behind(d, &a);
+            g_stats.sync_noted++;
+            g_stats.sync_bytes_noted += (uint64_t)lv_area_get_size(&a) * lv_color_format_get_size(dest->header.cf);
+        }
+        return;
+    }
+    /* Any other copy from one frame buffer to another, at the same place: made
+     * now, by the turner when there is one -- the caller expects it done. */
+    if (same_place) {
+        lv_area_t r, whole;
+        sync_whole_area(dest, &whole);
+        if (lv_area_intersect(&r, dest_area, &whole)) {
+            const lv_color_format_t cf = dest->header.cf;
+            const int32_t px = lv_color_format_get_size(cf);
+            const uint64_t handed = g_stats.bytes_straight_handed;
+            straight_or_cpu(cf, px, dest->data, (int32_t)dest->header.stride, &whole, src->data,
+                            (int32_t)src->header.stride, &whole, &r, true);
+            fence();
+            g_stats.sync_others++;
+            if (g_stats.bytes_straight_handed != handed) {
+                g_stats.sync_others_handed += (uint64_t)lv_area_get_size(&r) * (uint64_t)px;
+            }
+        }
+        return;
+    }
+    g_sync.orig[d]->buf_copy_cb(dest, dest_area, src, src_area);
+}
+
+/* `in[0..n)` less `cut`, into `out` (at most `max`). False when it would
+ * not fit. */
+static bool sync_subtract(const lv_area_t * in, int32_t n, const lv_area_t * cut, lv_area_t * out, int32_t * n_out,
+                          int32_t max)
+{
+    int32_t m = 0;
+    for (int32_t i = 0; i < n; i++) {
+        lv_area_t res[4];
+        const int8_t r = lv_area_diff(res, &in[i], cut);
+        if (r < 0) {  /* apart: kept whole */
+            if (m >= max) {
+                return false;
+            }
+            out[m++] = in[i];
+            continue;
+        }
+        for (int8_t k = 0; k < r; k++) {
+            if (m >= max) {
+                return false;
+            }
+            out[m++] = res[k];
+        }
+    }
+    *n_out = m;
+    return true;
+}
+
+static bool sync_still_ours(void)
+{
+    lv_display_t * disp = g_sync.disp;
+    if (disp->render_mode != LV_DISPLAY_RENDER_MODE_DIRECT) {
+        return false;
+    }
+    if (disp->buf_1 != g_sync.buf[0] || disp->buf_2 != g_sync.buf[1] || disp->buf_3 != g_sync.buf[2]) {
+        return false;
+    }
+    for (int i = 0; i < 3; i++) {
+        if (g_sync.buf[i] && g_sync.buf[i]->handlers != &g_sync.handlers[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void sync_render_start(lv_event_t * e);
+static void sync_delete(lv_event_t * e);
+
+/* The buffers given their own handlers back; nothing written down kept. */
+static void sync_release(void)
+{
+    for (int i = 0; i < 3; i++) {
+        lv_draw_buf_t * b = g_sync.buf[i];
+        if (b && b->handlers == &g_sync.handlers[i]) {
+            b->handlers = g_sync.orig[i];
+        }
+    }
+    lv_memzero(&g_sync, sizeof(g_sync));
+}
+
+static void sync_unhook(void)
+{
+    if (g_sync_hooked == NULL) {
+        return;
+    }
+    lv_display_remove_event_cb_with_user_data(g_sync_hooked, sync_render_start, &g_sync);
+    lv_display_remove_event_cb_with_user_data(g_sync_hooked, sync_delete, &g_sync);
+    g_sync_hooked = NULL;
+}
+
+/* The buffer shown last, as LVGL works it out in refr_sync_areas. */
+static lv_draw_buf_t * sync_on_screen(const lv_display_t * disp)
+{
+    const lv_draw_buf_t * act = disp->buf_act;
+    return act == disp->buf_1 ? (disp->buf_3 ? disp->buf_3 : disp->buf_2)
+           : act == disp->buf_2 ? disp->buf_1 : disp->buf_2;
+}
+
+/* What buffer `i` is behind by, less the areas `drawn` (native), copied from
+ * `on`; nothing written down for it after. */
+static void sync_repair(int i, lv_draw_buf_t * on, const lv_area_t * drawn, int32_t ndrawn)
+{
+    lv_draw_buf_t * b = g_sync.buf[i];
+    lv_area_t pieces[2][SYNC_PIECES];
+    int32_t n = 0, cur = 0;
+    if (g_sync.whole[i]) {
+        sync_whole_area(b, &pieces[0][n++]);
+    } else {
+        for (uint8_t k = 0; k < g_sync.n[i]; k++) {
+            pieces[0][n++] = g_sync.behind[i][k];
+        }
+    }
+    g_sync.n[i] = 0;
+    g_sync.whole[i] = false;
+    if (n == 0 || on == NULL || on == b || on->data == NULL || b->data == NULL ||
+            on->header.w != b->header.w || on->header.h != b->header.h || on->header.cf != b->header.cf) {
+        return;
+    }
+    for (int32_t k = 0; k < ndrawn && n > 0; k++) {
+        int32_t m;
+        if (!sync_subtract(pieces[cur], n, &drawn[k], pieces[!cur], &m, SYNC_PIECES)) {
+            continue;    /* copied as it is */
+        }
+        cur = !cur;
+        n = m;
+    }
+    const lv_color_format_t cf = b->header.cf;
+    const int32_t px = lv_color_format_get_size(cf);
+    lv_area_t whole;
+    sync_whole_area(b, &whole);
+    for (int32_t k = 0; k < n; k++) {
+        lv_area_t r;
+        if (!lv_area_intersect(&r, &pieces[cur][k], &whole)) {
+            continue;
+        }
+        const uint64_t bytes = (uint64_t)lv_area_get_size(&r) * (uint64_t)px;
+        const uint64_t handed = g_stats.bytes_straight_handed;
+        straight_or_cpu(cf, px, b->data, (int32_t)b->header.stride, &whole, on->data, (int32_t)on->header.stride,
+                        &whole, &r, true);
+        g_stats.sync_copies++;
+        g_stats.sync_bytes_copied += bytes;
+        if (g_stats.bytes_straight_handed != handed) {
+            g_stats.sync_bytes_handed += bytes;
+        }
+    }
+}
+
+/* LVGL waits for the flush in progress before its own copies: the buffer
+ * about to be written may be on the panel until it is done. */
+static void sync_wait_flush(lv_display_t * disp)
+{
+    if (!disp->flushing) {
+        return;
+    }
+    if (disp->flush_wait_cb) {
+        disp->flush_wait_cb(disp);
+        disp->flushing = 0;
+    } else {
+        while (disp->flushing) {}
+    }
+}
+
+/* Everything written down, copied now from the buffer shown last, and the
+ * copies given back to LVGL -- whose own list of them was emptied as it
+ * handed each one over. */
+static void sync_settle_and_release(void)
+{
+    lv_display_t * disp = g_sync.disp;
+    if (disp && disp->buf_1 == g_sync.buf[0] && disp->buf_2 == g_sync.buf[1] && disp->buf_3 == g_sync.buf[2]) {
+        lv_draw_buf_t * on = sync_on_screen(disp);
+        sync_wait_flush(disp);
+        for (int i = 0; i < 3; i++) {
+            if (g_sync.buf[i] && g_sync.buf[i] != on) {
+                sync_repair(i, on, NULL, 0);
+            }
+        }
+        fence();
+    }
+    /* Otherwise the display has other buffers now: drawn again whole by
+     * whoever set them, as LVGL would need too. */
+    sync_release();
+}
+
+static bool sync_install(lv_display_t * disp);
+
+static void sync_render_start(lv_event_t * e)
+{
+    lv_display_t * disp = lv_event_get_current_target(e);
+    if (disp != g_sync_hooked) {
+        return;
+    }
+    if (g_sync.disp != disp || !sync_still_ours()) {
+        /* The buffers were set again behind us (a dummy draw, a new panel):
+         * what was written down is made, and they are taken again. LVGL
+         * made this refresh's own copies itself. */
+        if (g_sync.disp == disp) {
+            sync_settle_and_release();
+        }
+        if (!sync_install(disp)) {
+            return;
+        }
+    }
+    const int a = sync_index(disp->buf_act);
+    if (a < 0 || (g_sync.n[a] == 0 && !g_sync.whole[a])) {
+        return;
+    }
+
+    /* What this frame draws, in the panel's orientation. */
+    lv_area_t drawn[LV_INV_BUF_SIZE];
+    int32_t nd = 0;
+    const lv_area_t screen = {0, 0, lv_display_get_horizontal_resolution(disp) - 1,
+                              lv_display_get_vertical_resolution(disp) - 1
+                             };
+    for (uint32_t i = 0; i < disp->inv_p; i++) {
+        if (disp->inv_area_joined[i]) {
+            continue;
+        }
+        if (!lv_area_intersect(&drawn[nd], &disp->inv_areas[i], &screen)) {
+            continue;
+        }
+#if LV_DRAW_TRANSFORM_USE_MATRIX
+        if (lv_display_get_matrix_rotation(disp)) {
+            lv_display_rotate_area(disp, &drawn[nd]);
+        }
+#endif
+        nd++;
+    }
+    sync_wait_flush(disp);
+    sync_repair(a, sync_on_screen(disp), drawn, nd);
+    /* Done before anything is drawn: LVGL's own units, and the PPA's fills,
+     * are not in the turner's queue. */
+    fence();
+}
+
+static void sync_delete(lv_event_t * e)
+{
+    lv_display_t * disp = lv_event_get_current_target(e);
+    if (disp == g_sync.disp) {
+        sync_release();
+    }
+    if (disp == g_sync_hooked) {
+        g_sync_hooked = NULL;    /* gone with it */
+    }
+}
+
+/* The buffers' copy handlers replaced; false and nothing done when they
+ * cannot be. Changes no event list, so it may run inside an event. */
+static bool sync_install(lv_display_t * disp)
+{
+    if (disp->render_mode != LV_DISPLAY_RENDER_MODE_DIRECT || disp->buf_1 == NULL || disp->buf_2 == NULL) {
+        return false;
+    }
+#if LVGL_VERSION_MAJOR > 9 || (LVGL_VERSION_MAJOR == 9 && LVGL_VERSION_MINOR >= 6)
+    if (disp->sync_cb) {
+        return false;    /* the application's own sync: its business */
+    }
+#endif
+    lv_draw_buf_t * bufs[3] = {disp->buf_1, disp->buf_2, disp->buf_3};
+    for (int i = 0; i < 3; i++) {
+        if (bufs[i] == NULL) {
+            continue;
+        }
+        if (bufs[i]->handlers == NULL || bufs[i]->handlers->buf_copy_cb == NULL) {
+            return false;
+        }
+    }
+    for (int i = 0; i < 3; i++) {
+        lv_draw_buf_t * b = bufs[i];
+        g_sync.buf[i] = b;
+        if (b == NULL) {
+            continue;
+        }
+        g_sync.orig[i] = b->handlers;
+        g_sync.handlers[i] = *b->handlers;
+        g_sync.handlers[i].buf_copy_cb = sync_copy_cb;
+        b->handlers = &g_sync.handlers[i];
+    }
+    /* Nothing is written down yet: LVGL has kept the buffers in step until
+     * now, and what they are behind by is its own list, which it hands over
+     * at the next refresh. */
+    g_sync.disp = disp;
+    return true;
+}
+
+bool lv_draw_ortho_take_sync(lv_display_t * disp)
+{
+    if (g_sync.disp) {
+        sync_settle_and_release();
+    }
+    if (disp == NULL || !sync_install(disp)) {
+        return false;
+    }
+    if (g_sync_hooked != disp) {
+        sync_unhook();
+        lv_display_add_event_cb(disp, sync_render_start, LV_EVENT_RENDER_START, &g_sync);
+        lv_display_add_event_cb(disp, sync_delete, LV_EVENT_DELETE, &g_sync);
+        g_sync_hooked = disp;
+    }
+    return true;
+}
+
+void lv_draw_ortho_release_sync(lv_display_t * disp)
+{
+    if (disp != NULL && disp != g_sync_hooked && disp != g_sync.disp) {
+        return;
+    }
+    if (g_sync.disp) {
+        sync_settle_and_release();
+    }
+    sync_unhook();
+}
 /* The tile is where every widget is drawn and every pixel of it is turned
  * out of, so it has to be the fastest memory there is. On an ESP32-P4 that is
  * internal RAM: LVGL's own allocator there (ESPHome's lv_malloc_core) asks
@@ -2124,6 +2703,11 @@ void lv_draw_ortho_set_image_constant_cb(lv_draw_ortho_constant_cb_t cb)
 {
     g_constant_cb = cb;
     lv_draw_ortho_image_cache_drop(NULL);
+}
+
+void lv_draw_ortho_set_flash_cb(lv_draw_ortho_constant_cb_t cb)
+{
+    g_flash_cb = cb;
 }
 
 void lv_draw_ortho_reset_stats(void)

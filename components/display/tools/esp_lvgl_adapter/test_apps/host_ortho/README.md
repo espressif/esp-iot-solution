@@ -16,10 +16,11 @@ python3 run.py --reference /tmp/ppa-fixtures --lvgl /tmp/lvgl --mutants
 ```
 
 The runner itself downloads nothing. Fixtures are pinned to
-`6cf0eed1277032489fd0281890b9a326c93f063f`; the base scene suite is pinned to
+`5ab16014f76ff6b8176b62d69a5dc443dbb34058`; the base scene suite is pinned to
 `9db8952fc7f06438819fd4aaf28f5fb8a35a56b7`, before the standalone project's
 experimental split/tile-width controls. The newer fake PPA and font regression
-are retained. These commits must exist in the reference checkout.
+are retained, with the fixtures' dashboard on two cores, pictures in flash and
+frame-buffer sync cases run whole against this adapter's draw unit. These commits must exist in the reference checkout.
 
 The runner also exercises the adapter's actual CMake discovery/version block
 with local and managed LVGL versions, early dependency discovery and the public

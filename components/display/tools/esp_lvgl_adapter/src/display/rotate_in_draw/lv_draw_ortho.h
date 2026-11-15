@@ -59,6 +59,15 @@ extern "C" {
  *  text out again), so a tile too small is slower than LVGL's own way. On a
  *  PC with the test UI at 720x1280: 32 KiB 2.6 ms, 64 KiB 1.8, 128 KiB 1.45,
  *  256 KiB 1.3, against 1.7 for drawing upright and turning in flush. */
+/** With a second core: the pixels a tile must hold to be cut in two, one half
+ *  for each core, when it would otherwise be drawn by the first core alone
+ *  (an area that fits in one tile, or the odd tile of a larger one). Below
+ *  it, the second turn and the second pass over the tasks cost more than the
+ *  shared drawing saves. */
+#ifndef LV_DRAW_ORTHO_PAIR_MIN_PX
+#define LV_DRAW_ORTHO_PAIR_MIN_PX 8192
+#endif
+
 #ifndef LV_DRAW_ORTHO_TILE_BYTES
 #define LV_DRAW_ORTHO_TILE_BYTES (128 * 1024)
 #endif
@@ -98,6 +107,16 @@ typedef struct {
     uint32_t images_cached;    /**< pictures drawn from a copy turned once (lv_draw_ortho_set_image_cache) */
     uint32_t image_cache_builds; /**< pictures turned into the cache */
     uint32_t image_cache_bytes; /**< what the turned copies hold now */
+    uint32_t images_flash;     /**< big pictures in the flash left to the tiles: the CPU reads the flash
+                                    faster than the turner does (lv_draw_ortho_set_flash_cb) */
+    uint32_t sync_noted;       /**< LVGL's copies between frame buffers written down (lv_draw_ortho_take_sync) */
+    uint64_t sync_bytes_noted; /**< what LVGL would have copied */
+    uint32_t sync_copies;      /**< copies actually made, each a rectangle the next frame does not draw */
+    uint64_t sync_bytes_copied; /**< what they copied: the rest of sync_bytes_noted was never needed */
+    uint64_t sync_bytes_handed; /**< of those, bytes the turner (the PPA) copied */
+    uint32_t sync_others;      /**< other copies between those frame buffers, made at once (the adapter's own,
+                                    bringing a third panel buffer up to date) */
+    uint64_t sync_others_handed; /**< bytes of those the turner copied */
 } lv_draw_ortho_stats_t;
 
 /** Called with a straight (unturned) copy so a platform can hand it to DMA.
@@ -229,6 +248,40 @@ typedef bool (*lv_draw_ortho_constant_cb_t)(const lv_image_dsc_t * img);
 /** Decide which pictures may be kept instead of "in the flash" (NULL for that
  *  again). Forgets everything kept so far. */
 void lv_draw_ortho_set_image_constant_cb(lv_draw_ortho_constant_cb_t cb);
+
+/**
+ * Take over LVGL's copies between `disp`'s frame buffers: DIRECT mode with
+ * two or three of them, where LVGL brings the buffer it draws into up to date
+ * at the start of every refresh -- by the CPU, and before it knows whether
+ * anything will be drawn at all. Each copy is written down instead, and when
+ * a buffer is about to be drawn into, only what it is behind by and the frame
+ * does not draw is copied, from the buffer shown last, by the turner (the
+ * PPA) when there is one. LVGL itself is not changed: it makes those copies
+ * through the buffers' buf_copy_cb, which this replaces.
+ *
+ * Call after the display's buffers are set (lv_display_set_buffers, and
+ * lv_display_set_3rd_draw_buffer if any). Buffers set again later are taken
+ * again at the next frame. Returns false, and takes nothing, for any other
+ * mode, a single buffer, or (LVGL 9.6) a display with a sync_cb of its own.
+ * One display at a time.
+ */
+bool lv_draw_ortho_take_sync(lv_display_t * disp);
+
+/** Give LVGL its copies back (NULL: whichever display has them). */
+void lv_draw_ortho_release_sync(lv_display_t * disp);
+
+/**
+ * Decide which pictures have their pixels in the flash instead of "on an
+ * ESP32, those at a flash address" (NULL for that again).
+ *
+ * A turner is never handed such a picture: the PPA reads the flash through
+ * the same cache as the CPU and gets less out of it -- measured, 224 ms
+ * against 171 for a 1024x600 picture on a Waveshare 7B, 338 against 239 for
+ * 1280x720 on a Tab5. The CPU draws it into the tiles instead, on both cores
+ * when there are two, and reads it once into the picture cache when there is
+ * one.
+ */
+void lv_draw_ortho_set_flash_cb(lv_draw_ortho_constant_cb_t cb);
 
 const lv_draw_ortho_stats_t * lv_draw_ortho_get_stats(void);
 void lv_draw_ortho_reset_stats(void);

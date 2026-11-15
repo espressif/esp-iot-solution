@@ -18,7 +18,7 @@ import subprocess
 import tarfile
 import tempfile
 
-FIXTURES = '6cf0eed1277032489fd0281890b9a326c93f063f'
+FIXTURES = '5ab16014f76ff6b8176b62d69a5dc443dbb34058'
 CACHE_SUITE = '9db8952fc7f06438819fd4aaf28f5fb8a35a56b7'
 ADAPTER = Path(__file__).resolve().parents[2]
 UNIT = ADAPTER / 'src/display/rotate_in_draw'
@@ -264,14 +264,33 @@ void esp_rom_delay_us(uint32_t us)
     font = font.replace('    lv_draw_ortho_set_tile_width(0);\n', '')
     main = main.replace('/* The same scenes with the PPA', font + '/* The same scenes with the PPA', 1)
     main = main.replace('int main(int argc, char ** argv)', MUTEX_SPY + CLEANUP_CASE + '\nint main(int argc, char ** argv)', 1)
+    # Pictures in the flash, drawn in the tiles and never handed to the PPA,
+    # and LVGL's copies between frame buffers taken over: the fixture's own
+    # cases, whole, against this adapter's draw unit. The sync cases read the
+    # display's buffers, hence LVGL's private headers.
+    start = current.index('/* Pictures in the flash (lv_draw_ortho_set_flash_cb)')
+    start = current.rindex('/* ----', 0, start)
+    end = current.index('/* Timing ')
+    end = current.rindex('/* ----', 0, end)
+    main = main.replace('int main(int argc, char ** argv)', current[start:end] + 'int main(int argc, char ** argv)', 1)
+    needle = '#include "lvgl.h"\n'
+    assert main.count(needle) == 1
+    main = main.replace(needle, needle + '#include "lvgl_private.h"\n', 1)
     # The fixture deliberately submits unsafe transfers to validate its fake
     # hardware. Count only the adapter's submissions after that calibration.
     main = main.replace('    check_fake_ppa_against_the_board();', '    check_fake_ppa_against_the_board();\n    g_p4_short = 0;', 1)
     needle = '    /* Last: after it the PPA is stuck, as it would stay on a board. */'
     checks = r"""
 #if LV_USE_OS != LV_OS_NONE
-    if(g_two_cores) check_font_one_core();
+    if(g_two_cores) {
+        check_font_one_core();
+        /* A dashboard: both cores on areas that fit in one tile. */
+        check_dashboard(1024, 600, LV_DISPLAY_ROTATION_180);
+        check_dashboard(720, 1280, LV_DISPLAY_ROTATION_270);
+    }
 #endif
+    check_flashes();
+    check_syncs();
     check_cache_progress();
     check_padded_cache_geometry();
     g_cases++;
@@ -334,6 +353,12 @@ def run_tests(work, args):
         ('padded cache geometry', 'lv_draw_ortho_ppa.c', 'op.out.pic_h = out_h;', 'op.out.pic_h = dst->h;', 'FAIL  padded cache geometry'),
         ('cache preparation progress', 'lv_draw_ortho.c', 'const int32_t max_pixels = (128 * 1024) / px;', 'const int32_t max_pixels = INT32_MAX / px;', 'FAIL  cache preparation progress'),
         ('cache teardown', 'lv_draw_ortho.c', '    lv_draw_ortho_image_cache_drop(NULL);\n    if (g_helper.on)', '    if (g_helper.on)', 'cached pixel allocations survive'),
+        ('one-tile areas on one core', 'lv_draw_ortho.c', '    if (two && !cut_shows(jobs, n)) {\n        const int32_t h = lv_area_get_height(&box);', '    if (0 && !cut_shows(jobs, n)) {\n        const int32_t h = lv_area_get_height(&box);', 'its areas were left to one core'),
+        ('flash handed to the PPA', 'lv_draw_ortho.c', '    if (g_flash_cb) {\n        return g_flash_cb(img);', '    if (0) {\n        return g_flash_cb(img);', 'read the picture in the flash'),
+        ('cache filled from the flash by the PPA', 'lv_draw_ortho.c', '    if (in_flash(img)) {\n        /* Read once', '    if (0) {\n        /* Read once', 'read the picture in the flash'),
+        ('empty refresh copies dropped', 'lv_draw_ortho.c', '            sync_behind(d, &a);', '            if (disp->inv_p) {\n                sync_behind(d, &a);\n            }', 'differs from one buffer'),
+        ('frame areas not turned', 'lv_draw_ortho.c', '        if (lv_display_get_matrix_rotation(disp)) {\n            lv_display_rotate_area(disp, &drawn[nd]);\n        }', '', 'differs from one buffer'),
+        ('adapter copy written down', 'lv_draw_ortho.c', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && sync_area_of_lvgl(disp, dest_area)) {', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && !disp->rendering_in_progress) {', 'another copy at the frame'),
     ]
     for name, filename, before, after, expected in mutations:
         (unit / 'lv_draw_ortho.c').write_text(source)

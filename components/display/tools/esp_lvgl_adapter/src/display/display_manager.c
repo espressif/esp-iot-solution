@@ -1146,6 +1146,19 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
     lv_display_set_flush_cb(disp, display_manager_flush_cb_v9);
     lv_display_add_event_cb(disp, display_manager_invalidate_wake_cb,
                             LV_EVENT_INVALIDATE_AREA, NULL);
+#if ESP_LV_ADAPTER_ROTATE_IN_DRAW
+    if (draw_rotation != ESP_LV_ADAPTER_ROTATE_0) {
+        /* LVGL keeps its two draw buffers in step by copying, with the CPU, at
+         * every refresh -- even one with nothing to draw, which then copies
+         * what the next frame redraws anyway. lv_draw_ortho makes those copies
+         * instead: only what the next frame does not draw, by the PPA. Taken
+         * after the bridge, whose own LV_EVENT_RENDER_START handler brings
+         * the third panel buffer up to date first. */
+        if (lv_draw_ortho_take_sync(disp)) {
+            ESP_LOGI(TAG, "rotate in draw: frame buffers kept in step by lv_draw_ortho");
+        }
+    }
+#endif
 
 #if CONFIG_SOC_PPA_SUPPORTED
     bool ppa_accel = pub->profile.enable_ppa_accel;
