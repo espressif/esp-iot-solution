@@ -11,6 +11,11 @@
 #include "esp_cache.h"
 #include "esp_rom_sys.h"
 #include <stdio.h>
+#if defined(ESP_PLATFORM)
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#endif
 
 /* The PPA's output must start on, and its size be a multiple of, the L2
  * cache line (ESP-IDF's ppa.rst, "Buffer Alignment"). */
@@ -36,6 +41,16 @@ static ppa_client_handle_t g_fill_client;
 static uint32_t g_fill_queued;
 static volatile uint32_t g_fill_done;
 static bool g_stuck;
+#if defined(ESP_PLATFORM)
+/* Given by the PPA's interrupt when a transaction of either engine finishes,
+ * once for each task sleeping on it (once when none is, so a task about to
+ * sleep finds it), so a wait sleeps until then instead of spinning. Nobody
+ * passes a wake on: two waiting tasks handing one back and forth would spin
+ * on context switches until the PPA finished. */
+#define WAKE_MAX 4
+static SemaphoreHandle_t g_wake;
+static uint32_t g_sleepers;
+#endif
 
 /* The last transactions handed to the PPA, so a stall can say which one never
  * finished: nothing else on a board can. Room for every one that can be
@@ -264,7 +279,45 @@ static bool on_done(ppa_client_handle_t client, ppa_event_data_t * event, void *
     } else {
         g_done++;
     }
+#if defined(ESP_PLATFORM)
+    BaseType_t woken = pdFALSE;
+    if (g_wake) {
+        const uint32_t n = LV_MIN(LV_MAX(__atomic_load_n(&g_sleepers, __ATOMIC_SEQ_CST), 1u), (uint32_t)WAKE_MAX);
+        for (uint32_t i = 0; i < n; i++) {
+            BaseType_t w = pdFALSE;
+            xSemaphoreGiveFromISR(g_wake, &w);
+            woken |= w;
+        }
+    }
+    return woken == pdTRUE;
+#else
     return false;
+#endif
+}
+
+/* Let time pass while the PPA works, at most `max_us`, and say how much.
+ * On a board the task sleeps until the PPA's next interrupt, so the core is
+ * free meanwhile: spinning in 10 us steps made the waits of a dashboard --
+ * about 2.6 ms a frame on a Tab5 -- busy time no other task could have. A
+ * sleep is at most 10 ms, so a wake taken by someone else costs that much
+ * and no more; a wake left over from an earlier interrupt costs one more
+ * look at the counter. Elsewhere (the host tests' fake PPA, which advances in
+ * esp_rom_delay_us) it is the 10 us step it always was. */
+static uint32_t pause_for_ppa(uint32_t max_us)
+{
+#if defined(ESP_PLATFORM)
+    if (g_wake) {
+        const int64_t t0 = esp_timer_get_time();
+        TickType_t ticks = pdMS_TO_TICKS(LV_MIN((max_us + 999) / 1000, 10u));
+        __atomic_add_fetch(&g_sleepers, 1, __ATOMIC_SEQ_CST);
+        xSemaphoreTake(g_wake, ticks ? ticks : 1);
+        __atomic_sub_fetch(&g_sleepers, 1, __ATOMIC_SEQ_CST);
+        return (uint32_t)(esp_timer_get_time() - t0);
+    }
+#endif
+    LV_UNUSED(max_us);
+    esp_rom_delay_us(10);
+    return 10;
 }
 
 /* Until `*done` reaches `ticket`, bounded the same way for both engines. */
@@ -276,16 +329,17 @@ static void log_stall_line(const char * line, void * user)
 
 static bool wait_on(volatile uint32_t * done, uint32_t ticket)
 {
+    const uint32_t limit = LV_DRAW_ORTHO_PPA_TIMEOUT_MS * 1000u;
     uint32_t seen = *done, idle_us = 0;
     while ((int32_t)(*done - ticket) < 0) {
         if (g_stuck) {
             return false;
         }
-        esp_rom_delay_us(10);
+        idle_us += pause_for_ppa(limit - LV_MIN(idle_us, limit));
         if (*done != seen) {
             seen = *done;
             idle_us = 0;
-        } else if ((idle_us += 10) >= LV_DRAW_ORTHO_PPA_TIMEOUT_MS * 1000u) {
+        } else if (idle_us >= limit) {
             g_stuck_engine = done == &g_fill_done ? 2 : 1;
             g_stuck_done = *done;
             g_stuck_queued = done == &g_fill_done ? g_fill_queued : g_queued;
@@ -491,6 +545,11 @@ static esp_err_t ensure_client(void)
     lv_memzero(&cfg, sizeof(cfg));
     cfg.oper_type = PPA_OPERATION_SRM;
     cfg.max_pending_trans_num = PENDING;
+#if defined(ESP_PLATFORM)
+    if (g_wake == NULL && (g_wake = xSemaphoreCreateCounting(WAKE_MAX, 0)) == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+#endif
     esp_err_t err = ppa_register_client(&cfg, &g_client);
     if (err != ESP_OK) {
         return err;
@@ -628,6 +687,12 @@ void lv_draw_ortho_ppa_deinit(void)
         ppa_unregister_client(g_client);
         g_client = NULL;
     }
+#if defined(ESP_PLATFORM)
+    if (g_client == NULL && g_fill_client == NULL && g_wake) {
+        vSemaphoreDelete(g_wake);
+        g_wake = NULL;
+    }
+#endif
 }
 
 static void say_one(const trail_t * t, const char * what, lv_draw_ortho_ppa_line_cb_t line, void * user)
