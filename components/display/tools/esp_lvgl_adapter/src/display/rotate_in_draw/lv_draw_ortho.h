@@ -117,6 +117,9 @@ typedef struct {
     uint32_t sync_others;      /**< other copies between those frame buffers, made at once (the adapter's own,
                                     bringing a third panel buffer up to date) */
     uint64_t sync_others_handed; /**< bytes of those the turner copied */
+    uint8_t helper_cores;      /**< one bit per core a task painting the second core's tiles runs on
+                                    (ESP32): the tile goes to the one on the other core than the
+                                    drawing task, which may be either */
 } lv_draw_ortho_stats_t;
 
 /** Called with a straight (unturned) copy so a platform can hand it to DMA.

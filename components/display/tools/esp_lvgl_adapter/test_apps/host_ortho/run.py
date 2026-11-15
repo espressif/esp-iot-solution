@@ -18,7 +18,7 @@ import subprocess
 import tarfile
 import tempfile
 
-FIXTURES = 'ec9b554dada999b5211088a690940a26e2769d40'
+FIXTURES = 'dd3fd2b72e959345280adf3086ea22ef2d953fab'
 CACHE_SUITE = '9db8952fc7f06438819fd4aaf28f5fb8a35a56b7'
 ADAPTER = Path(__file__).resolve().parents[2]
 UNIT = ADAPTER / 'src/display/rotate_in_draw'
@@ -257,9 +257,14 @@ void esp_rom_delay_us(uint32_t us)
     needle = '    if(matrix) lv_display_set_matrix_rotation(s.disp, true);'
     assert main.count(needle) == 1
     main = main.replace(needle, '    if(matrix) lv_display_set_software_object_transforms(s.disp, true);\n' + needle)
-    start = current.index('/* A font whose engine')
+    # The cards and the dashboard both build their cards with the fixture's
+    # own helpers, which sit just before the font case.
+    start = current.index('/* Cards as LVGL draws them')
+    end = current.index('/* A font whose engine', start)
+    cards = current[start:end]
+    start = end
     end = current.index('/* The same scenes with the PPA', start)
-    font = current[start:end]
+    font = cards + current[start:end]
     font = font.replace('    lv_draw_ortho_set_tile_width(256);\n', '')
     font = font.replace('    lv_draw_ortho_set_tile_width(0);\n', '')
     main = main.replace('/* The same scenes with the PPA', font + '/* The same scenes with the PPA', 1)
@@ -290,6 +295,7 @@ void esp_rom_delay_us(uint32_t us)
     }
 #endif
     check_flashes();
+    check_all_cards();
     check_syncs();
     check_cache_progress();
     check_padded_cache_geometry();
@@ -356,6 +362,10 @@ def run_tests(work, args):
         ('one-tile areas on one core', 'lv_draw_ortho.c', '    if (two && !cut_shows(jobs, n)) {\n        const int32_t h = lv_area_get_height(&box);', '    if (0 && !cut_shows(jobs, n)) {\n        const int32_t h = lv_area_get_height(&box);', 'its areas were left to one core'),
         ('flash handed to the PPA', 'lv_draw_ortho.c', '    if (g_flash_cb) {\n        return g_flash_cb(img);', '    if (0) {\n        return g_flash_cb(img);', 'read the picture in the flash'),
         ('cache filled from the flash by the PPA', 'lv_draw_ortho.c', '    if (in_flash(img)) {\n        /* Read once', '    if (0) {\n        /* Read once', 'read the picture in the flash'),
+        ('shadow hidden only under a background of its own size', 'lv_draw_ortho.c', '            if (f->opa >= LV_OPA_MAX && f->grad.dir == LV_GRAD_DIR_NONE) {', '            if (f->opa >= LV_OPA_MAX && f->grad.dir == LV_GRAD_DIR_NONE && lv_area_is_in(&t->area, &t->next->area, 0)) {', 'were read back'),
+        ('background corners counted as covering the shadow', 'lv_draw_ortho.c', '                cross(j, fa, 0, r, &t->next->clip_area);', '                cross(j, fa, 0, r * 0, &t->next->clip_area);', 'in its corner: '),
+        ('one arm of the cross', 'lv_draw_ortho.c', '    for (int k = 0; k < 2; k++) {\n        lv_area_t h = *a;', '    for (int k = 1; k < 2; k++) {\n        lv_area_t h = *a;', 'were read back'),
+        ('border corners counted as clear', 'lv_draw_ortho.c', '        cross(j, &t->area, d->width, LV_MAX(d->width, d->radius), &t->area);', '        cross(j, &t->area, d->width, d->width, &t->area);', 'in its corner: '),
         ('empty refresh copies dropped', 'lv_draw_ortho.c', '            sync_behind(d, &a);', '            if (disp->inv_p) {\n                sync_behind(d, &a);\n            }', 'differs from one buffer'),
         ('frame areas not turned', 'lv_draw_ortho.c', '        if (lv_display_get_matrix_rotation(disp)) {\n            lv_display_rotate_area(disp, &drawn[nd]);\n        }', '', 'differs from one buffer'),
         ('adapter copy written down', 'lv_draw_ortho.c', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && sync_area_of_lvgl(disp, dest_area)) {', '    if (same_place && disp && lv_refr_get_disp_refreshing() == disp && (!disp->rendering_in_progress || sync_area_of_lvgl(disp, dest_area))) {', 'another copy at the frame'),

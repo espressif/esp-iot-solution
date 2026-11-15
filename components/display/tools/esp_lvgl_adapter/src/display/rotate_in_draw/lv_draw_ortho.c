@@ -637,7 +637,8 @@ static void tile_layer(lv_layer_t * tl, lv_draw_buf_t * tb, const lv_area_t * ar
 struct _job_t {
     lv_draw_task_t * t;
     lv_area_t todo;   /* upright: what the task may change */
-    lv_area_t hole;   /* upright: inside `todo` but certainly not changed, or x2 < x1 */
+    lv_area_t hole[2]; /* upright: inside `todo` but certainly not changed, or x2 < x1: a rounded
+                          rectangle's middle is a cross, the rectangle less its four corners */
 };
 
 /* Whether a fill paints every pixel of `tile` opaquely, so what was under the
@@ -686,32 +687,44 @@ static bool covers(const job_t * j, const lv_area_t * tile)
 /* The part of a task's area it is certain not to change. A border never
  * touches the middle of its rectangle; a shadow under an opaque background
  * is painted over by that background, which is the next task. Leaving these
- * out keeps a large panel from turning all its pixels for its outline. */
+ * out keeps a large panel from turning all its pixels for its outline, and
+ * keeps a tile inside a card from being read back for a shadow it cannot see.
+ * The middle of a rounded rectangle is a cross: the rectangle less its four
+ * corner squares, two rectangles. */
+static void cross(job_t * j, const lv_area_t * a, int32_t inset, int32_t corner, const lv_area_t * clip)
+{
+    for (int k = 0; k < 2; k++) {
+        lv_area_t h = *a;
+        lv_area_increase(&h, -(k ? corner : inset), -(k ? inset : corner));
+        if (lv_area_get_width(&h) <= 0 || lv_area_get_height(&h) <= 0 || !lv_area_intersect(&h, &h, clip)) {
+            lv_area_set(&h, 0, 0, -1, -1);
+        }
+        j->hole[k] = h;
+    }
+}
+
 static void find_hole(job_t * j)
 {
     const lv_draw_task_t * t = j->t;
-    lv_area_t h = {0, 0, -1, -1};
+    lv_area_set(&j->hole[0], 0, 0, -1, -1);
+    j->hole[1] = j->hole[0];
     if (t->type == LV_DRAW_DSC_TYPE_BORDER) {
         const lv_draw_border_dsc_t * d = t->draw_dsc;
-        int32_t in = LV_MAX(d->width, d->radius);
-        h = t->area;
-        lv_area_increase(&h, -in, -in);
+        cross(j, &t->area, d->width, LV_MAX(d->width, d->radius), &t->area);
     } else if (t->type == LV_DRAW_DSC_TYPE_BOX_SHADOW) {
         const lv_draw_box_shadow_dsc_t * d = t->draw_dsc;
-        if (d->bg_cover && t->next && t->next->type == LV_DRAW_DSC_TYPE_FILL) {
+        /* The background is drawn a pixel inside the object when it has a
+         * border (LVGL, lv_obj_draw), so it is the background's own area that
+         * is covered, not the shadow's. */
+        if (d->bg_cover && t->next && t->next->type == LV_DRAW_DSC_TYPE_FILL && t->next->opa >= LV_OPA_MAX) {
             const lv_draw_fill_dsc_t * f = t->next->draw_dsc;
-            if (f->opa >= LV_OPA_MAX && t->next->opa >= LV_OPA_MAX &&
-                    lv_area_is_in(&t->area, &t->next->area, 0) && lv_area_is_in(&t->next->area, &t->area, 0)) {
-                h = t->area;
-                lv_area_increase(&h, -d->radius, -d->radius);
+            if (f->opa >= LV_OPA_MAX && f->grad.dir == LV_GRAD_DIR_NONE) {
+                const lv_area_t * fa = &t->next->area;
+                const int32_t r = LV_MIN(f->radius, LV_MIN(lv_area_get_width(fa), lv_area_get_height(fa)) / 2);
+                cross(j, fa, 0, r, &t->next->clip_area);
             }
         }
     }
-    if (lv_area_get_width(&h) <= 0 || lv_area_get_height(&h) <= 0) {
-        lv_area_set(&j->hole, 0, 0, -1, -1);
-        return;
-    }
-    j->hole = h;
 }
 
 static bool job_touches(const job_t * j, const lv_area_t * tile)
@@ -721,8 +734,10 @@ static bool job_touches(const job_t * j, const lv_area_t * tile)
         return false;
     }
     /* Wholly inside the hole: nothing to do here. */
-    if (j->hole.x2 >= j->hole.x1 && lv_area_is_in(&a, &j->hole, 0)) {
-        return false;
+    for (int k = 0; k < 2; k++) {
+        if (j->hole[k].x2 >= j->hole[k].x1 && lv_area_is_in(&a, &j->hole[k], 0)) {
+            return false;
+        }
     }
     return true;
 }
@@ -892,13 +907,28 @@ static void draw_tile(const job_t * jobs, int32_t n, const ortho_t * o, const lv
 #define ORTHO_HELPER 0
 #endif
 
+#if ORTHO_HELPER == 2
+typedef struct {
+    TaskHandle_t task;
+    SemaphoreHandle_t go, done;
+    bool failed;   /* could not be started: this core is not asked again */
+} helper_task_t;
+#endif
+
 typedef struct {
     bool on;
     tile_work_t * volatile work;
     volatile bool quit;
 #if ORTHO_HELPER == 2
-    TaskHandle_t task;
-    SemaphoreHandle_t go, done;
+    /* One task per core, pinned there. A tile goes to the one on the core
+     * the drawing task is NOT on: LVGL's task has no core of its own, and an
+     * application may refresh from a task pinned anywhere, so a single task
+     * pinned once could be on the very core that hands it the tile -- and the
+     * two halves of every area were then painted one after the other. The
+     * second is started the first time it is needed. */
+    helper_task_t on_core[2];
+    int busy;             /* the core of the task painting `work` */
+    UBaseType_t prio;     /* LVGL's task's, when the first was started */
 #elif ORTHO_HELPER == 3
     pthread_t thread;
     pthread_mutex_t m;
@@ -912,17 +942,50 @@ static helper_t g_helper;
 #if ORTHO_HELPER == 2
 static void helper_main(void * arg)
 {
-    LV_UNUSED(arg);
+    helper_task_t * h = arg;
     for (;;) {
-        xSemaphoreTake(g_helper.go, portMAX_DELAY);
+        xSemaphoreTake(h->go, portMAX_DELAY);
         if (g_helper.quit) {
             break;
         }
         paint_tile(g_helper.work);
-        xSemaphoreGive(g_helper.done);
+        xSemaphoreGive(h->done);
     }
-    xSemaphoreGive(g_helper.done);
+    xSemaphoreGive(h->done);
     vTaskDelete(NULL);
+}
+
+/* The task pinned to `core`, started now if it is not running yet. */
+static bool helper_on(int core)
+{
+    helper_task_t * h = &g_helper.on_core[core];
+    if (h->task) {
+        return true;
+    }
+    if (h->failed) {
+        return false;
+    }
+    h->go = xSemaphoreCreateBinary();
+    h->done = xSemaphoreCreateBinary();
+    if (h->go && h->done) {
+        const uint32_t stack = LV_MAX(LV_DRAW_THREAD_STACK_SIZE, 12 * 1024);
+        if (xTaskCreatePinnedToCore(helper_main, core ? "lv_ortho1" : "lv_ortho0", stack, h, g_helper.prio,
+                                    &h->task, core) == pdPASS) {
+            return true;
+        }
+    }
+    if (h->go) {
+        vSemaphoreDelete(h->go);
+    }
+    if (h->done) {
+        vSemaphoreDelete(h->done);
+    }
+    h->go = h->done = NULL;
+    h->task = NULL;
+    h->failed = true;
+    LV_LOG_WARN("ortho: the task for core %d could not be started; tiles handed from the other core are "
+                "painted there", core);
+    return false;
 }
 #elif ORTHO_HELPER == 3
 static void * helper_main(void * arg)
@@ -955,25 +1018,13 @@ static bool helper_start_thread(void)
 #if ORTHO_HELPER == 1
     return true;
 #elif ORTHO_HELPER == 2
-    g_helper.go = xSemaphoreCreateBinary();
-    g_helper.done = xSemaphoreCreateBinary();
-    if (g_helper.go && g_helper.done) {
-        /* On the core LVGL is not on, at LVGL's priority: it is LVGL's work. */
-        const BaseType_t core = xPortGetCoreID() ^ 1;
-        const uint32_t stack = LV_MAX(LV_DRAW_THREAD_STACK_SIZE, 12 * 1024);
-        if (xTaskCreatePinnedToCore(helper_main, "lv_ortho2", stack, NULL, uxTaskPriorityGet(NULL),
-                                    &g_helper.task, core) == pdPASS) {
-            return true;
-        }
+    /* At LVGL's priority, since it is LVGL's work; the first on the core
+     * LVGL is not on now. */
+    g_helper.prio = uxTaskPriorityGet(NULL);
+    for (int k = 0; k < 2; k++) {
+        g_helper.on_core[k].failed = false;
     }
-    if (g_helper.go) {
-        vSemaphoreDelete(g_helper.go);
-    }
-    if (g_helper.done) {
-        vSemaphoreDelete(g_helper.done);
-    }
-    g_helper.go = g_helper.done = NULL;
-    return false;
+    return helper_on((int)xPortGetCoreID() ^ 1);
 #elif ORTHO_HELPER == 3
     pthread_mutex_init(&g_helper.m, NULL);
     pthread_cond_init(&g_helper.c, NULL);
@@ -993,11 +1044,17 @@ static void helper_stop_thread(void)
 {
 #if ORTHO_HELPER == 2
     g_helper.quit = true;   /* the semaphore orders it before the task reads it */
-    xSemaphoreGive(g_helper.go);
-    xSemaphoreTake(g_helper.done, portMAX_DELAY);
-    vSemaphoreDelete(g_helper.go);
-    vSemaphoreDelete(g_helper.done);
-    g_helper.go = g_helper.done = NULL;
+    for (int k = 0; k < 2; k++) {
+        helper_task_t * h = &g_helper.on_core[k];
+        if (h->task) {
+            xSemaphoreGive(h->go);
+            xSemaphoreTake(h->done, portMAX_DELAY);
+            vSemaphoreDelete(h->go);
+            vSemaphoreDelete(h->done);
+        }
+        h->go = h->done = NULL;
+        h->task = NULL;
+    }
 #elif ORTHO_HELPER == 3
     pthread_mutex_lock(&g_helper.m);
     g_helper.quit = true;
@@ -1017,19 +1074,32 @@ static void helper_stop_thread(void)
 #define SIM_MARK(n) __asm__ volatile("addi x0, x0, %0" :: "i"(n) : "memory")
 #endif
 
-static void helper_paint(tile_work_t * w)
+/* Hand `w` to the other core. False when there is no task there to take
+ * it: this core paints it then, after its own. */
+static bool helper_paint(tile_work_t * w)
 {
+#if ORTHO_HELPER == 2
+    /* Read where this task runs now. A task with no core of its own may move
+     * before the tile is joined: that costs the overlap, never the tile,
+     * since the join waits on the task the tile was given to. */
+    const int core = (int)xPortGetCoreID() ^ 1;
+    if (!helper_on(core)) {
+        return false;
+    }
+    g_helper.busy = core;
+#endif
     g_helper.work = w;
 #if ORTHO_HELPER == 1
     SIM_MARK(2042);
 #elif ORTHO_HELPER == 2
-    xSemaphoreGive(g_helper.go);
+    xSemaphoreGive(g_helper.on_core[g_helper.busy].go);
 #elif ORTHO_HELPER == 3
     pthread_mutex_lock(&g_helper.m);
     g_helper.state = 1;
     pthread_cond_broadcast(&g_helper.c);
     pthread_mutex_unlock(&g_helper.m);
 #endif
+    return true;
 }
 
 static void helper_join(void)
@@ -1040,7 +1110,7 @@ static void helper_join(void)
     SIM_MARK(2043);
     SIM_MARK(2041);
 #elif ORTHO_HELPER == 2
-    xSemaphoreTake(g_helper.done, portMAX_DELAY);
+    xSemaphoreTake(g_helper.on_core[g_helper.busy].done, portMAX_DELAY);
 #elif ORTHO_HELPER == 3
     pthread_mutex_lock(&g_helper.m);
     while (g_helper.state != 2) {
@@ -1066,20 +1136,22 @@ static void draw_pair(ortho_unit_t * u, const job_t * jobs, int32_t n, const ort
         u->pair ^= 1;
     }
     tile_work_t w[2];
-    bool ok[2];
+    bool ok[2], handed = false;
     wait_ticket(&u->ticket[base + 1]);
     ok[1] = prep_tile(jobs, n, o, &rect[1], u->tile[base + 1], u->tile_bytes, &w[1]);
     if (ok[1]) {
-        helper_paint(&w[1]);
+        handed = helper_paint(&w[1]);
     }
     wait_ticket(&u->ticket[base]);
     ok[0] = prep_tile(jobs, n, o, &rect[0], u->tile[base], u->tile_bytes, &w[0]);
     if (ok[0]) {
         paint_tile(&w[0]);
     }
-    if (ok[1]) {
+    if (handed) {
         helper_join();
         g_stats.tiles_other_core++;
+    } else if (ok[1]) {
+        paint_tile(&w[1]);
     }
     if (ok[0]) {
         finish_tile(o, &w[0], &u->ticket[base]);
@@ -2647,6 +2719,9 @@ const lv_draw_ortho_stats_t * lv_draw_ortho_get_stats(void)
     g_stats.tile_internal = g_tile_internal;
     g_stats.tiles_in_turn = g_unit && g_unit->tile[1] && g_turn ? (g_helper.on && g_unit->tile[3] ? 4 : 2) : 1;
     g_stats.cores = g_helper.on ? 2 : 1;
+#if ORTHO_HELPER == 2
+    g_stats.helper_cores = (g_helper.on_core[0].task ? 1 : 0) | (g_helper.on_core[1].task ? 2 : 0);
+#endif
     g_stats.turner_failed = g_turner_failed;
     return &g_stats;
 }
