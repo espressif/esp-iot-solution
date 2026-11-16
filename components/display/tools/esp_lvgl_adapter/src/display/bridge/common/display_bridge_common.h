@@ -204,7 +204,7 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
 /**
  * @brief Rotate and copy a region with stride support (IRAM optimized)
  *
- * @param src Source buffer
+ * @param src First pixel of the source region; buffers must not overlap
  * @param dst_fb Destination framebuffer
  * @param lv_x_start Start X in LVGL coordinates
  * @param lv_y_start Start Y in LVGL coordinates
@@ -217,6 +217,7 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
  * @param color_bytes Bytes per pixel
  * @param block_size_small Small block size for cache optimization
  * @param block_size_large Large block size for cache optimization
+ * @param swap_rgb565 Swap RGB565 bytes while copying; ignored for other formats
  */
 void display_rotate_copy_region(const void *src,
                                 void *dst_fb,
@@ -230,7 +231,8 @@ void display_rotate_copy_region(const void *src,
                                 esp_lv_adapter_rotation_t rotation,
                                 uint8_t color_bytes,
                                 int block_size_small,
-                                int block_size_large);
+                                int block_size_large,
+                                bool swap_rgb565);
 
 /**
  * @brief Rotate an entire image (IRAM optimized)
