@@ -2387,12 +2387,14 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
 {
     static size_t pending_urb_num = 0;
     static size_t zero_counter = 0;
+    static uint32_t rate_remainder_acc = 0;
     static urb_t *pending_urb[NUM_ISOC_SPK_URBS] = {NULL};
     esp_err_t ret = ESP_FAIL;
 
     if (reset) {
         pending_urb_num = 0;
         zero_counter = 0;
+        rate_remainder_acc = 0;
         for (size_t j = 0; j < NUM_ISOC_SPK_URBS; j++) {
             pending_urb[j] = NULL;
         }
@@ -2434,16 +2436,6 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
             }
         }
     }
-    /* check if we have buffered data need to send */
-    if (_ring_buffer_get_len(s_usb_dev.uac->ringbuf_hdl[UAC_SPK]) < s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet) {
-#if (!UAC_SPK_PACKET_COMPENSATION)
-        /* if speaker packet compensation not enable, just return here */
-        return;
-#endif
-    } else {
-        zero_counter = 0;
-    }
-
     /* fetch a pending urb from list */
     urb_t *next_urb = NULL;
     size_t next_index = 0;
@@ -2455,47 +2447,80 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
     }
     UVC_CHECK_RETURN_VOID(next_urb != NULL, "free urb not found");
 
-    size_t num_bytes_to_send = 0;
-    size_t buffer_size = s_usb_dev.uac->spk_max_xfer_size;
+    const _stream_ifc_t *spk_ifc = s_usb_dev.uac->as_ifc[UAC_SPK];
+    const uint32_t frame_bytes = s_usb_dev.uac->ch_num[UAC_SPK] * s_usb_dev.uac->bit_resolution[UAC_SPK] / 8;
+    const uint32_t rate = s_usb_dev.uac->samples_frequence[UAC_SPK];
+    const size_t available = _ring_buffer_get_len(s_usb_dev.uac->ringbuf_hdl[UAC_SPK]);
+    const size_t buffer_size = s_usb_dev.uac->spk_max_xfer_size;
     uint8_t *buffer = next_urb->transfer.data_buffer;
-    ret = _ring_buffer_pop(s_usb_dev.uac->ringbuf_hdl[UAC_SPK], buffer, buffer_size, &num_bytes_to_send, 0);
-    if (ret != ESP_OK || num_bytes_to_send == 0) {
-#if (!UAC_SPK_PACKET_COMPENSATION)
-        //should never happened
-        return;
-#else
-        if (pending_urb_num == NUM_ISOC_SPK_URBS) {
-            if (++zero_counter == (UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS / portTICK_PERIOD_MS)) {
-                /* if speaker packets compensation enable, we padding 0 to speaker */
-                num_bytes_to_send = s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet * (UAC_SPK_PACKET_COMPENSATION_SIZE_MS > UAC_SPK_ST_MAX_MS_DEFAULT ? UAC_SPK_ST_MAX_MS_DEFAULT : UAC_SPK_PACKET_COMPENSATION_SIZE_MS);
-                memset(buffer, 0, num_bytes_to_send);
-#if UAC_SPK_PACKET_COMPENSATION_CONTINUOUS
-                zero_counter = 0;
-#endif
-                ESP_LOGV(TAG, "SPK: padding 0 length = %d", num_bytes_to_send);
+    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&next_urb->transfer;
+
+    const bool rate_extra_fits = (rate / 1000 + 1) * frame_bytes <= spk_ifc->ep_mps;
+    uint32_t rate_remainder = rate_remainder_acc;
+    size_t num_bytes_send = 0;
+    size_t num_packets = 0;
+    while (num_packets < spk_ifc->packets_per_urb) {
+        uint32_t packet_frames = rate / 1000;
+        uint32_t next_remainder = rate_remainder;
+        if (rate_extra_fits) {
+            next_remainder += rate % 1000;
+            if (next_remainder >= 1000) {
+                next_remainder -= 1000;
+                ++packet_frames;
             }
         }
+        const size_t packet_bytes = packet_frames * frame_bytes;
+        if (packet_bytes == 0 || num_bytes_send + packet_bytes > buffer_size || num_bytes_send + packet_bytes > available) {
+            break;
+        }
+        next_urb->transfer.isoc_packet_desc[num_packets].num_bytes = packet_bytes;
+        num_bytes_send += packet_bytes;
+        rate_remainder = next_remainder;
+        ++num_packets;
+    }
+
+    if (num_packets > 0) {
+        zero_counter = 0;
+        /* The ring wraps, so a single receive may stop short of the requested bytes */
+        size_t popped = 0;
+        while (popped < num_bytes_send) {
+            size_t chunk = 0;
+            ret = _ring_buffer_pop(s_usb_dev.uac->ringbuf_hdl[UAC_SPK], buffer + popped, num_bytes_send - popped, &chunk, 0);
+            if (ret != ESP_OK || chunk == 0) {
+                break;
+            }
+            popped += chunk;
+        }
+        if (popped < num_bytes_send) {
+            // This task is the only reader and the length was checked above
+            ESP_LOGD(TAG, "SPK ring short read %u/%u", popped, num_bytes_send);
+            memset(buffer + popped, 0, num_bytes_send - popped);
+        }
+        rate_remainder_acc = rate_remainder;
+    } else {
+#if (!UAC_SPK_PACKET_COMPENSATION)
+        /* if speaker packet compensation not enable, just return here */
+        return;
+#else
+        if (pending_urb_num != NUM_ISOC_SPK_URBS || ++zero_counter != (UAC_SPK_PACKET_COMPENSATION_TIMEOUT_MS / portTICK_PERIOD_MS)) {
+            return;
+        }
+        /* if speaker packets compensation enable, we padding 0 to speaker */
+        num_packets = UAC_SPK_PACKET_COMPENSATION_SIZE_MS > UAC_SPK_ST_MAX_MS_DEFAULT ? UAC_SPK_ST_MAX_MS_DEFAULT : UAC_SPK_PACKET_COMPENSATION_SIZE_MS;
+        num_bytes_send = num_packets * spk_ifc->bytes_per_packet;
+        for (size_t j = 0; j < num_packets; j++) {
+            next_urb->transfer.isoc_packet_desc[j].num_bytes = spk_ifc->bytes_per_packet;
+        }
+        memset(buffer, 0, num_bytes_send);
+#if UAC_SPK_PACKET_COMPENSATION_CONTINUOUS
+        zero_counter = 0;
+#endif
+        ESP_LOGV(TAG, "SPK: padding 0 length = %d", num_bytes_send);
 #endif
     }
 
-    if (num_bytes_to_send == 0) {
-        return;
-    }
-
-    // may drop some data here?
-    //size_t num_bytes_send = num_bytes_to_send - num_bytes_to_send % s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet;
-    size_t num_bytes_send = num_bytes_to_send;
-    size_t last_packet_bytes = num_bytes_send % s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet;
     next_urb->transfer.num_bytes = num_bytes_send;
-    usb_transfer_dummy_t *transfer_dummy = (usb_transfer_dummy_t *)&next_urb->transfer;
-    transfer_dummy->num_isoc_packets = num_bytes_send / s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet + (last_packet_bytes ? 1 : 0);
-    for (size_t j = 0; j < transfer_dummy->num_isoc_packets; j++) {
-        //We need to initialize each individual isoc packet descriptor of the URB
-        next_urb->transfer.isoc_packet_desc[j].num_bytes = s_usb_dev.uac->as_ifc[UAC_SPK]->bytes_per_packet;
-    }
-    if (last_packet_bytes) {
-        next_urb->transfer.isoc_packet_desc[transfer_dummy->num_isoc_packets - 1].num_bytes = last_packet_bytes;
-    }
+    transfer_dummy->num_isoc_packets = num_packets;
 
     ret = hcd_urb_enqueue(pipe_hdl, next_urb);
     if (ret != ESP_OK) {
@@ -2506,7 +2531,7 @@ IRAM_ATTR static void _processing_spk_pipe(hcd_pipe_handle_t pipe_hdl, bool if_d
     pending_urb[next_index] = NULL;
     --pending_urb_num;
     assert(pending_urb_num <= NUM_ISOC_SPK_URBS); //should never happened
-    ESP_LOGV(TAG, "SPK ST %d/%d", num_bytes_send, num_bytes_to_send);
+    ESP_LOGV(TAG, "SPK ST %u bytes in %u packets", num_bytes_send, num_packets);
     ESP_LOGV(TAG, "spk payload = %02x %02x...%02x %02x\n", buffer[0], buffer[1], buffer[num_bytes_send - 2], buffer[num_bytes_send - 1]);
 }
 
