@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v1.3.6 - 2026.11.16
+
+### Bug Fixes:
+
+- Legacy advertising (NimBLE without `CONFIG_BLE_CONN_MGR_EXTENDED_ADV`): include the Flags AD structure in auto-built advertisement data and apply raw `adv_data_buf` without overwriting it via a prior `ble_gap_adv_set_fields()` call, so scanners (e.g. BlueZ) see General Discoverable | BR/EDR Not Supported.
+- Legacy auto-built advertising: derive Flags AD discoverability bits from `esp_ble_conn_adv_params_t.disc_mode`, rebuild auto payloads when advertising parameters change, shorten or relocate the local name to stay within 31-byte AD limits, and rebuild advertising/scan-response payloads before committing a runtime device-name change.
+
 ## v1.3.5 - 2026.11.07
 
 ### Enhancements:
