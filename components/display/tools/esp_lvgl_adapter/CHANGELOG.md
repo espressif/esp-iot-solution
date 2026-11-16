@@ -6,9 +6,11 @@
 
 ## v0.7.8 (2026-11-12)
 
-* Fix local LVGL detection and public touch dependencies.
-* Fix LVGL v9 panel framebuffer stride and dummy-draw buffer sizing.
-* Clarify partial-buffer SRAM usage and the MONO config macro.
+* Fix local LVGL detection and public touch dependencies. ([#829](https://github.com/espressif/esp-iot-solution/pull/829), [#632](https://github.com/espressif/esp-iot-solution/issues/632))
+* Fix LVGL v9 panel framebuffer stride and dummy-draw buffer sizing. ([#843](https://github.com/espressif/esp-iot-solution/pull/843))
+* Clarify partial-buffer SRAM usage and the MONO config macro. ([#838](https://github.com/espressif/esp-iot-solution/pull/838), [#768](https://github.com/espressif/esp-iot-solution/issues/768), [#647](https://github.com/espressif/esp-iot-solution/pull/647))
+
+Thanks to @Wooohaaa, @cheungxiongwei, @bkovacki, @yihua-wang and @andreaslundeen for the reports and suggestions.
 
 ## v0.7.7 (2026-11-10)
 
