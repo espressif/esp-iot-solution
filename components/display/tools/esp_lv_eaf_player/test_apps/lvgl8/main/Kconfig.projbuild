@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+
+# Optional LVGL registry dependencies use these symbols in manifest rules.
+# Keep them disabled in this codec-only test application unless another
+# component supplies and enables the corresponding integration.
+config LV_USE_LIBPNG
+    bool "Enable LVGL libpng integration"
+    default n
+
+config LV_USE_LIBJPEG_TURBO
+    bool "Enable LVGL libjpeg-turbo integration"
+    default n
+
+config LV_USE_LZ4
+    bool "Enable LVGL LZ4 integration"
+    default n

@@ -1,13 +1,36 @@
-version: "0.3.0"
-description: LVGL EAF (Emote Animation Format) decoder/player tailored for esp-iot-solution.
-url: https://github.com/espressif/esp-iot-solution
+version: "1.0.0"
+description: GUI-independent EAF/EAF4 animation codec and player with an optional LVGL adapter.
+license: "Apache-2.0"
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32s31
+  - esp32p4
+  - esp32c2
+  - esp32c3
+  - esp32c5
+  - esp32c6
+  - esp32c61
+  - esp32h4
+url: https://github.com/espressif/esp-iot-solution/tree/master/components/display/tools/esp_lv_eaf_player
 repository: https://github.com/espressif/esp-iot-solution.git
-documentation: https://github.com/espressif/esp-iot-solution/blob/master/components/display/tools/esp_lv_eaf_player/README.md
-issues: "https://github.com/espressif/esp-iot-solution/issues"
+repository_info:
+  path: components/display/tools/esp_lv_eaf_player
+issues: https://github.com/espressif/esp-iot-solution/issues
+documentation: https://docs.espressif.com/projects/esp-iot-solution/en/latest/display/lcd/gui_solution.html#esp-lvgl-eaf-player
 dependencies:
   idf: ">=5.5"
-  lvgl/lvgl:
-    version: ">=8,<10"
-  cmake_utilities: "0.*"
-  espressif/esp_new_jpeg:
-    version: 1.*
+  espressif/zlib: "1.3.2~1"
+  espressif/esp_new_jpeg: "1.*"
+examples:
+  - path: ../../../../examples/display/gui/lvgl_eaf_player
+files:
+  exclude:
+    - "**/build*/**/*"
+    - "test_apps/**/*"
+    - "src/port/host/**/*"
+    - "**/__pycache__/**/*"
+sbom:
+  supplier: 'Organization: Espressif Systems (Shanghai) CO LTD'
+  originator: 'Organization: Espressif Systems (Shanghai) CO LTD'

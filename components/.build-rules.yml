@@ -317,6 +317,11 @@ components/display/tools/esp_lvgl_adapter/test_apps:
     - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
     - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and IDF_VERSION_MAJOR == 6
 
+components/display/tools/esp_lv_eaf_player/test_apps:
+  enable:
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c3"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5
+    - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32s31", "esp32c3"] and IDF_VERSION_MAJOR == 6
+
 components/display/tools/esp_lvgl_adapter/benchmark:
   enable:
     - if: IDF_TARGET in ["esp32s3", "esp32p4", "esp32c2", "esp32c3", "esp32c5", "esp32c6"] and IDF_VERSION_MAJOR == 5 and IDF_VERSION_MINOR == 5

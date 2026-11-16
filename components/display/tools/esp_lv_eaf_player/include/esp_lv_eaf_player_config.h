@@ -1,12 +1,14 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #pragma once
 
+#ifdef ESP_PLATFORM
 #include "sdkconfig.h"
+#endif
 
 /* Allow project to override encoder/decoder toggles before including this header */
 
@@ -25,8 +27,4 @@
 #else
 #define ESP_LV_EAF_ENABLE_HW_JPEG 0
 #endif
-#endif
-
-#if ESP_LV_EAF_ENABLE_HW_JPEG && !ESP_LV_EAF_ENABLE_SW_JPEG
-#error "Hardware JPEG decoding requires ESP_LV_EAF_ENABLE_SW_JPEG"
 #endif

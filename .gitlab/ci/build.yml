@@ -1736,11 +1736,10 @@ build_components_display_tools_esp_lv_eaf_player_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_tools_esp_lv_eaf_player_test_apps
-  parallel:
-    matrix:
-      - IMAGE: espressif/idf:release-v5.5
+    - .build_idf_ge_than_v5_5_5_with_pre_release
   variables:
     EXAMPLE_DIR: components/display/tools/esp_lv_eaf_player/test_apps
+    EXAMPLE_PYTHON_DEPS: "-r components/display/tools/esp_lv_eaf_player/requirements.txt"
 
 build_components_display_tools_esp_lv_lottie_player_test_apps:
   extends:

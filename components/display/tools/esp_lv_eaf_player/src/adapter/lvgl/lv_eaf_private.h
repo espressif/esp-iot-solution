@@ -1,10 +1,11 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 /**
  * @file lv_eaf_private.h
+ * @brief Private state for the optional LVGL adapter
  *
  */
 
@@ -21,7 +22,11 @@ extern "C" {
 
 #include "lvgl.h"
 #include "lv_eaf.h"
-#include "esp_eaf_dec.h"
+#include "esp_eaf_player.h"
+
+#if LVGL_VERSION_MAJOR < 8 || LVGL_VERSION_MAJOR >= 10
+#error "EAF adapter requires LVGL 8 or 9"
+#endif
 
 #if LVGL_VERSION_MAJOR >= 9
 #include "src/widgets/image/lv_image_private.h"
@@ -38,17 +43,15 @@ typedef lv_img_dsc_t lv_eaf_image_dsc_t;
 
 struct _lv_eaf_t {
     lv_eaf_widget_t img;
-    esp_eaf_format_handle_t eaf_handle;    /*!< EAF parser handle */
-    esp_eaf_header_t eaf_header;           /*!< Current frame header */
-    uint8_t *frame_buffer;                 /*!< Buffer for decoded frame data */
-    uint32_t frame_buffer_size;            /*!< Size of frame buffer */
-    uint32_t color_buffer_size;            /*!< Size of RGB565 buffer */
-    bool use_alpha;                        /*!< Whether RGB565A8 format is used */
+    esp_eaf_player_t *player;              /*!< GUI-independent EAF decoder/player. */
+    int32_t color_key;                     /*!< 1-bit RGB565 color key (-1 if disabled) */
     uint8_t *file_data;                    /*!< Buffer for file data (when loaded from file) */
     int current_frame;                     /*!< Current frame index */
     int total_frames;                      /*!< Total number of frames */
     uint32_t frame_delay;                  /*!< Frame delay in milliseconds */
     bool loop_enabled;                     /*!< Whether looping is enabled */
+    bool frame_delay_explicit;             /*!< Preserve explicitly configured delay, including zero. */
+    int loops_remaining;                  /*!< Runtime repeat count, reset on restart/load. */
     int loop_count;                        /*!< Loop count (-1 for infinite) */
     lv_timer_t * timer;                    /*!< Timer for animation */
     lv_eaf_image_dsc_t imgdsc;             /*!< Image descriptor for LVGL */

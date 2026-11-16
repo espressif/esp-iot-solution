@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "scope": "Bundled CLI encoding and production decoder; not online service availability.",
+  "eaf4_limits": {
+    "max_width": 1024,
+    "max_height": 1024,
+    "dimension_alignment": 4,
+    "min_frames": 1,
+    "max_frames": 10000,
+    "min_period_ms": 10,
+    "max_period_ms": 10000,
+    "max_file_bytes": 33554432
+  },
+  "pixel_formats": {
+    "bgra8888": {
+      "bytes_per_pixel": 4,
+      "alpha": "straight A8"
+    },
+    "rgb565": {
+      "bytes_per_pixel": 2,
+      "alpha": "none"
+    },
+    "rgb565a8": {
+      "bytes_per_pixel": 3,
+      "alpha": "separate A8 plane"
+    }
+  },
+  "codecs": [
+    {
+      "id": 4,
+      "name": "lossless",
+      "container": "EAF4",
+      "formats": [
+        "bgra8888",
+        "rgb565",
+        "rgb565a8"
+      ],
+      "alpha": {
+        "en": "A8 with BGRA8888/RGB565A8",
+        "zh": "BGRA8888／RGB565A8 支持 A8"
+      },
+      "alignment": 4,
+      "dependencies": "NumPy + Pillow",
+      "validation": {
+        "en": "Exact encoded pixel format",
+        "zh": "编码像素格式逐字节一致"
+      },
+      "use_case": {
+        "zh": "精细 UI、阴影、半透明动画",
+        "en": "Exact UI, shadows, translucent animation"
+      }
+    },
+    {
+      "id": 5,
+      "name": "bounded",
+      "container": "EAF4",
+      "formats": [
+        "bgra8888",
+        "rgb565"
+      ],
+      "alpha": {
+        "zh": "BGRA8888 支持 A8（受误差上限约束）",
+        "en": "A8 with BGRA8888 (bounded error)"
+      },
+      "alignment": 4,
+      "dependencies": "NumPy + Pillow",
+      "validation": {
+        "en": "Reconstruction CRC + error bound",
+        "zh": "重建 CRC + 误差上限"
+      },
+      "use_case": {
+        "zh": "通道误差有上限的 UI／卡通动画",
+        "en": "UI/cartoon animation with bounded channel error"
+      }
+    },
+    {
+      "id": 6,
+      "name": "jpeg-delta",
+      "container": "EAF",
+      "formats": [
+        "rgb565"
+      ],
+      "alpha": {
+        "en": "No",
+        "zh": "不支持"
+      },
+      "alignment": 16,
+      "dependencies": "NumPy + Pillow",
+      "validation": {
+        "en": "Decodability + visual/error metrics",
+        "zh": "可解码性 + 画质／误差指标"
+      },
+      "use_case": {
+        "zh": "实景、渐变、不透明动效",
+        "en": "Photos, gradients, opaque animation"
+      }
+    }
+  ],
+  "compatibility_codecs": [
+    {
+      "id": 0,
+      "name": "RLE",
+      "container": "EAF / AAF",
+      "formats": [
+        "rgb565",
+        "bgra8888"
+      ],
+      "alpha": {
+        "zh": "调色板资源可带 A8",
+        "en": "A8 for palette assets"
+      },
+      "use_case": {
+        "zh": "既有资源、图标动画",
+        "en": "Existing assets and icon animation"
+      }
+    },
+    {
+      "id": 1,
+      "name": "HUFFMAN_RLE",
+      "container": "EAF / AAF",
+      "formats": [
+        "rgb565",
+        "bgra8888"
+      ],
+      "alpha": {
+        "zh": "调色板资源可带 A8",
+        "en": "A8 for palette assets"
+      },
+      "use_case": {
+        "zh": "既有资源、图标动画",
+        "en": "Existing assets and icon animation"
+      }
+    },
+    {
+      "id": 2,
+      "name": "JPEG",
+      "container": "EAF / AAF",
+      "formats": [
+        "rgb565"
+      ],
+      "alpha": {
+        "zh": "无",
+        "en": "No"
+      },
+      "use_case": {
+        "zh": "兼容既有 JPEG 资源",
+        "en": "Existing JPEG assets"
+      }
+    },
+    {
+      "id": 3,
+      "name": "HUFFMAN",
+      "container": "EAF / AAF",
+      "formats": [
+        "rgb565",
+        "bgra8888"
+      ],
+      "alpha": {
+        "zh": "调色板资源可带 A8",
+        "en": "A8 for palette assets"
+      },
+      "use_case": {
+        "zh": "既有资源、图标动画",
+        "en": "Existing assets and icon animation"
+      }
+    }
+  ]
+}

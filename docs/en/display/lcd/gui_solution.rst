@@ -64,21 +64,21 @@ Related Example:
 ESP LVGL EAF Player
 -------------------
 
-esp_lv_eaf_player is a lightweight and efficient EAF animation player designed specifically for LVGL v8/v9. It enables seamless integration of compressed animation sequences into LVGL projects. The EAF format supports multiple compression methods including RLE, Huffman coding, and JPEG compression, providing high-quality animations with minimal memory footprint.
+``esp_lv_eaf_player`` is an EAF/EAF4 animation codec and player with a GUI-independent core API (``esp_eaf_player.h``) and an optional LVGL v8/v9 widget adapter (``lv_eaf.h``). It supports legacy ``EAF/AAF`` (Palette RLE, Huffman, JPEG) as well as ``EAF4`` animations across ``BGRA8888``, ``RGB565``, and ``RGB565A8`` with Lossless (``HSUB`` / packed ``SUB`` / ``XOR``), error-bounded 4x4 ``Bounded`` (BTC), ``JPEG Delta``, and ``H.264`` modes.
 
 Features:
 
-- Multiple compression support: RLE, Huffman, JPEG
-- Optimized for embedded: Minimal memory footprint and efficient decoding
-- LVGL integration: Seamless integration with LVGL widget system
-- Animation control: Play, pause, restart, and loop control
+- Unified ``EAF/AAF`` and ``EAF4`` container decoding with dirty-rectangle tracking
+- Multiple codecs: Palette RLE/Huffman, JPEG, EAF Lossless, EAF Bounded, JPEG Delta, and optional H.264
+- GUI-independent player API plus seamless LVGL v8/v9 widget integration
+- Bundled Python CLI converter, batch packager, and inspector (``tools/eaf_cli.py``)
 
 Applicable Scenarios:
 
-- Users using LVGL v8/v9 who need to play high-quality animations
-- Efficient animation playback on resource-constrained platforms
+- LVGL v8/v9 or custom GUI applications requiring translucent or full-screen animations
+- High-compression UI/cartoon/weather effects on ESP32, ESP32-S3, ESP32-P4, and ESP32-S31
 
-EAF File Conversion: Use the online conversion tool to convert GIF or other animation formats to EAF format: https://esp32-gif.espressif.com/
+EAF File Conversion: Use the bundled ``tools/eaf_cli.py`` for EAF4/Lossless/Bounded/JPEG-Delta conversion and batch packaging, or the online converter for legacy EAF files: https://esp32-gif.espressif.com/
 
 Component Link: https://components.espressif.com/components/espressif/esp_lv_eaf_player
 
