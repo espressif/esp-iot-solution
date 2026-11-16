@@ -38,12 +38,12 @@ DRAM_ATTR static const epaper_init_cmd_t ssd1680_init_cmds[] = {
     {0x12, {0}, 0x80},
     /* Driver output control */
     {0x01, {0x27, 0x01, 0x01}, 3},
-    /* data entry mode */
-    {0x11, {0x01}, 1},
+    /* Data entry mode: X increment, Y increment. */
+    {0x11, {0x03}, 1},
     /* set Ram-X address start/end position */
     {0x44, {0x00, 0x0F}, 2},
-    /* set Ram-Y address start/end position */
-    {0x45, {0x27, 0x01, 0x00, 0x00}, 4},
+    /* Set RAM-Y address start/end position: 0..295. */
+    {0x45, {0x00, 0x00, 0x27, 0x01}, 4},
     /* BorderWavefrom */
     {0x3C, {0x05}, 1},
     /* Display update control */
@@ -53,8 +53,8 @@ DRAM_ATTR static const epaper_init_cmd_t ssd1680_init_cmds[] = {
     /* set RAM x address count to 0 */
     {0x4E, {0x00}, 1},
 
-    /* set RAM y address count to 0X199 */
-    {0x4F, {0x27, 0x01}, 2},
+    /* Set RAM-Y address counter to 0. */
+    {0x4F, {0x00, 0x00}, 2},
     {0, {0}, 0xff}
 };
 
