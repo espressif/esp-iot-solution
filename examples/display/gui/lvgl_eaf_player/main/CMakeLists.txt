@@ -18,7 +18,7 @@ file(DOWNLOAD ${EAF_URL} ${EAF_DOWNLOADED_FILE} SHOW_PROGRESS)
 
 if(EXISTS "${EAF_DOWNLOADED_FILE}")
     spiffs_create_partition_assets(eaf "${EAF_ASSETS_DIR}" FLASH_IN_PROJECT
-        MMAP_FILE_SUPPORT_FORMAT ".eaf"
+        MMAP_FILE_SUPPORT_FORMAT ".eaf, .eaf4"
         IMPORT_INC_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
     add_dependencies(${COMPONENT_LIB} assets_eaf_bin)
 endif()

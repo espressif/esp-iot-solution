@@ -1,0 +1,5 @@
+dependencies:
+  idf: ">=5.5"
+  esp_lv_eaf_player:
+    version: "*"
+    override_path: "../../../"
