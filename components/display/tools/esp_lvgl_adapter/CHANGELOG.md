@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v0.7.9 (2026-11-13)
+
+* Speed up RGB565 90°/270° software rotation and fuse async TE copy/rotation with byte swapping.
+
 ## v0.7.8 (2026-11-12)
 
 * Fix local LVGL detection and public touch dependencies.
