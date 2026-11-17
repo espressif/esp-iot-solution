@@ -184,6 +184,8 @@ void tud_msc_write10_complete_cb(uint8_t lun)
             ESP_LOGI(TAG, "STATE_WRITING_FINISHED");
             board_dfu_complete();
         }
+        else
+            board_event_cb(TINYUF2_UPDATE_PCT, _wr_state.numWritten * 100 / _wr_state.numBlocks);
     }
 }
 
@@ -207,8 +209,10 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 
     if (load_eject) {
         if (start) {
+            board_event_cb(TINYUF2_UPDATE_MOUNT, 1);
             // load disk storage
         } else {
+            board_event_cb(TINYUF2_UPDATE_MOUNT, 0);
             // unload disk storage
         }
     }
