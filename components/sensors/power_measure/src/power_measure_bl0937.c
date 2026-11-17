@@ -110,7 +110,7 @@ static esp_err_t bl0937_driver_get_energy(power_measure_driver_t *driver, float 
     ESP_RETURN_ON_FALSE(energy, ESP_ERR_INVALID_ARG, TAG, "Invalid energy pointer");
 
     power_measure_bl0937_t *bl0937_dev = __containerof(driver, power_measure_bl0937_t, base);
-    *energy = bl0937_get_energy(bl0937_dev->bl0937_handle) / 3600000;
+    *energy = bl0937_get_energy(bl0937_dev->bl0937_handle) * bl0937_dev->bl0937_config.kp / 3600000;
     return ESP_OK;
 }
 
@@ -204,6 +204,7 @@ esp_err_t power_measure_new_bl0937_device(const power_measure_config_t *config,
 
     // Copy configurations
     bl0937_dev->config = *config;
+    bl0937_dev->base.config = &bl0937_dev->config;
     bl0937_dev->bl0937_config = *bl0937_config;
 
     // Initialize function pointers

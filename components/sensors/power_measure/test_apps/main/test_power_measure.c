@@ -1,9 +1,10 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -572,6 +573,125 @@ TEST_CASE("BL0942 Initialization Test", "[power_measure][bl0942]")
 
     // Clean up
     cleanup_power_device();
+}
+
+/* Threshold Tests */
+typedef struct {
+    power_measure_driver_t base;
+    float value;
+    esp_err_t result;
+    unsigned event_count;
+    power_measure_event_t event;
+    float event_value;
+} threshold_test_driver_t;
+
+static esp_err_t threshold_test_read(power_measure_driver_t *driver, float *value)
+{
+    threshold_test_driver_t *test = (threshold_test_driver_t *)driver;
+    *value = test->value;
+    return test->result;
+}
+
+static void threshold_test_event(power_measure_handle_t handle, power_measure_event_t event, float value, void *user_data)
+{
+    threshold_test_driver_t *test = user_data;
+    TEST_ASSERT_EQUAL_PTR(test, handle);
+    test->event_count++;
+    test->event = event;
+    test->event_value = value;
+}
+
+TEST_CASE("Power measure threshold events", "[power_measure][threshold]")
+{
+    threshold_test_driver_t driver = {
+        .base = {.get_voltage = threshold_test_read, .get_current = threshold_test_read},
+    };
+    power_measure_config_t config;
+    config.overcurrent = 15;
+    config.overvoltage = 260;
+    config.undervoltage = 180;
+    config.enable_energy_detection = false;
+    driver.base.config = &config;
+    power_measure_handle_t handle = (power_measure_handle_t)&driver;
+    float value;
+    driver.value = 300.0f;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_current(handle, &value));
+    TEST_ASSERT_EQUAL(0, driver.event_count);
+    TEST_ASSERT_NULL(driver.base.event_cb);
+    TEST_ASSERT_NULL(driver.base.user_data);
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, power_measure_set_event_callback(NULL, threshold_test_event, &driver));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_set_event_callback(handle, threshold_test_event, NULL));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_set_event_callback(handle, threshold_test_event, &driver));
+    TEST_ASSERT_EQUAL_PTR(&driver, driver.base.user_data);
+    const struct {
+        float voltage;
+        unsigned count;
+        power_measure_event_t event;
+    } voltage_cases[] = {
+        {179.0f, 1, POWER_MEASURE_EVENT_UNDERVOLTAGE},
+        {180.0f, 0, POWER_MEASURE_EVENT_UNDERVOLTAGE},
+        {230.0f, 0, POWER_MEASURE_EVENT_OVERVOLTAGE},
+        {260.0f, 0, POWER_MEASURE_EVENT_OVERVOLTAGE},
+        {261.0f, 1, POWER_MEASURE_EVENT_OVERVOLTAGE},
+        {NAN, 0, POWER_MEASURE_EVENT_OVERVOLTAGE},
+        {INFINITY, 0, POWER_MEASURE_EVENT_OVERVOLTAGE},
+        {-INFINITY, 0, POWER_MEASURE_EVENT_UNDERVOLTAGE},
+    };
+    for (unsigned i = 0; i < sizeof(voltage_cases) / sizeof(voltage_cases[0]); i++) {
+        driver.value = voltage_cases[i].voltage;
+        driver.event_count = 0;
+        TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+        TEST_ASSERT_EQUAL(voltage_cases[i].count, driver.event_count);
+        if (driver.event_count) {
+            TEST_ASSERT_EQUAL(voltage_cases[i].event, driver.event);
+            TEST_ASSERT_EQUAL_FLOAT(driver.value, driver.event_value);
+            TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+            TEST_ASSERT_EQUAL(2, driver.event_count);
+        }
+    }
+    const float current_cases[] = {15.0f, 15.5f, -15.5f, -15.0f, NAN, INFINITY};
+    for (unsigned i = 0; i < sizeof(current_cases) / sizeof(current_cases[0]); i++) {
+        driver.value = current_cases[i];
+        driver.event_count = 0;
+        TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_current(handle, &value));
+        TEST_ASSERT_EQUAL(i == 1 || i == 2, driver.event_count);
+        if (driver.event_count) {
+            TEST_ASSERT_EQUAL(POWER_MEASURE_EVENT_OVERCURRENT, driver.event);
+            TEST_ASSERT_EQUAL_FLOAT(driver.value, driver.event_value);
+        }
+    }
+    driver.value = 300.0f;
+    driver.result = ESP_FAIL;
+    driver.event_count = 0;
+    TEST_ASSERT_EQUAL(ESP_FAIL, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_FAIL, power_measure_get_current(handle, &value));
+    TEST_ASSERT_EQUAL(0, driver.event_count);
+
+    driver.result = ESP_OK;
+    config.overcurrent = config.overvoltage = config.undervoltage = 0;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_current(handle, &value));
+    driver.value = 0.0f;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(0, driver.event_count);
+
+    config.overcurrent = 15;
+    config.overvoltage = 260;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_set_event_callback(handle, NULL, &driver));
+    TEST_ASSERT_NULL(driver.base.event_cb);
+    TEST_ASSERT_NULL(driver.base.user_data);
+    driver.value = 300.0f;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_current(handle, &value));
+    TEST_ASSERT_EQUAL(0, driver.event_count);
+
+    driver.base.config = NULL;
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_voltage(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_OK, power_measure_get_current(handle, &value));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, power_measure_get_voltage(NULL, &value));
+    TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, power_measure_get_current(handle, NULL));
+    TEST_ASSERT_EQUAL(0, driver.event_count);
 }
 
 static void check_leak(size_t before_free, size_t after_free, const char *type)

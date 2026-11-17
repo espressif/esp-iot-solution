@@ -1,13 +1,26 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include <stdlib.h>
+#include <math.h>
 #include "esp_check.h"
 #include "power_measure.h"
 #include "power_measure_interface.h"
+
+esp_err_t power_measure_set_event_callback(power_measure_handle_t handle,
+                                           void (*event_cb)(power_measure_handle_t, power_measure_event_t, float, void *),
+                                           void *user_data)
+{
+    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, "POWER_MEASURE", "Invalid handle");
+
+    power_measure_driver_t *driver = (power_measure_driver_t *)handle;
+    driver->event_cb = event_cb;
+    driver->user_data = event_cb ? user_data : NULL;
+    return ESP_OK;
+}
 
 esp_err_t power_measure_get_voltage(power_measure_handle_t handle, float* voltage)
 {
@@ -15,7 +28,21 @@ esp_err_t power_measure_get_voltage(power_measure_handle_t handle, float* voltag
 
     power_measure_driver_t *driver = (power_measure_driver_t *)handle;
     ESP_RETURN_ON_FALSE(driver->get_voltage, ESP_ERR_NOT_SUPPORTED, "POWER_MEASURE", "get_voltage not supported");
-    return driver->get_voltage(driver, voltage);
+    ESP_RETURN_ON_ERROR(driver->get_voltage(driver, voltage), "POWER_MEASURE", "Failed to read voltage");
+    if (driver->config && isfinite(*voltage)) {
+        if (driver->config->overvoltage && *voltage > driver->config->overvoltage) {
+            ESP_LOGW("POWER_MEASURE", "Overvoltage: %.2f V", (double)*voltage);
+            if (driver->event_cb) {
+                driver->event_cb(handle, POWER_MEASURE_EVENT_OVERVOLTAGE, *voltage, driver->user_data);
+            }
+        } else if (driver->config->undervoltage && *voltage < driver->config->undervoltage) {
+            ESP_LOGW("POWER_MEASURE", "Undervoltage: %.2f V", (double)*voltage);
+            if (driver->event_cb) {
+                driver->event_cb(handle, POWER_MEASURE_EVENT_UNDERVOLTAGE, *voltage, driver->user_data);
+            }
+        }
+    }
+    return ESP_OK;
 }
 
 esp_err_t power_measure_get_current(power_measure_handle_t handle, float* current)
@@ -24,7 +51,14 @@ esp_err_t power_measure_get_current(power_measure_handle_t handle, float* curren
 
     power_measure_driver_t *driver = (power_measure_driver_t *)handle;
     ESP_RETURN_ON_FALSE(driver->get_current, ESP_ERR_NOT_SUPPORTED, "POWER_MEASURE", "get_current not supported");
-    return driver->get_current(driver, current);
+    ESP_RETURN_ON_ERROR(driver->get_current(driver, current), "POWER_MEASURE", "Failed to read current");
+    if (driver->config && isfinite(*current) && driver->config->overcurrent && fabsf(*current) > driver->config->overcurrent) {
+        ESP_LOGW("POWER_MEASURE", "Overcurrent: %.2f A", (double)*current);
+        if (driver->event_cb) {
+            driver->event_cb(handle, POWER_MEASURE_EVENT_OVERCURRENT, *current, driver->user_data);
+        }
+    }
+    return ESP_OK;
 }
 
 esp_err_t power_measure_get_active_power(power_measure_handle_t handle, float* active_power)

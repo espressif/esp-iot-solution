@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2025 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2025-2026 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -21,17 +21,12 @@ extern "C" {
 /**
  * @brief Common power measure configuration
  */
-typedef struct {
-    uint16_t overcurrent;            /*!< Overcurrent threshold */
-    uint16_t overvoltage;            /*!< Overvoltage threshold */
-    uint16_t undervoltage;           /*!< Undervoltage threshold */
+typedef struct power_measure_config_s {
+    uint16_t overcurrent;            /*!< Absolute current threshold in A; 0 disables detection */
+    uint16_t overvoltage;            /*!< Voltage upper threshold in V; 0 disables detection */
+    uint16_t undervoltage;           /*!< Voltage lower threshold in V; 0 disables detection */
     bool enable_energy_detection;    /*!< Flag to enable energy detection */
 } power_measure_config_t;
-
-/**
- * @brief Power measure device handle
- */
-typedef struct power_measure_dev_t *power_measure_handle_t;
 
 // ============================================================================
 // Common API Functions
@@ -46,6 +41,22 @@ typedef struct power_measure_dev_t *power_measure_handle_t;
  *     - ESP_ERR_INVALID_ARG: Invalid handle
  */
 esp_err_t power_measure_delete(power_measure_handle_t handle);
+
+/**
+ * @brief Set the optional threshold event callback; NULL unregisters it
+ *
+ * The callback runs synchronously in the voltage/current reader's context.
+ * value is voltage (V) or signed current (A). Keep user_data valid until
+ * unregistered, and serialize registration, reads and deletion of this handle.
+ *
+ * @param handle Power measurement device handle
+ * @param event_cb Callback invoked on each successful read outside a threshold
+ * @param user_data User context passed to event_cb
+ * @return ESP_OK on success, ESP_ERR_INVALID_ARG for a NULL handle
+ */
+esp_err_t power_measure_set_event_callback(power_measure_handle_t handle,
+                                           void (*event_cb)(power_measure_handle_t, power_measure_event_t, float, void *),
+                                           void *user_data);
 
 // ============================================================================
 // Measurement API Functions
