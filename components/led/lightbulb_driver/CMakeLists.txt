@@ -6,8 +6,15 @@ set(srcs "src/hal_driver.c"
 set(priv_req nvs_flash esp_timer)
 set(public_req)
 
-if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.2.6")
-    list(APPEND priv_req "esp_driver_i2c")
+if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
+    if(CONFIG_LB_ENABLE_NEW_IIC_DRIVER AND
+       (("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}.${IDF_VERSION_PATCH}" VERSION_GREATER_EQUAL "5.3.4" AND
+         "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_LESS "5.4") OR
+        "${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}.${IDF_VERSION_PATCH}" VERSION_GREATER_EQUAL "5.4.1"))
+        list(APPEND priv_req "esp_driver_i2c")
+    else()
+        list(APPEND priv_req "driver")
+    endif()
 endif()
 
 if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.3")
