@@ -1,6 +1,10 @@
 # ChangeLog
 
-## v0.1.2 - 2026-05-15
+## v0.2.0 - 2026-05-15
+
+### Feature ###
+
+* Append an indicator string to truncated messages
 
 ### Bug fix ###
 
