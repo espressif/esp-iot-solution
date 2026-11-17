@@ -13,7 +13,7 @@ Implementation of the AXS15231B LCD & Touch controller with esp_lcd component.
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
 You can add them to your project via `idf.py add-dependency`, e.g.
 ```
-    idf.py add-dependency esp_lcd_axs15231b==2.1.2
+    idf.py add-dependency "espressif/esp_lcd_axs15231b==2.1.1~1"
 ```
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
