@@ -5,6 +5,8 @@
 ### Bugfix:
 
 * Fix SPD2010 I2C transactions with no command/control phase by using the `-1` panel-IO command sentinel.
+  Thanks to [@grischard](https://github.com/grischard) for the diagnosis, reproduction,
+  fix, and hardware validation provided in [PR #780](https://github.com/espressif/esp-iot-solution/pull/780).
 * Validate HDP packet lengths and avoid accessing a missing first touch point.
 * Keep coordinate transformation in the common `esp_lcd_touch` API instead of duplicating it in the raw driver callback.
 
