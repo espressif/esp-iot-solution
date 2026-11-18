@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include "esp_err.h"
 
 #ifdef __cplusplus
@@ -132,6 +133,17 @@ esp_mcp_property_t *esp_mcp_property_create_with_range(const char *name, int min
  * @return Pointer to the created property, or NULL on failure
  */
 esp_mcp_property_t *esp_mcp_property_create_with_int_and_range(const char *name, int default_value, int min_value, int max_value);
+
+/**
+ * @brief Limit string input length in bytes; also emits maxLength in its schema
+ *
+ * @param[in] property Pointer to a string property (must not be NULL)
+ * @param[in] max_length Maximum allowed string length in bytes
+ * @return
+ *      - ESP_OK: Constraint applied successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid property, non-string type, or existing default exceeds max_length
+ */
+esp_err_t esp_mcp_property_set_max_length(esp_mcp_property_t *property, size_t max_length);
 
 /**
  * @brief Destroy a MCP property

@@ -8,11 +8,15 @@
 #include <esp_log.h>
 #include <esp_websocket_client.h>
 #include <esp_crt_bundle.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 
 #include "esp_xiaozhi_keystore.h"
 #include "esp_xiaozhi_board.h"
 #include "esp_xiaozhi_websocket.h"
 #include "esp_xiaozhi_payload.h"
+#include "esp_xiaozhi_protocol_priv.h"
 
 typedef struct esp_xiaozhi_websocket_s {
     char url[ESP_XIAOZHI_WEBSOCKET_MAX_STRING_SIZE];
@@ -26,6 +30,7 @@ typedef struct esp_xiaozhi_websocket_s {
     esp_xiaozhi_transport_callbacks_t callbacks;
 
     esp_xiaozhi_payload_t payload;
+    size_t frame_received;
     uint8_t payload_opcode;  /* 1=TEXT, 2=BINARY; 0=idle */
 } esp_xiaozhi_websocket_t;
 
@@ -73,6 +78,91 @@ static void esp_xiaozhi_websocket_build_headers(esp_xiaozhi_websocket_t *websock
     }
 }
 
+static esp_err_t esp_xiaozhi_websocket_dispatch(esp_xiaozhi_websocket_t *websocket, unsigned opcode,
+                                                const uint8_t *data, size_t length)
+{
+    if (opcode == WS_OPCODE_TEXT) {
+        return websocket->callbacks.on_message_callback ? websocket->callbacks.on_message_callback(
+                   websocket->transport_handle, NULL, 0, (const char *)data, length) : ESP_OK;
+    }
+    const uint8_t *payload;
+    size_t payload_length;
+    uint32_t timestamp;
+    unsigned type;
+    esp_err_t ret = esp_xiaozhi_protocol_decode_frame(esp_xiaozhi_websocket_get_version(
+                                                          (esp_xiaozhi_websocket_handle_t)websocket), data, length, &payload, &payload_length, &timestamp, &type);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    if (type == 1 && websocket->callbacks.on_message_callback) {
+        return websocket->callbacks.on_message_callback(websocket->transport_handle, NULL, 0,
+                                                        (const char *)payload, payload_length);
+    }
+    if (type == 0 && websocket->callbacks.on_audio_callback) {
+        return websocket->callbacks.on_audio_callback(websocket->transport_handle, payload, payload_length, timestamp);
+    }
+    return type == 0 && websocket->callbacks.on_binary_callback ?
+           websocket->callbacks.on_binary_callback(websocket->transport_handle, payload, payload_length) : ESP_OK;
+}
+
+esp_err_t esp_xiaozhi_websocket_feed_frame(esp_xiaozhi_websocket_handle_t handle,
+                                           unsigned opcode, bool fin, const char *data,
+                                           int data_length, int frame_offset, int frame_length)
+{
+    if (!handle || (data_length > 0 && !data)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_websocket_t *websocket = (esp_xiaozhi_websocket_t *)handle;
+    if (opcode != WS_OPCODE_TEXT && opcode != WS_OPCODE_BINARY && opcode != WS_OPCODE_CONTINUATION) {
+        return ESP_OK;  /* Control frames never alter message assembly. */
+    }
+    if ((opcode == WS_OPCODE_TEXT || opcode == WS_OPCODE_BINARY) && fin &&
+            frame_offset == 0 && data_length == frame_length && data_length > 0 &&
+            websocket->payload_opcode == 0 && websocket->payload.buf == NULL) {
+        return esp_xiaozhi_websocket_dispatch(websocket, opcode, (const uint8_t *)data, (size_t)data_length);
+    }
+    esp_err_t ret = ESP_OK;
+    if (data_length < 0 || frame_length < 0 || frame_offset < 0 ||
+            frame_offset > frame_length ||
+            data_length > frame_length - frame_offset) {
+        ret = ESP_ERR_INVALID_SIZE;
+    } else {
+        if (frame_offset == 0) {
+            websocket->frame_received = 0;
+            if (opcode == WS_OPCODE_TEXT || opcode == WS_OPCODE_BINARY) {
+                if (websocket->payload_opcode) {
+                    ret = ESP_ERR_INVALID_STATE;
+                } else {
+                    websocket->payload_opcode = opcode;
+                }
+            } else if (!websocket->payload_opcode) {
+                ret = ESP_ERR_INVALID_STATE;
+            }
+        }
+        if ((size_t)frame_offset != websocket->frame_received) {
+            ret = ESP_ERR_INVALID_STATE;
+        }
+        if (ret == ESP_OK && data_length > 0) {
+            ret = esp_xiaozhi_payload_append(&websocket->payload, data, data_length,
+                                             websocket->payload.len, 0, ESP_XIAOZHI_PAYLOAD_MAX_DEFAULT);
+            websocket->frame_received += data_length;
+        }
+        if (ret == ESP_OK && fin && websocket->frame_received == (size_t)frame_length) {
+            ret = esp_xiaozhi_websocket_dispatch(websocket, websocket->payload_opcode,
+                                                 websocket->payload.buf, websocket->payload.len);
+            esp_xiaozhi_payload_clear(&websocket->payload);
+            websocket->payload_opcode = 0;
+            websocket->frame_received = 0;
+        }
+    }
+    if (ret != ESP_OK) {
+        esp_xiaozhi_payload_clear(&websocket->payload);
+        websocket->payload_opcode = 0;
+        websocket->frame_received = 0;
+    }
+    return ret;
+}
+
 static void esp_xiaozhi_websocket_event(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     (void)base;
@@ -93,6 +183,7 @@ static void esp_xiaozhi_websocket_event(void *handler_args, esp_event_base_t bas
         websocket->websocket_connected = false;
         esp_xiaozhi_payload_clear(&websocket->payload);
         websocket->payload_opcode = 0;
+        websocket->frame_received = 0;
         if (websocket->callbacks.on_disconnected_callback) {
             websocket->callbacks.on_disconnected_callback(websocket->transport_handle);
         }
@@ -103,6 +194,7 @@ static void esp_xiaozhi_websocket_event(void *handler_args, esp_event_base_t bas
         websocket->websocket_connected = false;
         esp_xiaozhi_payload_clear(&websocket->payload);
         websocket->payload_opcode = 0;
+        websocket->frame_received = 0;
         if (websocket->callbacks.on_disconnected_callback) {
             websocket->callbacks.on_disconnected_callback(websocket->transport_handle);
         }
@@ -113,75 +205,27 @@ static void esp_xiaozhi_websocket_event(void *handler_args, esp_event_base_t bas
         websocket->websocket_connected = false;
         esp_xiaozhi_payload_clear(&websocket->payload);
         websocket->payload_opcode = 0;
+        websocket->frame_received = 0;
         if (websocket->callbacks.on_disconnected_callback) {
             websocket->callbacks.on_disconnected_callback(websocket->transport_handle);
         }
         break;
 
     case WEBSOCKET_EVENT_DATA: {
-        /* Only handle WebSocket protocol-layer fragmentation here: reassemble frames (fin + payload_offset
-         * /payload_len) into one complete WS message, then pass to upper layer. Application/business-layer
-         * message completeness is the responsibility of the application layer. */
-        uint8_t op = (uint8_t)event->op_code;
-        bool fin = event->fin;
-        const char *data = event->data_ptr;
-        int data_len = event->data_len;
-        int payload_offset = event->payload_offset;
-        int payload_len = event->payload_len;
-
-        if (op != WS_OPCODE_TEXT && op != WS_OPCODE_BINARY && op != WS_OPCODE_CONTINUATION) {
-            ESP_LOGD(TAG, "Ignore websocket opcode=%d len=%d", op, data_len);
-            break;
-        }
-        if (!data || data_len <= 0) {
-            break;
-        }
-
-        /* Single-frame message: no append payload needed */
-        if ((op == WS_OPCODE_TEXT || op == WS_OPCODE_BINARY) && fin && websocket->payload.buf == NULL) {
-            if (op == WS_OPCODE_TEXT && websocket->callbacks.on_message_callback) {
-                websocket->callbacks.on_message_callback(websocket->transport_handle, NULL, 0, data, (size_t)data_len);
-            } else if (op == WS_OPCODE_BINARY && websocket->callbacks.on_binary_callback) {
-                websocket->callbacks.on_binary_callback(websocket->transport_handle, (const uint8_t *)data, (size_t)data_len);
-            }
-            break;
-        }
-
-        /* Multi-frame: append payload until fin */
-        if (op == WS_OPCODE_CONTINUATION && websocket->payload_opcode == 0) {
-            ESP_LOGW(TAG, "Unexpected continuation frame without prior TEXT/BINARY");
-            break;
-        }
-        if (op == WS_OPCODE_TEXT || op == WS_OPCODE_BINARY) {
-            websocket->payload_opcode = op;
-        }
-        esp_err_t err = esp_xiaozhi_payload_append(&websocket->payload, data, data_len, payload_offset, payload_len, ESP_XIAOZHI_PAYLOAD_MAX_DEFAULT);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "WebSocket payload append failed: %s, offset=%d total=%d chunk=%d opcode=%d",
-                     esp_err_to_name(err), payload_offset, payload_len, data_len, op);
-            esp_xiaozhi_payload_clear(&websocket->payload);
-            websocket->payload_opcode = 0;
-            if (websocket->callbacks.on_error_callback) {
-                websocket->callbacks.on_error_callback(websocket->transport_handle, err);
-            }
-            break;
-        }
-        if (fin) {
-            esp_xiaozhi_payload_t *r = &websocket->payload;
-            uint8_t o = websocket->payload_opcode;
-            if (o == WS_OPCODE_TEXT && websocket->callbacks.on_message_callback) {
-                websocket->callbacks.on_message_callback(websocket->transport_handle, NULL, 0, (const char *)r->buf, r->len);
-            } else if (o == WS_OPCODE_BINARY && websocket->callbacks.on_binary_callback) {
-                websocket->callbacks.on_binary_callback(websocket->transport_handle, r->buf, r->len);
-            }
-            esp_xiaozhi_payload_clear(&websocket->payload);
-            websocket->payload_opcode = 0;
+        esp_err_t ret = esp_xiaozhi_websocket_feed_frame((esp_xiaozhi_websocket_handle_t)websocket,
+                                                         event->op_code, event->fin, event->data_ptr,
+                                                         event->data_len, event->payload_offset, event->payload_len);
+        if (ret != ESP_OK && websocket->callbacks.on_error_callback) {
+            websocket->callbacks.on_error_callback(websocket->transport_handle, ret);
         }
         break;
     }
 
     case WEBSOCKET_EVENT_ERROR:
         ESP_LOGE(TAG, "WEBSOCKET_EVENT_ERROR");
+        if (websocket->callbacks.on_error_callback) {
+            websocket->callbacks.on_error_callback(websocket->transport_handle, ESP_FAIL);
+        }
         break;
 
     default:
@@ -207,12 +251,12 @@ esp_err_t esp_xiaozhi_websocket_deinit(esp_xiaozhi_websocket_handle_t handle)
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     esp_xiaozhi_websocket_t *websocket = (esp_xiaozhi_websocket_t *)handle;
-    esp_xiaozhi_payload_clear(&websocket->payload);
     if (websocket->websocket_client) {
-        esp_websocket_client_destroy(websocket->websocket_client);
+        ESP_RETURN_ON_ERROR(esp_websocket_client_destroy(websocket->websocket_client), TAG,
+                            "Failed to destroy WebSocket client");
         websocket->websocket_client = NULL;
     }
-
+    esp_xiaozhi_payload_clear(&websocket->payload);
     free(websocket);
     return ESP_OK;
 }
@@ -228,13 +272,21 @@ esp_err_t esp_xiaozhi_websocket_start(esp_xiaozhi_websocket_handle_t handle)
     ESP_RETURN_ON_FALSE(ret == ESP_OK, ret, TAG, "Failed to initialize keystore: %s", esp_err_to_name(ret));
 
     int protocol_version = 1;
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "url", "", websocket->url, sizeof(websocket->url));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "token", "", websocket->token, sizeof(websocket->token));
-    esp_xiaozhi_chat_keystore_get_int(&xiaozhi_chat_keystore, "version", 1, (int32_t *)&protocol_version);
-    esp_xiaozhi_chat_keystore_deinit(&xiaozhi_chat_keystore);
+    ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "url", "", websocket->url, sizeof(websocket->url));
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "token", "", websocket->token, sizeof(websocket->token));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_int(&xiaozhi_chat_keystore, "version", 1, (int32_t *)&protocol_version);
+    }
+    esp_err_t close_ret = esp_xiaozhi_chat_keystore_deinit(&xiaozhi_chat_keystore);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to read WebSocket configuration");
+    ESP_RETURN_ON_ERROR(close_ret, TAG, "Failed to close WebSocket configuration");
 
     ESP_RETURN_ON_FALSE(strlen(websocket->url) > 0, ESP_ERR_NOT_FOUND, TAG, "Websocket url is not specified");
 
+    ESP_RETURN_ON_FALSE(protocol_version >= 1 && protocol_version <= 3, ESP_ERR_NOT_SUPPORTED,
+                        TAG, "Unsupported WebSocket protocol version");
     snprintf(websocket->protocol_version, sizeof(websocket->protocol_version), "%d", protocol_version);
     esp_xiaozhi_websocket_build_headers(websocket);
 
@@ -283,6 +335,7 @@ esp_err_t esp_xiaozhi_websocket_stop(esp_xiaozhi_websocket_handle_t handle)
     websocket->websocket_connected = false;
     esp_xiaozhi_payload_clear(&websocket->payload);
     websocket->payload_opcode = 0;
+    websocket->frame_received = 0;
 
     return ESP_OK;
 }
@@ -297,7 +350,7 @@ esp_err_t esp_xiaozhi_websocket_send_text(esp_xiaozhi_websocket_handle_t handle,
     ESP_RETURN_ON_FALSE(websocket->websocket_connected, ESP_ERR_INVALID_STATE, TAG, "Websocket is not connected");
 
     int sent = esp_websocket_client_send_text(websocket->websocket_client, text, strlen(text), portMAX_DELAY);
-    if (sent < 0) {
+    if (sent != (int)strlen(text)) {
         websocket->websocket_connected = false;
         if (websocket->callbacks.on_disconnected_callback) {
             websocket->callbacks.on_disconnected_callback((esp_xiaozhi_transport_handle_t)websocket->transport_handle);
@@ -319,7 +372,7 @@ esp_err_t esp_xiaozhi_websocket_send_binary(esp_xiaozhi_websocket_handle_t handl
     ESP_RETURN_ON_FALSE(websocket->websocket_connected, ESP_ERR_INVALID_STATE, TAG, "Websocket is not connected");
 
     int sent = esp_websocket_client_send_bin(websocket->websocket_client, (const char *)data, data_len, portMAX_DELAY);
-    if (sent < 0) {
+    if (sent != (int)data_len) {
         websocket->websocket_connected = false;
         if (websocket->callbacks.on_disconnected_callback) {
             websocket->callbacks.on_disconnected_callback((esp_xiaozhi_transport_handle_t)websocket->transport_handle);
@@ -340,4 +393,40 @@ esp_err_t esp_xiaozhi_websocket_set_callbacks(esp_xiaozhi_websocket_handle_t han
     websocket->callbacks = *callbacks;
 
     return ESP_OK;
+}
+
+int esp_xiaozhi_websocket_get_version(esp_xiaozhi_websocket_handle_t handle)
+{
+    if (!handle) {
+        return 1;
+    }
+    esp_xiaozhi_websocket_t *websocket = (esp_xiaozhi_websocket_t *)handle;
+    return websocket->protocol_version[0] ? atoi(websocket->protocol_version) : 1;
+}
+
+esp_err_t esp_xiaozhi_websocket_send_audio(esp_xiaozhi_websocket_handle_t handle, const uint8_t *data,
+                                           size_t length, uint32_t timestamp)
+{
+    if (!handle || !data || !length || length > INT_MAX - 16) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    int version = esp_xiaozhi_websocket_get_version(handle);
+    if (version == 1) {
+        return esp_xiaozhi_websocket_send_binary(handle, data, length);
+    }
+    uint8_t stack_buf[512];
+    uint8_t *packet = (length + 16 <= sizeof(stack_buf)) ? stack_buf : malloc(length + 16);
+    if (!packet) {
+        return ESP_ERR_NO_MEM;
+    }
+    size_t written = 0;
+    esp_err_t ret = esp_xiaozhi_protocol_encode_audio(version, data, length, timestamp,
+                                                      packet, length + 16, &written);
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_websocket_send_binary(handle, packet, written);
+    }
+    if (packet != stack_buf) {
+        free(packet);
+    }
+    return ret;
 }

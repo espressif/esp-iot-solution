@@ -57,6 +57,11 @@ Device information
 
 .. include-build-file:: inc/esp_xiaozhi_info.inc
 
+Protocol capabilities and health
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_protocol.inc
+
 NVS operations
 ~~~~~~~~~~~~~~
 

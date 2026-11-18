@@ -46,12 +46,16 @@ typedef struct esp_mcp_tool_foreach_ctx_s {
     void *tools;                                        /*!< Pointer to the tools object (must not be NULL) */
     void *tools_array;                                  /*!< Pointer to the tools array (must not be NULL) */
     const char *cursor_str;                             /*!< Cursor string (must not be NULL) */
-    char *next_cursor;                                  /*!< Next cursor string (must not be NULL) */
-    size_t next_cursor_cap;                             /*!< Size of next_cursor buffer in bytes (including NUL) */
+    char *next_cursor;                                  /*!< Owned next cursor string, or NULL */
+    size_t next_cursor_cap;                             /*!< Generic MCP cursor buffer capacity */
     bool *found_cursor;                                 /*!< Pointer to the found cursor flag (must not be NULL) */
     bool should_break;                                  /*!< Whether to break the iteration (must not be NULL) */
     size_t page_limit;                                  /*!< Max tools in this page; 0 = unlimited */
     size_t emitted;                                     /*!< Tools appended this page (after cursor match) */
+    bool with_user_tools;
+    size_t max_size;
+    size_t envelope_size;
+    size_t current_size;
 } esp_mcp_tool_foreach_ctx_t;
 
 /**
@@ -85,7 +89,12 @@ esp_mcp_tool_t *esp_mcp_tool_create(const char *name, const char *description, e
  * @param[in] tool Pointer to the tool (must not be NULL)
  * @return Pointer to the JSON string (caller must free using free()), or NULL on failure
  */
+struct cJSON;
+
 char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool);
+
+/** @brief Build a tool definition cJSON object, omitting generic-only fields in Xiaozhi mode. */
+struct cJSON *esp_mcp_tool_to_cjson(const esp_mcp_tool_t *tool, bool xiaozhi_mode);
 
 /**
  * @brief Execute a tool
@@ -100,6 +109,9 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool);
  * @return Pointer to the result JSON string (caller must free using free()), or NULL on failure
  */
 char *esp_mcp_tool_call(const esp_mcp_tool_t *tool, const esp_mcp_property_list_t *properties);
+
+char *esp_mcp_tool_call_with_context(const esp_mcp_tool_t *tool, const esp_mcp_property_list_t *properties,
+                                     const esp_mcp_request_context_t *context);
 
 /**
  * @brief Destroy a tool
@@ -168,6 +180,10 @@ esp_mcp_tool_t *esp_mcp_tool_list_find_tool(const esp_mcp_tool_list_t *list, con
  *      - Other: Error code returned by callback
  */
 esp_err_t esp_mcp_tool_list_foreach(const esp_mcp_tool_list_t *list, esp_err_t (*callback)(esp_mcp_tool_t *tool, void *arg), void *arg);
+
+/** @brief Iterate in registration order for the Xiaozhi wire protocol. */
+esp_err_t esp_mcp_tool_list_foreach_registered(const esp_mcp_tool_list_t *list,
+                                               esp_err_t (*callback)(esp_mcp_tool_t *tool, void *arg), void *arg);
 
 /**
  * @brief Check if the tool list is empty

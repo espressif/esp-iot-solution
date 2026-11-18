@@ -13,11 +13,23 @@
 
 - **双向流式传输**：与 AI 代理进行实时语音和文本交互
 - **多种通信协议**：支持 WebSocket 和 MQTT+UDP 协议
-- **音频编解码支持**：OPUS、G.711 和 PCM 音频格式
+- **音频传输**：按协商格式传输编码音频；编解码器由应用提供
 - **MCP 集成**：设备端 MCP 用于设备控制（扬声器、LED、舵机、GPIO 等）
 - **多语言支持**：中文和英文
 - **离线唤醒词**：提供上报唤醒词的 API（如 `esp_xiaozhi_chat_send_wake_word`），与 ESP-SR 的集成由应用层实现
-- **设备信息**：自动获取设备信息和 OTA 更新支持
+- **设备信息**：获取 bootstrap 配置、固件元信息及发送激活请求；固件安装由应用实现
+
+## 协议同步与组件边界
+
+协议实现对齐 `xiaozhi-esp32` 的 `67ca62d`（固件 2.6.0），补齐 MQTT+UDP 认证探测、WebSocket v1/v2/v3 framing、统一 bootstrap/hello 能力声明和激活 v1/v2 请求。
+
+- 在 bootstrap 和 chat start 前调用 `esp_xiaozhi_protocol_set_capabilities()`。默认声明两版 MCP 和 UDP probe；没有内置引擎或外部 MCP 处理器时，应显式关闭 `mcp` / `mcp_20260728`。
+- 没有 MCP engine 也能启动协议。`CHAT_JSON` 回调提供完整入站 JSON（包括未知字段）；外部组件可用 `send_json()` / `send_mcp()` 发送协议消息。
+- `packet_callback` 保留音频 metadata，`get_audio_params()` 查询协商参数，`get_udp_health()` 查询认证探测状态。音频通道可用性不等待首个 PONG。
+- Board JSON 和激活签名通过 `esp_xiaozhi_chat_bootstrap_config_t` 回调提供；固件安装、编解码、摄像头采集、AEC、字形渲染及具体 MCP 工具由应用或其他组件实现。
+- 回调参数只在回调期间有效，异步使用前需要复制。生命周期调用需串行；不要在网络或 MCP 工具回调中同步 stop/deinit，应转交应用任务。stop 超时后保留句柄，等待正在执行的操作结束再重试。
+
+保留现有 chat 和 MCP 工具回调，新增能力通过兼容 API 提供。
 
 ## 架构
 

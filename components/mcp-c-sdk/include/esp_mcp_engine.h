@@ -161,6 +161,64 @@ esp_err_t esp_mcp_set_server_info(esp_mcp_t *mcp, const char *title, const char 
 esp_err_t esp_mcp_set_instructions(esp_mcp_t *mcp, const char *instructions);
 
 /**
+ * @brief Configure optional server extensions advertised by server/discover
+ *
+ * Copies a JSON object, or clears it when NULL. Configure before starting a
+ * transport. Advertise only extensions implemented by registered tools.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] extensions_json JSON object string for server extensions, or NULL to clear
+ * @return
+ *      - ESP_OK: Extensions updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer or non-object JSON string
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_set_extensions_json(esp_mcp_t *mcp, const char *extensions_json);
+
+/**
+ * @brief Enable the Xiaozhi device protocol on this engine instance
+ *
+ * Disabled by default. Enables the upstream 2024-11-05 / 2026-07-28
+ * discovery/tools dialect, including stateless legacy calls and per-request
+ * metadata. Generic MCP lifecycle, argument and pagination behavior is preserved
+ * when disabled. Configure before starting a transport; use a separate engine
+ * for a simultaneous generic MCP transport. esp_xiaozhi enables this while active.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] enabled True to enable Xiaozhi compatibility mode, false to disable
+ * @return
+ *      - ESP_OK: Mode updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer
+ */
+esp_err_t esp_mcp_set_xiaozhi_compatibility(esp_mcp_t *mcp, bool enabled);
+
+/**
+ * @brief Query whether this engine uses the Xiaozhi device protocol
+ *
+ * @param[in] mcp MCP instance
+ * @return
+ *      - true: Xiaozhi compatibility mode is enabled
+ *      - false: Invalid pointer or generic MCP mode is active
+ */
+bool esp_mcp_is_xiaozhi_compatibility_enabled(const esp_mcp_t *mcp);
+
+/**
+ * @brief Set the application/board identity for Xiaozhi serverInfo
+ *
+ * Copies nonempty strings before transport start. NULL restores the application
+ * descriptor default for that field. This does not change generic MCP replies.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] name Board/application name (non-empty string, or NULL to restore default)
+ * @param[in] version Firmware version string (non-empty string, or NULL to restore default)
+ * @return
+ *      - ESP_OK: Identity updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer or empty string argument
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_set_xiaozhi_server_identity(esp_mcp_t *mcp, const char *name, const char *version);
+
+/**
  * @brief Emit notifications/message to a client session
  *
  * @param[in] mcp MCP instance

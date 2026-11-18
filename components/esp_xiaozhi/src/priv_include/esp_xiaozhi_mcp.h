@@ -17,56 +17,43 @@ extern "C" {
 
 /**
  * @brief  MCP transport configuration structure
- *         When both MQTT and WebSocket are supported, use_mqtt true means prefer MQTT.
- *         One callbacks struct is used for both transports; on_binary_callback is only used by WebSocket.
  */
 typedef struct {
     void *ctx;                                  /*!< Context for callbacks */
-    char *session_id;                           /*!< Session ID for wrapping responses */
-    size_t session_id_len;                      /*!< Session ID length */
-    bool use_mqtt;                              /*!< Use MQTT for this session; when false use WebSocket. When both supported, prefer MQTT if true */
-    esp_xiaozhi_transport_callbacks_t callbacks; /*!< Transport callbacks (shared by MQTT and WebSocket) */
+    esp_xiaozhi_transport_handle_t transport_handle; /*!< Borrowed transport owned by chat */
+    esp_err_t (*send_message)(void *ctx, const char *routing_session, const char *reply_session, const char *payload);
+    esp_err_t (*prepare_request)(void *ctx, const char *routing_session, const char *payload);
 } esp_xiaozhi_mcp_config_t;
 
 /**
- * @brief  MCP MQTT transport function table
+ * @brief  MCP transport function table
  */
 extern const esp_mcp_transport_t esp_mcp_transport_xiaozhi;
 
 /**
- * @brief  Handle incoming MQTT message for MCP
+ * @brief  Enqueue an incoming Xiaozhi MCP message for worker processing
  *
- *         This function should be called when a MCP message is received via MQTT.
- *         It processes the MCP message and sends the response back via MQTT.
- *
- * @param[in] mgr_handle   MCP manager handle
- * @param[in] ep_name     Endpoint name
- * @param[in] payload     MCP message payload (JSON string)
- * @param[in] payload_len Payload length
- * @param[in] session_id  Session ID for wrapping response (can be NULL)
+ * @param[in] mgr_handle           MCP manager handle
+ * @param[in] ep_name              Endpoint name
+ * @param[in] payload              MCP message payload (JSON string)
+ * @param[in] payload_len          Payload length
+ * @param[in] session_id           Audio session ID for wrapping response (can be NULL)
+ * @param[in] routing_session      Connection routing identifier
+ * @param[in] dialogue_generation  Dialogue generation counter for request ID cache isolation
  *
  * @return
- *       - ESP_OK   On success
+ *       - ESP_OK                On success
  *       - ESP_ERR_INVALID_ARG   Invalid arguments
- *       - ESP_FAIL              Failed to process message
+ *       - ESP_ERR_INVALID_STATE Transport stopped
+ *       - ESP_ERR_NO_MEM        Queue full or allocation failed
  */
 esp_err_t esp_xiaozhi_mcp_handle_message(esp_mcp_mgr_handle_t mgr_handle,
                                          const char *ep_name,
                                          const char *payload,
                                          size_t payload_len,
-                                         const char *session_id);
-
-/**
- * @brief  Get MQTT handle from MCP MQTT transport
- *
- * @param[in]  mgr_handle        MCP manager handle
- * @param[out] transport_handle  Pointer to store transport handle
- *
- * @return
- *       - ESP_OK   On success
- *       - ESP_ERR_INVALID_STATE   MCP transport not initialized
- */
-esp_err_t esp_xiaozhi_mcp_get_handle(esp_mcp_mgr_handle_t mgr_handle, esp_xiaozhi_transport_handle_t *transport_handle);
+                                         const char *session_id,
+                                         const char *routing_session,
+                                         uint32_t dialogue_generation);
 
 #ifdef __cplusplus
 }

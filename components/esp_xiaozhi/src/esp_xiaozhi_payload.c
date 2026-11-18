@@ -23,7 +23,7 @@ void esp_xiaozhi_payload_clear(esp_xiaozhi_payload_t *r)
 
 esp_err_t esp_xiaozhi_payload_append(esp_xiaozhi_payload_t *r, const void *data, int data_len, int chunk_offset, int total_len, size_t max_payload)
 {
-    if (!data || data_len <= 0 || chunk_offset < 0) {
+    if (!r || !data || data_len <= 0 || chunk_offset < 0 || (size_t)chunk_offset != r->len) {
         return ESP_ERR_INVALID_ARG;
     }
     if (chunk_offset > (int)max_payload || data_len > (int)max_payload) {

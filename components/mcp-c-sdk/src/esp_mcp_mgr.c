@@ -127,7 +127,12 @@ static esp_err_t esp_mcp_mgr_message_handler(const uint8_t *inbuf, uint16_t inle
     esp_mcp_t *engine = (esp_mcp_t *)mcp_ctx->config.instance;
     ESP_RETURN_ON_FALSE(engine, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP engine");
 
-    ESP_LOGI(TAG, "Received message: %s", (char *)inbuf);
+    if (esp_mcp_is_xiaozhi_compatibility_enabled(engine)) {
+        /* Xiaozhi metadata can contain bearer credentials. */
+        ESP_LOGD(TAG, "Received MCP message: %u bytes", (unsigned)inlen);
+    } else {
+        ESP_LOGI(TAG, "Received message: %s", (char *)inbuf);
+    }
     return esp_mcp_handle_message(engine, inbuf, inlen, outbuf, outlen);
 }
 
