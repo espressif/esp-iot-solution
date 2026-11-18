@@ -13,11 +13,23 @@ This component is ideal for use cases such as voice assistants and intelligent v
 
 - **Bidirectional Streaming**: Real-time voice and text interaction with AI agents
 - **Multiple Communication Protocols**: Supports WebSocket and MQTT+UDP; both can coexist. When the server provides both (from `esp_xiaozhi_chat_get_info`), MQTT is preferred
-- **Audio Codec Support**: OPUS, G.711, and PCM audio formats
+- **Audio Transport**: Carries encoded audio with negotiated format parameters; codecs are supplied by the application
 - **MCP Integration**: Device-side MCP for device control (speaker, LED, servo, GPIO, etc.)
 - **Multi-language Support**: Chinese and English
 - **Offline Wake Word**: API to report wake word (e.g. `esp_xiaozhi_chat_send_wake_word`); integration with ESP-SR is application-level
-- **Device Information**: Automatic device information retrieval and OTA update support
+- **Device Information**: Bootstrap configuration, firmware metadata, and activation requests; firmware installation is application-owned
+
+## Protocol sync and application boundaries
+
+The protocol implementation is aligned to `xiaozhi-esp32` commit `67ca62d` (firmware 2.6.0), including authenticated MQTT+UDP probes, WebSocket v1/v2/v3 framing, shared bootstrap/hello capabilities, and activation v1/v2 requests.
+
+- Configure `esp_xiaozhi_protocol_set_capabilities()` before bootstrap and chat start. Defaults advertise both MCP revisions and UDP probes. Set `mcp` and `mcp_20260728` to false if neither the built-in engine nor an external MCP handler is available.
+- A chat can start without an MCP engine. `CHAT_JSON` delivers complete inbound JSON, including unknown fields, for external handlers; `send_json()` and `send_mcp()` send application protocol messages.
+- Use `packet_callback` for audio metadata, `get_audio_params()` for negotiated parameters, and `get_udp_health()` for authenticated probe status. Audio readiness does not wait for the first PONG.
+- Board JSON and activation signing are application callbacks in `esp_xiaozhi_chat_bootstrap_config_t`. Firmware installation, codecs, camera capture, AEC, glyph rendering, and concrete MCP tools remain application or separate-component responsibilities.
+- Callbacks borrow their data. Copy it before returning if it will be used asynchronously. Serialize lifecycle calls and defer stop/deinit from transport or MCP tool callbacks to an application task. If stop returns a timeout, retain the handle and retry after the operation completes.
+
+Existing chat and MCP tool callbacks remain supported; the new APIs are additive.
 
 ## Architecture
 

@@ -29,6 +29,7 @@ typedef struct {
     esp_err_t (*on_connected_callback)(esp_xiaozhi_transport_handle_t handle);
     esp_err_t (*on_disconnected_callback)(esp_xiaozhi_transport_handle_t handle);
     esp_err_t (*on_error_callback)(esp_xiaozhi_transport_handle_t handle, esp_err_t err);
+    esp_err_t (*on_audio_callback)(esp_xiaozhi_transport_handle_t handle, const uint8_t *data, size_t length, uint32_t timestamp);
 } esp_xiaozhi_transport_callbacks_t;
 
 /**
@@ -108,6 +109,9 @@ esp_err_t esp_xiaozhi_transport_send_text(esp_xiaozhi_transport_handle_t handle,
  *       - Other    Error from WebSocket send_binary
  */
 esp_err_t esp_xiaozhi_transport_send_binary(esp_xiaozhi_transport_handle_t handle, const uint8_t *data, size_t data_len);
+
+esp_err_t esp_xiaozhi_transport_send_audio(esp_xiaozhi_transport_handle_t handle, const uint8_t *data, size_t length, uint32_t timestamp);
+int esp_xiaozhi_transport_get_version(esp_xiaozhi_transport_handle_t handle);
 
 #ifdef __cplusplus
 }

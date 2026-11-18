@@ -30,6 +30,7 @@ typedef struct esp_xiaozhi_mqtt_s {
     esp_xiaozhi_payload_t payload;
     char payload_topic[ESP_XIAOZHI_MQTT_MAX_STRING_SIZE];
     int payload_topic_len;
+    int payload_total_len;
 } esp_xiaozhi_mqtt_t;
 
 static const char *TAG = "ESP_XIAOZHI_MQTT";
@@ -151,6 +152,8 @@ static void esp_xiaozhi_mqtt_event(void *handler_args, esp_event_base_t base, in
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGD(TAG, "MQTT_EVENT_DISCONNECTED");
         mqtt->mqtt_connected = false;
+        mqtt->payload_topic_len = 0;
+        mqtt->payload_total_len = 0;
         esp_xiaozhi_payload_clear(&mqtt->payload);
         if (mqtt->callbacks.on_disconnected_callback) {
             mqtt->callbacks.on_disconnected_callback(mqtt->transport_handle);
@@ -177,9 +180,19 @@ static void esp_xiaozhi_mqtt_event(void *handler_args, esp_event_base_t base, in
         if (!event->data || data_len <= 0) {
             break;
         }
+        if (offset == 0) {
+            esp_xiaozhi_payload_clear(&mqtt->payload);
+            mqtt->payload_topic_len = 0;
+            mqtt->payload_total_len = total_len;
+        }
+        if (offset < 0 || total_len < 0 || (size_t)total_len > ESP_XIAOZHI_PAYLOAD_MAX_DEFAULT ||
+                (offset > 0 && (!mqtt->payload.buf || total_len != mqtt->payload_total_len)) ||
+                (total_len > 0 && (offset > total_len || data_len > total_len - offset))) {
+            esp_xiaozhi_payload_clear(&mqtt->payload);
+            break;
+        }
         /* Single-chunk message: no append payload needed */
-        if (total_len <= 0 || (offset == 0 && data_len == total_len)) {
-            ESP_LOGD(TAG, "MQTT_EVENT_DATA, topic: %.*s, data: %.*s", (int)event->topic_len, event->topic, (int)data_len, event->data);
+        if ((total_len == 0 && offset == 0) || (offset == 0 && data_len == total_len)) {
             if (mqtt->callbacks.on_message_callback) {
                 mqtt->callbacks.on_message_callback(mqtt->transport_handle, event->topic, event->topic_len, event->data, (size_t)data_len);
             }
@@ -188,9 +201,10 @@ static void esp_xiaozhi_mqtt_event(void *handler_args, esp_event_base_t base, in
         /* Multi-chunk message: append payload until complete delivery to upper layer */
         if (offset == 0) {
             mqtt->payload_topic_len = event->topic_len;
-            if (mqtt->payload_topic_len >= (int)sizeof(mqtt->payload_topic)) {
-                ESP_LOGW(TAG, "MQTT payload topic truncated from %d to %d", mqtt->payload_topic_len, (int)sizeof(mqtt->payload_topic) - 1);
-                mqtt->payload_topic_len = (int)sizeof(mqtt->payload_topic) - 1;
+            if (mqtt->payload_topic_len < 0 || mqtt->payload_topic_len >= (int)sizeof(mqtt->payload_topic)) {
+                esp_xiaozhi_payload_clear(&mqtt->payload);
+                mqtt->payload_topic_len = 0;
+                break;
             }
             if (mqtt->payload_topic_len > 0 && event->topic) {
                 memcpy(mqtt->payload_topic, event->topic, (size_t)mqtt->payload_topic_len);
@@ -222,6 +236,9 @@ static void esp_xiaozhi_mqtt_event(void *handler_args, esp_event_base_t base, in
 
     case MQTT_EVENT_ERROR:
         ESP_LOGD(TAG, "MQTT_EVENT_ERROR");
+        if (mqtt->callbacks.on_error_callback) {
+            mqtt->callbacks.on_error_callback(mqtt->transport_handle, ESP_FAIL);
+        }
         break;
 
     default:
@@ -247,15 +264,12 @@ esp_err_t esp_xiaozhi_mqtt_deinit(esp_xiaozhi_mqtt_handle_t handle)
     ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     esp_xiaozhi_mqtt_t *mqtt = (esp_xiaozhi_mqtt_t *)handle;
-    esp_xiaozhi_payload_clear(&mqtt->payload);
     if (mqtt->mqtt_client) {
         esp_err_t ret = esp_mqtt_client_destroy(mqtt->mqtt_client);
-        if (ret != ESP_OK) {
-            ESP_LOGW(TAG, "Failed to destroy MQTT client: %s", esp_err_to_name(ret));
-        }
+        ESP_RETURN_ON_ERROR(ret, TAG, "Failed to destroy MQTT client");
         mqtt->mqtt_client = NULL;
     }
-
+    esp_xiaozhi_payload_clear(&mqtt->payload);
     free(mqtt);
 
     return ESP_OK;
@@ -282,14 +296,30 @@ esp_err_t esp_xiaozhi_mqtt_start(esp_xiaozhi_mqtt_handle_t handle)
     memset(password, 0, sizeof(password));
     memset(mqtt->publish_topic, 0, sizeof(mqtt->publish_topic));
     memset(mqtt->subscribe_topic, 0, sizeof(mqtt->subscribe_topic));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "endpoint", "", endpoint, sizeof(endpoint));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "client_id", "", client_id, sizeof(client_id));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "username", "", username, sizeof(username));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "password", "", password, sizeof(password));
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "publish_topic", "", mqtt->publish_topic, sizeof(mqtt->publish_topic) - 1);
-    esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "subscribe_topic", "", mqtt->subscribe_topic, sizeof(mqtt->subscribe_topic) - 1);
+    int32_t keepalive = 240;
+    ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "endpoint", "", endpoint, sizeof(endpoint));
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "client_id", "", client_id, sizeof(client_id));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "username", "", username, sizeof(username));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "password", "", password, sizeof(password));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "publish_topic", "", mqtt->publish_topic, sizeof(mqtt->publish_topic));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_string(&xiaozhi_chat_keystore, "subscribe_topic", "", mqtt->subscribe_topic, sizeof(mqtt->subscribe_topic));
+    }
+    if (ret == ESP_OK) {
+        ret = esp_xiaozhi_chat_keystore_get_int(&xiaozhi_chat_keystore, "keepalive", 240, &keepalive);
+    }
     esp_xiaozhi_chat_keystore_deinit(&xiaozhi_chat_keystore);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to read MQTT configuration");
     ESP_RETURN_ON_FALSE(strlen(endpoint) > 0, ESP_ERR_NOT_FOUND, TAG, "MQTT endpoint is not specified");
+    ESP_RETURN_ON_FALSE(keepalive > 0 && keepalive <= UINT16_MAX, ESP_ERR_INVALID_ARG, TAG, "Invalid MQTT keepalive");
 
     const char *host = NULL;
     uint32_t port = 0;
@@ -313,7 +343,7 @@ esp_err_t esp_xiaozhi_mqtt_start(esp_xiaozhi_mqtt_handle_t handle)
             },
         },
         .session = {
-            .keepalive = 90,
+            .keepalive = keepalive,
         },
     };
     if (transport == MQTT_TRANSPORT_OVER_SSL) {
@@ -370,9 +400,9 @@ esp_err_t esp_xiaozhi_mqtt_send_text(esp_xiaozhi_mqtt_handle_t handle, const cha
     esp_xiaozhi_mqtt_t *mqtt = (esp_xiaozhi_mqtt_t *)handle;
     ESP_RETURN_ON_FALSE(strlen(mqtt->publish_topic) > 0, ESP_ERR_INVALID_ARG, TAG, "Publish topic is not specified");
 
-    ESP_LOGD(TAG, "Sending text to topic %s: %s", mqtt->publish_topic, text);
-    int msg_id = esp_mqtt_client_publish(mqtt->mqtt_client, mqtt->publish_topic, text, 0, 0, 0);
-    ESP_RETURN_ON_FALSE(msg_id != -1, ESP_ERR_INVALID_ARG, TAG, "Failed to publish message: %s", text);
+    ESP_RETURN_ON_FALSE(mqtt->mqtt_client && mqtt->mqtt_connected, ESP_ERR_INVALID_STATE, TAG, "MQTT is not connected");
+    int msg_id = esp_mqtt_client_enqueue(mqtt->mqtt_client, mqtt->publish_topic, text, 0, 0, 0, true);
+    ESP_RETURN_ON_FALSE(msg_id >= 0, ESP_FAIL, TAG, "Failed to enqueue MQTT message");
 
     return ESP_OK;
 }

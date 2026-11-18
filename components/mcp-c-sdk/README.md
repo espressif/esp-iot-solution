@@ -45,6 +45,20 @@ A comprehensive C SDK implementing the **Model Context Protocol (MCP)** for ESP3
 | Tasks (exp.) | `tasks/list/get/result/cancel`, task status notifications | `esp_mcp_mgr_post_tasks_list/get/result/cancel` |
 | Generic JSON-RPC | `esp_mcp_mgr_req_handle` / manager dispatch | `esp_mcp_mgr_post_request_json`, `esp_mcp_mgr_post_notification_json`, `esp_mcp_mgr_post_ping` |
 
+## Xiaozhi request metadata compatibility
+
+Alongside the existing MCP `2025-11-25` session APIs, the engine supports the Xiaozhi `2026-07-28` **discovery and tools subset**. This is not a migration of the HTTP transports or every MCP method to that revision.
+
+This dialect is disabled by default. Call `esp_mcp_set_xiaozhi_compatibility(mcp, true)` before starting a dedicated Xiaozhi transport. `esp_xiaozhi` enables it while chat is active and restores the borrowed engine's previous mode on stop or failed start. Use separate engine instances for simultaneous generic and Xiaozhi transports. Generic argument conversion, pagination, resources, prompts and tasks retain their existing behavior.
+
+Use `esp_mcp_set_xiaozhi_server_identity()` to supply the external board name and firmware version for Xiaozhi serverInfo. Strings are copied; NULL restores the application descriptor default. Generic serverInfo is unaffected.
+
+`server/discover`, `tools/list`, and `tools/call` accept `params._meta` with `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` on every request. Xiaozhi supports `2026-07-28` and `2024-11-05`; both dialects accept tool calls before initialize and permit reused request IDs. Modern replies include `resultType: complete` and server metadata; discovery/list replies include a private 60-second TTL. Xiaozhi requests do not change generic initialize state or request ID caches.
+
+Use `esp_mcp_tool_create_with_context()` to consume borrowed request metadata, session and authenticated subject; copy fields needed after the callback. `esp_mcp_tool_set_required_capabilities_json()` declares client capability requirements, `esp_mcp_tool_set_request_validator()` validates extension values, and `esp_mcp_tool_set_user_only()` controls list visibility. These setters, and `esp_mcp_set_extensions_json()`, must be configured before serving requests. HTTP authentication is unchanged; metadata does not authenticate a peer.
+
+Xiaozhi modern tool errors use `result.isError`; legacy errors use JSON-RPC `-32603`. Legacy image content uses the upstream JSON string wrapper; modern images use direct fields. These conventions apply only to engines with Xiaozhi compatibility enabled. Existing tool callbacks remain supported.
+
 ## 🌟 Features
 
 - **🚀 Clean API**: Intuitive interface for tool registration and management

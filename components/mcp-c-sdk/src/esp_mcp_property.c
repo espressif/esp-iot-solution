@@ -208,6 +208,18 @@ esp_err_t esp_mcp_property_destroy(esp_mcp_property_t *property)
     return ESP_OK;
 }
 
+esp_err_t esp_mcp_property_set_max_length(esp_mcp_property_t *property, size_t max_length)
+{
+    ESP_RETURN_ON_FALSE(property && property->type == ESP_MCP_PROPERTY_TYPE_STRING,
+                        ESP_ERR_INVALID_ARG, TAG, "Expected a string property");
+    if (property->has_default_value && strlen(property->default_value.string_value) > max_length) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    property->has_max_length = true;
+    property->max_length = max_length;
+    return ESP_OK;
+}
+
 char *esp_mcp_property_to_json(const esp_mcp_property_t *property)
 {
     ESP_RETURN_ON_FALSE(property, NULL, TAG, "Invalid property");
@@ -244,6 +256,9 @@ char *esp_mcp_property_to_json(const esp_mcp_property_t *property)
 
     case ESP_MCP_PROPERTY_TYPE_STRING:
         cJSON_AddStringToObject(json, "type", "string");
+        if (property->has_max_length) {
+            cJSON_AddNumberToObject(json, "maxLength", property->max_length);
+        }
         if (property->has_default_value) {
             cJSON_AddStringToObject(json, "default", property->default_value.string_value);
         }

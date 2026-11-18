@@ -11,6 +11,7 @@
 #include "esp_err.h"
 #include "esp_event_base.h"
 #include "esp_mcp_engine.h"
+#include "esp_xiaozhi_protocol.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,7 @@ typedef enum {
     ESP_XIAOZHI_CHAT_EVENT_CHAT_EMOJI,               /*!< event_data = const char * (LLM emotion) */
     ESP_XIAOZHI_CHAT_EVENT_CHAT_TTS_STATE,           /*!< event_data = esp_xiaozhi_chat_tts_state_t * (protocol TTS state) */
     ESP_XIAOZHI_CHAT_EVENT_CHAT_SYSTEM_CMD,          /*!< event_data = const char * (e.g. "reboot"); app decides whether to execute */
+    ESP_XIAOZHI_CHAT_EVENT_CHAT_JSON,                /*!< event_data = esp_xiaozhi_chat_json_t *; complete message, including unknown fields */
 } esp_xiaozhi_chat_event_t;
 
 /**
@@ -166,6 +168,29 @@ typedef struct {
 typedef void (*esp_xiaozhi_chat_audio_callback_t)(const uint8_t *data, int len, void *ctx);
 
 /**
+ * @brief  Complete incoming JSON payload for ESP_XIAOZHI_CHAT_EVENT_CHAT_JSON
+ *
+ *         All pointers are borrowed for the duration of the event callback and
+ *         must be copied before asynchronous use.
+ */
+typedef struct {
+    const char *type;   /*!< Message "type" field */
+    const char *json;   /*!< Complete NUL-terminated incoming JSON string */
+    size_t length;      /*!< Length of the JSON string in bytes, excluding terminating NUL */
+} esp_xiaozhi_chat_json_t;
+
+/**
+ * @brief  Callback for receiving incoming audio packets with negotiated parameters and wire timestamp
+ *
+ *         The @p packet and its payload buffer are borrowed for the duration of this callback.
+ *         Callbacks run on the receive task; defer blocking work and destruction to an application task.
+ *
+ * @param[in] packet  Pointer to the received audio packet metadata and payload
+ * @param[in] ctx     User-defined context passed to the callback
+ */
+typedef void (*esp_xiaozhi_chat_packet_callback_t)(const esp_xiaozhi_chat_audio_t *packet, void *ctx);
+
+/**
  * @brief  Callback for receiving chat events
  *
  * @param event       Chat event type
@@ -187,6 +212,8 @@ typedef struct {
     bool owns_mcp_engine;            /*!< Whether chat takes ownership of mcp_engine and destroys it in deinit */
     bool has_mqtt_config;           /*!< True if server provides MQTT config (from get_info). When both MQTT and WebSocket supported, prefer MQTT */
     bool has_websocket_config;      /*!< True if server provides WebSocket config (from get_info) */
+    esp_xiaozhi_chat_packet_callback_t packet_callback; /*!< Optional metadata-preserving audio callback */
+    void *packet_callback_ctx;      /*!< Context pointer passed to the packet callback */
 } esp_xiaozhi_chat_config_t;
 
 /**
@@ -202,7 +229,123 @@ typedef struct {
     .owns_mcp_engine = false, \
     .has_mqtt_config = false, \
     .has_websocket_config = false, \
+    .packet_callback = NULL, \
+    .packet_callback_ctx = NULL, \
 }
+
+/**
+ * @brief  Send a complete protocol JSON object over the active control transport
+ *
+ *         Can be used to send MCP or application protocol messages even before a
+ *         dialogue hello handshake completes.
+ *
+ * @param[in] chat_hd  Handle to the chat instance
+ * @param[in] json     NUL-terminated JSON object string containing a string "type" field
+ *
+ * @return
+ *       - ESP_OK                 On success
+ *       - ESP_ERR_INVALID_ARG    Invalid handle, malformed JSON, missing "type", or oversized payload
+ *       - ESP_ERR_INVALID_STATE  Transport is not started or not connected
+ *       - Other                  Error from transport send
+ */
+esp_err_t esp_xiaozhi_chat_send_json(esp_xiaozhi_chat_handle_t chat_hd, const char *json);
+
+/**
+ * @brief  Wrap a JSON-RPC payload in a Xiaozhi MCP envelope and send it
+ *
+ * @param[in] chat_hd       Handle to the chat instance
+ * @param[in] payload_json  NUL-terminated JSON-RPC object string to wrap under "payload"
+ *
+ * @return
+ *       - ESP_OK                 On success
+ *       - ESP_ERR_INVALID_ARG    Invalid handle, malformed JSON object, or oversized payload
+ *       - ESP_ERR_INVALID_STATE  Transport is not started or not connected
+ *       - ESP_ERR_NO_MEM         Failed to allocate outgoing message buffer
+ *       - Other                  Error from transport send
+ */
+esp_err_t esp_xiaozhi_chat_send_mcp(esp_xiaozhi_chat_handle_t chat_hd, const char *payload_json);
+
+/**
+ * @brief  Send an audio packet while preserving its timestamp
+ *
+ * @param[in] chat_hd  Handle to the chat instance
+ * @param[in] packet   Audio packet containing payload, payload_size, and timestamp
+ *
+ * @return
+ *       - ESP_OK                 On success
+ *       - ESP_ERR_INVALID_ARG    Invalid handle, packet, payload, or payload_size
+ *       - ESP_ERR_INVALID_STATE  Audio channel is not ready
+ *       - Other                  Error from transport send
+ */
+esp_err_t esp_xiaozhi_chat_send_audio_packet(esp_xiaozhi_chat_handle_t chat_hd, const esp_xiaozhi_chat_audio_t *packet);
+
+/**
+ * @brief  Copy negotiated audio parameters from the chat session
+ *
+ *         Fills @p params with negotiated format, sample_rate, channels, and frame_duration
+ *         (payload is set to NULL). The @c format string pointer is borrowed from the chat
+ *         instance and remains valid until the next channel negotiation or deinit; copy it
+ *         for longer-lived use.
+ *
+ * @param[in]  chat_hd  Handle to the chat instance
+ * @param[out] params   Pointer to structure receiving the negotiated parameters
+ *
+ * @return
+ *       - ESP_OK               On success
+ *       - ESP_ERR_INVALID_ARG  Invalid handle or params pointer
+ */
+esp_err_t esp_xiaozhi_chat_get_audio_params(esp_xiaozhi_chat_handle_t chat_hd, esp_xiaozhi_chat_audio_t *params);
+
+/**
+ * @brief  Query audio channel readiness, including errors and the 120-second inbound timeout
+ *
+ * @param[in] handle  Handle to the chat instance
+ *
+ * @return
+ *       - true   Audio channel is open and healthy
+ *       - false  Invalid handle, channel closed, transport disconnected, error occurred, or timed out
+ */
+bool esp_xiaozhi_chat_is_audio_channel_opened(esp_xiaozhi_chat_handle_t handle);
+
+/**
+ * @brief  Get independent MQTT+UDP probe health status
+ *
+ * @param[in]  handle  Handle to the chat instance
+ * @param[out] info    Pointer to health info structure to populate
+ *
+ * @return
+ *       - ESP_OK                 On success
+ *       - ESP_ERR_INVALID_ARG    Invalid handle or info pointer
+ *       - ESP_ERR_NOT_SUPPORTED  Session uses WebSocket instead of MQTT+UDP
+ */
+esp_err_t esp_xiaozhi_chat_get_udp_health(esp_xiaozhi_chat_handle_t handle, esp_xiaozhi_udp_health_info_t *info);
+
+/**
+ * @brief  Resolve vision explain configuration for one MCP tool invocation
+ *
+ *         Modern 2026-07-28 requests read only the current request's
+ *         `me.xiaozhi/vision` extension. Legacy requests read the endpoint stored
+ *         from the last initialize capabilities. Never falls back from a modern
+ *         request to the legacy endpoint. Call from an MCP tool callback or
+ *         request validator; output strings are copied to caller-owned buffers.
+ *
+ * @param[in]  handle      Handle to the chat instance
+ * @param[in]  request     Optional request context for the current tool invocation (NULL selects legacy)
+ * @param[out] url         Output buffer for the vision explain URL (cleared on error)
+ * @param[in]  url_size    Size of @p url buffer in bytes, including terminating NUL
+ * @param[out] token       Optional output buffer for the bearer token (NULL skips copy)
+ * @param[in]  token_size  Size of @p token buffer in bytes, including terminating NUL (must be > 0 when @p token is non-NULL)
+ *
+ * @return
+ *       - ESP_OK                 On success
+ *       - ESP_ERR_INVALID_ARG    Invalid arguments or invalid vision URL/token format
+ *       - ESP_ERR_INVALID_SIZE   Output @p url or @p token buffer is too small
+ *       - ESP_ERR_INVALID_STATE  Legacy vision URL is not set
+ *       - ESP_ERR_NOT_SUPPORTED  CONFIG_XIAOZHI_VISION_ENABLE is disabled (legacy path)
+ */
+esp_err_t esp_xiaozhi_chat_get_request_vision(esp_xiaozhi_chat_handle_t handle,
+                                              const esp_mcp_request_context_t *request,
+                                              char *url, size_t url_size, char *token, size_t token_size);
 
 /** @cond **/
 ESP_EVENT_DECLARE_BASE(ESP_XIAOZHI_CHAT_EVENTS);

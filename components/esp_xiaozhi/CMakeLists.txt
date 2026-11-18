@@ -6,6 +6,8 @@ set(srcs
     "src/esp_xiaozhi_mqtt.c"
     "src/esp_xiaozhi_websocket.c"
     "src/esp_xiaozhi_transport.c"
+    "src/esp_xiaozhi_protocol.c"
+    "src/esp_xiaozhi_udp.c"
     "src/esp_xiaozhi_mcp.c"
     "src/esp_xiaozhi_chat.c"
     "src/esp_xiaozhi_vision.c"
@@ -17,5 +19,5 @@ idf_component_register(
     SRCS "${srcs}"
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "src/priv_include"
-    PRIV_REQUIRES  esp_common nvs_flash app_update spi_flash cjson mbedtls mqtt esp_http_client mcp-c-sdk esp_websocket_client
+    PRIV_REQUIRES  esp_common esp_timer nvs_flash app_update spi_flash cjson mbedtls mqtt esp_http_client mcp-c-sdk esp_websocket_client
 )

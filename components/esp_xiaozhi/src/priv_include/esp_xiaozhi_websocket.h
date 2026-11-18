@@ -100,6 +100,9 @@ esp_err_t esp_xiaozhi_websocket_send_text(esp_xiaozhi_websocket_handle_t handle,
  */
 esp_err_t esp_xiaozhi_websocket_send_binary(esp_xiaozhi_websocket_handle_t handle, const uint8_t *data, size_t data_len);
 
+esp_err_t esp_xiaozhi_websocket_send_audio(esp_xiaozhi_websocket_handle_t handle, const uint8_t *data, size_t length, uint32_t timestamp);
+int esp_xiaozhi_websocket_get_version(esp_xiaozhi_websocket_handle_t handle);
+
 /**
  * @brief  Set the callbacks for the websocket application
  *
@@ -116,3 +119,9 @@ esp_err_t esp_xiaozhi_websocket_set_callbacks(esp_xiaozhi_websocket_handle_t han
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+
+/* Feed one client-delivered chunk. Frame length/offset refer to the WebSocket frame,
+ * while message assembly spans continuation frames. Control frames are ignored. */
+esp_err_t esp_xiaozhi_websocket_feed_frame(esp_xiaozhi_websocket_handle_t handle,
+                                           unsigned opcode, bool fin, const char *data,
+                                           int data_length, int frame_offset, int frame_length);

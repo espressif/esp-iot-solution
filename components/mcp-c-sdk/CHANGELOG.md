@@ -1,5 +1,20 @@
 # ChangeLog
 
+## [v2.2.0]
+
+### Added
+
+- Xiaozhi 2026-07-28 request metadata for server/discover, tools/list and tools/call, independent of the legacy initialize lifecycle.
+- Tool request context callbacks and validators, required client capabilities, user-only list filtering, and string maxLength constraints.
+- Xiaozhi legacy JSON-RPC tool error compatibility within the explicit Xiaozhi mode.
+- Explicit per-engine Xiaozhi compatibility mode, disabled by default, with stateless legacy requests, upstream version advertisements, registration-order listing and legacy image wrapping.
+
+### Fixed
+
+- Xiaozhi argument defaults, modern strict integer validation, complete-response pagination budgets and long cursors are isolated from the generic SDK argument and pagination paths.
+- Exact safe-integer response IDs and bounded, strict JSON input parsing in Xiaozhi mode; generic response metadata, parsing and reinitialization behavior remain unchanged.
+
+
 ## [v2.1.0]
 
 ### Added

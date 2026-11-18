@@ -64,6 +64,8 @@ typedef struct esp_mcp_property_s {
     int min_value;                      /*!< Minimum value for numeric properties (valid only if has_range is true) */
     int max_value;                      /*!< Maximum value for numeric properties (valid only if has_range is true) */
     bool has_range;                     /*!< Whether value range constraints are set */
+    bool has_max_length;
+    size_t max_length;
 } esp_mcp_property_t;
 
 /**
@@ -103,6 +105,12 @@ typedef struct esp_mcp_tool_s {
     esp_mcp_property_list_t *properties;           /*!< List of input properties */
     esp_mcp_tool_callback_t callback;              /*!< Callback function executed when tool is called */
     void *callback_ex;                               /*!< Optional extended callback */
+    esp_mcp_tool_callback_with_context_t callback_with_context;
+    void *callback_ctx;
+    char *required_capabilities_json;
+    esp_mcp_tool_request_validator_t request_validator;
+    void *validator_ctx;
+    bool user_only;
 } esp_mcp_tool_t;
 
 /**
@@ -169,6 +177,12 @@ typedef struct {
     char  uri[128];
 } esp_mcp_resource_subscription_t;
 
+typedef struct {
+    bool used;
+    char session_id[32];
+    char request_id[64];
+} esp_mcp_recent_request_id_t;
+
 /**
  * @brief MCP structure (server-side MCP instance)
  *
@@ -196,6 +210,13 @@ typedef struct esp_mcp_s {
     char *server_icons_json;          /*!< Server icons JSON object string (nullable) */
     char *server_website_url;         /*!< Server website URL (nullable) */
     char *instructions;               /*!< Instructions for the client (nullable) */
+    char *extensions_json;
+    bool xiaozhi_compatibility;
+    char *xiaozhi_server_name;
+    char *xiaozhi_server_version;
+    bool request_modern;
+    char *request_full_meta_json;
+    char request_method[64];
     bool client_initialized;          /*!< True after a successful client-side initialize response */
     bool client_requires_initialized_notification; /*!< True when negotiated client lifecycle requires notifications/initialized */
     bool client_sent_initialized_notification; /*!< True after client-side notifications/initialized is sent */
@@ -232,13 +253,9 @@ typedef struct esp_mcp_s {
     // Session-scoped resource subscriptions
     size_t resource_subscriptions_count;
     esp_mcp_resource_subscription_t *resource_subscriptions;
-    // Recent request-id cache for session-level duplicate detection.
+    // Recent request-id cache for session-level duplicate detection (allocated on first use).
     size_t recent_request_id_cursor;
-    struct {
-        bool used;
-        char session_id[32];
-        char request_id[64];
-    } recent_request_ids[CONFIG_MCP_RECENT_REQUEST_IDS_MAX];
+    esp_mcp_recent_request_id_t *recent_request_ids;
 
     // Generic _meta storage for unknown fields
     char *request_meta_json;

@@ -7,6 +7,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "unity.h"
 #include "esp_log.h"
 #include "esp_check.h"
@@ -14,8 +19,14 @@
 #include "nvs_flash.h"
 #include "esp_system.h"
 #include "esp_heap_caps.h"
+#include "esp_netif.h"
 
 #include "esp_xiaozhi_chat.h"
+#include "esp_xiaozhi_udp.h"
+#include "esp_idf_version.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+#include "psa/crypto.h"
+#endif
 
 /* Allow at most this many bytes less free memory after the test (signed delta). */
 #define TEST_MEMORY_LEAK_THRESHOLD 150
@@ -103,6 +114,8 @@ void setUp(void)
 
 void tearDown(void)
 {
+    /* Self-deleted worker stacks are reclaimed by the idle task. */
+    vTaskDelay(pdMS_TO_TICKS(20));
     size_t after_free_8bit = esp_get_free_heap_size();
     size_t after_free_32bit = esp_get_free_internal_heap_size();
 
@@ -464,6 +477,7 @@ TEST_CASE("esp_xiaozhi_start_returns_not_found_when_websocket_config_missing", "
 
     ret = esp_xiaozhi_chat_start(chat_handle);
     TEST_ASSERT_EQUAL(ESP_ERR_NOT_FOUND, ret);
+    TEST_ASSERT_FALSE(esp_mcp_is_xiaozhi_compatibility_enabled(mcp));
 
     ret = esp_xiaozhi_chat_deinit(chat_handle);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
@@ -508,6 +522,7 @@ TEST_CASE("esp_xiaozhi_start_returns_not_found_when_mqtt_config_missing", "[esp_
     esp_mcp_t *mcp = NULL;
     esp_err_t ret = esp_mcp_create(&mcp);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
+    TEST_ASSERT_EQUAL(ESP_OK, esp_mcp_set_xiaozhi_compatibility(mcp, true));
 
     esp_xiaozhi_chat_config_t config = make_test_config();
     config.mcp_engine = mcp;
@@ -519,6 +534,7 @@ TEST_CASE("esp_xiaozhi_start_returns_not_found_when_mqtt_config_missing", "[esp_
 
     ret = esp_xiaozhi_chat_start(chat_handle);
     TEST_ASSERT_EQUAL(ESP_ERR_NOT_FOUND, ret);
+    TEST_ASSERT_TRUE(esp_mcp_is_xiaozhi_compatibility_enabled(mcp));
 
     ret = esp_xiaozhi_chat_deinit(chat_handle);
     TEST_ASSERT_EQUAL(ESP_OK, ret);
@@ -584,6 +600,44 @@ TEST_CASE("chat - vision query follows configuration and context is released", "
 
 void app_main(void)
 {
+    /* Initialize lwIP's process/task-wide socket resources before leak checks. */
+    ESP_ERROR_CHECK(esp_netif_init());
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
+    /* The first PSA key import allocates a process-wide store, retained by PSA. */
+    ESP_ERROR_CHECK(psa_crypto_init() == PSA_SUCCESS ? ESP_OK : ESP_FAIL);
+    const uint8_t key[16] = {0}, header[16] = {0};
+    uint8_t tag[16];
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_probe_mac(key, header, tag) ? ESP_OK : ESP_FAIL);
+#endif
+    int warmup_server = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    ESP_ERROR_CHECK(warmup_server >= 0 ? ESP_OK : ESP_FAIL);
+    struct sockaddr_in warmup_addr = {.sin_family = AF_INET, .sin_addr = {.s_addr = htonl(INADDR_LOOPBACK)}};
+    ESP_ERROR_CHECK(bind(warmup_server, (struct sockaddr *)&warmup_addr, sizeof(warmup_addr)) == 0 ? ESP_OK : ESP_FAIL);
+    socklen_t warmup_addr_size = sizeof(warmup_addr);
+    ESP_ERROR_CHECK(getsockname(warmup_server, (struct sockaddr *)&warmup_addr, &warmup_addr_size) == 0 ? ESP_OK : ESP_FAIL);
+    struct timeval timeout = {.tv_sec = 1};
+    ESP_ERROR_CHECK(setsockopt(warmup_server, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0 ? ESP_OK : ESP_FAIL);
+    esp_xiaozhi_udp_handle_t warmup_udp = NULL;
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_init(&warmup_udp, NULL, NULL, NULL));
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_configure(warmup_udp, "127.0.0.1", ntohs(warmup_addr.sin_port),
+                                              "000102030405060708090a0b0c0d0e0f",
+                                              "01000000010203040000000000000000", false));
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_open(warmup_udp));
+    uint8_t *dummy_audio = calloc(1, 1400);
+    ESP_ERROR_CHECK(dummy_audio ? ESP_OK : ESP_FAIL);
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_send(warmup_udp, dummy_audio, 1400, 0));
+    free(dummy_audio);
+    uint8_t *dummy_pkt = malloc(1416);
+    ESP_ERROR_CHECK(dummy_pkt ? ESP_OK : ESP_FAIL);
+    struct sockaddr_in peer = {0};
+    socklen_t peer_size = sizeof(peer);
+    int n = recvfrom(warmup_server, dummy_pkt, 1416, 0, (struct sockaddr *)&peer, &peer_size);
+    ESP_ERROR_CHECK(n > 0 ? ESP_OK : ESP_FAIL);
+    ESP_ERROR_CHECK(sendto(warmup_server, dummy_pkt, n, 0, (struct sockaddr *)&peer, peer_size) == n ? ESP_OK : ESP_FAIL);
+    free(dummy_pkt);
+    vTaskDelay(pdMS_TO_TICKS(20));
+    ESP_ERROR_CHECK(esp_xiaozhi_udp_deinit(warmup_udp));
+    close(warmup_server);
     //  NOTE: Unity test framework is used for testing
     //  Run tests with: idf.py -p <PORT> flash monitor
     ESP_LOGI(TAG, "Starting ESP Xiaozhi component tests");

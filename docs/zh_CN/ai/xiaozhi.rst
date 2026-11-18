@@ -57,6 +57,11 @@ API 参考
 
 .. include-build-file:: inc/esp_xiaozhi_info.inc
 
+协议能力与健康状态
+~~~~~~~~~~~~~~~~~~
+
+.. include-build-file:: inc/esp_xiaozhi_protocol.inc
+
 NVS 操作
 ~~~~~~~~
 

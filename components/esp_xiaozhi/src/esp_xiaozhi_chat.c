@@ -6,56 +6,28 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
-#include <sys/param.h>
 #include <ctype.h>
-
+#include <math.h>
 #include <esp_check.h>
 #include <esp_log.h>
+#include <esp_event.h>
+#include <esp_timer.h>
 #include <cJSON.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
 #include <freertos/task.h>
-#include <freertos/idf_additions.h>
-#include <esp_idf_version.h>
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-#include <psa/crypto.h>
-#else
-#include <mbedtls/aes.h>
-#endif
 #include <freertos/event_groups.h>
-#include <freertos/semphr.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <netdb.h>
-#include <errno.h>
-#include <esp_event.h>
-#include <esp_heap_caps.h>
-
 #include "esp_mcp_engine.h"
 #include "esp_mcp_mgr.h"
-
 #include "esp_xiaozhi_mcp.h"
 #include "esp_xiaozhi_vision.h"
 #include "esp_xiaozhi_transport.h"
 #include "esp_xiaozhi_chat.h"
+#include "esp_xiaozhi_udp.h"
+#include "esp_xiaozhi_protocol_priv.h"
 
 #define ESP_XIAOZHI_CHAT_MAX_STRING_SIZE 256
-#define ESP_XIAOZHI_CHAT_AES_NONCE_SIZE 16
-#define ESP_XIAOZHI_CHAT_AES_KEY_SIZE 16
-
-#define ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_MS   1000
-#define ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT 3
-#define ESP_XIAOZHI_CHAT_TASK_EXIT_WAIT_MS 2000
-#define ESP_XIAOZHI_CHAT_UDP_RECV_TIMEOUT_MS 200
-#define ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS 20
-#define ESP_XIAOZHI_CHAT_UDP_BACKPRESSURE_DELAY_MS 10
-#define ESP_XIAOZHI_CHAT_UDP_MIN_PORT 1
-#define ESP_XIAOZHI_CHAT_UDP_MAX_PORT 65535
-
-#define ESP_XIAOZHI_CHAT_TASK_NAME "chat_audio"
 #define ESP_XIAOZHI_CHAT_MIN_SAMPLE_RATE 8000
 #define ESP_XIAOZHI_CHAT_MAX_SAMPLE_RATE 48000
 #define ESP_XIAOZHI_CHAT_MIN_CHANNELS 1
@@ -63,39 +35,10 @@
 #define ESP_XIAOZHI_CHAT_MIN_FRAME_DURATION_MS 10
 #define ESP_XIAOZHI_CHAT_MAX_FRAME_DURATION_MS 120
 
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-typedef struct {
-    psa_key_id_t key_id;
-    bool key_imported;
-} esp_xiaozhi_chat_aes_ctr_context_t;
-#else
-typedef mbedtls_aes_context esp_xiaozhi_chat_aes_ctr_context_t;
-#endif
-
-/* Internal sync bits: server hello received, receive enabled, shutdown, task exited */
-#define ESP_XIAOZHI_CHAT_SERVER_HELLO          (1 << 0) /*!< Server hello received */
-#define ESP_XIAOZHI_CHAT_RECV_RECEIVE_ENABLED  (1 << 1) /*!< Receive enabled */
-#define ESP_XIAOZHI_CHAT_RECV_SHUTDOWN         (1 << 2) /*!< Shutdown */
-#define ESP_XIAOZHI_CHAT_RECV_TASK_EXITED      (1 << 3) /*!< Task exited */
-
-/**
- * @brief  UDP context for MQTT path (audio over UDP). NULL when using WebSocket.
- *        Audio input task uses static stack/TCB memory, is created on first open,
- *        kept alive across close, and exits during deinit.
- */
-typedef struct {
-    SemaphoreHandle_t channel_mutex;
-    EventGroupHandle_t audio_receive_events;   /*!< RECEIVE_ENABLED: may receive; SHUTDOWN: task must exit */
-    int udp_socket;
-    struct sockaddr_in udp_addr;
-    char udp_server[ESP_XIAOZHI_CHAT_MAX_STRING_SIZE];
-    int udp_port;
-    esp_xiaozhi_chat_aes_ctr_context_t aes_ctx;
-    uint8_t aes_nonce[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
-    uint32_t local_sequence;
-    uint32_t remote_sequence;
-    uint32_t last_incoming_time;
-} esp_xiaozhi_chat_udp_ctx_t;
+#define ESP_XIAOZHI_CHAT_SERVER_HELLO BIT0
+#define ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED BIT1
+#define ESP_XIAOZHI_CHAT_CANCELLED BIT2
+#define ESP_XIAOZHI_CHAT_HELLO_ERROR BIT3
 
 /**
  * @brief  Xiaozhi chat
@@ -103,24 +46,37 @@ typedef struct {
 typedef struct {
     bool use_mqtt;                                      /*!< Use MQTT for this session (prefer MQTT when both supported) */
     bool owns_mcp_engine;                               /*!< Whether this instance owns mcp_engine */
+    bool mcp_compatibility_applied;
+    bool previous_mcp_compatibility;
     bool error_occurred;                                /*!< Error occurred */
     bool chat_connected;                                /*!< Chat connected */
     bool audio_channel_opened;                          /*!< Audio channel opened */
-    esp_xiaozhi_chat_device_state_t device_state;       /*!< Device state */
-    esp_xiaozhi_chat_listening_mode_t listening_mode;   /*!< Listening mode */
-    esp_xiaozhi_transport_handle_t mcp_chat_handle;           /*!< Transport handle for MCP chat */
+    esp_xiaozhi_transport_handle_t transport_handle;           /*!< Transport handle for MCP chat */
     EventGroupHandle_t event_group_handle;              /*!< Event group for handling events */
 
     esp_mcp_t *mcp_engine;                              /*!< MCP engine instance for processing MCP protocol */
     esp_mcp_mgr_handle_t mcp_mgr_handle;                /*!< MCP manager handle */
 
-    esp_xiaozhi_chat_udp_ctx_t *udp;                    /*!< UDP context for MQTT path; NULL when WebSocket */
+    esp_xiaozhi_udp_handle_t udp;                    /*!< UDP context for MQTT path; NULL when WebSocket */
 
     char session_id[ESP_XIAOZHI_CHAT_MAX_STRING_SIZE];  /*!< Session ID */
 #if CONFIG_XIAOZHI_VISION_ENABLE
+    char vision_connection_id[32];
     esp_xiaozhi_vision_t vision;                        /*!< Vision explain endpoint for this chat */
 #endif
     int server_sample_rate;                             /*!< Server sample rate */
+    int server_channels;
+    char server_format[16];
+    bool hello_pending;
+    bool hello_probe_requested;
+    bool started;
+    bool websocket_stopped;
+    int64_t last_incoming_time;
+    uint32_t connection_generation;
+    uint32_t dialogue_generation;
+    char connection_id[32];
+    esp_xiaozhi_chat_packet_callback_t packet_callback;
+    void *packet_callback_ctx;
     int server_frame_duration;                          /*!< Server frame duration */
 
     esp_xiaozhi_chat_audio_type_t       audio_type;     /*!< Audio type */
@@ -144,118 +100,6 @@ static const char *TAG = "ESP_XIAOZHI_CHAT";
 
 static esp_xiaozhi_chat_t *s_xiaozhi_chat = NULL;
 static portMUX_TYPE s_xiaozhi_chat_lock = portMUX_INITIALIZER_UNLOCKED;
-#if CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_STATIC
-static StaticTask_t s_audio_input_task_tcb;
-static StackType_t s_audio_input_task_stack[CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE];
-#endif
-
-static void esp_xiaozhi_chat_audio_input(void *pvParameter);
-
-static void esp_xiaozhi_chat_aes_ctr_init(esp_xiaozhi_chat_aes_ctr_context_t *ctx)
-{
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-    ctx->key_id = 0;
-    ctx->key_imported = false;
-#else
-    mbedtls_aes_init(ctx);
-#endif
-}
-
-static int esp_xiaozhi_chat_aes_ctr_setkey(esp_xiaozhi_chat_aes_ctr_context_t *ctx,
-                                           const uint8_t *key,
-                                           size_t key_bits)
-{
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-    if (ctx->key_imported) {
-        psa_destroy_key(ctx->key_id);
-        ctx->key_id = 0;
-        ctx->key_imported = false;
-    }
-
-    psa_status_t status = psa_crypto_init();
-    if (status != PSA_SUCCESS) {
-        return (int)status;
-    }
-
-    psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
-    psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_ENCRYPT);
-    psa_set_key_algorithm(&attributes, PSA_ALG_CTR);
-    psa_set_key_type(&attributes, PSA_KEY_TYPE_AES);
-    psa_set_key_bits(&attributes, key_bits);
-
-    status = psa_import_key(&attributes, key, key_bits / 8, &ctx->key_id);
-    psa_reset_key_attributes(&attributes);
-    if (status != PSA_SUCCESS) {
-        ctx->key_id = 0;
-        return (int)status;
-    }
-
-    ctx->key_imported = true;
-    return 0;
-#else
-    return mbedtls_aes_setkey_enc(ctx, key, (unsigned int)key_bits);
-#endif
-}
-
-static int esp_xiaozhi_chat_aes_ctr_crypt(esp_xiaozhi_chat_aes_ctr_context_t *ctx,
-                                          size_t length,
-                                          uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE],
-                                          const uint8_t *input,
-                                          uint8_t *output)
-{
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-    if (!ctx->key_imported) {
-        return PSA_ERROR_BAD_STATE;
-    }
-
-    psa_cipher_operation_t operation = PSA_CIPHER_OPERATION_INIT;
-    psa_status_t status = psa_cipher_encrypt_setup(&operation, ctx->key_id, PSA_ALG_CTR);
-    if (status != PSA_SUCCESS) {
-        return (int)status;
-    }
-
-    status = psa_cipher_set_iv(&operation, nonce_counter, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
-    if (status != PSA_SUCCESS) {
-        psa_cipher_abort(&operation);
-        return (int)status;
-    }
-
-    size_t output_len = 0;
-    status = psa_cipher_update(&operation, input, length, output, length, &output_len);
-    if (status != PSA_SUCCESS) {
-        psa_cipher_abort(&operation);
-        return (int)status;
-    }
-
-    uint8_t finish_buf[16] = {0};
-    size_t finish_len = 0;
-    status = psa_cipher_finish(&operation, finish_buf, sizeof(finish_buf), &finish_len);
-    if (status != PSA_SUCCESS) {
-        psa_cipher_abort(&operation);
-        return (int)status;
-    }
-
-    return (output_len == length && finish_len == 0) ? 0 : PSA_ERROR_GENERIC_ERROR;
-#else
-    size_t nc_off = 0;
-    uint8_t stream_block[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE] = {0};
-    return mbedtls_aes_crypt_ctr(ctx, length, &nc_off, nonce_counter, stream_block, input, output);
-#endif
-}
-
-static void esp_xiaozhi_chat_aes_ctr_free(esp_xiaozhi_chat_aes_ctr_context_t *ctx)
-{
-#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(6, 0, 0)
-    if (ctx->key_imported) {
-        psa_destroy_key(ctx->key_id);
-        ctx->key_id = 0;
-        ctx->key_imported = false;
-    }
-#else
-    mbedtls_aes_free(ctx);
-#endif
-}
-
 static esp_xiaozhi_chat_t *esp_xiaozhi_chat_get_instance(void)
 {
     esp_xiaozhi_chat_t *xiaozhi_chat = NULL;
@@ -292,41 +136,10 @@ static void esp_xiaozhi_chat_unregister_instance(esp_xiaozhi_chat_t *xiaozhi_cha
     portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
 }
 
-static uint8_t char_to_hex(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    }
-    if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    }
-    if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    }
-    return 0;
-}
-
-static void esp_xiaozhi_chat_decode_hex_string(const char *hex_string, uint8_t *output, size_t output_size)
-{
-    if (!hex_string || !output) {
-        return;
-    }
-
-    size_t hex_len = strlen(hex_string);
-    size_t decode_len = hex_len / 2;
-    if (decode_len > output_size) {
-        decode_len = output_size;
-    }
-
-    for (size_t i = 0; i < decode_len; i++) {
-        output[i] = (char_to_hex(hex_string[i * 2]) << 4) | char_to_hex(hex_string[i * 2 + 1]);
-    }
-}
-
 static esp_xiaozhi_chat_t *esp_xiaozhi_chat_get_by_transport(esp_xiaozhi_transport_handle_t handle)
 {
     esp_xiaozhi_chat_t *xiaozhi_chat = esp_xiaozhi_chat_get_instance();
-    if (xiaozhi_chat && xiaozhi_chat->mcp_chat_handle == handle) {
+    if (xiaozhi_chat && xiaozhi_chat->transport_handle == handle) {
         return xiaozhi_chat;
     }
 
@@ -337,181 +150,101 @@ static bool esp_xiaozhi_chat_is_audio_ready(esp_xiaozhi_chat_t *xiaozhi_chat)
 {
     ESP_RETURN_ON_FALSE(xiaozhi_chat, false, TAG, "Invalid chat");
 
-    if (!xiaozhi_chat->audio_channel_opened || xiaozhi_chat->error_occurred) {
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    bool opened = xiaozhi_chat->audio_channel_opened;
+    bool error = xiaozhi_chat->error_occurred;
+    bool use_mqtt = xiaozhi_chat->use_mqtt;
+    bool connected = xiaozhi_chat->chat_connected;
+    int64_t last_incoming = xiaozhi_chat->last_incoming_time;
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+
+    if (!opened || error) {
         return false;
     }
-    if (!xiaozhi_chat->use_mqtt) {
-        return true;
+    if (!use_mqtt) {
+        return connected && esp_timer_get_time() - last_incoming <= 120000000;
     }
-    return xiaozhi_chat->udp != NULL && xiaozhi_chat->udp->udp_socket != -1;
+    return esp_xiaozhi_udp_is_open(xiaozhi_chat->udp);
 }
 
-static esp_err_t esp_xiaozhi_chat_set_listening_mode(esp_xiaozhi_chat_t *xiaozhi_chat, esp_xiaozhi_chat_listening_mode_t mode)
+static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *chat, cJSON *root)
 {
-    const char *const mode_str[] = {
-        "unknown",
-        "realtime",
-        "auto",
-        "manual",
-        "manual_stop",
-        "auto_stop"
-    };
-
-    if (xiaozhi_chat->listening_mode == mode) {
-        ESP_LOGD(TAG, "Listening mode is already %s", mode_str[mode]);
-        return ESP_OK;
+    if (!chat->hello_pending) {
+        return ESP_OK;  /* Late/unsolicited hello cannot mutate the current session. */
     }
-
-    xiaozhi_chat->listening_mode = mode;
-    ESP_LOGD(TAG, "Listening mode: %s", mode_str[mode]);
-
+    const cJSON *transport = cJSON_GetObjectItemCaseSensitive(root, "transport");
+    char session[sizeof(chat->session_id)];
+    const char *expected = chat->use_mqtt ? "udp" : "websocket";
+    esp_err_t ret = ESP_ERR_INVALID_RESPONSE;
+    if (!cJSON_IsString(transport) || strcmp(transport->valuestring, expected) ||
+            esp_xiaozhi_protocol_read_session_id(root, session, sizeof(session)) != ESP_OK) {
+        goto invalid;
+    }
+    const cJSON *params = cJSON_GetObjectItemCaseSensitive(root, "audio_params");
+    if (params && !cJSON_IsObject(params)) {
+        goto invalid;
+    }
+    const cJSON *rate = cJSON_GetObjectItemCaseSensitive(params, "sample_rate");
+    const cJSON *duration = cJSON_GetObjectItemCaseSensitive(params, "frame_duration");
+    const cJSON *channels = cJSON_GetObjectItemCaseSensitive(params, "channels");
+    const cJSON *format = cJSON_GetObjectItemCaseSensitive(params, "format");
+    if ((rate && (!cJSON_IsNumber(rate) || rate->valuedouble != rate->valueint || rate->valueint < 8000 || rate->valueint > 48000)) ||
+            (duration && (!cJSON_IsNumber(duration) || duration->valuedouble != duration->valueint || duration->valueint < 10 || duration->valueint > 120)) ||
+            (channels && (!cJSON_IsNumber(channels) || channels->valuedouble != channels->valueint || channels->valueint < 1 || channels->valueint > 2)) ||
+            (format && (!cJSON_IsString(format) || !format->valuestring[0] || strlen(format->valuestring) >= sizeof(chat->server_format)))) {
+        goto invalid;
+    }
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(root, "features");
+    const cJSON *probe = cJSON_GetObjectItemCaseSensitive(features, "udp_probe");
+    if ((features && !cJSON_IsObject(features)) || (probe && !cJSON_IsBool(probe))) {
+        goto invalid;
+    }
+    if (chat->use_mqtt) {
+        const cJSON *udp = cJSON_GetObjectItemCaseSensitive(root, "udp");
+        const cJSON *server = cJSON_GetObjectItemCaseSensitive(udp, "server");
+        const cJSON *port = cJSON_GetObjectItemCaseSensitive(udp, "port");
+        const cJSON *key = cJSON_GetObjectItemCaseSensitive(udp, "key");
+        const cJSON *nonce = cJSON_GetObjectItemCaseSensitive(udp, "nonce");
+        if (!cJSON_IsString(server) || !cJSON_IsNumber(port) || port->valuedouble != port->valueint ||
+                !cJSON_IsString(key) || !cJSON_IsString(nonce)) {
+            goto invalid;
+        }
+        ret = esp_xiaozhi_udp_configure(chat->udp, server->valuestring, port->valueint,
+                                        key->valuestring, nonce->valuestring,
+                                        chat->hello_probe_requested && cJSON_IsTrue(probe));
+        if (ret != ESP_OK) {
+            goto invalid;
+        }
+    }
+    strcpy(chat->session_id, session);
+    chat->server_sample_rate = rate ? rate->valueint : 24000;
+    chat->server_frame_duration = duration ? duration->valueint : 60;
+    chat->server_channels = channels ? channels->valueint : 1;
+    strcpy(chat->server_format, format ? format->valuestring : "opus");
+    chat->hello_pending = false;
+    chat->dialogue_generation++;
+    xEventGroupSetBits(chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO);
     return ESP_OK;
+invalid:
+    chat->hello_pending = false;
+    chat->error_occurred = true;
+    xEventGroupSetBits(chat->event_group_handle, ESP_XIAOZHI_CHAT_HELLO_ERROR);
+    return ret;
 }
 
-static esp_err_t esp_xiaozhi_chat_set_device_state(esp_xiaozhi_chat_t *xiaozhi_chat, esp_xiaozhi_chat_device_state_t state)
+static esp_err_t esp_xiaozhi_chat_goodbye_handler(esp_xiaozhi_chat_t *chat, cJSON *root)
 {
-    if (xiaozhi_chat->device_state == state) {
-        ESP_LOGD(TAG, "Device state(%d) is already", state);
-        return ESP_OK;
+    const cJSON *session = cJSON_GetObjectItemCaseSensitive(root, "session_id");
+    if (session && !cJSON_IsString(session)) {
+        return ESP_ERR_INVALID_RESPONSE;
     }
-    xiaozhi_chat->device_state = state;
-    ESP_LOGD(TAG, "Device state: %d", xiaozhi_chat->device_state);
-    /* App derives device state from CHAT_TTS_STATE / connection events; no CHAT_STATE event */
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_chat_hello_handler(esp_xiaozhi_chat_t *xiaozhi_chat, cJSON *root)
-{
-    const cJSON *transport = cJSON_GetObjectItem(root, "transport");
-    if (!transport || !cJSON_IsString(transport) ||
-            (strcmp(transport->valuestring, "udp") != 0 && strcmp(transport->valuestring, "websocket") != 0)) {
-        ESP_LOGE(TAG, "Unsupported transport: %s", transport ? transport->valuestring : "null");
-        return ESP_ERR_INVALID_ARG;
+    if (chat->audio_channel_opened && session && !strcmp(chat->session_id, session->valuestring)) {
+        chat->audio_channel_opened = false;
+        (void)esp_xiaozhi_udp_close(chat->udp);
+        chat->session_id[0] = '\0';
+        esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_SERVER_GOODBYE, NULL, 0, 0);
+        esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_CLOSED, NULL, 0, 0);
     }
-
-    const cJSON *session_id = cJSON_GetObjectItem(root, "session_id");
-    if (cJSON_IsString(session_id)) {
-        uint16_t session_id_len = strlen(session_id->valuestring);
-        if (session_id_len > sizeof(xiaozhi_chat->session_id) - 1) {
-            ESP_LOGE(TAG, "Session ID is too long: %u > %u", session_id_len, sizeof(xiaozhi_chat->session_id) - 1);
-            return ESP_ERR_INVALID_ARG;
-        }
-        for (uint16_t i = 0; i < session_id_len; i++) {
-            char c = session_id->valuestring[i];
-            if (!isalnum((unsigned char)c) && c != '-' && c != '_') {
-                ESP_LOGE(TAG, "Invalid session ID character at position %u", i);
-                return ESP_ERR_INVALID_ARG;
-            }
-        }
-        memcpy(xiaozhi_chat->session_id, session_id->valuestring, session_id_len);
-        xiaozhi_chat->session_id[session_id_len] = '\0';
-        ESP_LOGD(TAG, "Session established");
-        /*
-         * One MCP session stays initialized across audio dialogues, but the
-         * cloud restarts JSON-RPC ids. Drop only the remembered ids.
-         */
-        if (xiaozhi_chat->mcp_mgr_handle) {
-            esp_err_t clear_ret = esp_mcp_mgr_clear_recent_request_ids(xiaozhi_chat->mcp_mgr_handle, NULL);
-            if (clear_ret != ESP_OK) {
-                ESP_LOGW(TAG, "Failed to clear MCP request ids: %s", esp_err_to_name(clear_ret));
-            }
-        }
-    }
-
-    const cJSON *audio_params = cJSON_GetObjectItem(root, "audio_params");
-    if (cJSON_IsObject(audio_params)) {
-        const cJSON *sample_rate = cJSON_GetObjectItem(audio_params, "sample_rate");
-        if (cJSON_IsNumber(sample_rate)) {
-            xiaozhi_chat->server_sample_rate = sample_rate->valueint;
-        }
-
-        const cJSON *frame_duration = cJSON_GetObjectItem(audio_params, "frame_duration");
-        if (cJSON_IsNumber(frame_duration)) {
-            xiaozhi_chat->server_frame_duration = frame_duration->valueint;
-        }
-    }
-
-    if (strcmp(transport->valuestring, "udp") == 0) {
-        const cJSON *udp = cJSON_GetObjectItem(root, "udp");
-        if (!cJSON_IsObject(udp)) {
-            ESP_LOGE(TAG, "UDP is not specified");
-            return ESP_ERR_INVALID_ARG;
-        }
-
-        const cJSON *server = cJSON_GetObjectItem(udp, "server");
-        const cJSON *port = cJSON_GetObjectItem(udp, "port");
-        const cJSON *key = cJSON_GetObjectItem(udp, "key");
-        const cJSON *nonce = cJSON_GetObjectItem(udp, "nonce");
-
-        if (xiaozhi_chat->udp) {
-            if (server && cJSON_IsString(server)) {
-                uint16_t server_len = strlen(server->valuestring);
-                if (server_len > sizeof(xiaozhi_chat->udp->udp_server) - 1) {
-                    ESP_LOGE(TAG, "Server is too long: %u > %u", server_len, sizeof(xiaozhi_chat->udp->udp_server) - 1);
-                    return ESP_ERR_INVALID_ARG;
-                }
-                memcpy(xiaozhi_chat->udp->udp_server, server->valuestring, server_len);
-                xiaozhi_chat->udp->udp_server[server_len] = '\0';
-            }
-            if (port && cJSON_IsNumber(port)) {
-                if (port->valueint <= ESP_XIAOZHI_CHAT_UDP_MIN_PORT || port->valueint > ESP_XIAOZHI_CHAT_UDP_MAX_PORT) {
-                    ESP_LOGE(TAG, "Invalid port: %d", port->valueint);
-                    return ESP_ERR_INVALID_ARG;
-                }
-                xiaozhi_chat->udp->udp_port = port->valueint;
-            }
-            if (key && cJSON_IsString(key) && nonce && cJSON_IsString(nonce)) {
-                uint8_t aes_key[ESP_XIAOZHI_CHAT_AES_KEY_SIZE] = {0};
-                size_t nonce_len = strlen(nonce->valuestring);
-                size_t key_len = strlen(key->valuestring);
-                if (nonce_len != ESP_XIAOZHI_CHAT_AES_NONCE_SIZE * 2) {
-                    ESP_LOGE(TAG, "Invalid nonce length: %zu (expected %zu)", nonce_len, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE * 2);
-                    return ESP_ERR_INVALID_ARG;
-                }
-                if (key_len != ESP_XIAOZHI_CHAT_AES_KEY_SIZE * 2) {
-                    ESP_LOGE(TAG, "Invalid key length: %d (expected %d)", key_len, ESP_XIAOZHI_CHAT_AES_KEY_SIZE * 2);
-                    return ESP_ERR_INVALID_ARG;
-                }
-                for (size_t i = 0; i < nonce_len; i++) {
-                    if (!isxdigit((unsigned char)nonce->valuestring[i])) {
-                        ESP_LOGE(TAG, "Invalid nonce character at position %zu", i);
-                        return ESP_ERR_INVALID_ARG;
-                    }
-                }
-                for (size_t i = 0; i < key_len; i++) {
-                    if (!isxdigit((unsigned char)key->valuestring[i])) {
-                        ESP_LOGE(TAG, "Invalid key character at position %zu", i);
-                        return ESP_ERR_INVALID_ARG;
-                    }
-                }
-                esp_xiaozhi_chat_decode_hex_string(nonce->valuestring, xiaozhi_chat->udp->aes_nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
-                esp_xiaozhi_chat_decode_hex_string(key->valuestring, aes_key, ESP_XIAOZHI_CHAT_AES_KEY_SIZE);
-
-                int aes_ret = esp_xiaozhi_chat_aes_ctr_setkey(&xiaozhi_chat->udp->aes_ctx, aes_key, 128);
-                memset(aes_key, 0, ESP_XIAOZHI_CHAT_AES_KEY_SIZE);
-                if (aes_ret != 0) {
-                    ESP_LOGE(TAG, "Failed to set AES key: %d", aes_ret);
-                    return ESP_FAIL;
-                }
-
-                xiaozhi_chat->udp->local_sequence = 0;
-                xiaozhi_chat->udp->remote_sequence = 0;
-            }
-        }
-    }
-
-    xEventGroupSetBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO);
-
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_chat_goodbye_handler(esp_xiaozhi_chat_t *xiaozhi_chat, cJSON *root)
-{
-    cJSON *session_id = cJSON_GetObjectItem(root, "session_id");
-    if (session_id == NULL || strcmp(xiaozhi_chat->session_id, session_id->valuestring) == 0) {
-        esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_SERVER_GOODBYE, NULL, 0, portMAX_DELAY);
-    }
-
     return ESP_OK;
 }
 
@@ -534,8 +267,6 @@ static void esp_xiaozhi_chat_note_vision(esp_xiaozhi_chat_t *xiaozhi_chat, const
     capabilities = cJSON_IsObject(params) ? cJSON_GetObjectItem(params, "capabilities") : NULL;
     vision = cJSON_IsObject(capabilities) ? cJSON_GetObjectItem(capabilities, "vision") : NULL;
     if (!cJSON_IsObject(vision)) {
-        /* A re-initialize without vision must not keep the previous endpoint. */
-        (void)esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, NULL, NULL);
         return;
     }
 
@@ -565,18 +296,25 @@ static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, 
     }
 
     if (!xiaozhi_chat->mcp_mgr_handle) {
-        ESP_LOGW(TAG, "MCP manager not initialized");
-        return ESP_ERR_INVALID_STATE;
+        return ESP_OK;  /* External MCP handlers consume CHAT_JSON and use send_mcp(). */
     }
 
     cJSON *method = cJSON_GetObjectItem(payload_obj, "method");
     if (cJSON_IsString(method)) {
         ESP_LOGI(TAG, "Received MCP method: %s", method->valuestring);
     }
-#if CONFIG_XIAOZHI_VISION_ENABLE
-    esp_xiaozhi_chat_note_vision(xiaozhi_chat, payload_obj);
-#endif
 
+    cJSON *request_id = cJSON_GetObjectItemCaseSensitive(payload_obj, "id");
+    if (cJSON_IsNumber(request_id) && isfinite(request_id->valuedouble) &&
+            trunc(request_id->valuedouble) == request_id->valuedouble && fabs(request_id->valuedouble) <= 9007199254740991.0) {
+        char number[32];
+        snprintf(number, sizeof(number), "%.0f", request_id->valuedouble);
+        cJSON *raw = cJSON_CreateRaw(number);
+        if (!raw) {
+            return ESP_ERR_NO_MEM;
+        }
+        cJSON_ReplaceItemInObjectCaseSensitive(payload_obj, "id", raw);
+    }
     char *payload_mcp = cJSON_PrintUnformatted(payload_obj);
     if (!payload_mcp) {
         ESP_LOGE(TAG, "Failed to print MCP payload");
@@ -587,13 +325,11 @@ static esp_err_t esp_xiaozhi_chat_mcp_handler(esp_xiaozhi_chat_t *xiaozhi_chat, 
     ESP_LOGI(TAG, "Received MCP message: %u bytes", (unsigned)strlen(payload_mcp));
 
     const char *reply_session = xiaozhi_chat->session_id[0] ? xiaozhi_chat->session_id : NULL;
-    (void)esp_mcp_mgr_set_request_context(xiaozhi_chat->mcp_mgr_handle, NULL, NULL, true);
     esp_err_t ret = esp_xiaozhi_mcp_handle_message(xiaozhi_chat->mcp_mgr_handle,
                                                    "mcp_server",
                                                    payload_mcp,
                                                    strlen(payload_mcp),
-                                                   reply_session);
-    (void)esp_mcp_mgr_set_request_context(xiaozhi_chat->mcp_mgr_handle, NULL, NULL, false);
+                                                   reply_session, xiaozhi_chat->connection_id, xiaozhi_chat->dialogue_generation);
 
     cJSON_free(payload_mcp);
 
@@ -695,17 +431,52 @@ static esp_err_t esp_xiaozhi_chat_system_handler(esp_xiaozhi_chat_t *xiaozhi_cha
     return ESP_OK;
 }
 
-static esp_err_t esp_xiaozhi_chat_binary_handler(esp_xiaozhi_transport_handle_t handle, const uint8_t *data, size_t data_len)
+static void esp_xiaozhi_chat_deliver_audio(void *ctx, const uint8_t *data, size_t length, uint32_t timestamp)
 {
-    esp_xiaozhi_chat_t *xiaozhi_chat = esp_xiaozhi_chat_get_by_transport(handle);
-    if (!xiaozhi_chat) {
-        return ESP_ERR_INVALID_ARG;
+    esp_xiaozhi_chat_t *chat = ctx;
+    if (!chat->audio_channel_opened || chat->error_occurred) {
+        return;
     }
-
-    if (xiaozhi_chat->audio_callback) {
-        xiaozhi_chat->audio_callback(data, data_len, xiaozhi_chat->audio_callback_ctx);
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    chat->last_incoming_time = esp_timer_get_time();
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    esp_xiaozhi_chat_audio_t packet = {
+        .format = chat->server_format,
+        .sample_rate = chat->server_sample_rate,
+        .channels = chat->server_channels,
+        .frame_duration = chat->server_frame_duration,
+        .timestamp = timestamp,
+        .payload = (uint8_t *)data,
+        .payload_size = length,
+    };
+    if (chat->packet_callback) {
+        chat->packet_callback(&packet, chat->packet_callback_ctx);
     }
+    if (chat->audio_callback) {
+        chat->audio_callback(data, length, chat->audio_callback_ctx);
+    }
+}
 
+static void esp_xiaozhi_chat_udp_error(void *ctx, esp_err_t error, const char *source)
+{
+    esp_xiaozhi_chat_t *chat = ctx;
+    chat->error_occurred = true;
+    chat->audio_channel_opened = false;
+    if (chat->event_callback) {
+        esp_xiaozhi_chat_error_info_t info = {.code = error, .source = source};
+        chat->event_callback(ESP_XIAOZHI_CHAT_EVENT_CHAT_ERROR, &info, chat->event_callback_ctx);
+    }
+    esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_CLOSED, NULL, 0, 0);
+}
+
+static esp_err_t esp_xiaozhi_chat_audio_handler(esp_xiaozhi_transport_handle_t handle,
+                                                const uint8_t *data, size_t length, uint32_t timestamp)
+{
+    esp_xiaozhi_chat_t *chat = esp_xiaozhi_chat_get_by_transport(handle);
+    if (!chat) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_xiaozhi_chat_deliver_audio(chat, data, length, timestamp);
     return ESP_OK;
 }
 
@@ -716,9 +487,14 @@ static esp_err_t esp_xiaozhi_chat_data_handler(esp_xiaozhi_transport_handle_t ha
         return ESP_ERR_INVALID_ARG;
     }
 
-    cJSON *root = cJSON_ParseWithLength(data, data_len);
-    if (root == NULL) {
-        ESP_LOGE(TAG, "Failed to parse JSON message: %.*s", (int)data_len, data);
+    const char *end = NULL;
+    cJSON *root = cJSON_ParseWithLengthOpts(data, data_len, &end, false);
+    while (end && end < data + data_len && isspace((unsigned char) * end)) {
+        end++;
+    }
+    if (!cJSON_IsObject(root) || end != data + data_len) {
+        cJSON_Delete(root);
+        ESP_LOGE(TAG, "Invalid JSON message");
         return ESP_ERR_INVALID_ARG;
     }
 
@@ -729,6 +505,27 @@ static esp_err_t esp_xiaozhi_chat_data_handler(esp_xiaozhi_transport_handle_t ha
         return ESP_ERR_INVALID_ARG;
     }
 
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    xiaozhi_chat->last_incoming_time = esp_timer_get_time();
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    esp_xiaozhi_udp_note_activity(xiaozhi_chat->udp);
+    if (xiaozhi_chat->event_callback) {
+        if (data_len == SIZE_MAX) {
+            cJSON_Delete(root);
+            return ESP_ERR_NO_MEM;
+        }
+        char *json = malloc(data_len + 1);
+        if (json == NULL) {
+            ESP_LOGE(TAG, "Failed to copy JSON message");
+            cJSON_Delete(root);
+            return ESP_ERR_NO_MEM;
+        }
+        memcpy(json, data, data_len);
+        json[data_len] = '\0';
+        esp_xiaozhi_chat_json_t message = {.type = type->valuestring, .json = json, .length = data_len};
+        xiaozhi_chat->event_callback(ESP_XIAOZHI_CHAT_EVENT_CHAT_JSON, &message, xiaozhi_chat->event_callback_ctx);
+        free(json);
+    }
     esp_err_t ret = ESP_OK;
     esp_xiaozhi_chat_type_func_t esp_xiaozhi_chat_type_handlers[] = {
         { "hello",   esp_xiaozhi_chat_hello_handler },
@@ -757,7 +554,14 @@ static esp_err_t esp_xiaozhi_chat_connected_handler(esp_xiaozhi_transport_handle
     esp_xiaozhi_chat_t *xiaozhi_chat = esp_xiaozhi_chat_get_by_transport(handle);
     ESP_RETURN_ON_FALSE(xiaozhi_chat, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
     xiaozhi_chat->chat_connected = true;
+    xiaozhi_chat->connection_generation++;
+    snprintf(xiaozhi_chat->connection_id, sizeof(xiaozhi_chat->connection_id), "xiaozhi-%lu",
+             (unsigned long)xiaozhi_chat->connection_generation);
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    xEventGroupClearBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_CANCELLED);
+    xEventGroupSetBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED);
 
     esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_CONNECTED, NULL, 0, portMAX_DELAY);
 
@@ -769,9 +573,23 @@ static esp_err_t esp_xiaozhi_chat_disconnected_handler(esp_xiaozhi_transport_han
     esp_xiaozhi_chat_t *xiaozhi_chat = esp_xiaozhi_chat_get_by_transport(handle);
     ESP_RETURN_ON_FALSE(xiaozhi_chat, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
     xiaozhi_chat->chat_connected = false;
+    xiaozhi_chat->hello_pending = false;
+    xiaozhi_chat->audio_channel_opened = false;
+    xiaozhi_chat->connection_generation++;
+    xiaozhi_chat->connection_id[0] = '\0';
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+#if CONFIG_XIAOZHI_VISION_ENABLE
+    xiaozhi_chat->vision_connection_id[0] = '\0';
+    (void)esp_xiaozhi_vision_set_endpoint(&xiaozhi_chat->vision, NULL, NULL);
+#endif
+    (void)esp_xiaozhi_udp_close(xiaozhi_chat->udp);
+    xEventGroupClearBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED);
+    xEventGroupSetBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_CANCELLED);
 
-    esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_DISCONNECTED, NULL, 0, portMAX_DELAY);
+    esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_DISCONNECTED, NULL, 0, 0);
+    esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_CLOSED, NULL, 0, 0);
 
     return ESP_OK;
 }
@@ -781,6 +599,11 @@ static esp_err_t esp_xiaozhi_chat_transport_error_handler(esp_xiaozhi_transport_
     esp_xiaozhi_chat_t *xiaozhi_chat = esp_xiaozhi_chat_get_by_transport(handle);
     ESP_RETURN_ON_FALSE(xiaozhi_chat, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
+    xiaozhi_chat->error_occurred = true;
+    if (xiaozhi_chat->hello_pending) {
+        xiaozhi_chat->hello_pending = false;
+        xEventGroupSetBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_HELLO_ERROR);
+    }
     if (xiaozhi_chat->event_callback) {
         esp_xiaozhi_chat_error_info_t info = {
             .code = err,
@@ -799,7 +622,7 @@ static esp_err_t esp_xiaozhi_chat_send_json_message(esp_xiaozhi_chat_t *xiaozhi_
     char *json_str = cJSON_PrintUnformatted(root);
     ESP_RETURN_ON_FALSE(json_str, ESP_ERR_NO_MEM, TAG, "Failed to print JSON");
 
-    esp_err_t ret = esp_xiaozhi_transport_send_text(xiaozhi_chat->mcp_chat_handle, json_str);
+    esp_err_t ret = esp_xiaozhi_transport_send_text(xiaozhi_chat->transport_handle, json_str);
     cJSON_free(json_str);
 
     return ret;
@@ -810,7 +633,8 @@ static esp_err_t esp_xiaozhi_chat_create_session_message(esp_xiaozhi_chat_t *xia
     ESP_RETURN_ON_FALSE(xiaozhi_chat != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
     ESP_RETURN_ON_FALSE(type != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid type");
     ESP_RETURN_ON_FALSE(out_root != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid output");
-    ESP_RETURN_ON_FALSE(strlen(xiaozhi_chat->session_id) > 0, ESP_ERR_INVALID_STATE, TAG, "No session, open audio channel first");
+    ESP_RETURN_ON_FALSE(xiaozhi_chat->audio_channel_opened || strlen(xiaozhi_chat->session_id) > 0,
+                        ESP_ERR_INVALID_STATE, TAG, "No session, open audio channel first");
 
     cJSON *root = cJSON_CreateObject();
     ESP_RETURN_ON_FALSE(root != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create JSON object");
@@ -860,19 +684,15 @@ static esp_err_t esp_xiaozhi_chat_get_hello_message(esp_xiaozhi_chat_t *xiaozhi_
         cJSON_AddNumberToObject(root, "version", 3);
         cJSON_AddStringToObject(root, "transport", "udp");
     } else {
-        cJSON_AddNumberToObject(root, "version", 1);
+        cJSON_AddNumberToObject(root, "version", esp_xiaozhi_transport_get_version(xiaozhi_chat->transport_handle));
         cJSON_AddStringToObject(root, "transport", "websocket");
     }
 
-    cJSON *features = cJSON_CreateObject();
-    if (!features) {
+    esp_err_t capability_ret = esp_xiaozhi_protocol_add_capabilities(root, true);
+    if (capability_ret != ESP_OK) {
         cJSON_Delete(root);
-        return ESP_ERR_NO_MEM;
+        return capability_ret;
     }
-
-    cJSON_AddBoolToObject(features, "mcp", true);
-    cJSON_AddItemToObject(root, "features", features);
-
     cJSON *audio_params = cJSON_CreateObject();
     if (!audio_params) {
         cJSON_Delete(root);
@@ -901,91 +721,65 @@ static esp_err_t esp_xiaozhi_chat_get_hello_message(esp_xiaozhi_chat_t *xiaozhi_
     return ESP_OK;
 }
 
-static void esp_xiaozhi_chat_audio_input_exit(EventGroupHandle_t evt)
+static esp_err_t esp_xiaozhi_chat_validate_hello(esp_xiaozhi_chat_t *chat, const char *message, size_t capacity)
 {
-    if (evt != NULL) {
-        xEventGroupSetBits(evt, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
+    if (!memchr(message, '\0', capacity) || strlen(message) > UINT16_MAX) {
+        return ESP_ERR_INVALID_SIZE;
     }
-    vTaskDelete(NULL);
+    cJSON *root = cJSON_ParseWithOpts(message, NULL, true);
+    const cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
+    const cJSON *version = cJSON_GetObjectItemCaseSensitive(root, "version");
+    const cJSON *transport = cJSON_GetObjectItemCaseSensitive(root, "transport");
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(root, "features");
+    const cJSON *probe = cJSON_GetObjectItemCaseSensitive(features, "udp_probe");
+    bool valid = cJSON_IsString(type) && !strcmp(type->valuestring, "hello") &&
+                 cJSON_IsNumber(version) && version->valuedouble == esp_xiaozhi_transport_get_version(chat->transport_handle) &&
+                 cJSON_IsString(transport) && !strcmp(transport->valuestring, chat->use_mqtt ? "udp" : "websocket") &&
+                 (!features || cJSON_IsObject(features)) && (!probe || cJSON_IsBool(probe));
+    chat->hello_probe_requested = valid && esp_xiaozhi_protocol_probe_enabled() && cJSON_IsTrue(probe);
+    cJSON_Delete(root);
+    return valid ? ESP_OK : ESP_ERR_INVALID_ARG;
 }
 
-static esp_err_t esp_xiaozhi_chat_create_audio_input_task(esp_xiaozhi_chat_t *xiaozhi_chat)
+static esp_err_t esp_xiaozhi_chat_stop_runtime(esp_xiaozhi_chat_t *chat)
 {
-    BaseType_t core = (CONFIG_XIAOZHI_AUDIO_TASK_CORE < 0) ? tskNO_AFFINITY : CONFIG_XIAOZHI_AUDIO_TASK_CORE;
-    TaskHandle_t task_handle = NULL;
-
-#if CONFIG_XIAOZHI_AUDIO_TASK_ALLOC_STATIC
-    memset(&s_audio_input_task_tcb, 0, sizeof(s_audio_input_task_tcb));
-    task_handle = xTaskCreateStaticPinnedToCore(esp_xiaozhi_chat_audio_input,
-                                                ESP_XIAOZHI_CHAT_TASK_NAME,
-                                                CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE,
-                                                xiaozhi_chat,
-                                                CONFIG_XIAOZHI_AUDIO_TASK_PRIORITY,
-                                                s_audio_input_task_stack,
-                                                &s_audio_input_task_tcb,
-                                                core);
-    ESP_RETURN_ON_FALSE(task_handle != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create audio input task");
-#else
-    UBaseType_t stack_caps = CONFIG_XIAOZHI_STACK_IN_PSRAM
-                             ? (MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
-                             : (MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    BaseType_t task_ret = xTaskCreatePinnedToCoreWithCaps(esp_xiaozhi_chat_audio_input,
-                                                          ESP_XIAOZHI_CHAT_TASK_NAME,
-                                                          CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE,
-                                                          xiaozhi_chat,
-                                                          CONFIG_XIAOZHI_AUDIO_TASK_PRIORITY,
-                                                          &task_handle,
-                                                          core,
-                                                          stack_caps);
-    if (task_ret != pdPASS && CONFIG_XIAOZHI_STACK_IN_PSRAM) {
-        ESP_LOGW(TAG, "Audio task PSRAM allocation failed, retrying with internal memory");
-        stack_caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
-        task_ret = xTaskCreatePinnedToCoreWithCaps(esp_xiaozhi_chat_audio_input,
-                                                   ESP_XIAOZHI_CHAT_TASK_NAME,
-                                                   CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE,
-                                                   xiaozhi_chat,
-                                                   CONFIG_XIAOZHI_AUDIO_TASK_PRIORITY,
-                                                   &task_handle,
-                                                   core,
-                                                   stack_caps);
+    chat->started = false;
+    chat->hello_pending = false;
+    xEventGroupSetBits(chat->event_group_handle, ESP_XIAOZHI_CHAT_CANCELLED);
+    esp_err_t ret = esp_xiaozhi_chat_close_audio_channel((esp_xiaozhi_chat_handle_t)chat);
+    if (ret != ESP_OK) {
+        return ret;
     }
-    ESP_RETURN_ON_FALSE(task_ret == pdPASS && task_handle != NULL, ESP_ERR_NO_MEM, TAG, "Failed to create audio input task");
-#endif
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_chat_stop_runtime(esp_xiaozhi_chat_t *xiaozhi_chat)
-{
-    ESP_RETURN_ON_FALSE(xiaozhi_chat != NULL, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-
-    esp_err_t ret = ESP_OK;
-    esp_err_t step_ret = esp_xiaozhi_chat_close_audio_channel((esp_xiaozhi_chat_handle_t)xiaozhi_chat);
-    if (step_ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to close audio channel during stop: %s", esp_err_to_name(step_ret));
-        ret = step_ret;
-    }
-
-    if (xiaozhi_chat->mcp_mgr_handle != 0) {
-        step_ret = esp_mcp_mgr_stop(xiaozhi_chat->mcp_mgr_handle);
-        if (step_ret != ESP_OK) {
-            ESP_LOGW(TAG, "Failed to stop MCP manager during stop: %s", esp_err_to_name(step_ret));
-            if (ret == ESP_OK) {
-                ret = step_ret;
-            }
-        }
-
-        step_ret = esp_mcp_mgr_deinit(xiaozhi_chat->mcp_mgr_handle);
-        if (step_ret != ESP_OK) {
-            ESP_LOGW(TAG, "Failed to deinit MCP manager during stop: %s", esp_err_to_name(step_ret));
-            if (ret == ESP_OK) {
-                ret = step_ret;
-            }
-        } else {
-            xiaozhi_chat->mcp_mgr_handle = 0;
+    if (chat->transport_handle) {
+        ret = esp_xiaozhi_transport_stop(chat->transport_handle);
+        if (ret != ESP_OK) {
+            return ret;
         }
     }
-    xiaozhi_chat->mcp_chat_handle = 0;
-
+    if (chat->mcp_mgr_handle) {
+        ret = esp_mcp_mgr_stop(chat->mcp_mgr_handle);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+        ret = esp_mcp_mgr_deinit(chat->mcp_mgr_handle);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+        chat->mcp_mgr_handle = 0;
+    }
+    if (chat->mcp_compatibility_applied) {
+        ret = esp_mcp_set_xiaozhi_compatibility(chat->mcp_engine, chat->previous_mcp_compatibility);
+        if (ret != ESP_OK) {
+            return ret;
+        }
+        chat->mcp_compatibility_applied = false;
+    }
+    if (chat->transport_handle) {
+        ret = esp_xiaozhi_transport_deinit(chat->transport_handle);
+        chat->transport_handle = 0;
+    }
+    chat->chat_connected = false;
+    chat->connection_id[0] = '\0';
     return ret;
 }
 
@@ -1002,352 +796,29 @@ static esp_err_t esp_xiaozhi_chat_destroy_owned_resources(esp_xiaozhi_chat_t *xi
     return ESP_OK;
 }
 
-static void esp_xiaozhi_chat_udp_force_close_socket(esp_xiaozhi_chat_t *xiaozhi_chat)
+static esp_err_t esp_xiaozhi_chat_audio_open(esp_xiaozhi_chat_t *chat)
 {
-    if (xiaozhi_chat == NULL || xiaozhi_chat->udp == NULL) {
-        return;
+    chat->audio_channel_opened = true;
+    esp_err_t ret = chat->use_mqtt ? esp_xiaozhi_udp_open(chat->udp) : ESP_OK;
+    if (ret != ESP_OK) {
+        chat->audio_channel_opened = false;
     }
-
-    int sockfd = xiaozhi_chat->udp->udp_socket;
-    xiaozhi_chat->udp->udp_socket = -1;
-    xiaozhi_chat->audio_channel_opened = false;
-    xiaozhi_chat->udp->local_sequence = 0;
-    xiaozhi_chat->udp->remote_sequence = 0;
-    if (xiaozhi_chat->udp->audio_receive_events != NULL) {
-        xEventGroupClearBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_RECEIVE_ENABLED);
-    }
-
-    if (sockfd != -1) {
-        shutdown(sockfd, SHUT_RDWR);
-        close(sockfd);
-    }
-}
-
-static void esp_xiaozhi_chat_audio_input(void *pvParameter)
-{
-    esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)pvParameter;
-    EventGroupHandle_t evt = NULL;
-    if (!xiaozhi_chat || !xiaozhi_chat->udp || !xiaozhi_chat->udp->audio_receive_events) {
-        ESP_LOGE(TAG, "Invalid parameter in audio input task");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    evt = xiaozhi_chat->udp->audio_receive_events;
-    xEventGroupClearBits(evt, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
-
-    char *buffer = calloc(1, CONFIG_XIAOZHI_UDP_RECEIVE_BUFFER_SIZE);
-    if (!buffer) {
-        ESP_LOGE(TAG, "Failed to allocate UDP receive buffer");
-        esp_xiaozhi_chat_audio_input_exit(evt);
-        return;
-    }
-
-    uint8_t *decrypted_data = NULL;
-    int consecutive_errors = 0;
-
-    for (;;) {
-        uint32_t bits = xEventGroupWaitBits(evt,
-                                            ESP_XIAOZHI_CHAT_RECV_RECEIVE_ENABLED | ESP_XIAOZHI_CHAT_RECV_SHUTDOWN,
-                                            pdFALSE, pdFALSE, portMAX_DELAY);
-        if (bits & ESP_XIAOZHI_CHAT_RECV_SHUTDOWN) {
-            break;
-        }
-        if (!(bits & ESP_XIAOZHI_CHAT_RECV_RECEIVE_ENABLED)) {
-            continue;
-        }
-
-        /* Receive loop: run while socket is valid and not shutdown; reset error count per session */
-        consecutive_errors = 0;
-        while (xiaozhi_chat->udp && xiaozhi_chat->udp->udp_socket != -1) {
-            if (xEventGroupGetBits(evt) & ESP_XIAOZHI_CHAT_RECV_SHUTDOWN) {
-                break;
-            }
-            int received = recv(xiaozhi_chat->udp->udp_socket, buffer, CONFIG_XIAOZHI_UDP_RECEIVE_BUFFER_SIZE, 0);
-            if (received <= 0) {
-                EventBits_t current_bits = xEventGroupGetBits(evt);
-                if ((current_bits & ESP_XIAOZHI_CHAT_RECV_SHUTDOWN) || !xiaozhi_chat->udp || xiaozhi_chat->udp->udp_socket == -1) {
-                    break;
-                }
-                if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                    vTaskDelay(pdMS_TO_TICKS(10));
-                    continue;
-                }
-                if (errno == EBADF || errno == ENOTCONN) {
-                    ESP_LOGW(TAG, "Audio input socket closed: %s", strerror(errno));
-                    break;
-                }
-
-                consecutive_errors++;
-                ESP_LOGE(TAG, "Audio input error: %s (error count: %d)", strerror(errno), consecutive_errors);
-
-                if (consecutive_errors >= CONFIG_XIAOZHI_MAX_CONSECUTIVE_UDP_ERRORS) {
-                    ESP_LOGE(TAG, "Too many consecutive audio input errors, stopping receive");
-                    xiaozhi_chat->error_occurred = true;
-                    break;
-                }
-
-                vTaskDelay(pdMS_TO_TICKS(100));
-                continue;
-            }
-
-            consecutive_errors = 0;
-            if (received < ESP_XIAOZHI_CHAT_AES_NONCE_SIZE) {
-                ESP_LOGE(TAG, "Invalid audio packet size: %d", received);
-                continue;
-            }
-
-            if (buffer[0] != 0x01) {
-                ESP_LOGE(TAG, "Invalid audio packet type: %x", buffer[0]);
-                continue;
-            }
-
-            uint32_t timestamp = ntohl(*(uint32_t *)&buffer[8]);
-            uint32_t sequence = ntohl(*(uint32_t *)&buffer[12]);
-
-            if (sequence < xiaozhi_chat->udp->remote_sequence) {
-                ESP_LOGW(TAG, "Received audio packet with old sequence: %lu, expected: %lu", (unsigned long)sequence, (unsigned long)xiaozhi_chat->udp->remote_sequence);
-                continue;
-            }
-
-            if (sequence != xiaozhi_chat->udp->remote_sequence + 1) {
-                ESP_LOGW(TAG, "Received audio packet with wrong sequence: %lu, expected: %lu", (unsigned long)sequence, (unsigned long)(xiaozhi_chat->udp->remote_sequence + 1));
-            }
-
-            size_t decrypted_size = received - ESP_XIAOZHI_CHAT_AES_NONCE_SIZE;
-            decrypted_data = calloc(1, decrypted_size);
-            if (!decrypted_data) {
-                ESP_LOGE(TAG, "Failed to allocate memory for decrypted data");
-                continue;
-            }
-
-            const uint8_t *nonce = (const uint8_t *)buffer;
-            const uint8_t *encrypted = (const uint8_t *)buffer + ESP_XIAOZHI_CHAT_AES_NONCE_SIZE;
-
-            uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
-            memcpy(nonce_counter, nonce, sizeof(nonce_counter));
-            int ret = esp_xiaozhi_chat_aes_ctr_crypt(&xiaozhi_chat->udp->aes_ctx, decrypted_size, nonce_counter, encrypted, decrypted_data);
-            if (ret != 0) {
-                ESP_LOGE(TAG, "Failed to decrypt audio data, ret: %d", ret);
-                free(decrypted_data);
-                decrypted_data = NULL;
-                continue;
-            }
-
-            esp_xiaozhi_chat_audio_t packet;
-            packet.sample_rate = xiaozhi_chat->server_sample_rate;
-            packet.frame_duration = xiaozhi_chat->server_frame_duration;
-            packet.timestamp = timestamp;
-            packet.payload = decrypted_data;
-            packet.payload_size = decrypted_size;
-            esp_xiaozhi_chat_binary_handler(xiaozhi_chat->mcp_chat_handle, packet.payload, packet.payload_size);
-
-            free(decrypted_data);
-            decrypted_data = NULL;
-            xiaozhi_chat->udp->remote_sequence = sequence;
-            xiaozhi_chat->udp->last_incoming_time = xTaskGetTickCount();
-        }
-
-        if (decrypted_data != NULL) {
-            free(decrypted_data);
-            decrypted_data = NULL;
-        }
-    }
-
-    free(buffer);
-    esp_xiaozhi_chat_audio_input_exit(evt);
-}
-
-static esp_err_t esp_xiaozhi_chat_audio_open(esp_xiaozhi_chat_t *xiaozhi_chat)
-{
-    ESP_RETURN_ON_FALSE(xiaozhi_chat, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-
-    if (!xiaozhi_chat->use_mqtt) {
-        xiaozhi_chat->audio_channel_opened = true;
-        return ESP_OK;
-    }
-
-    if (!xiaozhi_chat->udp) {
-        ESP_LOGE(TAG, "UDP context not allocated");
-        return ESP_ERR_INVALID_STATE;
-    }
-
-    struct addrinfo *res = NULL;
-    int sockfd = -1;
-    esp_err_t ret = ESP_OK;
-    struct addrinfo hints = {
-        .ai_family = AF_INET,
-        .ai_socktype = SOCK_DGRAM,
-    };
-    char port_str[16] = {0};
-
-    snprintf(port_str, sizeof(port_str), "%d", xiaozhi_chat->udp->udp_port);
-    if (getaddrinfo(xiaozhi_chat->udp->udp_server, port_str, &hints, &res) != 0) {
-        ESP_RETURN_ON_ERROR(ESP_ERR_INVALID_ARG, TAG, "Failed to get address info: %s", strerror(errno));
-    }
-
-    sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-    if (sockfd < 0) {
-        freeaddrinfo(res);
-        ESP_RETURN_ON_ERROR(ESP_ERR_NO_MEM, TAG, "Failed to create socket: %s", strerror(errno));
-    }
-
-    if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-        close(sockfd);
-        freeaddrinfo(res);
-        ESP_RETURN_ON_ERROR(ESP_ERR_INVALID_ARG, TAG, "Failed to connect audio channel: %s", strerror(errno));
-    }
-
-    struct timeval recv_timeout = {
-        .tv_sec = ESP_XIAOZHI_CHAT_UDP_RECV_TIMEOUT_MS / 1000,
-        .tv_usec = (ESP_XIAOZHI_CHAT_UDP_RECV_TIMEOUT_MS % 1000) * 1000,
-    };
-    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &recv_timeout, sizeof(recv_timeout)) < 0) {
-        close(sockfd);
-        freeaddrinfo(res);
-        ESP_RETURN_ON_ERROR(ESP_FAIL, TAG, "Failed to set audio socket recv timeout: %s", strerror(errno));
-    }
-
-    struct timeval send_timeout = {
-        .tv_sec = ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS / 1000,
-        .tv_usec = (ESP_XIAOZHI_CHAT_UDP_SEND_TIMEOUT_MS % 1000) * 1000,
-    };
-    if (setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, &send_timeout, sizeof(send_timeout)) < 0) {
-        ESP_LOGW(TAG, "Failed to set audio socket send timeout: %s", strerror(errno));
-    }
-
-    if (xSemaphoreTake(xiaozhi_chat->udp->channel_mutex, pdMS_TO_TICKS(1000)) == pdTRUE) {
-        xiaozhi_chat->udp->udp_socket = sockfd;
-        xiaozhi_chat->audio_channel_opened = true;
-
-        /* Recreate the task after a previous instance exited during deinit. */
-        EventBits_t recv_bits = xEventGroupGetBits(xiaozhi_chat->udp->audio_receive_events);
-        if (recv_bits & ESP_XIAOZHI_CHAT_RECV_TASK_EXITED) {
-            ESP_LOGD(TAG, "Create audio input task (stack=%d)", CONFIG_XIAOZHI_AUDIO_TASK_STACK_SIZE);
-            xEventGroupClearBits(xiaozhi_chat->udp->audio_receive_events,
-                                 ESP_XIAOZHI_CHAT_RECV_SHUTDOWN | ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
-            esp_err_t task_ret = esp_xiaozhi_chat_create_audio_input_task(xiaozhi_chat);
-            if (task_ret != ESP_OK) {
-                ESP_LOGE(TAG, "Failed to create audio input task");
-                xEventGroupSetBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
-                close(sockfd);
-                xiaozhi_chat->udp->udp_socket = -1;
-                xiaozhi_chat->audio_channel_opened = false;
-                xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-                freeaddrinfo(res);
-                return ESP_ERR_NO_MEM;
-            }
-        }
-        xEventGroupSetBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_RECEIVE_ENABLED);
-        xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-    } else {
-        ESP_LOGE(TAG, "Failed to take channel mutex");
-        close(sockfd);
-        ret = ESP_ERR_TIMEOUT;
-    }
-
-    freeaddrinfo(res);
     return ret;
 }
 
-static esp_err_t esp_xiaozhi_chat_audio_close(esp_xiaozhi_chat_t *xiaozhi_chat)
+static esp_err_t esp_xiaozhi_chat_audio_close(esp_xiaozhi_chat_t *chat)
 {
-    if (xiaozhi_chat->udp == NULL) {
-        xiaozhi_chat->audio_channel_opened = false;
-        return ESP_OK;
-    }
-    if (xiaozhi_chat->udp->channel_mutex == NULL) {
-        xiaozhi_chat->audio_channel_opened = false;
-        return ESP_OK;
-    }
-
-    bool taken = false;
-    for (int retry = 0; retry < ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT && !taken; retry++) {
-        taken = (xSemaphoreTake(xiaozhi_chat->udp->channel_mutex, pdMS_TO_TICKS(ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_MS)) == pdTRUE);
-        if (!taken && retry < ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT - 1) {
-            ESP_LOGW(TAG, "Failed to take mutex for closing UDP socket, retry %d/%d", retry + 1, ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT);
-        }
-    }
-    if (!taken) {
-        ESP_LOGW(TAG, "Failed to take mutex for closing UDP socket after %d retries, force closing", ESP_XIAOZHI_CHAT_CLOSE_MUTEX_RETRY_CNT);
-        esp_xiaozhi_chat_udp_force_close_socket(xiaozhi_chat);
-        return ESP_OK;
-    }
-
-    esp_xiaozhi_chat_udp_force_close_socket(xiaozhi_chat);
-    xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-    return ESP_OK;
+    chat->audio_channel_opened = false;
+    return esp_xiaozhi_udp_close(chat->udp);
 }
 
-static esp_err_t esp_xiaozhi_chat_audio_send(esp_xiaozhi_chat_t *xiaozhi_chat, const esp_xiaozhi_chat_audio_t *packet)
+static esp_err_t esp_xiaozhi_chat_audio_send(esp_xiaozhi_chat_t *chat, const esp_xiaozhi_chat_audio_t *packet)
 {
-    esp_err_t result = ESP_FAIL;
-    if (esp_xiaozhi_chat_is_audio_ready(xiaozhi_chat)) {
-        if (!xiaozhi_chat->use_mqtt) {
-            return esp_xiaozhi_transport_send_binary(xiaozhi_chat->mcp_chat_handle, packet->payload, packet->payload_size);
-        }
-
-        if (xiaozhi_chat->udp == NULL) {
-            ESP_LOGE(TAG, "UDP context not allocated");
-            return ESP_ERR_INVALID_STATE;
-        }
-        if (xSemaphoreTake(xiaozhi_chat->udp->channel_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
-            ESP_RETURN_ON_ERROR(ESP_ERR_TIMEOUT, TAG, "Failed to take mutex");
-        }
-        if (xiaozhi_chat->udp->udp_socket == -1) {
-            xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-            return ESP_ERR_INVALID_STATE;
-        }
-        if (packet->payload_size > CONFIG_XIAOZHI_UDP_MAX_AUDIO_PAYLOAD_SIZE) {
-            xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-            ESP_LOGW(TAG, "UDP audio payload too large: %u > %u", packet->payload_size, CONFIG_XIAOZHI_UDP_MAX_AUDIO_PAYLOAD_SIZE);
-            return ESP_ERR_INVALID_SIZE;
-        }
-        uint8_t nonce[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
-        memcpy(nonce, xiaozhi_chat->udp->aes_nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
-
-        *(uint16_t *)&nonce[2] = htons(packet->payload_size);
-        *(uint32_t *)&nonce[8] = htonl(packet->timestamp);
-        *(uint32_t *)&nonce[12] = htonl(++xiaozhi_chat->udp->local_sequence);
-
-        size_t encrypted_size = ESP_XIAOZHI_CHAT_AES_NONCE_SIZE + packet->payload_size;
-        uint8_t *encrypted = malloc(encrypted_size);
-        if (encrypted) {
-            memcpy(encrypted, nonce, ESP_XIAOZHI_CHAT_AES_NONCE_SIZE);
-
-            uint8_t nonce_counter[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE];
-            memcpy(nonce_counter, nonce, sizeof(nonce_counter));
-            int ret = esp_xiaozhi_chat_aes_ctr_crypt(&xiaozhi_chat->udp->aes_ctx, packet->payload_size, nonce_counter, packet->payload, &encrypted[ESP_XIAOZHI_CHAT_AES_NONCE_SIZE]);
-
-            if (ret == 0) {
-                ssize_t sent = send(xiaozhi_chat->udp->udp_socket, (const char *)encrypted, encrypted_size, 0);
-                if (sent == (ssize_t)encrypted_size) {
-                    result = ESP_OK;
-                } else {
-                    result = ESP_FAIL;
-                    if (sent < 0) {
-                        ESP_LOGW(TAG, "UDP send failed: errno=%d (%s)", errno, strerror(errno));
-                        if (errno == ENOMEM || errno == EAGAIN || errno == EWOULDBLOCK) {
-                            vTaskDelay(pdMS_TO_TICKS(ESP_XIAOZHI_CHAT_UDP_BACKPRESSURE_DELAY_MS));
-                        }
-                    } else {
-                        ESP_LOGW(TAG, "UDP send short: sent=%zd, expected=%zu", (size_t)sent, encrypted_size);
-                    }
-                }
-            } else {
-                ESP_LOGE(TAG, "Failed to encrypt audio data: %d", ret);
-            }
-
-            free(encrypted);
-        } else {
-            ESP_LOGE(TAG, "Failed to allocate memory for encrypted audio data");
-        }
-        xSemaphoreGive(xiaozhi_chat->udp->channel_mutex);
-    } else {
-        ESP_LOGD(TAG, "Audio channel not opened");
+    if (!esp_xiaozhi_chat_is_audio_ready(chat)) {
+        return ESP_ERR_INVALID_STATE;
     }
-
-    return result;
+    return chat->use_mqtt ? esp_xiaozhi_udp_send(chat->udp, packet->payload, packet->payload_size, packet->timestamp) :
+           esp_xiaozhi_transport_send_audio(chat->transport_handle, packet->payload, packet->payload_size, packet->timestamp);
 }
 
 esp_err_t esp_xiaozhi_chat_init(esp_xiaozhi_chat_config_t *config, esp_xiaozhi_chat_handle_t *chat_hd)
@@ -1363,21 +834,26 @@ esp_err_t esp_xiaozhi_chat_init(esp_xiaozhi_chat_config_t *config, esp_xiaozhi_c
     xiaozhi_chat->use_mqtt = config->has_mqtt_config;
 
     xiaozhi_chat->event_group_handle = xEventGroupCreate();
-    ESP_RETURN_ON_FALSE(xiaozhi_chat->event_group_handle, ESP_ERR_NO_MEM, TAG, "Failed to create event group");
-
-    if (xiaozhi_chat->use_mqtt) {
-        xiaozhi_chat->udp = calloc(1, sizeof(esp_xiaozhi_chat_udp_ctx_t));
-        ESP_RETURN_ON_FALSE(xiaozhi_chat->udp, ESP_ERR_NO_MEM, TAG, "Failed to allocate UDP context");
-
-        xiaozhi_chat->udp->channel_mutex = xSemaphoreCreateMutex();
-        ESP_RETURN_ON_FALSE(xiaozhi_chat->udp->channel_mutex, ESP_ERR_NO_MEM, TAG, "Failed to create mutex");
-        xiaozhi_chat->udp->audio_receive_events = xEventGroupCreate();
-        ESP_RETURN_ON_FALSE(xiaozhi_chat->udp->audio_receive_events, ESP_ERR_NO_MEM, TAG, "Failed to create receive event group");
-        xEventGroupSetBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_TASK_EXITED);
-        xiaozhi_chat->udp->udp_socket = -1;
-        esp_xiaozhi_chat_aes_ctr_init(&xiaozhi_chat->udp->aes_ctx);
+    if (!xiaozhi_chat->event_group_handle) {
+        free(xiaozhi_chat);
+        return ESP_ERR_NO_MEM;
     }
 
+    if (xiaozhi_chat->use_mqtt) {
+        esp_err_t ret = esp_xiaozhi_udp_init(&xiaozhi_chat->udp, esp_xiaozhi_chat_deliver_audio,
+                                             esp_xiaozhi_chat_udp_error, xiaozhi_chat);
+        if (ret != ESP_OK) {
+            vEventGroupDelete(xiaozhi_chat->event_group_handle);
+            free(xiaozhi_chat);
+            return ret;
+        }
+    }
+    xiaozhi_chat->server_sample_rate = 24000;
+    xiaozhi_chat->server_channels = 1;
+    xiaozhi_chat->server_frame_duration = 60;
+    strcpy(xiaozhi_chat->server_format, "opus");
+    xiaozhi_chat->packet_callback = config->packet_callback;
+    xiaozhi_chat->packet_callback_ctx = config->packet_callback_ctx;
     xiaozhi_chat->audio_type = config->audio_type;
     xiaozhi_chat->audio_callback = config->audio_callback;
     xiaozhi_chat->event_callback = config->event_callback;
@@ -1394,9 +870,6 @@ esp_err_t esp_xiaozhi_chat_init(esp_xiaozhi_chat_config_t *config, esp_xiaozhi_c
 
     *chat_hd = (esp_xiaozhi_chat_handle_t)xiaozhi_chat;
 
-    esp_xiaozhi_chat_set_device_state(xiaozhi_chat, ESP_XIAOZHI_CHAT_DEVICE_STATE_IDLE);
-    esp_xiaozhi_chat_set_listening_mode(xiaozhi_chat, ESP_XIAOZHI_CHAT_LISTENING_MODE_AUTO);
-
     return ESP_OK;
 }
 
@@ -1409,36 +882,13 @@ esp_err_t esp_xiaozhi_chat_deinit(esp_xiaozhi_chat_handle_t chat_hd)
 
     ret = esp_xiaozhi_chat_stop_runtime(xiaozhi_chat);
     if (ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to stop chat runtime during deinit: %s", esp_err_to_name(ret));
+        return ret;  /* Keep resources alive if a callback/worker has not stopped. */
     }
-
-    if (xiaozhi_chat->udp != NULL && xiaozhi_chat->udp->audio_receive_events != NULL) {
-        xEventGroupSetBits(xiaozhi_chat->udp->audio_receive_events, ESP_XIAOZHI_CHAT_RECV_SHUTDOWN);
-        esp_xiaozhi_chat_udp_force_close_socket(xiaozhi_chat);
-        EventBits_t bits = xEventGroupWaitBits(xiaozhi_chat->udp->audio_receive_events,
-                                               ESP_XIAOZHI_CHAT_RECV_TASK_EXITED,
-                                               pdFALSE, pdFALSE, pdMS_TO_TICKS(ESP_XIAOZHI_CHAT_TASK_EXIT_WAIT_MS));
-        if (!(bits & ESP_XIAOZHI_CHAT_RECV_TASK_EXITED)) {
-            ESP_LOGE(TAG, "Timed out waiting for audio input task to exit; continuing best-effort cleanup");
-            if (ret == ESP_OK) {
-                ret = ESP_ERR_TIMEOUT;
-            }
-        }
+    ret = esp_xiaozhi_udp_deinit(xiaozhi_chat->udp);
+    if (ret != ESP_OK) {
+        return ret;
     }
-
-    if (xiaozhi_chat->udp) {
-        esp_xiaozhi_chat_aes_ctr_free(&xiaozhi_chat->udp->aes_ctx);
-        if (xiaozhi_chat->udp->audio_receive_events) {
-            vEventGroupDelete(xiaozhi_chat->udp->audio_receive_events);
-            xiaozhi_chat->udp->audio_receive_events = NULL;
-        }
-        if (xiaozhi_chat->udp->channel_mutex) {
-            vSemaphoreDelete(xiaozhi_chat->udp->channel_mutex);
-        }
-        free(xiaozhi_chat->udp);
-        xiaozhi_chat->udp = NULL;
-    }
-
+    xiaozhi_chat->udp = NULL;
     if (xiaozhi_chat->event_group_handle) {
         vEventGroupDelete(xiaozhi_chat->event_group_handle);
     }
@@ -1490,56 +940,126 @@ esp_err_t esp_xiaozhi_chat_get_vision_explain(esp_xiaozhi_chat_handle_t chat_hd,
 #endif
 }
 
+static bool esp_xiaozhi_chat_connection_matches(esp_xiaozhi_chat_t *chat, const char *routing_session)
+{
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    bool matches = chat->started && chat->chat_connected &&
+                   (!routing_session || !strcmp(routing_session, chat->connection_id));
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    return matches;
+}
+
+static esp_err_t esp_xiaozhi_chat_prepare_mcp_request(void *ctx, const char *routing_session, const char *payload)
+{
+    esp_xiaozhi_chat_t *chat = ctx;
+    if (!esp_xiaozhi_chat_connection_matches(chat, routing_session)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#if CONFIG_XIAOZHI_VISION_ENABLE
+    if (strcmp(chat->vision_connection_id, routing_session)) {
+        (void)esp_xiaozhi_vision_set_endpoint(&chat->vision, NULL, NULL);
+        strlcpy(chat->vision_connection_id, routing_session, sizeof(chat->vision_connection_id));
+    }
+    cJSON *request = cJSON_ParseWithOpts(payload, NULL, true);
+    if (esp_xiaozhi_protocol_is_legacy_initialize(request)) {
+        esp_xiaozhi_chat_note_vision(chat, request);
+    }
+    cJSON_Delete(request);
+#endif
+    return ESP_OK;
+}
+
+static esp_err_t esp_xiaozhi_chat_send_mcp_reply(void *ctx, const char *routing_session,
+                                                 const char *reply_session, const char *payload)
+{
+    esp_xiaozhi_chat_t *chat = ctx;
+    if (!esp_xiaozhi_chat_connection_matches(chat, routing_session)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    cJSON *session = reply_session && reply_session[0] ? cJSON_CreateString(reply_session) : NULL;
+    char *encoded_session = session ? cJSON_PrintUnformatted(session) : NULL;
+    cJSON_Delete(session);
+    if (reply_session && reply_session[0] && !encoded_session) {
+        return ESP_ERR_NO_MEM;
+    }
+    size_t capacity = strlen(payload) + (encoded_session ? strlen(encoded_session) : 0) + 64;
+    char *message = malloc(capacity);
+    if (!message) {
+        cJSON_free(encoded_session);
+        return ESP_ERR_NO_MEM;
+    }
+    if (encoded_session) {
+        snprintf(message, capacity, "{\"type\":\"mcp\",\"session_id\":%s,\"payload\":%s}", encoded_session, payload);
+    } else {
+        snprintf(message, capacity, "{\"type\":\"mcp\",\"payload\":%s}", payload);
+    }
+    cJSON_free(encoded_session);
+    esp_err_t ret = esp_xiaozhi_transport_send_text(chat->transport_handle, message);
+    free(message);
+    return ret;
+}
+
+static esp_err_t esp_xiaozhi_chat_start_transport(esp_xiaozhi_chat_t *chat)
+{
+    esp_xiaozhi_transport_callbacks_t callbacks = {
+        .on_message_callback = esp_xiaozhi_chat_data_handler,
+        .on_audio_callback = esp_xiaozhi_chat_audio_handler,
+        .on_connected_callback = esp_xiaozhi_chat_connected_handler,
+        .on_disconnected_callback = esp_xiaozhi_chat_disconnected_handler,
+        .on_error_callback = esp_xiaozhi_chat_transport_error_handler,
+    };
+    xEventGroupClearBits(chat->event_group_handle, ESP_XIAOZHI_CHAT_CANCELLED);
+    esp_err_t ret = esp_xiaozhi_transport_start(chat->transport_handle, chat->use_mqtt, &callbacks);
+    if (ret == ESP_OK) {
+        chat->websocket_stopped = false;
+    }
+    return ret;
+}
+
 esp_err_t esp_xiaozhi_chat_start(esp_xiaozhi_chat_handle_t chat_hd)
 {
     ESP_RETURN_ON_FALSE(chat_hd, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-
-    esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)chat_hd;
-    ESP_RETURN_ON_FALSE(xiaozhi_chat->mcp_engine, ESP_ERR_INVALID_ARG, TAG, "MCP engine not initialized");
-
-    esp_err_t ret = ESP_OK;
-    esp_xiaozhi_mcp_config_t mcp_config = {
-        .session_id = xiaozhi_chat->session_id,
-        .session_id_len = strlen(xiaozhi_chat->session_id),
-        .use_mqtt = xiaozhi_chat->use_mqtt,
-        .callbacks = {
-            .on_message_callback = esp_xiaozhi_chat_data_handler,
-            .on_binary_callback = esp_xiaozhi_chat_binary_handler,
-            .on_connected_callback = esp_xiaozhi_chat_connected_handler,
-            .on_disconnected_callback = esp_xiaozhi_chat_disconnected_handler,
-            .on_error_callback = esp_xiaozhi_chat_transport_error_handler,
-        },
-        .ctx = xiaozhi_chat,
-    };
-
-    esp_mcp_mgr_config_t mcp_mgr_config = {
-        .transport = esp_mcp_transport_xiaozhi,
-        .config = &mcp_config,
-        .instance = xiaozhi_chat->mcp_engine,
-    };
-
-    ret = esp_mcp_mgr_init(mcp_mgr_config, &xiaozhi_chat->mcp_mgr_handle);
-    ESP_GOTO_ON_ERROR(ret, error, TAG, "Failed to initialize MCP manager: %s", esp_err_to_name(ret));
-
-    ret = esp_mcp_mgr_start(xiaozhi_chat->mcp_mgr_handle);
-    ESP_GOTO_ON_ERROR(ret, error, TAG, "Failed to start MCP manager: %s", esp_err_to_name(ret));
-
-    ret = esp_mcp_mgr_register_endpoint(xiaozhi_chat->mcp_mgr_handle, "mcp_server", NULL);
-    ESP_GOTO_ON_ERROR(ret, error, TAG, "Failed to register MCP endpoint: %s", esp_err_to_name(ret));
-
-    ret = esp_xiaozhi_mcp_get_handle(xiaozhi_chat->mcp_mgr_handle, &xiaozhi_chat->mcp_chat_handle);
-    ESP_GOTO_ON_ERROR(ret, error, TAG, "Failed to get transport handle from MCP: %s", esp_err_to_name(ret));
-
-    ESP_LOGD(TAG, "MCP manager initialized with %s transport", xiaozhi_chat->use_mqtt ? "MQTT" : "WebSocket");
-
-    return ESP_OK;
-
+    esp_xiaozhi_chat_t *chat = (esp_xiaozhi_chat_t *)chat_hd;
+    if (chat->started || chat->transport_handle) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t ret = esp_xiaozhi_transport_init(&chat->transport_handle);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Transport initialization failed");
+    if (chat->mcp_engine) {
+        esp_xiaozhi_mcp_config_t adapter = {
+            .ctx = chat, .transport_handle = chat->transport_handle,
+            .send_message = esp_xiaozhi_chat_send_mcp_reply,
+            .prepare_request = esp_xiaozhi_chat_prepare_mcp_request,
+        };
+        esp_mcp_mgr_config_t manager = {
+            .transport = esp_mcp_transport_xiaozhi, .config = &adapter, .instance = chat->mcp_engine,
+        };
+        chat->previous_mcp_compatibility = esp_mcp_is_xiaozhi_compatibility_enabled(chat->mcp_engine);
+        ret = esp_mcp_set_xiaozhi_compatibility(chat->mcp_engine, true);
+        if (ret != ESP_OK) {
+            goto error;
+        }
+        chat->mcp_compatibility_applied = true;
+        ret = esp_mcp_mgr_init(manager, &chat->mcp_mgr_handle);
+        if (ret != ESP_OK) {
+            goto error;
+        }
+        ret = esp_mcp_mgr_register_endpoint(chat->mcp_mgr_handle, "mcp_server", NULL);
+        if (ret != ESP_OK) {
+            goto error;
+        }
+        ret = esp_mcp_mgr_start(chat->mcp_mgr_handle);
+        if (ret != ESP_OK) {
+            goto error;
+        }
+    }
+    chat->started = true;
+    ret = esp_xiaozhi_chat_start_transport(chat);
+    if (ret == ESP_OK) {
+        return ESP_OK;
+    }
 error:
-
-    esp_mcp_mgr_stop(xiaozhi_chat->mcp_mgr_handle);
-    esp_mcp_mgr_deinit(xiaozhi_chat->mcp_mgr_handle);
-    xiaozhi_chat->mcp_mgr_handle = 0;
-
+    (void)esp_xiaozhi_chat_stop_runtime(chat);
     return ret;
 }
 
@@ -1569,14 +1089,23 @@ esp_err_t esp_xiaozhi_chat_open_audio_channel(esp_xiaozhi_chat_handle_t chat_hd,
 
     ESP_RETURN_ON_ERROR(esp_xiaozhi_chat_validate_audio_params(audio), TAG, "Invalid audio parameters");
 
-    if (!message || !message_len) {
-        uint16_t alloc_size = (message_len > 0) ? message_len : CONFIG_XIAOZHI_HELLO_MESSAGE_SIZE;
-        if (alloc_size > CONFIG_XIAOZHI_HELLO_MESSAGE_SIZE) {
-            alloc_size = CONFIG_XIAOZHI_HELLO_MESSAGE_SIZE;
+    if (!xiaozhi_chat->started || xiaozhi_chat->audio_channel_opened || xiaozhi_chat->hello_pending) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xiaozhi_chat->websocket_stopped) {
+        ret = esp_xiaozhi_chat_start_transport(xiaozhi_chat);
+        if (ret != ESP_OK) {
+            return ret;
         }
+        xiaozhi_chat->websocket_stopped = false;
+    }
+    if (!message || !message_len) {
+        size_t alloc_size = message_len && message_len < CONFIG_XIAOZHI_HELLO_MESSAGE_SIZE ?
+                            message_len : CONFIG_XIAOZHI_HELLO_MESSAGE_SIZE;
         message = calloc(1, alloc_size);
         ESP_RETURN_ON_FALSE(message, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory");
         message_allocated = true;
+        message_len = alloc_size;
         ret = esp_xiaozhi_chat_get_hello_message(xiaozhi_chat, audio, message, alloc_size);
         if (ret != ESP_OK) {
             free(message);
@@ -1584,19 +1113,58 @@ esp_err_t esp_xiaozhi_chat_open_audio_channel(esp_xiaozhi_chat_handle_t chat_hd,
         }
     }
 
+    if (!xiaozhi_chat->started || xiaozhi_chat->audio_channel_opened || xiaozhi_chat->hello_pending) {
+        if (message_allocated) {
+            free(message);
+        }
+        return ESP_ERR_INVALID_STATE;
+    }
+    ret = esp_xiaozhi_chat_validate_hello(xiaozhi_chat, message, message_len);
+    if (ret != ESP_OK) {
+        if (message_allocated) {
+            free(message);
+        }
+        return ret;
+    }
+    EventBits_t connected = xEventGroupWaitBits(xiaozhi_chat->event_group_handle,
+                                                ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED | ESP_XIAOZHI_CHAT_CANCELLED,
+                                                pdFALSE, pdFALSE, pdMS_TO_TICKS(10000));
+    if (!(connected & ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED) || (connected & ESP_XIAOZHI_CHAT_CANCELLED)) {
+        if (message_allocated) {
+            free(message);
+        }
+        return ESP_ERR_TIMEOUT;
+    }
+    xiaozhi_chat->hello_pending = true;
     xiaozhi_chat->error_occurred = false;
     memset(xiaozhi_chat->session_id, 0, sizeof(xiaozhi_chat->session_id));
-    xEventGroupClearBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO);
+    xEventGroupClearBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO | ESP_XIAOZHI_CHAT_HELLO_ERROR);
 
-    ret = esp_xiaozhi_transport_send_text(xiaozhi_chat->mcp_chat_handle, message);
+    ret = esp_xiaozhi_transport_send_text(xiaozhi_chat->transport_handle, message);
     if (message_allocated) {
         free(message);
     }
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to send hello message");
+    if (ret != ESP_OK) {
+        xiaozhi_chat->hello_pending = false;
+        return ret;
+    }
 
-    EventBits_t bits = xEventGroupWaitBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_SERVER_HELLO, pdTRUE, pdFALSE, pdMS_TO_TICKS(10000));
-    if (!(bits & ESP_XIAOZHI_CHAT_SERVER_HELLO)) {
-        ESP_RETURN_ON_ERROR(ESP_ERR_INVALID_ARG, TAG, "Failed to receive server hello");
+    EventBits_t bits = xEventGroupWaitBits(xiaozhi_chat->event_group_handle,
+                                           ESP_XIAOZHI_CHAT_SERVER_HELLO | ESP_XIAOZHI_CHAT_HELLO_ERROR | ESP_XIAOZHI_CHAT_CANCELLED,
+                                           pdFALSE, pdFALSE, pdMS_TO_TICKS(10000));
+    xiaozhi_chat->hello_pending = false;
+    if (!(bits & ESP_XIAOZHI_CHAT_SERVER_HELLO) ||
+            (bits & (ESP_XIAOZHI_CHAT_HELLO_ERROR | ESP_XIAOZHI_CHAT_CANCELLED)) || !xiaozhi_chat->chat_connected) {
+        xiaozhi_chat->error_occurred = true;
+        esp_xiaozhi_chat_error_info_t error = {
+            .code = bits & ESP_XIAOZHI_CHAT_CANCELLED ? ESP_ERR_INVALID_STATE :
+            bits & ESP_XIAOZHI_CHAT_HELLO_ERROR ? ESP_ERR_INVALID_RESPONSE : ESP_ERR_TIMEOUT,
+            .source = "hello",
+        };
+        if (xiaozhi_chat->event_callback) {
+            xiaozhi_chat->event_callback(ESP_XIAOZHI_CHAT_EVENT_CHAT_ERROR, &error, xiaozhi_chat->event_callback_ctx);
+        }
+        return error.code;
     }
 
     ret = esp_xiaozhi_chat_audio_open(xiaozhi_chat);
@@ -1612,7 +1180,7 @@ esp_err_t esp_xiaozhi_chat_close_audio_channel(esp_xiaozhi_chat_handle_t chat_hd
     ESP_RETURN_ON_FALSE(chat_hd, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)chat_hd;
-    if (strlen(xiaozhi_chat->session_id) > 0) {
+    if (xiaozhi_chat->use_mqtt && xiaozhi_chat->chat_connected && strlen(xiaozhi_chat->session_id) > 0) {
         cJSON *root = cJSON_CreateObject();
         if (root) {
             cJSON_AddStringToObject(root, "session_id", xiaozhi_chat->session_id);
@@ -1626,11 +1194,22 @@ esp_err_t esp_xiaozhi_chat_close_audio_channel(esp_xiaozhi_chat_handle_t chat_hd
     }
 
     memset(xiaozhi_chat->session_id, 0, sizeof(xiaozhi_chat->session_id));
-    esp_xiaozhi_chat_audio_close(xiaozhi_chat);
+    bool was_open = xiaozhi_chat->audio_channel_opened;
+    esp_err_t close_ret = esp_xiaozhi_chat_audio_close(xiaozhi_chat);
+    if (!xiaozhi_chat->use_mqtt &&
+            (was_open || !xiaozhi_chat->chat_connected || xiaozhi_chat->error_occurred) &&
+            !xiaozhi_chat->websocket_stopped && xiaozhi_chat->transport_handle) {
+        close_ret = esp_xiaozhi_transport_stop(xiaozhi_chat->transport_handle);
+        if (close_ret == ESP_OK) {
+            xiaozhi_chat->websocket_stopped = true;
+            xiaozhi_chat->chat_connected = false;
+            xEventGroupClearBits(xiaozhi_chat->event_group_handle, ESP_XIAOZHI_CHAT_TRANSPORT_CONNECTED);
+        }
+    }
 
     esp_event_post(ESP_XIAOZHI_CHAT_EVENTS, ESP_XIAOZHI_CHAT_EVENT_AUDIO_CHANNEL_CLOSED, NULL, 0, portMAX_DELAY);
 
-    return ESP_OK;
+    return close_ret;
 }
 
 esp_err_t esp_xiaozhi_chat_send_audio_data(esp_xiaozhi_chat_handle_t chat_hd, const char *data, size_t data_len)
@@ -1643,7 +1222,7 @@ esp_err_t esp_xiaozhi_chat_send_audio_data(esp_xiaozhi_chat_handle_t chat_hd, co
     esp_xiaozhi_chat_audio_t packet = {
         .sample_rate = xiaozhi_chat->server_sample_rate,
         .frame_duration = xiaozhi_chat->server_frame_duration,
-        .timestamp = xTaskGetTickCount(),
+        .timestamp = esp_timer_get_time() / 1000,
         .payload = (uint8_t *)data,
         .payload_size = data_len,
     };
@@ -1674,9 +1253,12 @@ esp_err_t esp_xiaozhi_chat_send_start_listening(esp_xiaozhi_chat_handle_t chat_h
     ESP_RETURN_ON_FALSE(chat_hd, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)chat_hd;
+    if (mode < ESP_XIAOZHI_CHAT_LISTENING_MODE_REALTIME || mode > ESP_XIAOZHI_CHAT_LISTENING_MODE_MANUAL_STOP) {
+        return ESP_ERR_INVALID_ARG;
+    }
     const char *mode_str = (mode == ESP_XIAOZHI_CHAT_LISTENING_MODE_REALTIME) ? "realtime" :
-                           (mode == ESP_XIAOZHI_CHAT_LISTENING_MODE_AUTO) ? "auto" :
-                           (mode == ESP_XIAOZHI_CHAT_LISTENING_MODE_MANUAL) ? "manual" : "unknown";
+                           (mode == ESP_XIAOZHI_CHAT_LISTENING_MODE_AUTO || mode == ESP_XIAOZHI_CHAT_LISTENING_MODE_AUTO_STOP) ? "auto" :
+                           "manual";
 
     cJSON *root = NULL;
     esp_err_t ret = esp_xiaozhi_chat_create_session_message(xiaozhi_chat, "listen", &root);
@@ -1711,15 +1293,138 @@ esp_err_t esp_xiaozhi_chat_send_abort_speaking(esp_xiaozhi_chat_handle_t chat_hd
     ESP_RETURN_ON_FALSE(chat_hd, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
 
     esp_xiaozhi_chat_t *xiaozhi_chat = (esp_xiaozhi_chat_t *)chat_hd;
-    const char *reason_str = (reason == ESP_XIAOZHI_CHAT_ABORT_SPEAKING_REASON_WAKE_WORD_DETECTED) ? "wake_word_detected" : (reason == ESP_XIAOZHI_CHAT_ABORT_SPEAKING_REASON_STOP_LISTENING) ? "stop_listening" : "unknown";
+    if (reason < ESP_XIAOZHI_CHAT_ABORT_SPEAKING_REASON_WAKE_WORD_DETECTED || reason > ESP_XIAOZHI_CHAT_ABORT_SPEAKING_REASON_UNKNOWN) {
+        return ESP_ERR_INVALID_ARG;
+    }
 
     cJSON *root = NULL;
     esp_err_t ret = esp_xiaozhi_chat_create_session_message(xiaozhi_chat, "abort", &root);
     ESP_RETURN_ON_ERROR(ret, TAG, "Failed to create session message");
 
-    cJSON_AddStringToObject(root, "reason", reason_str);
+    if (reason == ESP_XIAOZHI_CHAT_ABORT_SPEAKING_REASON_WAKE_WORD_DETECTED) {
+        cJSON_AddStringToObject(root, "reason", "wake_word_detected");
+    }
 
     ret = esp_xiaozhi_chat_send_json_message(xiaozhi_chat, root);
     cJSON_Delete(root);
     return ret;
+}
+
+esp_err_t esp_xiaozhi_chat_send_json(esp_xiaozhi_chat_handle_t handle, const char *json)
+{
+    if (!handle || !json || strlen(json) > UINT16_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    cJSON *object = cJSON_ParseWithOpts(json, NULL, true);
+    bool valid = cJSON_IsObject(object) && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(object, "type"));
+    cJSON_Delete(object);
+    if (!valid) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_chat_t *chat = (esp_xiaozhi_chat_t *)handle;
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    bool ready = chat->started && chat->chat_connected;
+    esp_xiaozhi_transport_handle_t transport = chat->transport_handle;
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    return ready && transport ? esp_xiaozhi_transport_send_text(transport, json) : ESP_ERR_INVALID_STATE;
+}
+
+esp_err_t esp_xiaozhi_chat_send_mcp(esp_xiaozhi_chat_handle_t handle, const char *payload)
+{
+    if (!handle || !payload || strlen(payload) > UINT16_MAX) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    cJSON *object = cJSON_ParseWithOpts(payload, NULL, true);
+    bool valid = cJSON_IsObject(object);
+    cJSON_Delete(object);
+    if (!valid) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_chat_t *chat = (esp_xiaozhi_chat_t *)handle;
+    char connection_id[sizeof(chat->connection_id)];
+    char session_id[sizeof(chat->session_id)];
+    portENTER_CRITICAL(&s_xiaozhi_chat_lock);
+    memcpy(connection_id, chat->connection_id, sizeof(connection_id));
+    memcpy(session_id, chat->session_id, sizeof(session_id));
+    portEXIT_CRITICAL(&s_xiaozhi_chat_lock);
+    return esp_xiaozhi_chat_send_mcp_reply(chat, connection_id, session_id, payload);
+}
+
+esp_err_t esp_xiaozhi_chat_send_audio_packet(esp_xiaozhi_chat_handle_t handle, const esp_xiaozhi_chat_audio_t *packet)
+{
+    if (!handle || !packet || !packet->payload || !packet->payload_size) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    return esp_xiaozhi_chat_audio_send((esp_xiaozhi_chat_t *)handle, packet);
+}
+
+esp_err_t esp_xiaozhi_chat_get_audio_params(esp_xiaozhi_chat_handle_t handle, esp_xiaozhi_chat_audio_t *params)
+{
+    if (!handle || !params) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_chat_t *chat = (esp_xiaozhi_chat_t *)handle;
+    *params = (esp_xiaozhi_chat_audio_t) {
+        .format = chat->server_format, .sample_rate = chat->server_sample_rate,
+        .channels = chat->server_channels, .frame_duration = chat->server_frame_duration,
+    };
+    return ESP_OK;
+}
+
+esp_err_t esp_xiaozhi_chat_get_request_vision(esp_xiaozhi_chat_handle_t handle,
+                                              const esp_mcp_request_context_t *request,
+                                              char *url, size_t url_size, char *token, size_t token_size)
+{
+    if (!handle || !url || !url_size || (token && !token_size)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    url[0] = '\0';
+    if (token) {
+        token[0] = '\0';
+    }
+    if (!request || !request->protocol_version || strcmp(request->protocol_version, "2026-07-28")) {
+        return esp_xiaozhi_chat_get_vision_explain(handle, url, url_size, token, token_size);
+    }
+    cJSON *meta = request->meta_json ? cJSON_ParseWithOpts(request->meta_json, NULL, true) : NULL;
+    const cJSON *caps = cJSON_GetObjectItemCaseSensitive(meta, "io.modelcontextprotocol/clientCapabilities");
+    const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(caps, "extensions");
+    const cJSON *vision = cJSON_GetObjectItemCaseSensitive(extensions, "me.xiaozhi/vision");
+    const cJSON *target = cJSON_GetObjectItemCaseSensitive(vision, "url");
+    const cJSON *bearer = cJSON_GetObjectItemCaseSensitive(vision, "token");
+    esp_err_t ret = ESP_ERR_INVALID_ARG;
+    if (cJSON_IsObject(vision) && cJSON_IsString(target) && (!bearer || cJSON_IsString(bearer))) {
+        const char *value = target->valuestring;
+        size_t prefix = !strncmp(value, "https://", 8) ? 8 : !strncmp(value, "http://", 7) ? 7 : 0;
+        bool valid = prefix && value[prefix] && !strchr("/?#", value[prefix]);
+        for (const unsigned char *c = (const unsigned char *)value; valid && *c; c++) {
+            valid = !isspace(*c) && !iscntrl(*c);
+        }
+        const char *secret = bearer ? bearer->valuestring : "";
+        valid = valid && !strpbrk(secret, "\r\n");
+        if (valid) {
+            ret = strlen(value) < url_size && (!token || strlen(secret) < token_size) ? ESP_OK : ESP_ERR_INVALID_SIZE;
+            if (ret == ESP_OK) {
+                strcpy(url, value);
+                if (token) {
+                    strcpy(token, secret);
+                }
+            }
+        }
+    }
+    cJSON_Delete(meta);
+    return ret;
+}
+
+bool esp_xiaozhi_chat_is_audio_channel_opened(esp_xiaozhi_chat_handle_t handle)
+{
+    return handle && esp_xiaozhi_chat_is_audio_ready((esp_xiaozhi_chat_t *)handle);
+}
+
+esp_err_t esp_xiaozhi_chat_get_udp_health(esp_xiaozhi_chat_handle_t handle, esp_xiaozhi_udp_health_info_t *info)
+{
+    if (!handle || !info) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_chat_t *chat = (esp_xiaozhi_chat_t *)handle;
+    return chat->use_mqtt ? esp_xiaozhi_udp_get_health(chat->udp, info) : ESP_ERR_NOT_SUPPORTED;
 }
