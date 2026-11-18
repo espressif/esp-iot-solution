@@ -386,7 +386,9 @@ typedef struct esp_ble_conn_session_t {
     bool                         adv_params_set;
     bool                         scan_params_set;
     bool                         nimble_initialized;
-    bool                         adv_data_auto_built;   /* Legacy auto-built adv_data_buf includes Local Name */
+    bool                         adv_data_auto_built;   /* Legacy auto-built adv_data_buf includes Flags + Local Name */
+    bool                         adv_rsp_auto_built;    /* Legacy scan rsp includes manufacturer (+ optional name) */
+    uint8_t                      broadcast_data[BROADCAST_PARAM_LEN];
     bool                         adv_data_auto_include_uuid;
     esp_ble_conn_uuid_type_t     adv_data_auto_uuid_type;
     uint16_t                     adv_data_auto_uuid16;
@@ -2642,6 +2644,10 @@ static esp_err_t esp_ble_conn_ext_advertise(esp_ble_conn_session_t *conn_session
 }
 #endif /* BLE_CONN_MGR_NIMBLE_USE_EXT_GAP */
 
+#if !BLE_CONN_MGR_NIMBLE_USE_EXT_GAP
+static uint8_t esp_ble_conn_legacy_adv_disc_flags(const esp_ble_conn_session_t *conn_session);
+#endif
+
 static esp_err_t esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
 {
     /* Defense in depth: never start connectable ADV while a periodic sync is
@@ -2663,30 +2669,27 @@ static esp_err_t esp_ble_conn_advertise(esp_ble_conn_session_t *conn_session)
     struct ble_gap_adv_params adv_params;
     struct ble_hs_adv_fields fields;
 
-    memset(&fields, 0, sizeof(fields));
-    fields.flags = BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
-    fields.tx_pwr_lvl_is_present = 1;
-    fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
-
-    fields.name = (const uint8_t *)ble_svc_gap_device_name();
-    if (fields.name) {
-        fields.name_len = strlen((const char *)fields.name);
-        fields.name_is_complete = 1;
-    }
-
-    fields.num_uuids128 = 1;
-    fields.uuids128_is_complete = 1;
-
-    rc = ble_gap_adv_set_fields(&fields);
-    if (rc != 0) {
-        ESP_LOGE(TAG, "error setting advertisement data; rc=%d", rc);
-        return ESP_FAIL;
-    }
-
     if (conn_session->adv_data_buf) {
         rc = ble_gap_adv_set_data(conn_session->adv_data_buf, conn_session->adv_data_len);
         if (rc != 0) {
-            ESP_LOGE(TAG, "Error in setting name; rc = %d", rc);
+            ESP_LOGE(TAG, "Error in setting advertisement data; rc = %d", rc);
+            return ESP_FAIL;
+        }
+    } else {
+        memset(&fields, 0, sizeof(fields));
+        fields.flags = esp_ble_conn_legacy_adv_disc_flags(conn_session);
+        fields.tx_pwr_lvl_is_present = 1;
+        fields.tx_pwr_lvl = BLE_HS_ADV_TX_PWR_LVL_AUTO;
+
+        fields.name = (const uint8_t *)ble_svc_gap_device_name();
+        if (fields.name) {
+            fields.name_len = strlen((const char *)fields.name);
+            fields.name_is_complete = 1;
+        }
+
+        rc = ble_gap_adv_set_fields(&fields);
+        if (rc != 0) {
+            ESP_LOGE(TAG, "error setting advertisement data; rc=%d", rc);
             return ESP_FAIL;
         }
     }
@@ -4118,6 +4121,13 @@ static void esp_ble_conn_del_svc(esp_ble_conn_svc_t *svc)
     }
 }
 
+#if !defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn_session,
+                                                    const char *name_candidate);
+static esp_err_t esp_ble_conn_rebuild_auto_scan_rsp_data(esp_ble_conn_session_t *conn_session,
+                                                         const char *name_candidate);
+#endif
+
 esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
 {
     if (!config || s_conn_session) {
@@ -4234,70 +4244,12 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
     }
 
 #else
-    uint8_t offset = 0;
-    esp_nimble_maps_t uuid_data = { 0 };
-    /* Store BLE announce data internally */
-    esp_nimble_maps_t announce_data[] = {
-        {
-            .type = BLE_CONN_DATA_NAME_COMPLETE,
-            .length = conn_session->device_name ? strlen((const char *)conn_session->device_name) : 0,
-            .value = conn_session->device_name,
-        }
-    };
+    memcpy(conn_session->broadcast_data, config->broadcast_data, BROADCAST_PARAM_LEN);
+    conn_session->adv_rsp_auto_built = true;
 
-    for (uint8_t i = 0; i < (sizeof(announce_data)/sizeof(announce_data[0])); i++) {
-        if (announce_data[i].length > 0 && announce_data[i].value != NULL) {
-            conn_session->adv_data_len += announce_data[i].length + 2;
-        }
-    }
-
-    if (config->include_service_uuid) {
-        /* Default to 16-bit UUID if not specified (for backward compatibility) */
-        if (config->adv_uuid_type == 0 || config->adv_uuid_type == BLE_CONN_UUID_TYPE_16) {
-            uuid_data.type = BLE_CONN_DATA_UUID16_ALL;
-            uuid_data.length = sizeof(config->adv_uuid16);
-            uuid_data.value = (uint8_t *)(&(config->adv_uuid16));
-        } else if (config->adv_uuid_type == BLE_CONN_UUID_TYPE_128) {
-            uuid_data.type = BLE_CONN_DATA_UUID128_ALL;
-            uuid_data.length = sizeof(config->adv_uuid128);
-            uuid_data.value = (uint8_t *)(config->adv_uuid128);
-        } else {
-            ESP_LOGE(TAG, "Unsupported UUID type: %d", config->adv_uuid_type);
-            goto ble_init_error;
-        }
-        conn_session->adv_data_len += uuid_data.length + 2;
-    }
-
-    if (conn_session->adv_data_len > BLE_ADV_DATA_LEN_MAX) {
-        ESP_LOGE(TAG, "Advertisement data too long = %d bytes", conn_session->adv_data_len);
-        goto ble_init_error;
-    }
-
-    /* Allocate memory for the raw advertisement data (skip when Central-only, adv_data_len is 0) */
-    if (conn_session->adv_data_len > 0) {
-        conn_session->adv_data_buf = calloc(1, conn_session->adv_data_len);
-        if (conn_session->adv_data_buf == NULL) {
-            ESP_LOGE(TAG, "Allocate memory for raw advertisement data error!");
-            goto ble_init_error;
-        }
-
-        /* Form the raw advertisement data using above entries */
-        for (uint8_t i = 0, len = 0; i < (sizeof(announce_data)/sizeof(announce_data[0])); i++) {
-            if (announce_data[i].length > 0 && announce_data[i].value != NULL) {
-                conn_session->adv_data_buf[len++] = announce_data[i].length + 1; // + 1 byte for type
-                conn_session->adv_data_buf[len++] = announce_data[i].type;
-                memcpy(&conn_session->adv_data_buf[len], announce_data[i].value, announce_data[i].length);
-                len += announce_data[i].length;
-                offset = len;
-            }
-        }
-
-        if (config->include_service_uuid) {
-            conn_session->adv_data_buf[offset++] = uuid_data.length + 1;
-            conn_session->adv_data_buf[offset++] = uuid_data.type;
-            memcpy(&conn_session->adv_data_buf[offset], uuid_data.value, uuid_data.length);
-            offset += uuid_data.length;
-        }
+    if ((conn_session->device_name && conn_session->device_name[0] != '\0') ||
+            config->include_service_uuid) {
+        esp_err_t adv_err;
 
         conn_session->adv_data_auto_built = true;
         conn_session->adv_data_auto_include_uuid = config->include_service_uuid ? true : false;
@@ -4305,48 +4257,29 @@ esp_err_t esp_ble_conn_init(esp_ble_conn_config_t *config)
             if (config->adv_uuid_type == 0 || config->adv_uuid_type == BLE_CONN_UUID_TYPE_16) {
                 conn_session->adv_data_auto_uuid_type = BLE_CONN_UUID_TYPE_16;
                 conn_session->adv_data_auto_uuid16 = config->adv_uuid16;
-            } else {
+            } else if (config->adv_uuid_type == BLE_CONN_UUID_TYPE_128) {
                 conn_session->adv_data_auto_uuid_type = BLE_CONN_UUID_TYPE_128;
                 memcpy(conn_session->adv_data_auto_uuid128, config->adv_uuid128,
                        sizeof(conn_session->adv_data_auto_uuid128));
+            } else {
+                ESP_LOGE(TAG, "Unsupported UUID type: %d", config->adv_uuid_type);
+                goto ble_init_error;
             }
         }
-    }
 
-    /* Store BLE scan response data internally */
-    esp_nimble_maps_t scan_resp_data[] = {
-        {
-            .type   = BLE_CONN_DATA_MANUFACTURER_DATA,
-            .length = sizeof(config->broadcast_data),
-            .value = config->broadcast_data,
+        adv_err = esp_ble_conn_rebuild_auto_adv_data(conn_session, NULL);
+        if (adv_err != ESP_OK) {
+            ESP_LOGE(TAG, "Build legacy advertisement data error: %s", esp_err_to_name(adv_err));
+            goto ble_init_error;
         }
-    };
-
-    /* Get the total raw scan response data length required for above entries */
-    for (int i = 0; i < (sizeof(scan_resp_data)/sizeof(scan_resp_data[0])); i++) {
-        /* Add extra bytes required per entry, i.e.
-         * length (1 byte) + type (1 byte) = 2 bytes */
-        conn_session->adv_rsp_data_len += scan_resp_data[i].length + 2;
     }
 
-    if (conn_session->adv_rsp_data_len > BLE_SCAN_RSP_DATA_LEN_MAX) {
-        ESP_LOGE(TAG, "Scan response data too long = %d bytes", conn_session->adv_rsp_data_len);
-        goto ble_init_error;
-    }
-
-    /* Allocate memory for the raw scan response data */
-    conn_session->adv_rsp_data_buf = calloc(1, conn_session->adv_rsp_data_len);
-    if (conn_session->adv_rsp_data_buf == NULL) {
-        ESP_LOGE(TAG, "Allocate memory for raw response data!");
-        goto ble_init_error;
-    }
-
-    /* Form the raw scan response data using above entries */
-    for (uint8_t i = 0, len = 0; i < (sizeof(scan_resp_data)/sizeof(scan_resp_data[0])); i++) {
-        conn_session->adv_rsp_data_buf[len++] = scan_resp_data[i].length + 1; // + 1 byte for type
-        conn_session->adv_rsp_data_buf[len++] = scan_resp_data[i].type;
-        memcpy(&conn_session->adv_rsp_data_buf[len], scan_resp_data[i].value, scan_resp_data[i].length);
-        len += scan_resp_data[i].length;
+    {
+        esp_err_t rsp_err = esp_ble_conn_rebuild_auto_scan_rsp_data(conn_session, NULL);
+        if (rsp_err != ESP_OK) {
+            ESP_LOGE(TAG, "Build legacy scan response data error: %s", esp_err_to_name(rsp_err));
+            goto ble_init_error;
+        }
     }
 #endif
 
@@ -4635,6 +4568,18 @@ esp_err_t esp_ble_conn_adv_params_set(const esp_ble_conn_adv_params_t *params)
         esp_ble_conn_set_default_adv_params(s_conn_session);
         s_conn_session->adv_params_set = false;
     }
+#if !defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
+    if (s_conn_session->adv_data_auto_built) {
+        esp_err_t err = esp_ble_conn_rebuild_auto_adv_data(s_conn_session, NULL);
+        if (err != ESP_OK) {
+            return err;
+        }
+        err = esp_ble_conn_rebuild_auto_scan_rsp_data(s_conn_session, NULL);
+        if (err != ESP_OK) {
+            return err;
+        }
+    }
+#endif
     return ESP_OK;
 }
 
@@ -4661,33 +4606,158 @@ static uint16_t esp_ble_conn_adv_data_max_len(void)
 }
 
 #if !defined(CONFIG_BLE_CONN_MGR_EXTENDED_ADV)
-static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn_session)
+static uint8_t esp_ble_conn_legacy_adv_disc_flags(const esp_ble_conn_session_t *conn_session)
+{
+    uint8_t disc_mode;
+    uint8_t flags;
+
+    if (!conn_session) {
+        return BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP;
+    }
+
+    if (!conn_session->adv_params_set) {
+        disc_mode = ESP_BLE_CONN_ADV_DISC_MODE_GEN;
+    } else {
+        disc_mode = conn_session->adv_params_cfg.disc_mode;
+    }
+
+    flags = BLE_HS_ADV_F_BREDR_UNSUP;
+    if (disc_mode == ESP_BLE_CONN_ADV_DISC_MODE_GEN) {
+        flags |= BLE_HS_ADV_F_DISC_GEN;
+    } else if (disc_mode == ESP_BLE_CONN_ADV_DISC_MODE_LTD) {
+        flags |= BLE_HS_ADV_F_DISC_LTD;
+    }
+
+    return flags;
+}
+
+static void esp_ble_conn_legacy_adv_flags_encode(uint8_t *buf, uint8_t flags)
+{
+    buf[0] = 1 + 1;
+    buf[1] = BLE_CONN_DATA_FLAGS;
+    buf[2] = flags;
+}
+
+static uint16_t esp_ble_conn_legacy_uuid_ad_size(const esp_ble_conn_session_t *conn_session)
+{
+    if (!conn_session || !conn_session->adv_data_auto_include_uuid) {
+        return 0;
+    }
+
+    if (conn_session->adv_data_auto_uuid_type == 0 ||
+            conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_16) {
+        return 4;
+    }
+    if (conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_128) {
+        return 18;
+    }
+
+    return 0;
+}
+
+static uint16_t esp_ble_conn_legacy_encode_name_ad(uint8_t *buf, const char *name, size_t name_len,
+                                                    uint16_t budget)
+{
+    uint16_t max_payload;
+    uint16_t ad_len;
+    uint8_t ad_type;
+
+    if (!name || name_len == 0 || budget < 3) {
+        return 0;
+    }
+
+    max_payload = budget - 2;
+    if (name_len <= max_payload) {
+        ad_type = BLE_CONN_DATA_NAME_COMPLETE;
+        ad_len = (uint16_t)name_len;
+    } else if (max_payload == 0) {
+        return 0;
+    } else {
+        ad_type = BLE_CONN_DATA_NAME_SHORTENED;
+        ad_len = max_payload;
+    }
+
+    if (buf) {
+        buf[0] = (uint8_t)(ad_len + 1);
+        buf[1] = ad_type;
+        memcpy(&buf[2], name, ad_len);
+    }
+
+    return (uint16_t)(2 + ad_len);
+}
+
+static bool esp_ble_conn_legacy_name_use_scan_rsp_only(const esp_ble_conn_session_t *conn_session,
+                                                       size_t name_len)
+{
+    uint16_t adv_budget;
+    uint16_t scan_budget;
+
+    if (!conn_session || name_len == 0) {
+        return false;
+    }
+
+    adv_budget = BLE_ADV_DATA_LEN_MAX - 3 - esp_ble_conn_legacy_uuid_ad_size(conn_session);
+    scan_budget = BLE_SCAN_RSP_DATA_LEN_MAX - (2 + BROADCAST_PARAM_LEN);
+
+    if (adv_budget < 2 || scan_budget < 2) {
+        return false;
+    }
+
+    if (name_len <= adv_budget - 2) {
+        return false;
+    }
+
+    return scan_budget > adv_budget;
+}
+
+static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn_session,
+                                                    const char *name_candidate)
 {
     esp_nimble_maps_t uuid_data = { 0 };
-    uint8_t offset = 0;
-    uint16_t new_len = 0;
+    const char *name;
+    size_t name_len;
+    uint16_t budget;
+    uint16_t new_len;
+    uint8_t flags;
+    uint8_t offset;
+    uint8_t *new_buf;
+    bool name_in_scan_rsp_only;
 
     if (!conn_session || !conn_session->adv_data_auto_built) {
         return ESP_OK;
     }
 
-    size_t name_len = conn_session->device_name ? strlen((const char *)conn_session->device_name) : 0;
-    if (name_len > 0) {
-        new_len += (uint16_t)(name_len + 2);
+    name = name_candidate;
+    if (!name && conn_session->device_name) {
+        name = (const char *)conn_session->device_name;
     }
+    name_len = name ? strlen(name) : 0;
+    name_in_scan_rsp_only = esp_ble_conn_legacy_name_use_scan_rsp_only(conn_session, name_len);
+
+    budget = BLE_ADV_DATA_LEN_MAX - 3;
 
     if (conn_session->adv_data_auto_include_uuid) {
-        if (conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_16) {
+        if (conn_session->adv_data_auto_uuid_type == 0 ||
+                conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_16) {
             uuid_data.type = BLE_CONN_DATA_UUID16_ALL;
             uuid_data.length = sizeof(conn_session->adv_data_auto_uuid16);
             uuid_data.value = (uint8_t *)&conn_session->adv_data_auto_uuid16;
-            new_len += uuid_data.length + 2;
         } else if (conn_session->adv_data_auto_uuid_type == BLE_CONN_UUID_TYPE_128) {
             uuid_data.type = BLE_CONN_DATA_UUID128_ALL;
             uuid_data.length = sizeof(conn_session->adv_data_auto_uuid128);
             uuid_data.value = conn_session->adv_data_auto_uuid128;
-            new_len += uuid_data.length + 2;
+        } else {
+            return ESP_ERR_INVALID_ARG;
         }
+        budget -= uuid_data.length + 2;
+    }
+
+    new_len = 3;
+    if (conn_session->adv_data_auto_include_uuid && uuid_data.value) {
+        new_len += uuid_data.length + 2;
+    }
+    if (name_len > 0 && !name_in_scan_rsp_only) {
+        new_len += esp_ble_conn_legacy_encode_name_ad(NULL, name, name_len, budget);
     }
 
     if (new_len > BLE_ADV_DATA_LEN_MAX) {
@@ -4695,42 +4765,105 @@ static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (conn_session->adv_data_buf) {
-        free(conn_session->adv_data_buf);
-        conn_session->adv_data_buf = NULL;
-        conn_session->adv_data_len = 0;
+    new_buf = (uint8_t *)calloc(1, new_len);
+    if (!new_buf) {
+        return ESP_ERR_NO_MEM;
     }
 
-    if (new_len == 0) {
+    flags = esp_ble_conn_legacy_adv_disc_flags(conn_session);
+    esp_ble_conn_legacy_adv_flags_encode(new_buf, flags);
+    offset = 3;
+    if (conn_session->adv_data_auto_include_uuid && uuid_data.value) {
+        new_buf[offset++] = uuid_data.length + 1;
+        new_buf[offset++] = uuid_data.type;
+        memcpy(&new_buf[offset], uuid_data.value, uuid_data.length);
+        offset += uuid_data.length;
+    }
+
+    if (name_len > 0 && !name_in_scan_rsp_only) {
+        offset += esp_ble_conn_legacy_encode_name_ad(&new_buf[offset], name, name_len, budget);
+    }
+
+    if (conn_session->adv_data_buf) {
+        free(conn_session->adv_data_buf);
+    }
+    conn_session->adv_data_buf = new_buf;
+    conn_session->adv_data_len = offset;
+
+    return ESP_OK;
+}
+
+static esp_err_t esp_ble_conn_rebuild_auto_scan_rsp_data(esp_ble_conn_session_t *conn_session,
+                                                         const char *name_candidate)
+{
+    const char *name;
+    size_t name_len;
+    uint16_t budget;
+    uint16_t name_ad_len;
+    uint16_t total_len;
+    uint8_t offset;
+    uint8_t *new_buf;
+
+    if (!conn_session || !conn_session->adv_rsp_auto_built) {
         return ESP_OK;
     }
 
-    conn_session->adv_data_buf = calloc(1, new_len);
-    if (!conn_session->adv_data_buf) {
-        ESP_LOGE(TAG, "Allocate memory for auto advertisement data error!");
+    name = name_candidate;
+    if (!name && conn_session->device_name) {
+        name = (const char *)conn_session->device_name;
+    }
+    name_len = name ? strlen(name) : 0;
+
+    total_len = 2 + BROADCAST_PARAM_LEN;
+    budget = BLE_SCAN_RSP_DATA_LEN_MAX - total_len;
+    name_ad_len = 0;
+    if (esp_ble_conn_legacy_name_use_scan_rsp_only(conn_session, name_len)) {
+        name_ad_len = esp_ble_conn_legacy_encode_name_ad(NULL, name, name_len, budget);
+    }
+    total_len += name_ad_len;
+
+    if (total_len > BLE_SCAN_RSP_DATA_LEN_MAX) {
+        ESP_LOGE(TAG, "Auto scan response data too long = %d bytes", total_len);
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    new_buf = (uint8_t *)calloc(1, total_len);
+    if (!new_buf) {
         return ESP_ERR_NO_MEM;
     }
-    conn_session->adv_data_len = new_len;
 
-    if (name_len > 0) {
-        conn_session->adv_data_buf[offset++] = (uint8_t)(name_len + 1);
-        conn_session->adv_data_buf[offset++] = BLE_CONN_DATA_NAME_COMPLETE;
-        memcpy(&conn_session->adv_data_buf[offset], conn_session->device_name, name_len);
-        offset += (uint8_t)name_len;
+    offset = 0;
+    new_buf[offset++] = BROADCAST_PARAM_LEN + 1;
+    new_buf[offset++] = BLE_CONN_DATA_MANUFACTURER_DATA;
+    memcpy(&new_buf[offset], conn_session->broadcast_data, BROADCAST_PARAM_LEN);
+    offset += BROADCAST_PARAM_LEN;
+
+    if (name_ad_len > 0) {
+        offset += esp_ble_conn_legacy_encode_name_ad(&new_buf[offset], name, name_len, budget);
     }
 
-    if (conn_session->adv_data_auto_include_uuid && uuid_data.value) {
-        conn_session->adv_data_buf[offset++] = uuid_data.length + 1;
-        conn_session->adv_data_buf[offset++] = uuid_data.type;
-        memcpy(&conn_session->adv_data_buf[offset], uuid_data.value, uuid_data.length);
+    if (conn_session->adv_rsp_data_buf) {
+        free(conn_session->adv_rsp_data_buf);
     }
+    conn_session->adv_rsp_data_buf = new_buf;
+    conn_session->adv_rsp_data_len = offset;
 
     return ESP_OK;
 }
 #else
-static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn_session)
+static esp_err_t esp_ble_conn_rebuild_auto_adv_data(esp_ble_conn_session_t *conn_session,
+                                                    const char *name_candidate)
 {
     (void)conn_session;
+    (void)name_candidate;
+    return ESP_OK;
+}
+
+static esp_err_t esp_ble_conn_rebuild_auto_scan_rsp_data(esp_ble_conn_session_t *conn_session,
+                                                         const char *name_candidate)
+{
+    (void)conn_session;
+    (void)name_candidate;
     return ESP_OK;
 }
 #endif
@@ -4752,6 +4885,16 @@ static esp_err_t esp_ble_conn_device_name_apply(esp_ble_conn_session_t *conn_ses
         return ESP_ERR_INVALID_ARG;
     }
 
+    err = esp_ble_conn_rebuild_auto_adv_data(conn_session, name);
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    err = esp_ble_conn_rebuild_auto_scan_rsp_data(conn_session, name);
+    if (err != ESP_OK) {
+        return err;
+    }
+
     new_name = (uint8_t *)strndup(name, name_len);
     if (!new_name) {
         return ESP_ERR_NO_MEM;
@@ -4769,11 +4912,6 @@ static esp_err_t esp_ble_conn_device_name_apply(esp_ble_conn_session_t *conn_ses
     conn_session->device_name = new_name;
     if (old_name) {
         free(old_name);
-    }
-
-    err = esp_ble_conn_rebuild_auto_adv_data(conn_session);
-    if (err != ESP_OK) {
-        return err;
     }
 
     if (refresh_adv) {
@@ -4965,6 +5103,7 @@ esp_err_t esp_ble_conn_scan_rsp_data_set(const uint8_t *data, uint16_t len)
         memcpy(conn_session->adv_rsp_data_buf, data, len);
         conn_session->adv_rsp_data_len = len;
     }
+    conn_session->adv_rsp_auto_built = false;
     return esp_ble_conn_refresh_adv_if_active(conn_session);
 }
 
