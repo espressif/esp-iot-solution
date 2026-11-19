@@ -1,0 +1,10 @@
+menu "Standby clock"
+    config EXAMPLE_DSI_SOFTWARE_RESET
+        bool "Use DSI software reset for EK79007"
+        depends on IDF_TARGET_ESP32P4
+        default n
+        help
+            Send DCS SWRESET through the DSI command channel. Enable only on
+            boards that hold the panel RESET input at a valid inactive level
+            without the ESP32-P4 driving it.
+endmenu

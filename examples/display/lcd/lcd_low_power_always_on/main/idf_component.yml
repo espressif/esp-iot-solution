@@ -1,0 +1,14 @@
+dependencies:
+  idf: ">=5.5.5"
+  esp_lcd_ek79007:
+    override_path: "../../../../../components/display/lcd/esp_lcd_ek79007"
+    rules:
+      - if: "target == esp32p4"
+  esp_lcd_st7701:
+    override_path: "../../../../../components/display/lcd/esp_lcd_st7701"
+    rules:
+      - if: "target == esp32s3"
+  esp_lcd_panel_io_additions:
+    override_path: "../../../../../components/display/lcd/esp_lcd_panel_io_additions"
+    rules:
+      - if: "target == esp32s3"
