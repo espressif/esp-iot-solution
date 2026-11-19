@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v2.1.1~1 - 2026-11-17
+
+### Documentation:
+
+* Document QSPI frame ordering, Y gap handling, and LVGL integration requirements
+* Update the dependency installation example
+
 ## v2.1.1 - 2026-08-31
 
 ### Bug Fixes:

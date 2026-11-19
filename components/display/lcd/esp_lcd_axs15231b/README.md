@@ -13,7 +13,7 @@ Implementation of the AXS15231B LCD & Touch controller with esp_lcd component.
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
 You can add them to your project via `idf.py add-dependency`, e.g.
 ```
-    idf.py add-dependency esp_lcd_axs15231b==1.0.0
+    idf.py add-dependency "espressif/esp_lcd_axs15231b==2.1.1~1"
 ```
 
 Alternatively, you can create `idf_component.yml`. More is in [Espressif's documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-component-manager.html).
@@ -71,6 +71,30 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
 ```
 
 ### QSPI Interface
+
+#### Refresh requirements
+
+The current QSPI driver requires continuous full-frame transfers. Send each complete
+frame either as one bitmap or as consecutive full-width strips in top-to-bottom
+order. The first transfer must satisfy `y_start + y_gap == 0`. For frames starting
+at logical row zero, keep the configured Y gap at zero.
+
+In QSPI mode, `esp_lcd_panel_draw_bitmap()` does not send `LCD_CMD_RASET` to set an
+independent Y-axis window. It sends `LCD_CMD_RAMWR` when the adjusted `y_start` is
+zero and `LCD_CMD_RAMWRC` otherwise. A draw call with a nonzero adjusted `y_start`
+therefore continues the preceding write instead of positioning an arbitrary dirty
+rectangle.
+
+When integrating LVGL, ensure the display integration sends complete frames in this
+order. If each LVGL flush area is forwarded directly to
+`esp_lcd_panel_draw_bitmap()`, use a full-refresh configuration. Sending only
+changed rectangles to the panel is not supported by the current QSPI path and can
+place pixels on the wrong rows.
+
+This transfer sequence follows the panel manufacturer's recommendation at the time,
+as described in [issue #666](https://github.com/espressif/esp-iot-solution/issues/666#issuecomment-6594439162).
+
+#### Initialization example
 
 ```c
     ESP_LOGI(TAG, "Initialize QSPI bus");
