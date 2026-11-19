@@ -713,6 +713,8 @@ static esp_err_t _cdc_transfers_allocate(usbh_cdc_port_t *cdc_port, const usb_ep
             cdc_port->data.out_xfer->context = cdc_port;
             cdc_port->data.out_xfer->num_bytes = out_buf_len;
             cdc_port->data.out_xfer->callback = out_xfer_cb;
+            /* Preserve transfer boundaries when the payload length is a multiple of MPS. */
+            cdc_port->data.out_xfer->flags |= USB_TRANSFER_FLAG_ZERO_PACK;
         }
     }
     return ret;
