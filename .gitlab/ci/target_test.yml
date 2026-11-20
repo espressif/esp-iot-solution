@@ -379,7 +379,7 @@ components_test_esp_lcd_sh8601:
   parallel:
     matrix:
       - IDF_TARGET: esp32s3
-        IDF_VERSION: ["5.4", "5.5"]
+        IDF_VERSION: "5.5"
         ENV_TAG: "esp32s3_lcd_ev"
   tags:
     - ${IDF_TARGET}

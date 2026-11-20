@@ -10,6 +10,8 @@ Implementation of the SH8601 LCD controller with [esp_lcd](https://docs.espressi
 
 ## Add to project
 
+This component requires ESP-IDF v5.5.4 or later, excluding v6.0.0, which lacks the panel brightness API.
+
 Packages from this repository are uploaded to [Espressif's component service](https://components.espressif.com/).
 You can add them to your project via `idf.py add-dependency`, e.g.
 ```
@@ -120,6 +122,10 @@ Alternatively, you can create `idf_component.yml`. More is in [Espressif's docum
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
 ```
+
+## Runtime brightness
+
+After panel initialization, call `esp_lcd_panel_set_brightness(panel_handle, level)` with a raw 10-bit level from 0 to 1023. Values outside this range are clamped to the nearest endpoint.
 
 ## Notes
 

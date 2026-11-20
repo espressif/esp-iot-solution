@@ -351,10 +351,8 @@ static esp_err_t panel_sh8601_disp_on_off(esp_lcd_panel_t *panel, bool on_off)
 static esp_err_t panel_sh8601_set_brightness(esp_lcd_panel_t *panel, int brightness)
 {
     sh8601_panel_t *sh8601 = __containerof(panel, sh8601_panel_t, base);
-    esp_lcd_panel_io_handle_t io = sh8601->io;
-
-    // Clamp brightness to 0-1023 range (10-bit)
-    uint16_t brightness_val = (brightness < 0) ? 0 : (brightness > 1023) ? 1023 : (uint16_t)brightness;
-    // Send as 2 bytes: MSB and LSB
-    return tx_param(sh8601, io, LCD_CMD_WRDISBV, (uint8_t[]) { (brightness_val >> 8) & 0xFF, brightness_val & 0xFF }, 2);
+    const uint16_t level = brightness < 0 ? 0 : (brightness > 0x3ff ? 0x3ff : brightness);
+    // WRDISBV takes DBV[7:0] first, followed by DBV[9:8].
+    const uint8_t params[] = { level & 0xff, level >> 8 };
+    return tx_param(sh8601, sh8601->io, LCD_CMD_WRDISBV, params, sizeof(params));
 }
