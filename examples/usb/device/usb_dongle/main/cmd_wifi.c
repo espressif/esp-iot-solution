@@ -130,11 +130,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
         esp_wifi_internal_reg_rxcb(WIFI_IF_STA, NULL);
 
 #if CONFIG_TINYUSB_NET_MODE_ECM || CONFIG_TINYUSB_NET_MODE_NCM
-        // Notify USB host that network link is down
-        if (tud_ready()) {
-            tud_network_link_state(0, false);
-            ESP_LOGI(TAG, "Notified USB host: link DOWN");
-        }
+        // Queue the link state update for the TinyUSB task
+        tinyusb_net_set_link_state(false);
+        ESP_LOGI(TAG, "Queued USB network link DOWN");
 #endif
         if (reconnect && tud_ready()) {
             ESP_LOGI(TAG, "sta disconnect, reconnect...");
@@ -155,11 +153,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             ESP_LOGI(TAG, "CONNECTED_BIT\r\n");
 
 #if CONFIG_TINYUSB_NET_MODE_ECM || CONFIG_TINYUSB_NET_MODE_NCM
-            // Notify USB host that network link is down
-            if (tud_ready()) {
-                tud_network_link_state(0, true);
-                ESP_LOGI(TAG, "Notified USB host: link UP");
-            }
+            // Queue the link state update for the TinyUSB task
+            tinyusb_net_set_link_state(true);
+            ESP_LOGI(TAG, "Queued USB network link UP");
 #endif
         }
     }

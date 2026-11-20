@@ -5,6 +5,7 @@
  */
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "freertos/queue.h"
 #include "tinyusb_net.h"
 #include "descriptors_control.h"
 #include "usb_descriptors.h"
@@ -12,6 +13,7 @@
 #include "esp_check.h"
 
 #define MAC_ADDR_LEN 6
+#define TINYUSB_NET_TX_QUEUE_LENGTH 16
 
 typedef struct packet {
     void *buffer;
@@ -27,6 +29,8 @@ struct tinyusb_net_handle {
     tusb_net_init_cb_t init_cb;
     char mac_str[2 * MAC_ADDR_LEN + 1];
     void *ctx;
+    QueueHandle_t tx_packet_queue;
+    QueueHandle_t link_state_queue;
     packet_t packet_to_send;
 };
 
@@ -35,27 +39,58 @@ static const char *TAG = "tusb_net";
 
 esp_err_t tinyusb_net_send(void *buffer, uint16_t len, void *buff_free_arg)
 {
-    for (;;) {
-        /* if TinyUSB isn't ready, we must signal back to lwip that there is nothing we can do */
-        if (!tud_ready()) {
-            return ESP_ERR_INVALID_STATE;
-        }
+    ESP_RETURN_ON_FALSE(s_net_obj.initialized && s_net_obj.tx_packet_queue,
+                        ESP_ERR_INVALID_STATE, TAG, "TinyUSB Net class is not initialized");
 
-        /* if the network driver can accept another packet, we make it happen */
-        if (tud_network_can_xmit(len)) {
-            s_net_obj.packet_to_send.buffer = buffer;
-            s_net_obj.packet_to_send.len = len;
-            s_net_obj.packet_to_send.buff_free_arg = buff_free_arg;
+    packet_t packet = {
+        .buffer = buffer,
+        .buff_free_arg = buff_free_arg,
+        .len = len,
+    };
+    if (xQueueSend(s_net_obj.tx_packet_queue, &packet, 0) != pdTRUE) {
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
 
-            tud_network_xmit(&s_net_obj.packet_to_send, s_net_obj.packet_to_send.len);
-            return ESP_OK;
-        }
+void tinyusb_net_set_link_state(bool connected)
+{
+    if (s_net_obj.link_state_queue) {
+        xQueueOverwrite(s_net_obj.link_state_queue, &connected);
+    }
+}
 
-        /* transfer execution to TinyUSB in the hopes that it will finish transmitting the prior packet */
-        tud_task();
+void tinyusb_net_process_tx_queue(void)
+{
+    if (!s_net_obj.initialized || !s_net_obj.tx_packet_queue) {
+        return;
     }
 
-    return ESP_OK;
+    packet_t packet;
+    if (!tud_ready()) {
+        // Drop pending packets while USB is unavailable and release their Wi-Fi RX buffers.
+        while (xQueueReceive(s_net_obj.tx_packet_queue, &packet, 0) == pdTRUE) {
+            if (s_net_obj.tx_buff_free_cb) {
+                s_net_obj.tx_buff_free_cb(packet.buff_free_arg, s_net_obj.ctx);
+            }
+        }
+        return;
+    }
+
+    bool link_connected;
+    if (xQueueReceive(s_net_obj.link_state_queue, &link_connected, 0) == pdTRUE) {
+        tud_network_link_state(0, link_connected);
+    }
+
+    if (xQueuePeek(s_net_obj.tx_packet_queue, &packet, 0) != pdTRUE ||
+            !tud_network_can_xmit(packet.len)) {
+        return;
+    }
+
+    if (xQueueReceive(s_net_obj.tx_packet_queue, &packet, 0) == pdTRUE) {
+        s_net_obj.packet_to_send = packet;
+        tud_network_xmit(&s_net_obj.packet_to_send, s_net_obj.packet_to_send.len);
+    }
 }
 
 esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t *cfg)
@@ -69,6 +104,20 @@ esp_err_t tinyusb_net_init(tinyusb_usbdev_t usb_dev, const tinyusb_net_config_t 
     s_net_obj.init_cb = cfg->on_init_callback;
     s_net_obj.tx_buff_free_cb = cfg->free_tx_buffer;
     s_net_obj.ctx = cfg->user_context;
+
+    QueueHandle_t tx_packet_queue = xQueueCreate(TINYUSB_NET_TX_QUEUE_LENGTH, sizeof(packet_t));
+    QueueHandle_t link_state_queue = xQueueCreate(1, sizeof(bool));
+    if (!tx_packet_queue || !link_state_queue) {
+        if (tx_packet_queue) {
+            vQueueDelete(tx_packet_queue);
+        }
+        if (link_state_queue) {
+            vQueueDelete(link_state_queue);
+        }
+        return ESP_ERR_NO_MEM;
+    }
+    s_net_obj.tx_packet_queue = tx_packet_queue;
+    s_net_obj.link_state_queue = link_state_queue;
 
     const uint8_t *mac = &cfg->mac_addr[0];
     snprintf(s_net_obj.mac_str, sizeof(s_net_obj.mac_str), "%02X%02X%02X%02X%02X%02X",
