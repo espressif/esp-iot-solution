@@ -11,6 +11,12 @@ Please use the component manager command `add-dependency` to add the `bme280` to
 idf.py add-dependency "espressif/bme280=*"
 ```
 
+## I2C bus handle
+
+`bme280_create()` expects an `i2c_bus_handle_t` returned by `i2c_bus_create()`. Do not pass an ESP-IDF `i2c_master_bus_handle_t` directly; the two handle types are not interchangeable.
+
+With ESP-IDF's new I2C master driver, if the application has already created a native master bus with `i2c_new_master_bus()`, call `i2c_bus_create()` for that same port to obtain the wrapper handle, then pass the wrapper to `bme280_create()`. The `i2c_bus` component can bind to the existing native bus.
+
 ## Example of BME280 usage
 
 
