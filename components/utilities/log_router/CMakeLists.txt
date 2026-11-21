@@ -1,6 +1,7 @@
 idf_component_register(SRC_DIRS "."
                         INCLUDE_DIRS "include"
-                        REQUIRES "fatfs" "esp_timer")
+                        PRIV_INCLUDE_DIRS "priv_include"
+                        REQUIRES "fatfs" "esp_timer" "esp_ringbuf")
 
 include(package_manager)
 cu_pkg_define_version(${CMAKE_CURRENT_LIST_DIR})
