@@ -3101,10 +3101,14 @@ static void copy_diff_repair_from_front_to_back(
 
 #if SOC_DMA2D_SUPPORTED
     const uint16_t ver_res = bridge_v_res(impl);
+#ifndef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
+    /* Legacy fbcpy does not synchronize pixel buffers. The color-convert
+     * driver synchronizes each source window before its DMA transfer. */
     if (repair_count != 0) {
         display_cache_msync_framebuffer(impl->disp_fb,
                                         impl->runtime.frame_buffer_size);
     }
+#endif
 #endif
 
     for (uint16_t index = 0; index < repair_count; ++index) {
