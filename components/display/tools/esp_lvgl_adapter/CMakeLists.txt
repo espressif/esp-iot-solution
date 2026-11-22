@@ -82,6 +82,7 @@ set(ADAPTER_SRCS
     "src/adapter/esp_lv_adapter.c"
     "src/display/display_manager.c"
     "src/display/bridge/common/display_bridge_common.c"
+    "src/display/bridge/common/display_pending_regions.c"
     "src/display/display_te_sync.c"
 )
 

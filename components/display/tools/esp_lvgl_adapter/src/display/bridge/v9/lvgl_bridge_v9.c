@@ -32,6 +32,7 @@
 #include "lvgl_port_private.h"
 #include "lvgl_port_alignment.h"
 #include "common/display_bridge_common.h"
+#include "common/display_pending_regions.h"
 #include "common/display_rgb565.h"
 
 #if SOC_MIPI_DSI_SUPPORTED
@@ -233,42 +234,6 @@ static void display_bridge_v9_diff_reset(esp_lv_adapter_display_bridge_v9_t *imp
 static bool display_bridge_v9_diff_rect_valid(const lv_area_t *rect)
 {
     return rect->x2 >= rect->x1 && rect->y2 >= rect->y1;
-}
-
-static bool display_bridge_v9_diff_rects_touch_or_overlap(const lv_area_t *a,
-                                                          const lv_area_t *b)
-{
-    bool x_overlap = a->x1 <= b->x2 && a->x2 >= b->x1;
-    bool y_overlap = a->y1 <= b->y2 && a->y2 >= b->y1;
-    bool x_adjacent = a->x2 + 1 == b->x1 || b->x2 + 1 == a->x1;
-    bool y_adjacent = a->y2 + 1 == b->y1 || b->y2 + 1 == a->y1;
-    return (x_overlap && y_overlap) || (x_adjacent && y_overlap) ||
-           (y_adjacent && x_overlap);
-}
-
-static bool display_bridge_v9_diff_merge_one(lv_area_t *rects,
-                                             uint16_t *count,
-                                             uint16_t capacity,
-                                             lv_area_t rect)
-{
-    uint16_t index = 0;
-    while (index < *count) {
-        if (!display_bridge_v9_diff_rects_touch_or_overlap(&rects[index], &rect)) {
-            ++index;
-            continue;
-        }
-        rect.x1 = LV_MIN(rect.x1, rects[index].x1);
-        rect.y1 = LV_MIN(rect.y1, rects[index].y1);
-        rect.x2 = LV_MAX(rect.x2, rects[index].x2);
-        rect.y2 = LV_MAX(rect.y2, rects[index].y2);
-        rects[index] = rects[--(*count)];
-        index = 0;
-    }
-    if (*count >= capacity) {
-        return false;
-    }
-    rects[(*count)++] = rect;
-    return true;
 }
 
 static void display_bridge_v9_diff_area_to_physical(
@@ -486,7 +451,7 @@ static void display_bridge_v9_diff_commit(
         }
         uint16_t pending_count = state->pending_count;
         for (uint16_t rect = 0; rect < current_count; ++rect) {
-            if (!display_bridge_v9_diff_merge_one(
+            if (!display_pending_regions_add(
                         state->pending, &pending_count,
                         DISPLAY_BRIDGE_V9_DIFF_RECT_CAPACITY, current[rect])) {
                 state->valid = false;
