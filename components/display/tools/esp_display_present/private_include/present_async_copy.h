@@ -20,7 +20,7 @@
 /**
  * Asynchronous tile → framebuffer copy shared by PARTITION and TE compose.
  * Enabled only when the drawbuf pool has two or more buffers: the producer
- * renders the next band while a worker task swaps (optional) and blits the
+ * renders the next band while a worker task blits the
  * previous one. The producer task alone submits and waits; the worker only
  * gives a slot back after its blit.
  */
@@ -48,15 +48,14 @@ void present_async_copy_deinit(present_async_copy_t *copy);
 void present_async_copy_wait_slot(present_async_copy_t *copy, uint8_t slot);
 
 /**
- * Queue @p region for the worker. With @p swap_rgb565 the worker first swaps
- * the tile in place to panel byte order. ESP_ERR_NOT_SUPPORTED means the
- * caller must drain and copy inline.
+ * Queue @p region for the worker, including @p dst's copy-time byte order.
+ * The source stays unchanged. ESP_ERR_NOT_SUPPORTED means the caller must
+ * drain and copy inline with the same destination policy.
  */
 esp_err_t present_async_copy_submit(present_async_copy_t *copy,
                                     esp_display_present_target_t *target,
                                     const esp_display_present_blit_fb_t *dst,
-                                    const esp_display_presenter_region_t *region,
-                                    bool swap_rgb565);
+                                    const esp_display_presenter_region_t *region);
 
 /** Wait for every queued blit and return the first worker error. */
 esp_err_t present_async_copy_drain(present_async_copy_t *copy);

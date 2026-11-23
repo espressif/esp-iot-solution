@@ -314,6 +314,7 @@ static bool rotate_tile_ppa(const esp_display_present_blit_fb_t *dst,
             .y = physical->y1,
         },
         .rotation = dst->rotation,
+        .swap_rgb565 = dst->swap_rgb565,
     };
     return esp_display_present_ppa_rotate_copy_block(dst->ppa_handle, &request) ==
            ESP_OK;
@@ -359,6 +360,7 @@ blit_tile_rotated(const esp_display_present_blit_fb_t *dst,
         },
         .logical_area = placement->logical,
         .rotation = dst->rotation,
+        .swap_rgb565 = dst->swap_rgb565,
     };
     esp_display_present_rotate_copy(&request);
     /*
@@ -374,7 +376,9 @@ esp_err_t esp_display_present_blit_tile_to_fb(
     size_t src_stride_bytes)
 {
     if (dst == NULL || dst->pixels == NULL || placement == NULL || src == NULL ||
-            dst->color_bytes == 0 || placement->logical.x1 < 0 ||
+            dst->color_bytes == 0 ||
+            (dst->swap_rgb565 && dst->color_bytes != 2) ||
+            placement->logical.x1 < 0 ||
             placement->logical.y1 < 0 ||
             placement->logical.x2 < placement->logical.x1 ||
             placement->logical.y2 < placement->logical.y1 ||
@@ -446,7 +450,8 @@ memcmp(&expected_physical, &placement->physical,
         },
         .flags = ESP_DISPLAY_PRESENT_BLIT_COPY_TRY_DMA2D |
         ESP_DISPLAY_PRESENT_BLIT_COPY_DMA2D_EXT_DST |
-        ESP_DISPLAY_PRESENT_BLIT_COPY_MSYNC_DST,
+        ESP_DISPLAY_PRESENT_BLIT_COPY_MSYNC_DST |
+        (dst->swap_rgb565 ? ESP_DISPLAY_PRESENT_BLIT_COPY_SWAP_RGB565 : 0),
     };
     return esp_display_present_blit_copy_area(&request);
 }

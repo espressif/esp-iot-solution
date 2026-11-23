@@ -82,6 +82,9 @@ typedef struct {
     esp_display_present_rotation_t rotation;
     /** Optional PPA SRM client; NULL forces software rotate. */
     void *ppa_handle;
+    /** RGB565 only: copy to panel byte order without modifying the source.
+     *  Zero-initialized callers preserve the original byte order. */
+    bool swap_rgb565;
 } esp_display_present_blit_fb_t;
 
 /** Geometry resolved by the producer before entering the pixel layer. */
