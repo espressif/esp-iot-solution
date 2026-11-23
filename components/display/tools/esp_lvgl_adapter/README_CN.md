@@ -281,6 +281,21 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 - 三缓冲：≈ 2.2 MB
 - **结论**：通常需要 PSRAM 支持
 
+### 按需配置诊断
+
+显示注册成功后，可从任务上下文调用：
+
+```c
+ESP_ERROR_CHECK(esp_lv_adapter_dump_display_config(disp));
+```
+
+该函数自动获取适配器锁，按 INFO 日志级别输出 panel 配置尺寸、LVGL 逻辑尺寸、旋转、
+颜色位深、实际渲染模式、已绑定的 panel framebuffer，以及当前 LVGL draw buffer 的容量和
+内存位置。panel 的 `payload_bytes_each` 是像素数据大小，draw buffer 的 `capacity_bytes`
+是 LVGL 登记容量（v9 单色模式包含调色板），均不代表 heap 实占或显示链路总内存。
+v9 的 stride 是当前布局，可随局部刷新变化。异步 TE 的 staging 单独标记；panel 在睡眠解绑期间省略 buffer 明细。
+诊断仅在调用时输出，不创建任务，也不改变配置。
+
 ### 缓冲调优（默认与建议）
 
 #### 默认 `buffer_height` 值

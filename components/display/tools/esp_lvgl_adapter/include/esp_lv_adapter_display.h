@@ -371,6 +371,20 @@ lv_display_t *esp_lv_adapter_register_display(const esp_lv_adapter_display_confi
 esp_err_t esp_lv_adapter_unregister_display(lv_display_t *disp);
 
 /**
+ * @brief Log the current display configuration at INFO level
+ *
+ * Reports panel geometry, logical resolution, render mode, bound panel buffers
+ * and current LVGL draw-buffer capacities and memory locations. This is not a
+ * total heap-usage report. Buffer details are omitted while the panel is detached.
+ * Call from task context; this function acquires the adapter's recursive lock.
+ *
+ * @param[in] disp Registered LVGL display (must not be NULL)
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not initialized,
+ *         ESP_ERR_INVALID_ARG for NULL, or ESP_ERR_NOT_FOUND if not registered
+ */
+esp_err_t esp_lv_adapter_dump_display_config(lv_display_t *disp);
+
+/**
  * @brief Set area rounding callback for display
  *
  * Some displays require specific alignment for drawing areas (e.g., width/height must be

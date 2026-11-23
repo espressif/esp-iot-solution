@@ -15,6 +15,7 @@
 #include "esp_log.h"
 #include "esp_check.h"
 #include "esp_heap_caps.h"
+#include "esp_memory_utils.h"
 #include "esp_psram.h"
 #include "esp_timer.h"
 #include "esp_cache.h"
@@ -469,6 +470,101 @@ static bool display_manager_is_panel_frame_buffer(const esp_lv_adapter_display_n
     }
 
     return false;
+}
+
+static const char *display_manager_interface_name(esp_lv_adapter_panel_interface_t interface)
+{
+    switch (interface) {
+    case ESP_LV_ADAPTER_PANEL_IF_MIPI_DSI: return "MIPI_DSI";
+    case ESP_LV_ADAPTER_PANEL_IF_RGB: return "RGB";
+    case ESP_LV_ADAPTER_PANEL_IF_OTHER: return "OTHER";
+    default: return "UNKNOWN";
+    }
+}
+
+static const char *display_manager_tear_mode_name(esp_lv_adapter_tear_avoid_mode_t mode)
+{
+    switch (mode) {
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE: return "NONE";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL: return "DOUBLE_FULL";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL: return "TRIPLE_FULL";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_DIRECT: return "DOUBLE_DIRECT";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_PARTIAL: return "TRIPLE_PARTIAL";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC: return "TE_SYNC";
+    case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL: return "DOUBLE_PARTIAL";
+    default: return "UNKNOWN";
+    }
+}
+
+static const char *display_manager_buffer_location(const void *buffer)
+{
+    if (!buffer) {
+        return "none";
+    }
+    return esp_ptr_external_ram(buffer) ? "PSRAM" :
+           esp_ptr_internal(buffer) ? "internal" : "other";
+}
+
+esp_err_t display_manager_dump_config(lv_display_t *disp)
+{
+    esp_lv_adapter_display_node_t *node = display_manager_find_node(disp);
+    ESP_RETURN_ON_FALSE(node, ESP_ERR_NOT_FOUND, TAG, "Display not registered");
+    const esp_lv_adapter_display_runtime_config_t *cfg = &node->cfg;
+    const esp_lv_adapter_display_profile_t *profile = &cfg->base.profile;
+#if LVGL_VERSION_MAJOR >= 9
+    unsigned color_bits = lv_color_format_get_bpp(lv_display_get_color_format(disp));
+    const char *render = disp->render_mode == LV_DISPLAY_RENDER_MODE_FULL ? "FULL" :
+                         disp->render_mode == LV_DISPLAY_RENDER_MODE_DIRECT ? "DIRECT" : "PARTIAL";
+    int32_t width = lv_display_get_horizontal_resolution(disp);
+    int32_t height = lv_display_get_vertical_resolution(disp);
+#else
+    unsigned color_bits = LV_COLOR_DEPTH;
+    const char *render = disp->driver->full_refresh ? "FULL" : disp->driver->direct_mode ? "DIRECT" : "PARTIAL";
+    int32_t width = lv_disp_get_hor_res(disp);
+    int32_t height = lv_disp_get_ver_res(disp);
+#endif
+    ESP_LOGI(TAG, "display %p: %s, panel_config=%ux%u, logical=%" PRId32 "x%" PRId32
+             ", rotation=%d, color=%u bpp", disp, display_manager_interface_name(profile->interface),
+             profile->hor_res, profile->ver_res, width, height, profile->rotation, color_bits);
+    ESP_LOGI(TAG, "tear=%s, render=%s, panel_detached=%u, dummy_draw=%u",
+             display_manager_tear_mode_name(cfg->base.tear_avoid_mode), render,
+             cfg->panel_detached, cfg->dummy_draw_enabled);
+    if (cfg->panel_detached) {
+        ESP_LOGI(TAG, "Buffer details unavailable while panel is detached");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "bound_panel_fbs=%u, payload_bytes_each=%zu",
+             cfg->frame_buffer_count, cfg->frame_buffer_count ? cfg->frame_buffer_size : 0);
+    for (uint8_t i = 0; i < cfg->frame_buffer_count; ++i) {
+        ESP_LOGI(TAG, "panel_fb[%u]: %p (%s)", i, cfg->frame_buffers[i],
+                 display_manager_buffer_location(cfg->frame_buffers[i]));
+    }
+    for (unsigned i = 0; i < 2; ++i) {
+#if LVGL_VERSION_MAJOR >= 9
+        const lv_draw_buf_t *buffer = i == 0 ? disp->buf_1 : disp->buf_2;
+        if (buffer) {
+            ESP_LOGI(TAG, "lvgl_draw[%u]: %p (%s), capacity_bytes=%" PRIu32
+                     ", stride=%u, panel_shared=%u", i, buffer->data,
+                     display_manager_buffer_location(buffer->data), buffer->data_size,
+                     (unsigned)buffer->header.stride, display_manager_is_panel_frame_buffer(node, buffer->data));
+        }
+#else
+        const lv_disp_draw_buf_t *draw = disp->driver->draw_buf;
+        const void *buffer = i == 0 ? draw->buf1 : draw->buf2;
+        if (buffer) {
+            ESP_LOGI(TAG, "lvgl_draw[%u]: %p (%s), capacity_bytes=%zu, panel_shared=%u",
+                     i, buffer, display_manager_buffer_location(buffer),
+                     (size_t)draw->size * sizeof(lv_color_t), display_manager_is_panel_frame_buffer(node, buffer));
+        }
+#endif
+    }
+    if (cfg->base.tear_avoid_mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_TE_SYNC &&
+            cfg->base.te_sync.pipeline == ESP_LV_ADAPTER_TE_PIPELINE_ASYNC_FULL) {
+        ESP_LOGI(TAG, "TE async staging: %p (%s)", cfg->draw_buf_secondary,
+                 display_manager_buffer_location(cfg->draw_buf_secondary));
+    }
+    return ESP_OK;
 }
 
 /**
@@ -933,6 +1029,7 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
                              (pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_90 ||
                               pub->profile.rotation == ESP_LV_ADAPTER_ROTATE_270) ? pub->profile.hor_res : pub->profile.ver_res);
     if (!disp) {
+        ESP_LOGE(TAG, "LVGL display creation failed");
         return false;
     }
 
@@ -1072,6 +1169,7 @@ static bool display_manager_init_node(esp_lv_adapter_display_node_t *node)
 
     lv_disp_t *disp = lv_disp_drv_register(&node->disp_drv);
     if (!disp) {
+        ESP_LOGE(TAG, "LVGL display registration failed");
         return false;
     }
 
@@ -1180,17 +1278,20 @@ static void *display_manager_alloc_draw_buffer(size_t size, bool use_psram, bool
     caps |= dma_capable ? MALLOC_CAP_DMA : 0;
 #endif
 
+    void *buf = NULL;
     if (align > 0) {
-        void *buf = heap_caps_aligned_alloc(align, alloc_size, caps);
-        if (buf) {
-            return buf;
-        }
-        if (use_psram && enc_active) {
-            return NULL;
-        }
+        buf = heap_caps_aligned_alloc(align, alloc_size, caps);
     }
-
-    return heap_caps_malloc(size, caps);
+    /* Encrypted PSRAM must not fall back after an aligned allocation fails. */
+    if (!buf && (align == 0 || !use_psram || !enc_active)) {
+        buf = heap_caps_malloc(size, caps);
+    }
+    if (!buf) {
+        ESP_LOGE(TAG, "Draw buffer allocation failed: bytes=%zu, alignment=%zu, memory=%s, "
+                 "caps=0x%" PRIx32 ", largest_free=%zu", alloc_size, align,
+                 use_psram ? "PSRAM" : "internal", caps, heap_caps_get_largest_free_block(caps));
+    }
+    return buf;
 }
 
 static size_t display_manager_i1_stride_bytes(uint16_t hor_res)
@@ -1677,7 +1778,8 @@ static bool display_manager_fetch_panel_frame_buffers(esp_lv_adapter_display_nod
     }
 
     if (err != ESP_OK) {
-        ESP_LOGW(TAG, "panel frame buffer request failed (err=%d, required=%u)", err, required);
+        ESP_LOGW(TAG, "%s panel frame buffer request failed: %s; requested=%u, check panel num_fbs",
+                 display_manager_interface_name(panel_if), esp_err_to_name(err), required);
         return false;
     }
 
@@ -1931,7 +2033,8 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
                 mode == ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_PARTIAL) {
             return true;
         }
-        ESP_LOGE(TAG, "tear mode %d unsupported on panel interface %d", mode, cfg->profile.interface);
+        ESP_LOGE(TAG, "tear mode %s unsupported on %s; use a framebuffer mode or NONE",
+                 display_manager_tear_mode_name(mode), display_manager_interface_name(cfg->profile.interface));
         return false;
     case ESP_LV_ADAPTER_PANEL_IF_OTHER:
     default:
@@ -1945,7 +2048,8 @@ static bool display_manager_validate_tearing_mode(const esp_lv_adapter_display_c
             }
             return true;
         }
-        ESP_LOGE(TAG, "tear mode %d unsupported on panel interface %d", mode, cfg->profile.interface);
+        ESP_LOGE(TAG, "tear mode %s unsupported on %s; use NONE or TE_SYNC",
+                 display_manager_tear_mode_name(mode), display_manager_interface_name(cfg->profile.interface));
         return false;
     }
 }

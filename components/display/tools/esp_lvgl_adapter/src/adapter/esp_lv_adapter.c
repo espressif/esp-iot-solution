@@ -1269,6 +1269,8 @@ lv_display_t *esp_lv_adapter_register_display(const esp_lv_adapter_display_confi
 {
     /* Validate adapter is initialized and config is valid */
     if (!s_ctx.inited || !config) {
+        ESP_LOGE(TAG, "Cannot register display: %s", !s_ctx.inited ?
+                 "call esp_lv_adapter_init first" : "configuration is NULL");
         return NULL;
     }
 
@@ -1314,6 +1316,18 @@ esp_err_t esp_lv_adapter_unregister_display(lv_display_t *disp)
         esp_lv_adapter_resume();
     }
 
+    return ret;
+}
+
+esp_err_t esp_lv_adapter_dump_display_config(lv_display_t *disp)
+{
+    ESP_RETURN_ON_FALSE(s_ctx.inited, ESP_ERR_INVALID_STATE, TAG, "Adapter not initialized");
+    ESP_RETURN_ON_FALSE(disp, ESP_ERR_INVALID_ARG, TAG, "Invalid display handle");
+
+    esp_err_t ret = esp_lv_adapter_lock(-1);
+    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to acquire LVGL lock");
+    ret = display_manager_dump_config(disp);
+    esp_lv_adapter_unlock();
     return ret;
 }
 

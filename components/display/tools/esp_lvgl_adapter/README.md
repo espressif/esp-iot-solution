@@ -286,6 +286,23 @@ Full-frame buffer size ≈ `horizontal_res × vertical_res × bytes_per_pixel`
 - Triple buffering: ≈ 2.2 MB
 - **Conclusion**: PSRAM is typically required
 
+### On-demand Configuration Diagnostics
+
+After registering a display, call from task context:
+
+```c
+ESP_ERROR_CHECK(esp_lv_adapter_dump_display_config(disp));
+```
+
+The function acquires the adapter lock and logs at INFO level: configured panel geometry,
+LVGL logical resolution, rotation, color depth, actual render mode, bound panel framebuffers,
+and current LVGL draw-buffer capacities and memory locations. Panel `payload_bytes_each`
+describes pixel data; draw-buffer `capacity_bytes` is the capacity registered with LVGL
+(including the palette for v9 monochrome). Neither is heap allocation size or total display
+memory usage. The v9 stride describes the current layout and may change after a partial refresh.
+Async TE staging is identified separately; buffer details are omitted while
+the panel is detached for sleep. The call creates no task and does not change configuration.
+
 ### Buffer Tuning (Defaults and Tips)
 
 #### Default `buffer_height` Values
