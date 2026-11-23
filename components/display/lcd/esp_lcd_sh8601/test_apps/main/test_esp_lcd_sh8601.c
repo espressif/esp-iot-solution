@@ -111,6 +111,7 @@ TEST_CASE("test sh8601 to draw color bar with SPI interface", "[sh8601][spi]")
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
+    TEST_ESP_OK(esp_lcd_panel_set_brightness(panel_handle, 256));
 
     test_draw_bitmap(panel_handle);
 
@@ -167,6 +168,7 @@ TEST_CASE("test sh8601 to draw color bar with QSPI interface", "[sh8601][qspi]")
     esp_lcd_panel_reset(panel_handle);
     esp_lcd_panel_init(panel_handle);
     esp_lcd_panel_disp_on_off(panel_handle, true);
+    TEST_ESP_OK(esp_lcd_panel_set_brightness(panel_handle, 256));
 
     test_draw_bitmap(panel_handle);
 

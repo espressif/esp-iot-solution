@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v3.0.0 - 2026-11-20
+
+* Add runtime brightness control ([#668](https://github.com/espressif/esp-iot-solution/pull/668), thanks @ldab).
+* **Breaking change:** Require ESP-IDF v5.5.4 or later, excluding v6.0.0.
+
 ## v2.0.1 - 2025-12-10
 
 ### Bugfix:

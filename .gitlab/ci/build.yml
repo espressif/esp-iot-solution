@@ -1534,7 +1534,7 @@ build_components_display_lcd_esp_lcd_sh8601_test_apps:
   extends:
     - .build_examples_template
     - .rules:build:components_display_lcd_esp_lcd_sh8601_test_apps
-    - .build_idf_ge_than_v5_3
+    - .build_idf_ge_than_v5_5
   variables:
     EXAMPLE_DIR: components/display/lcd/esp_lcd_sh8601/test_apps
 
