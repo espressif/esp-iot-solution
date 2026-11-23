@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.3 - 2026-11-23
+
+- Fuse RGB565 byte swapping into TE tile copies and software/PPA rotation.
+
 ## 1.2.2 - 2026-11-10
 
 - Fix PPA rotation buffer alignment, capacity, strides and dimension checks.
