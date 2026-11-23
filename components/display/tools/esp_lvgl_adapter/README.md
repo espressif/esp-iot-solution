@@ -428,15 +428,15 @@ touch_cfg.multi_touch.pointers = 2;
 
 #### Encoder/Knob
 
-Requires Kconfig option `ESP_LV_ADAPTER_ENABLE_KNOB`. See `esp_lv_adapter_input.h` for `esp_lv_adapter_encoder_config_t`.
+Requires Kconfig option `ESP_LVGL_ADAPTER_ENABLE_KNOB`. See `esp_lv_adapter_input.h` for `esp_lv_adapter_encoder_config_t`.
 
 #### Navigation Buttons
 
-Requires Kconfig option `ESP_LV_ADAPTER_ENABLE_BUTTON`. Use `esp_lv_adapter_register_navigation_buttons()`.
+Requires Kconfig option `ESP_LVGL_ADAPTER_ENABLE_BUTTON`. Use `esp_lv_adapter_register_navigation_buttons()`.
 
 ### Filesystem Bridge (Optional)
 
-If `ESP_LV_ADAPTER_ENABLE_FS` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from `esp_mmap_assets`.
+If `ESP_LVGL_ADAPTER_ENABLE_FS` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from `esp_mmap_assets`.
 
 ```c
 #include "esp_lv_fs.h"
@@ -468,7 +468,7 @@ lv_img_set_src(img, "A:my_image.png");
 
 ### Image Decoding (Optional)
 
-Enable `ESP_LV_ADAPTER_ENABLE_DECODER` to integrate `esp_lv_decoder` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
+Enable `ESP_LVGL_ADAPTER_ENABLE_DECODER` to integrate `esp_lv_decoder` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
 
 ```c
 // Use LVGL image widget to load images
@@ -485,7 +485,7 @@ lv_img_set_src(img, "I:red_png.png");  // I: is the decoder drive letter
 
 ### FreeType Fonts (Optional)
 
-Enable `ESP_LV_ADAPTER_ENABLE_FREETYPE` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
+Enable `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
 
 ```c
 #include "esp_lv_adapter.h" // FreeType APIs under this header
@@ -525,7 +525,7 @@ Enable `ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM` only after validating PSRAM
 
 #### FPS Statistics
 
-Requires `ESP_LV_ADAPTER_ENABLE_FPS_STATS`.
+Requires `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS`.
 
 ```c
 // Enable FPS statistics
@@ -710,13 +710,13 @@ Configure via `idf.py menuconfig`:
 
 | Option | Description |
 |--------|-------------|
-| `ESP_LV_ADAPTER_ENABLE_FS` | Enable filesystem bridge (`esp_lv_fs`) |
-| `ESP_LV_ADAPTER_ENABLE_DECODER` | Enable image decoder (`esp_lv_decoder`) |
-| `ESP_LV_ADAPTER_ENABLE_FREETYPE` | Enable FreeType vector font support |
-| `ESP_LV_ADAPTER_ENABLE_FPS_STATS` | Enable FPS monitoring APIs |
-| `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
-| `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
-| `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
+| `ESP_LVGL_ADAPTER_ENABLE_FS` | Enable filesystem bridge (`esp_lv_fs`) |
+| `ESP_LVGL_ADAPTER_ENABLE_DECODER` | Enable image decoder (`esp_lv_decoder`) |
+| `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` | Enable FreeType vector font support |
+| `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS` | Enable FPS monitoring APIs |
+| `ESP_LVGL_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
+| `ESP_LVGL_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
+| `ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB
@@ -729,7 +729,7 @@ Configure via `idf.py menuconfig`:
 
 | Interface Type | Supported Tearing Modes |
 |---------------|------------------------|
-| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
+| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL` |
 | OTHER (SPI/I2C/I80/QSPI) | `NONE`, `TE_SYNC` |
 
 ### Rotation Limitations
@@ -753,11 +753,11 @@ Configure via `idf.py menuconfig`:
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL render mode
   - `DOUBLE_DIRECT` → DIRECT render mode
   - `TE_SYNC`: synchronous mode → FULL; asynchronous high-performance mode → DIRECT
-  - Others (incl. `TRIPLE_PARTIAL`) → PARTIAL render mode
+  - Others (incl. `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL`) → PARTIAL render mode
   
 - **LVGL Draw Buffer Count**:
-  - `TRIPLE_PARTIAL`: 1 buffer
-  - `TRIPLE_FULL` / `DOUBLE_*`: 2 buffers
+  - `DOUBLE_PARTIAL` / `TRIPLE_PARTIAL`: 1 buffer
+  - `DOUBLE_FULL` / `DOUBLE_DIRECT` / `TRIPLE_FULL`: 2 buffers
   - `TE_SYNC`: 1 LVGL draw buffer; asynchronous high-performance mode adds 1 adapter staging buffer
   - FULL/DIRECT default: 2 buffers
   - Otherwise: 1 buffer

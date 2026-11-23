@@ -375,19 +375,19 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 旋钮/编码器
 """""""""""
 
-需要启用 Kconfig 选项 ``ESP_LV_ADAPTER_ENABLE_KNOB``。详见 ``esp_lv_adapter_input.h``。
+需要启用 Kconfig 选项 ``ESP_LVGL_ADAPTER_ENABLE_KNOB``。详见 ``esp_lv_adapter_input.h``。
 
 
 按键导航
 """"""""
 
-需要启用 Kconfig 选项 ``ESP_LV_ADAPTER_ENABLE_BUTTON``。详见 ``esp_lv_adapter_input.h``。
+需要启用 Kconfig 选项 ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``。详见 ``esp_lv_adapter_input.h``。
 
 
 文件系统桥接(可选)
 ^^^^^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_FS`` 后,可将 ``esp_mmap_assets`` 生成的资源分区挂载为 LVGL 文件系统:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_FS`` 后,可将 ``esp_mmap_assets`` 生成的资源分区挂载为 LVGL 文件系统:
 
 .. code:: c
 
@@ -424,7 +424,7 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 图片解码(可选)
 ^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_DECODER`` 后,适配器会集成 ``esp_lv_decoder``,支持直接使用 LVGL 图片控件加载各种格式的图片:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_DECODER`` 后,适配器会集成 ``esp_lv_decoder``,支持直接使用 LVGL 图片控件加载各种格式的图片:
 
 .. code:: c
 
@@ -445,7 +445,7 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 FreeType 字体(可选)
 ^^^^^^^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_FREETYPE`` 并在 LVGL 中开启 FreeType 后,可以从文件或内存加载矢量字体:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE`` 并在 LVGL 中开启 FreeType 后,可以从文件或内存加载矢量字体:
 
 .. code:: c
 
@@ -494,7 +494,7 @@ FPS 与 Dummy Draw
 FPS 统计
 """"""""
 
-需要启用 ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``。
+需要启用 ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``。
 
 .. code:: c
 
@@ -541,17 +541,17 @@ Dummy Draw 模式绕过 LVGL 渲染,直接控制显示:
 
    * - 配置项
      - 说明
-   * - ``ESP_LV_ADAPTER_ENABLE_FS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FS``
      - 启用文件系统桥接 (``esp_lv_fs``)
-   * - ``ESP_LV_ADAPTER_ENABLE_DECODER``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_DECODER``
      - 启用图片解码 (``esp_lv_decoder``)
-   * - ``ESP_LV_ADAPTER_ENABLE_FREETYPE``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE``
      - 启用 FreeType 矢量字体支持
-   * - ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``
      - 启用 FPS 统计功能
-   * - ``ESP_LV_ADAPTER_ENABLE_BUTTON``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``
      - 启用按键导航输入
-   * - ``ESP_LV_ADAPTER_ENABLE_KNOB``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_KNOB``
      - 启用旋钮/编码器输入
 
 

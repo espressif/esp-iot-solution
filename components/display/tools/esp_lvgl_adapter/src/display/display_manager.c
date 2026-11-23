@@ -1431,7 +1431,7 @@ static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *no
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_DOUBLE_FULL: {
         size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
         if (!display_manager_use_panel_buffers(node, full_pixels, 1, 0)) {
-            ESP_LOGW(TAG, "tear mode %d: panel buffers unavailable", mode);
+            ESP_LOGW(TAG, "tear mode %s: panel buffers unavailable", display_manager_tear_mode_name(mode));
             return false;
         }
         break;
@@ -1439,7 +1439,7 @@ static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *no
     case ESP_LV_ADAPTER_TEAR_AVOID_MODE_TRIPLE_FULL: {
         size_t full_pixels = (size_t)profile->hor_res * profile->ver_res;
         if (!display_manager_use_panel_buffers(node, full_pixels, 1, 2)) {
-            ESP_LOGW(TAG, "tear mode %d: panel buffers unavailable", mode);
+            ESP_LOGW(TAG, "tear mode %s: panel buffers unavailable", display_manager_tear_mode_name(mode));
             return false;
         }
         break;
@@ -1451,7 +1451,8 @@ static bool display_manager_setup_tear_buffers(esp_lv_adapter_display_node_t *no
             ESP_LOGW(TAG, "%d frames needed, but only %d available", needed, cfg->frame_buffer_count);
             return false;
         }
-        cfg->draw_buf_pixels = (size_t)profile->hor_res * profile->buffer_height;
+        uint16_t effective_height = display_manager_effective_buffer_height(cfg);
+        cfg->draw_buf_pixels = (size_t)profile->hor_res * effective_height;
         void *buf = display_manager_alloc_draw_buffer(cfg->draw_buf_pixels * color_size, false, false);
         if (!buf) {
             ESP_LOGE(TAG, "alloc partial draw buffer %zu bytes failed", cfg->draw_buf_pixels * color_size);
@@ -1576,7 +1577,8 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         if (have_panel_fb && display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %d", pub->tear_avoid_mode);
+        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %s",
+                 display_manager_tear_mode_name(pub->tear_avoid_mode));
         return false;
     }
 
@@ -1664,7 +1666,8 @@ static bool display_manager_prepare_buffers(esp_lv_adapter_display_node_t *node,
         if (have_panel_fb && display_manager_setup_tear_buffers(node, color_size)) {
             return true;
         }
-        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %d", pub->tear_avoid_mode);
+        ESP_LOGE(TAG, "panel framebuffer setup failed for tear mode %s",
+                 display_manager_tear_mode_name(pub->tear_avoid_mode));
         return false;
     }
 

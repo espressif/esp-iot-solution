@@ -416,15 +416,15 @@ touch_cfg.multi_touch.pointers = 2;
 
 #### 旋钮/编码器
 
-需要启用 Kconfig 选项 `ESP_LV_ADAPTER_ENABLE_KNOB`。详见 `esp_lv_adapter_input.h`。
+需要启用 Kconfig 选项 `ESP_LVGL_ADAPTER_ENABLE_KNOB`。详见 `esp_lv_adapter_input.h`。
 
 #### 按键导航
 
-需要启用 Kconfig 选项 `ESP_LV_ADAPTER_ENABLE_BUTTON`。详见 `esp_lv_adapter_input.h`。
+需要启用 Kconfig 选项 `ESP_LVGL_ADAPTER_ENABLE_BUTTON`。详见 `esp_lv_adapter_input.h`。
 
 ### 文件系统桥接（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_FS` 后，可将 `esp_mmap_assets` 生成的资源分区挂载为 LVGL 文件系统：
+启用 `ESP_LVGL_ADAPTER_ENABLE_FS` 后，可将 `esp_mmap_assets` 生成的资源分区挂载为 LVGL 文件系统：
 
 ```c
 #include "esp_lv_fs.h"
@@ -456,7 +456,7 @@ lv_img_set_src(img, "A:my_image.png");
 
 ### 图片解码（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_DECODER` 后，适配器会集成 `esp_lv_decoder`，支持直接使用 LVGL 图片控件加载各种格式的图片：
+启用 `ESP_LVGL_ADAPTER_ENABLE_DECODER` 后，适配器会集成 `esp_lv_decoder`，支持直接使用 LVGL 图片控件加载各种格式的图片：
 
 ```c
 // 使用 LVGL 图片控件加载图片
@@ -473,7 +473,7 @@ lv_img_set_src(img, "I:red_png.png");  // I: 为图片解码器的盘符
 
 ### FreeType 字体（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_FREETYPE` 并在 LVGL 中开启 FreeType 后，可以从文件或内存加载矢量字体：
+启用 `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` 并在 LVGL 中开启 FreeType 后，可以从文件或内存加载矢量字体：
 
 ```c
 #include "esp_lv_adapter.h"
@@ -511,7 +511,7 @@ lv_obj_set_style_text_font(label, font30, 0);
 
 #### FPS 统计
 
-需要启用 `ESP_LV_ADAPTER_ENABLE_FPS_STATS`。
+需要启用 `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS`。
 
 ```c
 // 启用 FPS 统计
@@ -696,13 +696,13 @@ static void panel_wake_cb(void *user_data)
 
 | 配置项 | 说明 |
 |-------|------|
-| `ESP_LV_ADAPTER_ENABLE_FS` | 启用文件系统桥接 (`esp_lv_fs`) |
-| `ESP_LV_ADAPTER_ENABLE_DECODER` | 启用图片解码 (`esp_lv_decoder`) |
-| `ESP_LV_ADAPTER_ENABLE_FREETYPE` | 启用 FreeType 矢量字体支持 |
-| `ESP_LV_ADAPTER_ENABLE_FPS_STATS` | 启用 FPS 统计功能 |
-| `ESP_LV_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
-| `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
-| `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
+| `ESP_LVGL_ADAPTER_ENABLE_FS` | 启用文件系统桥接 (`esp_lv_fs`) |
+| `ESP_LVGL_ADAPTER_ENABLE_DECODER` | 启用图片解码 (`esp_lv_decoder`) |
+| `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` | 启用 FreeType 矢量字体支持 |
+| `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS` | 启用 FPS 统计功能 |
+| `ESP_LVGL_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
+| `ESP_LVGL_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
+| `ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
 
 **默认任务栈大小**：
 - LVGL 适配器任务栈：8KB
@@ -715,7 +715,7 @@ static void panel_wake_cb(void *user_data)
 
 | 接口类型 | 支持的防撕裂模式 |
 |---------|----------------|
-| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
+| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL` |
 | OTHER (SPI/I2C/I80/QSPI) | `NONE`、`TE_SYNC` |
 
 ### 旋转限制
@@ -739,11 +739,11 @@ static void panel_wake_cb(void *user_data)
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL 渲染模式
   - `DOUBLE_DIRECT` → DIRECT 渲染模式
   - `TE_SYNC`：同步模式 → FULL；异步高性能模式 → DIRECT
-  - 其余（含 `TRIPLE_PARTIAL`）→ PARTIAL 渲染模式
+  - 其余（含 `DOUBLE_PARTIAL`、`TRIPLE_PARTIAL`）→ PARTIAL 渲染模式
   
 - **LVGL 绘制缓冲数量**：
-  - `TRIPLE_PARTIAL`：1 块
-  - `TRIPLE_FULL` / `DOUBLE_*`：2 块
+  - `DOUBLE_PARTIAL` / `TRIPLE_PARTIAL`：1 块
+  - `DOUBLE_FULL` / `DOUBLE_DIRECT` / `TRIPLE_FULL`：2 块
   - `TE_SYNC`：1 块 LVGL 绘制缓冲；异步高性能模式额外使用 1 块 adapter staging 缓冲
   - FULL/DIRECT 模式默认：2 块
   - 其他：1 块

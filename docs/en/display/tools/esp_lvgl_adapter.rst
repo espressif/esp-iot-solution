@@ -381,19 +381,19 @@ The adapter provides a default configuration macro ``ESP_LV_ADAPTER_TOUCH_DEFAUL
 Encoder/Knob
 """"""""""""
 
-Requires Kconfig option ``ESP_LV_ADAPTER_ENABLE_KNOB``. See ``esp_lv_adapter_input.h`` for ``esp_lv_adapter_encoder_config_t``.
+Requires Kconfig option ``ESP_LVGL_ADAPTER_ENABLE_KNOB``. See ``esp_lv_adapter_input.h`` for ``esp_lv_adapter_encoder_config_t``.
 
 
 Navigation Buttons
 """"""""""""""""""
 
-Requires Kconfig option ``ESP_LV_ADAPTER_ENABLE_BUTTON``. Use ``esp_lv_adapter_register_navigation_buttons()``.
+Requires Kconfig option ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``. Use ``esp_lv_adapter_register_navigation_buttons()``.
 
 
 Filesystem Bridge (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If ``ESP_LV_ADAPTER_ENABLE_FS`` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from ``esp_mmap_assets``.
+If ``ESP_LVGL_ADAPTER_ENABLE_FS`` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from ``esp_mmap_assets``.
 
 .. code:: c
 
@@ -430,7 +430,7 @@ Depends on `esp_lv_fs <esp_lv_fs.html>`__ and `esp_mmap_assets <esp_mmap_assets.
 Image Decoding (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Enable ``ESP_LV_ADAPTER_ENABLE_DECODER`` to integrate ``esp_lv_decoder`` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
+Enable ``ESP_LVGL_ADAPTER_ENABLE_DECODER`` to integrate ``esp_lv_decoder`` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
 
 .. code:: c
 
@@ -451,7 +451,7 @@ For details, refer to `esp_lv_decoder <esp_lv_decoder.html>`__.
 FreeType Fonts (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Enable ``ESP_LV_ADAPTER_ENABLE_FREETYPE`` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
+Enable ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE`` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
 
 .. code:: c
 
@@ -500,7 +500,7 @@ FPS Statistics and Dummy Draw
 FPS Statistics
 """"""""""""""
 
-Requires ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``.
+Requires ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``.
 
 .. code:: c
 
@@ -547,17 +547,17 @@ Configure via ``idf.py menuconfig``:
 
    * - Option
      - Description
-   * - ``ESP_LV_ADAPTER_ENABLE_FS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FS``
      - Enable filesystem bridge (``esp_lv_fs``)
-   * - ``ESP_LV_ADAPTER_ENABLE_DECODER``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_DECODER``
      - Enable image decoder (``esp_lv_decoder``)
-   * - ``ESP_LV_ADAPTER_ENABLE_FREETYPE``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE``
      - Enable FreeType vector font support
-   * - ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``
      - Enable FPS monitoring APIs
-   * - ``ESP_LV_ADAPTER_ENABLE_BUTTON``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``
      - Enable navigation button input support
-   * - ``ESP_LV_ADAPTER_ENABLE_KNOB``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_KNOB``
      - Enable rotary encoder input support
 
 
