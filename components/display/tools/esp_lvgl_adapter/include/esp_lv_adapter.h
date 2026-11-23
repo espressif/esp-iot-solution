@@ -88,7 +88,7 @@ typedef struct {
     uint32_t task_stack_size;       /*!< LVGL task stack size in bytes */
     uint32_t task_priority;         /*!< LVGL task priority */
     int task_core_id;               /*!< LVGL task core ID (-1 for no affinity) */
-    uint32_t tick_period_ms;        /*!< LVGL tick period in milliseconds */
+    uint32_t tick_period_ms;        /*!< LVGL tick period in milliseconds (used by LVGL v8 periodic timer; LVGL v9 uses pull-based lv_tick_set_cb() at 1 ms resolution) */
     uint32_t task_min_delay_ms;     /*!< Minimum LVGL task delay in milliseconds */
     uint32_t task_max_delay_ms;     /*!< Maximum LVGL task delay in milliseconds */
     bool stack_in_psram;            /*!< Allocate LVGL task stack in PSRAM when available */

@@ -41,6 +41,7 @@ static bool s_freetype_initialized = false;
 
 /* Forward declarations of internal functions */
 static esp_err_t tick_init(void);
+static void tick_deinit(void);
 static void lvgl_worker(void *arg);
 static esp_err_t adapter_wait_for_all_flush_done(int32_t timeout_ms);
 static esp_err_t adapter_unregister_all_inputs(void);
@@ -234,6 +235,41 @@ static esp_err_t adapter_unregister_all_inputs(void)
     return ESP_OK;
 }
 
+#if LVGL_VERSION_MAJOR >= 9
+static uint32_t adapter_tick_get_cb(void)
+{
+    portENTER_CRITICAL_SAFE(&s_ctx.tick.lock);
+    int64_t now_us = s_ctx.tick.paused ? s_ctx.tick.pause_start_us : esp_timer_get_time();
+    int64_t elapsed_us = now_us - s_ctx.tick.base_us;
+    portEXIT_CRITICAL_SAFE(&s_ctx.tick.lock);
+    return (elapsed_us > 0) ? (uint32_t)((uint64_t)elapsed_us / 1000ULL) : 0U;
+}
+
+static esp_err_t adapter_stop_tick_timer(void)
+{
+    portENTER_CRITICAL_SAFE(&s_ctx.tick.lock);
+    if (!s_ctx.tick.paused) {
+        s_ctx.tick.pause_start_us = esp_timer_get_time();
+        s_ctx.tick.paused = true;
+    }
+    portEXIT_CRITICAL_SAFE(&s_ctx.tick.lock);
+    return ESP_OK;
+}
+
+static esp_err_t adapter_start_tick_timer(void)
+{
+    portENTER_CRITICAL_SAFE(&s_ctx.tick.lock);
+    if (s_ctx.tick.paused) {
+        int64_t now_us = esp_timer_get_time();
+        if (now_us > s_ctx.tick.pause_start_us) {
+            s_ctx.tick.base_us += (now_us - s_ctx.tick.pause_start_us);
+        }
+        s_ctx.tick.paused = false;
+    }
+    portEXIT_CRITICAL_SAFE(&s_ctx.tick.lock);
+    return ESP_OK;
+}
+#else
 static esp_err_t adapter_stop_tick_timer(void)
 {
     if (!s_ctx.tick_timer) {
@@ -281,6 +317,7 @@ static esp_err_t adapter_start_tick_timer(void)
 
     return ret;
 }
+#endif
 
 static bool adapter_auto_sleep_is_enabled(void)
 {
@@ -643,12 +680,7 @@ cleanup:
         (void)esp_pm_lock_delete(s_ctx.auto_sleep.pm_lock);
         s_ctx.auto_sleep.pm_lock = NULL;
     }
-    if (s_ctx.tick_timer) {
-        esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
-        esp_timer_stop(timer);
-        esp_timer_delete(timer);
-        s_ctx.tick_timer = NULL;
-    }
+    tick_deinit();
     if (s_ctx.pause_done_sem) {
         vSemaphoreDelete(s_ctx.pause_done_sem);
         s_ctx.pause_done_sem = NULL;
@@ -1447,14 +1479,8 @@ esp_err_t esp_lv_adapter_deinit(void)
         s_ctx.task = NULL;
     }
 
-    /* Stop and delete tick timer */
-    if (s_ctx.tick_timer) {
-        esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
-        esp_timer_stop(timer);
-        esp_timer_delete(timer);
-        s_ctx.tick_timer = NULL;
-        ESP_LOGI(TAG, "Tick timer stopped and deleted");
-    }
+    /* Stop and release tick source */
+    tick_deinit();
 
     /* Clear any remaining registered displays */
     display_manager_clear();
@@ -1707,8 +1733,30 @@ static void lvgl_worker(void *arg)
     vTaskSuspend(NULL);
 }
 
+#if LVGL_VERSION_MAJOR >= 9
 /**
- * @brief LVGL tick increment callback
+ * @brief Initialize pull-based LVGL v9 tick source
+ *
+ * Registers lv_tick_set_cb() backed by esp_timer_get_time(), eliminating
+ * periodic esp_timer interrupts while preserving pause/resume freeze semantics.
+ */
+static esp_err_t tick_init(void)
+{
+    portMUX_INITIALIZE(&s_ctx.tick.lock);
+    s_ctx.tick.base_us = esp_timer_get_time();
+    s_ctx.tick.pause_start_us = 0;
+    s_ctx.tick.paused = false;
+    lv_tick_set_cb(adapter_tick_get_cb);
+    return ESP_OK;
+}
+
+static void tick_deinit(void)
+{
+    lv_tick_set_cb(NULL);
+}
+#else
+/**
+ * @brief LVGL v8 tick increment callback
  *
  * Called by esp_timer to increment LVGL's internal tick counter
  */
@@ -1719,7 +1767,7 @@ static void tick_increment(void *arg)
 }
 
 /**
- * @brief Initialize LVGL tick timer
+ * @brief Initialize LVGL v8 periodic tick timer
  *
  * Creates and starts a periodic timer for LVGL tick updates
  */
@@ -1749,6 +1797,18 @@ static esp_err_t tick_init(void)
 
     return ESP_OK;
 }
+
+static void tick_deinit(void)
+{
+    if (s_ctx.tick_timer) {
+        esp_timer_handle_t timer = (esp_timer_handle_t)s_ctx.tick_timer;
+        (void)adapter_stop_tick_timer();
+        esp_timer_delete(timer);
+        s_ctx.tick_timer = NULL;
+        ESP_LOGI(TAG, "Tick timer stopped and deleted");
+    }
+}
+#endif
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS
 /*****************************************************************************

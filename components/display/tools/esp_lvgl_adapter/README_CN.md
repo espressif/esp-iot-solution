@@ -685,7 +685,7 @@ static void panel_wake_cb(void *user_data)
 
 **注意事项：**
 - 仅需要暂停 LVGL 并依赖 tickless 自动睡眠时，使用 `esp_lv_adapter_pause()` / `resume()`；如果还要删除并重建 LCD 硬件，请使用 `sleep_prepare()` / `sleep_recover()`
-- 暂停后内部 `LVGL tick` timer 会停止；在 `esp_timer_dump(stdout)` 中它可能仍可见，但应为停止状态（`Period = 0`、`Alarm = 0`）
+- LVGL v9 改用按需拉取式 `lv_tick_set_cb()`（`esp_timer_dump(stdout)` 中不再存在周期性 `LVGL tick` timer），并在暂停期间自动冻结 tick；LVGL v8 下内部 `LVGL tick` timer 仍会停止（`Period = 0`、`Alarm = 0`）
 - 不要将手动 `pause()` 与 `sleep_prepare()` 混用
 
 ---

@@ -699,7 +699,7 @@ If tickless auto Light Sleep is enabled, `esp_lv_adapter_pause()` / `resume()` c
 
 **Notes:**
 - Use `pause()` / `resume()` for pause-only auto sleep flows; use `sleep_prepare()` / `sleep_recover()` when LCD hardware must be deleted and recreated
-- While paused, the internal `LVGL tick` timer is stopped; in `esp_timer_dump(stdout)` it may remain visible but should be disarmed (`Period = 0`, `Alarm = 0`)
+- On LVGL v9, ticks are read on demand via `lv_tick_set_cb()` (no periodic `LVGL tick` timer in `esp_timer_dump(stdout)`) and freeze automatically while paused; on LVGL v8, the internal `LVGL tick` timer is stopped (`Period = 0`, `Alarm = 0`)
 - Do not mix manual `pause()` with `sleep_prepare()`
 
 ---

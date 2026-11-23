@@ -240,7 +240,16 @@ typedef struct {
     SemaphoreHandle_t dummy_draw_mutex;     /*!< Recursive mutex for dummy draw operations */
     SemaphoreHandle_t pause_done_sem;       /*!< Semaphore to synchronize pause acknowledgement */
     TaskHandle_t task;                      /*!< LVGL task handle */
-    void *tick_timer;                       /*!< LVGL tick timer handle (esp_timer_handle_t) */
+#if LVGL_VERSION_MAJOR >= 9
+    struct {
+        portMUX_TYPE lock;                  /*!< Spinlock protecting pull-based tick pause state */
+        int64_t base_us;                    /*!< Effective origin timestamp in us (shifted by pause durations) */
+        int64_t pause_start_us;             /*!< Timestamp in us when tick was frozen */
+        bool paused;                        /*!< True while LVGL tick is frozen by adapter pause */
+    } tick;                                 /*!< Pull-based LVGL v9 tick state */
+#else
+    void *tick_timer;                       /*!< LVGL v8 periodic tick timer handle (esp_timer_handle_t) */
+#endif
     esp_lv_adapter_config_t config;       /*!< Adapter configuration */
     esp_lv_adapter_display_node_t *display_list;  /*!< Linked list of registered displays */
     esp_lv_adapter_input_node_t *input_list;      /*!< Linked list of registered input devices */
