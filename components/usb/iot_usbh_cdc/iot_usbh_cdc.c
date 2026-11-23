@@ -859,10 +859,8 @@ esp_err_t usbh_cdc_port_open(const usbh_cdc_port_config_t *port_config, usbh_cdc
     }
 
     // Claiming a host interface does not select its alternate setting on the device.
-    cdc_port->data.in_waits_for_alt_setting = cdc_port->data.in_xfer && cdc_info.notif_intf &&
-                                              cdc_info.notif_intf->bInterfaceClass == USB_CLASS_COMM &&
-                                              cdc_info.notif_intf->bInterfaceSubClass == USB_COMMUNICATIONS_INTERFACE_SUBCLASS_ETHERNET_NETWORKING_CONTROL_MODEL &&
-                                              cdc_info.data_intf->bAlternateSetting != 0;
+    cdc_port->data.in_waits_for_alt_setting = (port_config->flags & USBH_CDC_FLAGS_WAIT_FOR_SET_INTERFACE) &&
+                                              cdc_port->data.in_xfer && cdc_info.data_intf->bAlternateSetting != 0;
 
     CDC_ENTER_CRITICAL();
     SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->cdc_devices_port_list), cdc_port, list_entry);
@@ -1053,7 +1051,7 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_port_handle_t cdc_port_handle, u
     const uint8_t set_interface_type = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_STANDARD | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
     if (cdc_port->data.in_waits_for_alt_setting && bmRequestType == set_interface_type && bRequest == USB_B_REQUEST_SET_INTERFACE &&
             wIndex == cdc_port->data.intf_desc->bInterfaceNumber && wValue == cdc_port->data.intf_desc->bAlternateSetting && wLength == 0) {
-        ESP_GOTO_ON_ERROR(_cdc_host_transfer_submit(cdc_port, cdc_port->data.in_xfer), unblock, TAG, "Failed to start ECM bulk IN transfer");
+        ESP_GOTO_ON_ERROR(_cdc_host_transfer_submit(cdc_port, cdc_port->data.in_xfer), unblock, TAG, "Failed to start bulk IN transfer");
         cdc_port->data.in_waits_for_alt_setting = false;
     }
 

@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v3.2.0
+
+### Features:
+
+* Add a port flag to defer the first bulk IN transfer until the device selects the claimed data alternate setting.
+
 ## v3.1.1 - 2026-10-21
 
 ### Bug Fixes:
