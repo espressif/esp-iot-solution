@@ -712,6 +712,9 @@
 .patterns-example_display_lcd_lcd_with_te: &patterns-example_display_lcd_lcd_with_te
   - "examples/display/lcd/lcd_with_te/**/*"
 
+.patterns-example_display_lcd_lcd_low_power_always_on: &patterns-example_display_lcd_lcd_low_power_always_on
+  - "examples/display/lcd/lcd_low_power_always_on/**/*"
+
 .patterns-example_display_lcd_lcd_pattern_test: &patterns-example_display_lcd_lcd_pattern_test
   - "examples/display/lcd/lcd_pattern_test/**/*"
 
@@ -1423,6 +1426,22 @@
       changes: *patterns-example_display_lcd_lcd_with_te
     - <<: *if-dev-push
       changes: *patterns-components_display_lcd_esp_lcd_axs15231b
+
+.rules:build:example_display_lcd_lcd_low_power_always_on:
+  rules:
+    - <<: *if-protected
+    - <<: *if-label-build
+    - <<: *if-trigger-job
+    - <<: *if-dev-push
+      changes: *patterns-build_system
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_ek79007
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_st7701
+    - <<: *if-dev-push
+      changes: *patterns-components_display_lcd_esp_lcd_panel_io_additions
+    - <<: *if-dev-push
+      changes: *patterns-example_display_lcd_lcd_low_power_always_on
 
 .rules:build:example_display_lcd_lcd_pattern_test:
   rules:

@@ -250,6 +250,10 @@ examples/display/lcd/lcd_layer_blending:
   enable:
     - if: IDF_TARGET in ["esp32p4"]
 
+examples/display/lcd/lcd_low_power_always_on:
+  enable:
+    - if: IDF_TARGET in ["esp32p4", "esp32s3"] and IDF_VERSION >= "5.5.5"
+
 examples/display/lcd/mipi_dsi_avoid_tearing:
   enable:
     - if: IDF_TARGET in ["esp32p4"]

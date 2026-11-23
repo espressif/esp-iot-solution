@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(SUPPORTED_TARGETS esp32p4 esp32s3)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+idf_build_set_property(MINIMAL_BUILD ON)
+project(lcd_low_power_always_on)

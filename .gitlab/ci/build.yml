@@ -574,6 +574,14 @@ build_example_display_lcd_lcd_with_te:
   variables:
     EXAMPLE_DIR: examples/display/lcd/lcd_with_te
 
+build_example_display_lcd_lcd_low_power_always_on:
+  extends:
+    - .build_examples_template
+    - .rules:build:example_display_lcd_lcd_low_power_always_on
+    - .build_idf_ge_than_v5_5_5_with_pre_release
+  variables:
+    EXAMPLE_DIR: examples/display/lcd/lcd_low_power_always_on
+
 build_example_display_lcd_lcd_pattern_test:
   extends:
     - .build_examples_template
