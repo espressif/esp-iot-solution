@@ -338,8 +338,7 @@ void IRAM_ATTR display_rotate_copy_region(const void *src,
     const int rect_h = lv_y_end - lv_y_start + 1;
     const int phys_w = hor_res;
 
-    if (color_bytes == 2 && (swap_rgb565 || rotation == ESP_LV_ADAPTER_ROTATE_90 ||
-                             rotation == ESP_LV_ADAPTER_ROTATE_270)) {
+    if (color_bytes == 2) {
         display_rgb565_rotate_copy(src, dst_fb, lv_x_start, lv_y_start, lv_x_end, lv_y_end,
                                    src_stride_px, hor_res, ver_res, rotation,
                                    block_size_small, block_size_large, swap_rgb565);
@@ -375,13 +374,7 @@ void IRAM_ATTR display_rotate_copy_region(const void *src,
             int dst_x_start = hor_res - 1 - lv_x_end;
             uint8_t *dst_row = (uint8_t *)dst_fb + (size_t)(dst_y * phys_w + dst_x_start) * color_bytes;
 
-            if (color_bytes == 2) {
-                uint16_t *dst16 = (uint16_t *)(dst_row + (rect_w - 1) * 2);
-                const uint16_t *src16 = (const uint16_t *)src_row;
-                for (int x = 0; x < rect_w; x++) {
-                    *dst16-- = *src16++;
-                }
-            } else if (color_bytes == 4) {
+            if (color_bytes == 4) {
                 uint32_t *dst32 = (uint32_t *)(dst_row + (rect_w - 1) * 4);
                 const uint32_t *src32 = (const uint32_t *)src_row;
                 for (int x = 0; x < rect_w; x++) {
