@@ -1479,11 +1479,11 @@ esp_err_t esp_lv_adapter_deinit(void)
         s_ctx.task = NULL;
     }
 
-    /* Stop and release tick source */
-    tick_deinit();
-
     /* Clear any remaining registered displays */
     display_manager_clear();
+
+    /* Display deletion callbacks can still read the LVGL clock. */
+    tick_deinit();
 
 #if CONFIG_ESP_LVGL_ADAPTER_ENABLE_FS
     /* Deinitialize all mounted file systems */
