@@ -394,11 +394,7 @@ esp_err_t esp_display_present_te_compose_submit_drawbuf(
         .ppa_handle = te_compose->ppa_handle,
         .swap_rgb565 = te_compose->draw.panel_byte_order,
     };
-    /*
-     * Apply panel byte order in the copy/rotate hop, including its PPA and
-     * software fallback paths. Both inline and queued copies read the tile
-     * in renderer byte order and leave it unchanged.
-     */
+    /* Both inline and queued blits apply panel byte order to the submitted tile. */
     if (present_async_copy_submit(&te_compose->async_copy, ctx->target, &dst,
                                   region) ==
             ESP_OK) {

@@ -130,7 +130,10 @@ static bool copy_axis_dma2d(void *dst_fb, uint16_t dst_fb_w, uint16_t dst_fb_h,
                             uint16_t dst_y, uint16_t width, uint16_t height,
                             bool require_external_dst)
 {
-    if (require_external_dst && !esp_ptr_external_ram(dst_fb)) {
+    /* The DMA descriptors below use visible widths as row pitches. */
+    if (src_stride_bytes != (size_t)src_fb_w * color_bytes ||
+            dst_stride_bytes != (size_t)dst_fb_w * color_bytes ||
+            (require_external_dst && !esp_ptr_external_ram(dst_fb))) {
         return false;
     }
 #if defined(ESP_ASYNC_COLOR_CONVERT_AVAILABLE)
