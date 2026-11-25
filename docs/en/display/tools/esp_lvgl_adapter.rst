@@ -320,11 +320,13 @@ Default ``buffer_height`` for each interface (see ``esp_lv_adapter_display.h``):
      - 50
      - Medium stripe height
    * - OTHER with PSRAM
-     - ``ver_res`` (full height)
+     - Full logical height
      - Full-height partial refresh, better throughput
    * - OTHER without PSRAM
      - 10
      - Small stripe to save RAM
+
+In partial mode, ``buffer_height`` counts logical rows after rotation. LVGL v9 includes stride padding when it allocates space for each row.
 
 
 Tuning Tips

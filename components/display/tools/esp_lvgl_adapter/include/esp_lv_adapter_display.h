@@ -145,7 +145,7 @@ typedef struct {
     esp_lv_adapter_rotation_t rotation;           /*!< Display rotation angle */
     uint16_t hor_res;                       /*!< Horizontal resolution in pixels */
     uint16_t ver_res;                       /*!< Vertical resolution in pixels */
-    uint16_t buffer_height;                 /*!< Draw buffer height in pixels */
+    uint16_t buffer_height;                 /*!< Draw buffer height in logical rows */
     bool use_psram;                         /*!< Use PSRAM for adapter draw/conversion buffers where applicable.
                                                RGB/MIPI DOUBLE_PARTIAL/TRIPLE_PARTIAL draw buffers always use internal SRAM.
                                                Panel frame buffers and TE bounce buffers are not controlled by this flag. */
@@ -192,7 +192,8 @@ typedef struct {
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation)     \
     .interface             = ESP_LV_ADAPTER_PANEL_IF_OTHER,                                          \
     ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                        \
-    .buffer_height         = _ver_res,                                                               \
+    .buffer_height         = ((_rotation) == ESP_LV_ADAPTER_ROTATE_90 ||                              \
+                              (_rotation) == ESP_LV_ADAPTER_ROTATE_270) ? (_hor_res) : (_ver_res),    \
     .use_psram             = true,                                                                   \
     .enable_ppa_accel      = false
 

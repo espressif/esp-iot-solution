@@ -306,7 +306,7 @@ v9 的 stride 是当前布局，可随局部刷新变化。异步 TE 的 staging
 |---------|---------------------|------|
 | MIPI DSI | 50 | 中等条带高度 |
 | RGB | 50 | 中等条带高度 |
-| OTHER + PSRAM | `ver_res` (整屏高度) | 整屏高度分区，吞吐更高 |
+| OTHER + PSRAM | 逻辑整屏高度 | 整屏高度分区，吞吐更高 |
 | OTHER 无 PSRAM | 10 | 小条带以节省 RAM |
 
 #### 绘图缓冲区的内存位置
@@ -315,8 +315,9 @@ RGB/MIPI DSI 的 `DOUBLE_PARTIAL` 和 `TRIPLE_PARTIAL` 始终使用**一个片�
 不受 `profile.use_psram` 影响。条带渲染后复制或旋转到面板帧缓冲区，
 后者的内存位置由 `esp_lcd` 初始化配置决定。
 
-像素数据占用 `hor_res × buffer_height × 每像素字节数` 字节：RGB565 的
-480 × 50 × 2 = 48,000 字节。若 SRAM 分配失败，可减小 `buffer_height`。
+绘图缓冲区包含 `buffer_height` 个逻辑行，宽度随旋转方向变化。LVGL v9 的行步长
+包含对齐填充。以逻辑宽度 480 像素的 RGB565 为例，无填充时 50 行占 48,000 字节。
+若 SRAM 分配失败，可减小 `buffer_height`。
 
 #### 调优建议
 

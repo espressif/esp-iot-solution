@@ -313,7 +313,7 @@ Default `buffer_height` for each interface (see `esp_lv_adapter_display.h`):
 |---------------|------------------------|-------------|
 | MIPI DSI | 50 | Medium stripe height |
 | RGB | 50 | Medium stripe height |
-| OTHER with PSRAM | `ver_res` (full height) | Full-height partial refresh, better throughput |
+| OTHER with PSRAM | Full logical height | Full-height partial refresh, better throughput |
 | OTHER without PSRAM | 10 | Small stripe to save RAM |
 
 #### Draw-buffer Memory Placement
@@ -323,8 +323,9 @@ in **internal SRAM**, regardless of `profile.use_psram`. Rendered stripes are co
 or rotated into panel frame buffers, whose placement is set during `esp_lcd`
 initialization.
 
-Pixel storage is `hor_res × buffer_height × bytes_per_pixel`: 480 × 50 × 2 = 48,000
-bytes for RGB565. Reduce `buffer_height` if SRAM allocation fails.
+The buffer holds `buffer_height` logical rows. Its width follows the rotation,
+and LVGL v9 includes any row padding in the stride. For 480 logical pixels in RGB565
+without padding, 50 rows use 48,000 bytes. Reduce `buffer_height` if SRAM allocation fails.
 
 #### Tuning Tips
 

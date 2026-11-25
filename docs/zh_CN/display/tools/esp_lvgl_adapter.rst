@@ -314,11 +314,13 @@ PSRAM 优化(如果可用)
      - 50
      - 中等条带高度
    * - OTHER + PSRAM
-     - ``ver_res`` (整屏高度)
+     - 逻辑整屏高度
      - 整屏高度分区,吞吐更高
    * - OTHER 无 PSRAM
      - 10
      - 小条带以节省 RAM
+
+PARTIAL 模式下，``buffer_height`` 表示旋转后的逻辑行数。LVGL v9 的行步长包含对齐填充。
 
 
 调优建议
