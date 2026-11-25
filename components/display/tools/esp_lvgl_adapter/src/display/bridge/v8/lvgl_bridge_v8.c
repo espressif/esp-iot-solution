@@ -2598,9 +2598,6 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
                                                   lvgl_color_format_bytes);
 
     if (can_use_dma2d) {
-        size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
-        display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
-
 #ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
         async_color_convert_request_t blit = {
             .src_buffer  = color_map,
@@ -2618,6 +2615,8 @@ static void display_bridge_v8_flush_triple_diff(esp_lv_adapter_display_bridge_v8
             DMA2D_PIXEL_FORMAT_FIELD(lvgl_color_format_bytes),
         };
 #else
+        size_t flush_size = src_stride_px * rect_h * lvgl_color_format_bytes;
+        display_cache_msync_range(color_map, flush_size, hw_resource.data_cache_line_size);
         esp_async_fbcpy_trans_desc_t blit = {
             .src_buffer        = color_map,
             .dst_buffer        = impl->draw_fb,
