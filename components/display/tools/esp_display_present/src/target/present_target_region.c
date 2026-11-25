@@ -13,6 +13,7 @@
 #include "esp_display_present_target.h"
 #include "esp_memory_utils.h"
 #include "present_rgb565_swap.h"
+#include "sdkconfig.h"
 #include "soc/soc_caps.h"
 
 esp_err_t present_target_blit_region(
@@ -43,6 +44,7 @@ esp_err_t present_target_blit_region(
      * copies to PSRAM, swap it before the blit so DMA2D can move the pixels. */
     if (dst->rotation == ESP_DISPLAY_PRESENT_ROTATE_0 &&
             dst->swap_rgb565 && dst->color_bytes == sizeof(uint16_t) &&
+            ((uintptr_t)region->surface.pixels & 1U) == 0 &&
             esp_ptr_external_ram(dst->pixels) &&
             dst->stride_bytes == (size_t)dst->width * sizeof(uint16_t) &&
             region->surface.stride_bytes == (size_t)region->surface.width * sizeof(uint16_t)) {

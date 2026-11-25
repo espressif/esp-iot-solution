@@ -49,8 +49,9 @@ void present_async_copy_wait_slot(present_async_copy_t *copy, uint8_t slot);
 
 /**
  * Queue @p region for the worker, including @p dst's copy-time byte order.
- * The source stays unchanged. ESP_ERR_NOT_SUPPORTED means the caller must
- * drain and copy inline with the same destination policy.
+ * The worker may swap RGB565 bytes in the leased tile while it owns the slot.
+ * ESP_ERR_NOT_SUPPORTED means the caller must drain and copy inline with the
+ * same destination policy.
  */
 esp_err_t present_async_copy_submit(present_async_copy_t *copy,
                                     esp_display_present_target_t *target,

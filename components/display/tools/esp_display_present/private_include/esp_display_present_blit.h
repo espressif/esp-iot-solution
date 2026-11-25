@@ -82,8 +82,8 @@ typedef struct {
     esp_display_present_rotation_t rotation;
     /** Optional PPA SRM client; NULL forces software rotate. */
     void *ppa_handle;
-    /** RGB565 only: copy to panel byte order without modifying the source.
-     *  Zero-initialized callers preserve the original byte order. */
+    /** RGB565 only: the pixel blit writes panel byte order without modifying
+     *  its source. Leave false if the producer already converted the tile. */
     bool swap_rgb565;
 } esp_display_present_blit_fb_t;
 
