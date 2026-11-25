@@ -860,34 +860,31 @@ esp_err_t esp_lv_adapter_pause(int32_t timeout_ms)
         return ESP_OK;
     }
 
-    bool called_from_worker = (s_ctx.task && xTaskGetCurrentTaskHandle() == s_ctx.task);
+    const bool called_from_worker = s_ctx.task && xTaskGetCurrentTaskHandle() == s_ctx.task;
+    const bool wait_for_worker = !called_from_worker && s_ctx.task && s_ctx.pause_done_sem;
+    if (wait_for_worker) {
+        /* Clear stale acknowledgements before publishing the new request. */
+        xSemaphoreTake(s_ctx.pause_done_sem, 0);
+    }
 
-    s_ctx.pause_ack = false;
+    s_ctx.pause_ack = !wait_for_worker;
     s_ctx.paused = true;
 
-    if (called_from_worker) {
-        /* Avoid deadlock when pause is requested from the LVGL worker itself */
-        s_ctx.pause_ack = true;
-        if (s_ctx.pause_done_sem) {
-            xSemaphoreGive(s_ctx.pause_done_sem);
+    if (called_from_worker && s_ctx.pause_done_sem) {
+        xSemaphoreGive(s_ctx.pause_done_sem);
+    }
+
+    if (wait_for_worker) {
+        xTaskNotifyGive(s_ctx.task);
+        TickType_t ticks = (timeout_ms < 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
+        if (xSemaphoreTake(s_ctx.pause_done_sem, ticks) != pdTRUE) {
+            s_ctx.paused = false;
+            /* The worker may be entering its paused wait as the timeout expires. */
+            xTaskNotifyGive(s_ctx.task);
+            return ESP_ERR_TIMEOUT;
         }
-        /* Stop the tick timer so tickless light sleep can enter naturally. */
-        (void)adapter_stop_tick_timer();
-        return ESP_OK;
     }
 
-    if (!s_ctx.task || !s_ctx.pause_done_sem) {
-        s_ctx.pause_ack = true;
-        (void)adapter_stop_tick_timer();
-        return ESP_OK;
-    }
-
-    xSemaphoreTake(s_ctx.pause_done_sem, 0); /* clear pending */
-    TickType_t ticks = (timeout_ms < 0) ? portMAX_DELAY : pdMS_TO_TICKS(timeout_ms);
-    if (xSemaphoreTake(s_ctx.pause_done_sem, ticks) != pdTRUE) {
-        s_ctx.paused = false;
-        return ESP_ERR_TIMEOUT;
-    }
     (void)adapter_stop_tick_timer();
     return ESP_OK;
 }
