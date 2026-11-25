@@ -28,6 +28,10 @@ jobs:
           cp -r examples/display/gui/common/hw_init examples/display/gui/common/example_lvgl_init examples/display/gui/lvgl_eaf_player/components/
           mkdir -p examples/display/gui/lvgl_present_benchmark/components/
           cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_present_benchmark/components/
+          # Published projects resolve bundled or Registry components outside this checkout.
+          for example in lvgl_common_demo lvgl_decode_image lvgl_dummy_draw lvgl_freetype_font lvgl_multi_screen lvgl_present_benchmark; do
+            find "examples/display/gui/$example" -name idf_component.yml -exec sed -i '/^[[:space:]]*override_path:/d' {} +
+          done
           mkdir -p examples/display/gui/lvgl_light_sleep_demo/components/
           cp -r examples/display/gui/common/hw_init examples/display/gui/lvgl_light_sleep_demo/components/
           mkdir -p examples/usb/host/usb_cdc_4g_module/components/
