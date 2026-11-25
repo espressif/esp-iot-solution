@@ -93,7 +93,9 @@ If the old `sdkconfig` remains, regenerate it so the new board defaults take eff
 
 ### PC Side
 
-For preparation, refer to [windows_driver](./windows_driver/README_cn.md).
+> **Warning:** The prebuilt Windows driver is experimental and is reported to install third-party test CA certificates and disable automatic trusted root updates. Do not install it on production or everyday-use computers. Read the [driver security warning and cleanup guidance](./windows_driver/README.md) before proceeding.
+
+For preparation, refer to [windows_driver](./windows_driver/README.md).
 
 ![Demo](https://dl.espressif.com/AE/esp-iot-solution/p4_usb_extern_screen.gif)
 
