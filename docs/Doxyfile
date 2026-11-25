@@ -103,6 +103,7 @@ INPUT = \
     $(PROJECT_PATH)/components/esp_local_controller/include/esp_local_controller.h \
     $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_chat.h \
     $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_info.h \
+    $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_protocol.h \
     $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_nvs_ops.h \
     $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_camera.h \
     $(PROJECT_PATH)/components/esp_xiaozhi/include/esp_xiaozhi_video.h \

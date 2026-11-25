@@ -38,6 +38,7 @@ typedef struct esp_mcp_s esp_mcp_t;
  * @brief Create an MCP instance
  *
  * Allocates and initializes a new MCP instance.
+ * Named sessions and resource subscriptions allocate on first use.
  *
  * @param[out] mcp Pointer to store the created MCP instance (must not be NULL)
  * @return
@@ -158,6 +159,64 @@ esp_err_t esp_mcp_set_server_info(esp_mcp_t *mcp, const char *title, const char 
  * @return ESP_OK on success
  */
 esp_err_t esp_mcp_set_instructions(esp_mcp_t *mcp, const char *instructions);
+
+/**
+ * @brief Configure optional server extensions advertised by server/discover
+ *
+ * Copies a JSON object, or clears it when NULL. Configure before starting a
+ * transport. Advertise only extensions implemented by registered tools.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] extensions_json JSON object string for server extensions, or NULL to clear
+ * @return
+ *      - ESP_OK: Extensions updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer or non-object JSON string
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_set_extensions_json(esp_mcp_t *mcp, const char *extensions_json);
+
+/**
+ * @brief Enable the Xiaozhi device protocol on this engine instance
+ *
+ * Disabled by default. Enables the upstream 2024-11-05 / 2026-07-28
+ * discovery/tools dialect, including stateless legacy calls and per-request
+ * metadata. Generic MCP lifecycle, argument and pagination behavior is preserved
+ * when disabled. Configure before starting a transport; use a separate engine
+ * for a simultaneous generic MCP transport. esp_xiaozhi enables this while active.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] enabled True to enable Xiaozhi compatibility mode, false to disable
+ * @return
+ *      - ESP_OK: Mode updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer
+ */
+esp_err_t esp_mcp_set_xiaozhi_compatibility(esp_mcp_t *mcp, bool enabled);
+
+/**
+ * @brief Query whether this engine uses the Xiaozhi device protocol
+ *
+ * @param[in] mcp MCP instance
+ * @return
+ *      - true: Xiaozhi compatibility mode is enabled
+ *      - false: Invalid pointer or generic MCP mode is active
+ */
+bool esp_mcp_is_xiaozhi_compatibility_enabled(const esp_mcp_t *mcp);
+
+/**
+ * @brief Set the application/board identity for Xiaozhi serverInfo
+ *
+ * Copies nonempty strings before transport start. NULL restores the application
+ * descriptor default for that field. This does not change generic MCP replies.
+ *
+ * @param[in] mcp MCP instance (must not be NULL)
+ * @param[in] name Board/application name (non-empty string, or NULL to restore default)
+ * @param[in] version Firmware version string (non-empty string, or NULL to restore default)
+ * @return
+ *      - ESP_OK: Identity updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid mcp pointer or empty string argument
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_set_xiaozhi_server_identity(esp_mcp_t *mcp, const char *name, const char *version);
 
 /**
  * @brief Emit notifications/message to a client session
@@ -291,9 +350,17 @@ const char *esp_mcp_get_request_session_id(const esp_mcp_t *mcp);
 /**
  * @brief Clear session-scoped runtime state
  *
+ * Releases the named session state and its resource subscriptions. Serialized with
+ * esp_mcp_handle_message(). Calls from synchronous engine callbacks return
+ * ESP_ERR_INVALID_STATE without changing session state. Clear after message handling
+ * returns, or from another task that does not block the callback.
+ *
  * @param[in] mcp MCP instance
- * @param[in] session_id Target session id (nullable)
- * @return ESP_OK on success
+ * @param[in] session_id Non-empty target session id
+ * @return
+ *       - ESP_OK                 On success, including an unknown session
+ *       - ESP_ERR_INVALID_ARG    If mcp or session_id is NULL, or session_id is empty
+ *       - ESP_ERR_INVALID_STATE  If called from a synchronous engine callback or a state mutex cannot be acquired
  */
 esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id);
 
@@ -527,6 +594,9 @@ esp_err_t esp_mcp_request_tasks_list(esp_mcp_t *mcp,
  * This is a low-level helper that processes a single incoming MCP JSON-RPC message.
  * If the input is a request, it produces a JSON-RPC response (UTF-8 JSON).
  * If the input is a notification or response, it produces no output (outbuf==NULL).
+ * The returned buffer belongs to the caller and remains valid across subsequent
+ * requests. Release it exactly once with esp_mcp_free_response(), including when
+ * a protocol error payload accompanies a non-ESP_OK return value.
  *
  * @param[in]  mcp     MCP instance
  * @param[in]  inbuf   Input buffer (UTF-8 JSON)

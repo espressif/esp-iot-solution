@@ -23,7 +23,7 @@ extern "C"
 #define BLE_SCAN_RSP_DATA_LEN_MAX           31   /* Scan response data maximum length */
 
 /* EIR/AD data type definitions */
-#define BLE_CONN_DATA_FLAGS                 0x01 /* AD flags */;
+#define BLE_CONN_DATA_FLAGS                 0x01 /* AD flags */
 #define BLE_CONN_DATA_UUID16_SOME           0x02 /* 16-bit UUID, more available */
 #define BLE_CONN_DATA_UUID16_ALL            0x03 /* 16-bit UUID, all listed */
 #define BLE_CONN_DATA_UUID32_SOME           0x04 /* 32-bit UUID, more available */

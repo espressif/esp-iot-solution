@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Espressif Systems (Shanghai) CO LTD
+# SPDX-License-Identifier: Apache-2.0
+config EAF_TEST_ALL_MODES
+    bool "Run continuous all-mode conformance checks"
+    default n
+    help
+        Generate a procedural reference pack and verify all codecs/frame modes.
+        Requires NumPy and Pillow in EAF_TEST_FIXTURE_PYTHON at configure time.

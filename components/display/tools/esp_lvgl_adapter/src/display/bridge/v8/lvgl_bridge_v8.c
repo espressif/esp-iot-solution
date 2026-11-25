@@ -3017,7 +3017,8 @@ static void IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
                                rotation,
                                color_bytes,
                                impl->block_size_small,
-                               impl->block_size_large);
+                               impl->block_size_large,
+                               false);
 }
 
 /**
@@ -3117,7 +3118,8 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v8_t *imp
                                rotation,
                                color_bytes,
                                impl->block_size_small,
-                               impl->block_size_large);
+                               impl->block_size_large,
+                               false);
 }
 
 /**********************

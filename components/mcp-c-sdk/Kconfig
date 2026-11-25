@@ -70,13 +70,23 @@ menu "Model Context Protocol"
             normal multi-request flows; very large values delay cleanup of idle sessions.
 
 
+    config MCP_RECENT_REQUEST_IDS_MAX
+        int "Recent request ID cache entries per MCP instance"
+        range 1 64
+        default 64
+        help
+            Number of recent session/request ID pairs retained for duplicate detection.
+            Each entry currently requires 97 bytes. Smaller values reduce the duplicate
+            detection window. For a single-client device, 16 entries can reduce RAM use.
+
     config MCP_RESOURCE_SUBSCRIPTIONS_MAX
         int "Maximum resource subscriptions per MCP instance"
         range 4 256
         default 64
         help
             Maximum number of resource subscriptions stored in MCP engine state.
-            Higher values allow more subscribed resources but increase static memory use.
+            Entries are allocated as subscriptions are added. Higher values permit more
+            subscriptions but do not preallocate the maximum capacity at startup.
 
     config MCP_HTTP_DEFAULT_PROTOCOL_VERSION
         string "Default MCP protocol version when header is missing"

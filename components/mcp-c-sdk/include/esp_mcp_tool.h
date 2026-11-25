@@ -26,6 +26,45 @@ typedef struct esp_mcp_tool_s esp_mcp_tool_t;
 typedef struct esp_mcp_tool_result_s esp_mcp_tool_result_t;
 
 /**
+ * @brief Borrowed context of one tool invocation
+ *
+ * Strings are valid only during the callback. Copy them before deferring work.
+ * Client metadata describes peer capabilities; it is not authentication evidence.
+ */
+typedef struct {
+    const char *protocol_version;          /*!< NULL for legacy requests without negotiated version */
+    const char *meta_json;                 /*!< Complete request params._meta, nullable */
+    const char *session_id;                /*!< Transport routing context, nullable */
+    const char *auth_subject;              /*!< Transport-authenticated subject, nullable */
+    bool is_authenticated;                /*!< Authentication result supplied by transport */
+} esp_mcp_request_context_t;
+
+/**
+ * @brief Tool callback with per-request metadata and application context
+ *
+ * @param[in] properties Tool input properties (can be NULL)
+ * @param[in] context Borrowed request context (valid only during the callback)
+ * @param[out] result Tool result builder instance
+ * @param[in] user_ctx User context pointer passed to esp_mcp_tool_create_with_context()
+ * @return ESP_OK on success
+ */
+typedef esp_err_t (*esp_mcp_tool_callback_with_context_t)(const esp_mcp_property_list_t *properties,
+                                                          const esp_mcp_request_context_t *context,
+                                                          esp_mcp_tool_result_t *result,
+                                                          void *user_ctx);
+
+/**
+ * @brief Validate request metadata before executing a tool
+ *
+ * Implementations must not execute the tool or produce side effects.
+ *
+ * @param[in] context Borrowed request context (valid only during the callback)
+ * @param[in] user_ctx User context pointer passed to esp_mcp_tool_set_request_validator()
+ * @return ESP_OK to allow execution, or an error to reject with JSON-RPC -32602
+ */
+typedef esp_err_t (*esp_mcp_tool_request_validator_t)(const esp_mcp_request_context_t *context, void *user_ctx);
+
+/**
  * @brief Tool callback function type
  *
  * Callback function called when a tool is executed. Receives the input properties
@@ -69,6 +108,58 @@ esp_mcp_tool_t *esp_mcp_tool_create(const char *name, const char *description, e
  * @return Pointer to tool or NULL
  */
 esp_mcp_tool_t *esp_mcp_tool_create_ex(const char *name, const char *title, const char *description, esp_mcp_tool_callback_ex_t callback);
+
+/**
+ * @brief Create a tool whose callback receives the current request context
+ *
+ * @param[in] name Tool name (must not be NULL)
+ * @param[in] description Tool description (must not be NULL)
+ * @param[in] callback Context-aware tool callback function (must not be NULL)
+ * @param[in] user_ctx User context pointer passed to @p callback (nullable)
+ * @return Pointer to the created tool, or NULL on failure
+ */
+esp_mcp_tool_t *esp_mcp_tool_create_with_context(const char *name, const char *description,
+                                                 esp_mcp_tool_callback_with_context_t callback,
+                                                 void *user_ctx);
+
+/**
+ * @brief Set required client capabilities for modern requests
+ *
+ * JSON object matched recursively against clientCapabilities. Legacy calls are
+ * unaffected. A missing requirement returns -32021 before executing the tool.
+ *
+ * @param[in] tool Tool instance (must not be NULL)
+ * @param[in] capabilities_json JSON object string of required capabilities, or NULL to clear
+ * @return
+ *      - ESP_OK: Required capabilities updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid tool pointer or non-object JSON string
+ *      - ESP_ERR_NO_MEM: Memory allocation failed
+ */
+esp_err_t esp_mcp_tool_set_required_capabilities_json(esp_mcp_tool_t *tool, const char *capabilities_json);
+
+/**
+ * @brief Set an optional metadata validator executed before the tool callback
+ *
+ * @param[in] tool Tool instance (must not be NULL)
+ * @param[in] validator Validator callback, or NULL to clear
+ * @param[in] user_ctx User context pointer passed to @p validator (nullable)
+ * @return
+ *      - ESP_OK: Validator updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid tool pointer
+ */
+esp_err_t esp_mcp_tool_set_request_validator(esp_mcp_tool_t *tool,
+                                             esp_mcp_tool_request_validator_t validator, void *user_ctx);
+
+/**
+ * @brief Mark a tool as user-only (excluded unless tools/list.withUserTools is true)
+ *
+ * @param[in] tool Tool instance (must not be NULL)
+ * @param[in] user_only True to restrict listing to requests with withUserTools=true
+ * @return
+ *      - ESP_OK: Flag updated successfully
+ *      - ESP_ERR_INVALID_ARG: Invalid tool pointer
+ */
+esp_err_t esp_mcp_tool_set_user_only(esp_mcp_tool_t *tool, bool user_only);
 
 /**
  * @brief Set tool title

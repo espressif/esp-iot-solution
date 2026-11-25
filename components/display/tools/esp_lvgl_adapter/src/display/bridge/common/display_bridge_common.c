@@ -10,6 +10,7 @@
  *      INCLUDES
  *********************/
 #include "display_bridge_common.h"
+#include "display_rgb565.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -330,11 +331,20 @@ void IRAM_ATTR display_rotate_copy_region(const void *src,
                                           esp_lv_adapter_rotation_t rotation,
                                           uint8_t color_bytes,
                                           int block_size_small,
-                                          int block_size_large)
+                                          int block_size_large,
+                                          bool swap_rgb565)
 {
     const int rect_w = lv_x_end - lv_x_start + 1;
     const int rect_h = lv_y_end - lv_y_start + 1;
     const int phys_w = hor_res;
+
+    if (color_bytes == 2 && (swap_rgb565 || rotation == ESP_LV_ADAPTER_ROTATE_90 ||
+                             rotation == ESP_LV_ADAPTER_ROTATE_270)) {
+        display_rgb565_rotate_copy(src, dst_fb, lv_x_start, lv_y_start, lv_x_end, lv_y_end,
+                                   src_stride_px, hor_res, ver_res, rotation,
+                                   block_size_small, block_size_large, swap_rgb565);
+        return;
+    }
 
     if (rotation == ESP_LV_ADAPTER_ROTATE_0) {
         const uint8_t *src_base = (const uint8_t *)src;

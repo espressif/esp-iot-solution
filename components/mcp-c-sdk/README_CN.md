@@ -32,6 +32,20 @@
   - ⚠️ **Streamable HTTP（MCP 2025-11-25）**: 当前已支持 POST；在未启用 SSE 时 GET 返回 405
   - ⚠️ **鉴权（resource server）**: OAuth resource-server 元数据端点尚未完整实现
 
+## 小智按请求 metadata 兼容
+
+保留现有 MCP `2025-11-25` 会话 API，同时支持小智 `2026-07-28` 的 **discovery 和 tools 子集**；本次没有把 HTTP transport 或所有 MCP 方法迁移到该版本。
+
+小智模式默认关闭。在启动专用小智 transport 前调用 `esp_mcp_set_xiaozhi_compatibility(mcp, true)`。`esp_xiaozhi` 在聊天期间启用该模式，停止或启动失败时恢复借用引擎原先的模式。需要同时提供通用 MCP 和小智 transport 时，分别使用独立引擎实例。通用参数转换、分页、resources、prompts 和 tasks 保留现有行为。
+
+通过 `esp_mcp_set_xiaozhi_server_identity()` 提供外部 Board 名称和固件版本，作为小智 serverInfo。引擎复制字符串，NULL 恢复应用 descriptor 默认值，不改变通用 serverInfo。
+
+`server/discover`、`tools/list`、`tools/call` 每次请求通过 `params._meta` 携带 `io.modelcontextprotocol/protocolVersion` 和 `io.modelcontextprotocol/clientCapabilities`。小智模式支持 `2026-07-28` 和 `2024-11-05`，两版都允许在 initialize 前调用工具、复用请求 ID。新版响应包含 `resultType: complete` 和 server metadata；discovery/list 响应有 60 秒 private TTL。小智请求不修改通用 initialize 状态或请求 ID 缓存。
+
+`esp_mcp_tool_create_with_context()` 提供借用的请求 metadata、session 和认证主体；回调结束后仍需使用的字段必须复制。`esp_mcp_tool_set_required_capabilities_json()` 声明客户端能力要求，`esp_mcp_tool_set_request_validator()` 校验扩展值，`esp_mcp_tool_set_user_only()` 控制列表可见性。以上配置及 `esp_mcp_set_extensions_json()` 应在处理请求前设置。HTTP 鉴权机制保持原样，metadata 不能作为身份认证。
+
+小智新版工具错误使用 `result.isError`，旧版使用 JSON-RPC `-32603`。旧版图片内容使用上游 JSON 字符串包装，新版使用直接字段。上述约定仅用于显式启用小智兼容模式的引擎，原有工具回调继续保留。
+
 ## 🌟 特性
 
 - **🚀 简洁 API**：直观的工具注册和管理接口

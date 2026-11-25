@@ -1,0 +1,12 @@
+# 4MB flash. Partition table offset 0xb000, same data partitions as
+# partition_for_compressed_ota.csv. 1.4MiB is not a multiple of the 64KB app
+# alignment, so each firmware slot is 1408KB (22 * 64KB). The last app slot
+# is 640KB (10 * 64KB): large enough for a ~600KB packed compressed image or
+# a ddelta patch, and must stay the last app partition.
+# Name,   Type, SubType, Offset,   Size, Flags
+phy_init, data, phy,       ,        4k
+nvs,      data, nvs,       ,        28k
+otadata,  data, ota,       ,        8k
+ota_0,    app,  ota_0,     ,        1408k,
+ota_1,    app,  ota_1,     ,        1408k,
+ota_2,    app,  ota_2,     ,        640k,

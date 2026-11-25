@@ -344,6 +344,36 @@ esp_mcp_tool_t *esp_mcp_tool_create_ex(const char *name, const char *title, cons
     return tool;
 }
 
+esp_mcp_tool_t *esp_mcp_tool_create_with_context(const char *name, const char *description,
+                                                 esp_mcp_tool_callback_with_context_t callback, void *user_ctx)
+{
+    ESP_RETURN_ON_FALSE(callback, NULL, TAG, "Invalid callback");
+    esp_mcp_tool_t *tool = esp_mcp_tool_create_base(name, description);
+    if (tool) {
+        tool->callback_with_context = callback;
+        tool->callback_ctx = user_ctx;
+    }
+    return tool;
+}
+
+esp_err_t esp_mcp_tool_set_request_validator(esp_mcp_tool_t *tool,
+                                             esp_mcp_tool_request_validator_t validator, void *user_ctx)
+{
+    if (!tool) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    tool->request_validator = validator;
+    tool->validator_ctx = user_ctx;
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_tool_set_user_only(esp_mcp_tool_t *tool, bool user_only)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    tool->user_only = user_only;
+    return ESP_OK;
+}
+
 static esp_err_t esp_mcp_tool_set_dup_str(char **dst, const char *src)
 {
     if (*dst) {
@@ -355,6 +385,18 @@ static esp_err_t esp_mcp_tool_set_dup_str(char **dst, const char *src)
     }
     *dst = strdup(src);
     return *dst ? ESP_OK : ESP_ERR_NO_MEM;
+}
+
+esp_err_t esp_mcp_tool_set_required_capabilities_json(esp_mcp_tool_t *tool, const char *capabilities_json)
+{
+    ESP_RETURN_ON_FALSE(tool, ESP_ERR_INVALID_ARG, TAG, "Invalid tool");
+    if (capabilities_json) {
+        cJSON *json = cJSON_ParseWithOpts(capabilities_json, NULL, true);
+        bool valid = cJSON_IsObject(json);
+        cJSON_Delete(json);
+        ESP_RETURN_ON_FALSE(valid, ESP_ERR_INVALID_ARG, TAG, "Expected capabilities object");
+    }
+    return esp_mcp_tool_set_dup_str(&tool->required_capabilities_json, capabilities_json);
 }
 
 esp_err_t esp_mcp_tool_set_title(esp_mcp_tool_t *tool, const char *title)
@@ -397,7 +439,7 @@ esp_err_t esp_mcp_tool_set_task_support(esp_mcp_tool_t *tool, const char *task_s
     return ESP_OK;
 }
 
-char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
+cJSON *esp_mcp_tool_to_cjson(const esp_mcp_tool_t *tool, bool xiaozhi_mode)
 {
     ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Invalid tool");
 
@@ -405,11 +447,11 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
     ESP_RETURN_ON_FALSE(json, NULL, TAG, "Failed to allocate memory for json");
 
     cJSON_AddStringToObject(json, "name", tool->name);
-    if (tool->title) {
+    if (!xiaozhi_mode && tool->title) {
         cJSON_AddStringToObject(json, "title", tool->title);
     }
     cJSON_AddStringToObject(json, "description", tool->description);
-    if (tool->icons_json) {
+    if (!xiaozhi_mode && tool->icons_json) {
         cJSON *icons = cJSON_Parse(tool->icons_json);
         if (icons && cJSON_IsArray(icons)) {
             cJSON_AddItemToObject(json, "icons", icons);
@@ -425,7 +467,9 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
         return NULL;
     }
     cJSON_AddStringToObject(input_schema, "type", "object");
-    cJSON_AddBoolToObject(input_schema, "additionalProperties", false);
+    if (!xiaozhi_mode) {
+        cJSON_AddBoolToObject(input_schema, "additionalProperties", false);
+    }
 
     char *properties_json = esp_mcp_property_list_to_json(tool->properties);
     if (properties_json) {
@@ -467,7 +511,7 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
 
     cJSON_AddItemToObject(json, "inputSchema", input_schema);
 
-    if (tool->output_schema_json) {
+    if (!xiaozhi_mode && tool->output_schema_json) {
         cJSON *out_schema = cJSON_Parse(tool->output_schema_json);
         if (out_schema && cJSON_IsObject(out_schema)) {
             cJSON_AddItemToObject(json, "outputSchema", out_schema);
@@ -483,12 +527,36 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
             cJSON_Delete(ann);
         }
     }
-    if (tool->task_support[0]) {
+    if (tool->user_only) {
+        cJSON *annotations = cJSON_GetObjectItem(json, "annotations");
+        if (!annotations) {
+            annotations = cJSON_AddObjectToObject(json, "annotations");
+        }
+        cJSON *audience = cJSON_CreateArray();
+        if (annotations && audience) {
+            cJSON_AddItemToArray(audience, cJSON_CreateString("user"));
+            cJSON_DeleteItemFromObject(annotations, "audience");
+            cJSON_AddItemToObject(annotations, "audience", audience);
+        } else {
+            cJSON_Delete(audience);
+        }
+    }
+    if (!xiaozhi_mode && tool->task_support[0]) {
         cJSON *exec = cJSON_CreateObject();
         if (exec) {
             cJSON_AddStringToObject(exec, "taskSupport", tool->task_support);
             cJSON_AddItemToObject(json, "execution", exec);
         }
+    }
+
+    return json;
+}
+
+char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
+{
+    cJSON *json = esp_mcp_tool_to_cjson(tool, false);
+    if (!json) {
+        return NULL;
     }
 
     char *result = cJSON_PrintUnformatted(json);
@@ -500,13 +568,27 @@ char *esp_mcp_tool_to_json(const esp_mcp_tool_t *tool)
 
 char *esp_mcp_tool_call(const esp_mcp_tool_t *tool, const esp_mcp_property_list_t *properties)
 {
+    return esp_mcp_tool_call_with_context(tool, properties, NULL);
+}
+
+char *esp_mcp_tool_call_with_context(const esp_mcp_tool_t *tool, const esp_mcp_property_list_t *properties,
+                                     const esp_mcp_request_context_t *context)
+{
     ESP_RETURN_ON_FALSE(tool, NULL, TAG, "Invalid tool");
     ESP_RETURN_ON_FALSE(properties, NULL, TAG, "Invalid properties");
 
     esp_mcp_tool_result_t *r = esp_mcp_tool_result_create();
     ESP_RETURN_ON_FALSE(r, NULL, TAG, "No mem");
 
-    if (tool->callback_ex) {
+    if (tool->callback_with_context) {
+        esp_err_t ret = tool->callback_with_context(properties, context, r, tool->callback_ctx);
+        if (ret != ESP_OK) {
+            (void)esp_mcp_tool_result_set_is_error(r, true);
+            if (cJSON_GetArraySize(r->content) == 0) {
+                (void)esp_mcp_tool_result_add_text(r, "Tool execution failed");
+            }
+        }
+    } else if (tool->callback_ex) {
         esp_mcp_tool_callback_ex_t cb = (esp_mcp_tool_callback_ex_t)tool->callback_ex;
         esp_err_t cb_ret = cb(properties, r);
         if (cb_ret != ESP_OK) {
@@ -598,6 +680,7 @@ esp_err_t esp_mcp_tool_destroy(esp_mcp_tool_t *tool)
         free(tool->annotations_json);
     }
 
+    free(tool->required_capabilities_json);
     esp_mcp_property_list_destroy(tool->properties);
 
     free(tool);
@@ -689,6 +772,38 @@ esp_err_t esp_mcp_tool_list_foreach(const esp_mcp_tool_list_t *list, esp_err_t (
         }
     }
 
+    xSemaphoreGive(list->mutex);
+    return ret;
+}
+
+esp_err_t esp_mcp_tool_list_foreach_registered(const esp_mcp_tool_list_t *list,
+                                               esp_err_t (*callback)(esp_mcp_tool_t *tool, void *arg), void *arg)
+{
+    ESP_RETURN_ON_FALSE(list && callback, ESP_ERR_INVALID_ARG, TAG, "Invalid iteration");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(list->mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Failed to take tool list mutex");
+    size_t count = 0;
+    esp_mcp_tool_item_t *item = NULL;
+    SLIST_FOREACH(item, &list->tools, next) {
+        count++;
+    }
+    esp_mcp_tool_t **tools = count ? malloc(count * sizeof(*tools)) : NULL;
+    if (count && !tools) {
+        xSemaphoreGive(list->mutex);
+        return ESP_ERR_NO_MEM;
+    }
+    size_t index = count;
+    SLIST_FOREACH(item, &list->tools, next) {
+        tools[--index] = item->tools;
+    }
+    esp_err_t ret = ESP_OK;
+    for (index = 0; index < count; index++) {
+        ret = callback(tools[index], arg);
+        if (ret != ESP_OK) {
+            break;
+        }
+    }
+    free(tools);
     xSemaphoreGive(list->mutex);
     return ret;
 }

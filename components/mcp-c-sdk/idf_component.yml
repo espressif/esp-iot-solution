@@ -1,5 +1,5 @@
-version: "2.0.2"
-description: MCP SDK for ESP32 devices. Streamable HTTP, tools, resources, prompts, completions, and tasks (2025-11-05 target; legacy 2024-11-05 transport optional).
+version: "2.2.0"
+description: MCP SDK for ESP32 devices. MCP 2025-11-25 with Streamable HTTP, tools, resources, prompts, completions, and tasks; Xiaozhi 2026-07-28 request metadata for discovery and tools.
 url: https://github.com/espressif/esp-iot-solution/tree/master/components/mcp-c-sdk
 dependencies:
   idf: ">=5.4"

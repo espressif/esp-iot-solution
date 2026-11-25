@@ -4,231 +4,328 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <esp_log.h>
-#include <esp_check.h>
-#include <cJSON.h>
+#include <string.h>
+#include <stdint.h>
+#include "esp_heap_caps.h"
 #include "esp_mcp_mgr.h"
-#include "esp_xiaozhi_transport.h"
 #include "esp_xiaozhi_mcp.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 
-/**
- * @brief MCP transport item structure; uses esp_xiaozhi_transport for MCP.
- */
-typedef struct esp_xiaozhi_mcp_item_s {
-    esp_xiaozhi_mcp_config_t *config;       /*!< XiaoZhi MCP transport configuration */
-    esp_xiaozhi_transport_handle_t transport_handle; /*!< Transport handle (MQTT or WebSocket) */
-    esp_mcp_mgr_handle_t handle;            /*!< MCP manager handle */
+#define MCP_WORKER_EXITED BIT0
+#define MCP_QUEUE_LENGTH 4
+
+typedef struct {
+    uint32_t dialogue_generation;
+    const char *session;
+    const char *routing_session;
+    char payload[];
+} esp_xiaozhi_mcp_request_t;
+
+typedef struct {
+    esp_mcp_mgr_handle_t manager;
+    esp_xiaozhi_mcp_config_t *config;
+    QueueHandle_t queue;
+    EventGroupHandle_t events;
+    SemaphoreHandle_t mutex;
+    TaskHandle_t task;
+    bool stopping;
+    /* Preserve connection state when only the idle worker stack is released. */
+    char last_routing_session[32];
+    uint32_t last_dialogue_generation;
 } esp_xiaozhi_mcp_item_t;
 
-static const char *TAG = "ESP_XIAOZHI_MCP";
+/* esp_xiaozhi currently exposes one chat instance. */
+static esp_xiaozhi_mcp_item_t *s_xiaozhi_mcp;
 
-static esp_xiaozhi_mcp_item_t *s_xiaozhi_mcp = NULL;
-
-static esp_xiaozhi_mcp_item_t *esp_xiaozhi_mcp_get_item_by_mgr_handle(esp_mcp_mgr_handle_t mgr_handle)
+static void esp_xiaozhi_mcp_worker(void *arg)
 {
-    esp_xiaozhi_mcp_item_t *mcp_item = (esp_xiaozhi_mcp_item_t *)s_xiaozhi_mcp;
-    if (mcp_item && mcp_item->handle == mgr_handle) {
-        return mcp_item;
-    }
-
-    return NULL;
-}
-
-esp_err_t esp_xiaozhi_mcp_handle_message(esp_mcp_mgr_handle_t mgr_handle,
-                                         const char *ep_name,
-                                         const char *payload,
-                                         size_t payload_len,
-                                         const char *session_id)
-{
-    ESP_RETURN_ON_FALSE(ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid endpoint name");
-    ESP_RETURN_ON_FALSE(payload, ESP_ERR_INVALID_ARG, TAG, "Invalid payload");
-
-    esp_xiaozhi_mcp_item_t *mcp_item = esp_xiaozhi_mcp_get_item_by_mgr_handle(mgr_handle);
-    ESP_RETURN_ON_FALSE(mcp_item, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP item or handle mismatch");
-
-    uint8_t *outbuf = NULL;
-    uint16_t outlen = 0;
-    esp_err_t ret = esp_mcp_mgr_req_handle(mgr_handle, ep_name, (const uint8_t *)payload, payload_len, &outbuf, &outlen);
-    if (outbuf && outlen > 0) {
-        cJSON *response_root = cJSON_CreateObject();
-        if (response_root) {
-            if (session_id) {
-                cJSON_AddStringToObject(response_root, "session_id", session_id);
+    esp_xiaozhi_mcp_item_t *item = arg;
+    esp_xiaozhi_mcp_request_t *request;
+    for (;;) {
+        if (xQueueReceive(item->queue, &request, pdMS_TO_TICKS(CONFIG_XIAOZHI_MCP_IDLE_TIMEOUT_MS)) != pdTRUE) {
+            xSemaphoreTake(item->mutex, portMAX_DELAY);
+            if (uxQueueMessagesWaiting(item->queue)) {
+                xSemaphoreGive(item->mutex);
+                continue;
             }
-            cJSON_AddStringToObject(response_root, "type", "mcp");
-            cJSON *response_payload = cJSON_Parse((char *)outbuf);
-            if (response_payload) {
-                cJSON_AddItemToObject(response_root, "payload", response_payload);
-                char *json_str = cJSON_PrintUnformatted(response_root);
-                if (json_str) {
-                    esp_xiaozhi_transport_send_text(mcp_item->transport_handle, json_str);
-                    cJSON_free(json_str);
-                } else {
-                    ESP_LOGE(TAG, "Failed to print MCP response");
-                }
-            } else {
-                ESP_LOGE(TAG, "Failed to parse MCP response payload");
-            }
-            cJSON_Delete(response_root);
-        } else {
-            ESP_LOGE(TAG, "Failed to allocate MCP response");
+            /* Serialize retirement with enqueue/task creation and stop. */
+            break;
         }
-        esp_mcp_mgr_req_destroy_response(mgr_handle, outbuf);
+        if (!request) {
+            xSemaphoreTake(item->mutex, portMAX_DELAY);
+            break;
+        }
+        if (!__atomic_load_n(&item->stopping, __ATOMIC_ACQUIRE) &&
+                (!item->config->prepare_request ||
+                 item->config->prepare_request(item->config->ctx, request->routing_session, request->payload) == ESP_OK)) {
+            if (strcmp(item->last_routing_session, request->routing_session)) {
+                if (item->last_routing_session[0]) {
+                    (void)esp_mcp_mgr_clear_session_state(item->manager, item->last_routing_session);
+                }
+                strcpy(item->last_routing_session, request->routing_session);
+                item->last_dialogue_generation = request->dialogue_generation;
+            } else if (item->last_dialogue_generation != request->dialogue_generation) {
+                (void)esp_mcp_mgr_clear_recent_request_ids(item->manager, request->routing_session);
+                item->last_dialogue_generation = request->dialogue_generation;
+            }
+            uint8_t *response = NULL;
+            uint16_t length = 0;
+            (void)esp_mcp_mgr_set_request_context(item->manager,
+                                                  request->routing_session[0] ? request->routing_session : NULL,
+                                                  NULL, true);
+            (void)esp_mcp_mgr_req_handle(item->manager, "mcp_server", (const uint8_t *)request->payload,
+                                         strlen(request->payload), &response, &length);
+            (void)esp_mcp_mgr_set_request_context(item->manager, NULL, NULL, false);
+            if (response) {
+                if (!__atomic_load_n(&item->stopping, __ATOMIC_ACQUIRE) && item->config->send_message) {
+                    item->config->send_message(item->config->ctx, request->routing_session,
+                                               request->session, (const char *)response);
+                }
+                esp_mcp_mgr_req_destroy_response(item->manager, response);
+            }
+        }
+        free(request);
+        if (__atomic_load_n(&item->stopping, __ATOMIC_ACQUIRE)) {
+            xSemaphoreTake(item->mutex, portMAX_DELAY);
+            break;
+        }
     }
-    if (ret != ESP_ERR_NOT_FOUND && ret != ESP_OK) {
-        ESP_LOGW(TAG, "Failed to process MCP message: %s", esp_err_to_name(ret));
+    /* The lifecycle mutex is held; no producer can enqueue or start a worker. */
+    while (xQueueReceive(item->queue, &request, 0) == pdTRUE) {
+        free(request);
     }
+    item->task = NULL;
+    xEventGroupSetBits(item->events, MCP_WORKER_EXITED);
+    xSemaphoreGive(item->mutex);
+    /* Do not access item after unlocking: stop/deinit or a new worker may run. */
+#if CONFIG_XIAOZHI_MCP_STACK_IN_PSRAM
+    vTaskDeleteWithCaps(NULL);
+#else
+    vTaskDelete(NULL);
+#endif
+}
 
+esp_err_t esp_xiaozhi_mcp_handle_message(esp_mcp_mgr_handle_t manager, const char *endpoint,
+                                         const char *payload, size_t length, const char *session,
+                                         const char *routing_session, uint32_t dialogue_generation)
+{
+    esp_xiaozhi_mcp_item_t *item = s_xiaozhi_mcp;
+    if (!item || item->manager != manager || !endpoint || strcmp(endpoint, "mcp_server") ||
+            !payload || !length || length > UINT16_MAX ||
+            (session && strlen(session) >= 256) || (routing_session && strlen(routing_session) >= 32)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    size_t session_size = session ? strlen(session) + 1 : 1;
+    size_t route_size = routing_session ? strlen(routing_session) + 1 : 1;
+    esp_xiaozhi_mcp_request_t *request = malloc(sizeof(*request) + length + 1 + session_size + route_size);
+    if (!request) {
+        return ESP_ERR_NO_MEM;
+    }
+    request->dialogue_generation = dialogue_generation;
+    memcpy(request->payload, payload, length);
+    request->payload[length] = '\0';
+    char *strings = request->payload + length + 1;
+    memcpy(strings, session ? session : "", session_size);
+    request->session = strings;
+    strings += session_size;
+    memcpy(strings, routing_session ? routing_session : "", route_size);
+    request->routing_session = strings;
+    xSemaphoreTake(item->mutex, portMAX_DELAY);
+    if (!item->queue || __atomic_load_n(&item->stopping, __ATOMIC_ACQUIRE)) {
+        xSemaphoreGive(item->mutex);
+        free(request);
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (xQueueSend(item->queue, &request, 0) != pdTRUE) {
+        xSemaphoreGive(item->mutex);
+        free(request);
+        return ESP_ERR_NO_MEM;
+    }
+    if (!item->task) {
+        xEventGroupClearBits(item->events, MCP_WORKER_EXITED);
+#if CONFIG_XIAOZHI_MCP_STACK_IN_PSRAM
+        BaseType_t created = xTaskCreatePinnedToCoreWithCaps(esp_xiaozhi_mcp_worker, "xiaozhi_mcp",
+                                                             CONFIG_XIAOZHI_MCP_WORKER_STACK_SIZE,
+                                                             item, 4, &item->task, tskNO_AFFINITY,
+                                                             MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (created != pdPASS) {
+            created = xTaskCreatePinnedToCoreWithCaps(esp_xiaozhi_mcp_worker, "xiaozhi_mcp",
+                                                      CONFIG_XIAOZHI_MCP_WORKER_STACK_SIZE,
+                                                      item, 4, &item->task, tskNO_AFFINITY,
+                                                      MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        }
+#else
+        BaseType_t created = xTaskCreate(esp_xiaozhi_mcp_worker, "xiaozhi_mcp",
+                                         CONFIG_XIAOZHI_MCP_WORKER_STACK_SIZE,
+                                         item, 4, &item->task);
+#endif
+        if (created != pdPASS) {
+            item->task = NULL;
+            (void)xQueueReceive(item->queue, &request, 0);
+            xEventGroupSetBits(item->events, MCP_WORKER_EXITED);
+            xSemaphoreGive(item->mutex);
+            free(request);
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    xSemaphoreGive(item->mutex);
     return ESP_OK;
 }
 
-esp_err_t esp_xiaozhi_mcp_get_handle(esp_mcp_mgr_handle_t mgr_handle, esp_xiaozhi_transport_handle_t *transport_handle)
+static void esp_xiaozhi_mcp_clear_connection(esp_xiaozhi_mcp_item_t *item)
 {
-    ESP_RETURN_ON_FALSE(transport_handle, ESP_ERR_INVALID_ARG, TAG, "Invalid transport handle");
-
-    esp_xiaozhi_mcp_item_t *mcp_item = esp_xiaozhi_mcp_get_item_by_mgr_handle(mgr_handle);
-    ESP_RETURN_ON_FALSE(mcp_item, ESP_ERR_INVALID_ARG, TAG, "Invalid MCP item or handle mismatch");
-
-    *transport_handle = mcp_item->transport_handle;
-
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_mcp_init(esp_mcp_mgr_handle_t handle, esp_mcp_transport_handle_t *transport_handle)
-{
-    esp_xiaozhi_mcp_item_t *mcp_item = calloc(1, sizeof(esp_xiaozhi_mcp_item_t));
-    ESP_RETURN_ON_FALSE(mcp_item, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for MCP transport item");
-
-    mcp_item->handle = handle;
-    mcp_item->config = NULL;
-
-    esp_err_t ret = esp_xiaozhi_transport_init(&mcp_item->transport_handle);
-    if (ret != ESP_OK) {
-        free(mcp_item);
-        return ret;
+    if (item->last_routing_session[0]) {
+        (void)esp_mcp_mgr_clear_session_state(item->manager, item->last_routing_session);
+        item->last_routing_session[0] = '\0';
+        item->last_dialogue_generation = 0;
     }
-
-    *transport_handle = (esp_mcp_transport_handle_t)mcp_item;
-    s_xiaozhi_mcp = mcp_item;
-
-    return ESP_OK;
 }
 
-static esp_err_t esp_xiaozhi_mcp_deinit(esp_mcp_transport_handle_t handle)
+static esp_err_t esp_xiaozhi_mcp_init(esp_mcp_mgr_handle_t manager, esp_mcp_transport_handle_t *handle)
 {
-    esp_xiaozhi_mcp_item_t *mcp_item = (esp_xiaozhi_mcp_item_t *)handle;
-    ESP_RETURN_ON_FALSE(mcp_item, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-
-    esp_xiaozhi_transport_deinit(mcp_item->transport_handle);
-    mcp_item->handle = 0;
-    mcp_item->config = NULL;
-    if (s_xiaozhi_mcp == mcp_item) {
-        s_xiaozhi_mcp = NULL;
+    if (!handle || s_xiaozhi_mcp) {
+        return ESP_ERR_INVALID_STATE;
     }
-    free(mcp_item);
-
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_mcp_create_config(const void *config, void **config_out)
-{
-    ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
-
-    esp_xiaozhi_mcp_config_t *old_config = (esp_xiaozhi_mcp_config_t *)config;
-    esp_xiaozhi_mcp_config_t *new_config = calloc(1, sizeof(esp_xiaozhi_mcp_config_t));
-    ESP_RETURN_ON_FALSE(new_config, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for new configuration");
-
-    new_config->ctx = old_config->ctx;
-    new_config->use_mqtt = old_config->use_mqtt;
-    new_config->callbacks = old_config->callbacks;
-
-    if (old_config->session_id && old_config->session_id_len > 0) {
-        new_config->session_id_len = old_config->session_id_len;
-        new_config->session_id = calloc(1, new_config->session_id_len + 1);
-        ESP_RETURN_ON_FALSE(new_config->session_id, ESP_ERR_NO_MEM, TAG, "Failed to allocate memory for session ID");
-        memcpy(new_config->session_id, old_config->session_id, new_config->session_id_len);
+    esp_xiaozhi_mcp_item_t *item = calloc(1, sizeof(*item));
+    if (!item) {
+        return ESP_ERR_NO_MEM;
     }
-
-    *config_out = new_config;
-
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_mcp_delete_config(void *config)
-{
-    ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
-
-    esp_xiaozhi_mcp_config_t *old_config = (esp_xiaozhi_mcp_config_t *)config;
-    if (old_config->session_id) {
-        free(old_config->session_id);
+    item->manager = manager;
+    item->events = xEventGroupCreate();
+    if (!item->events) {
+        free(item);
+        return ESP_ERR_NO_MEM;
     }
-    free(old_config);
-
-    return ESP_OK;
-}
-
-static esp_err_t esp_xiaozhi_mcp_start(esp_mcp_transport_handle_t handle, void *config)
-{
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-    ESP_RETURN_ON_FALSE(config, ESP_ERR_INVALID_ARG, TAG, "Invalid configuration");
-
-    esp_xiaozhi_mcp_item_t *mcp_item = (esp_xiaozhi_mcp_item_t *)handle;
-    esp_xiaozhi_mcp_config_t *new_config = (esp_xiaozhi_mcp_config_t *)config;
-
-    mcp_item->config = new_config;
-
-    esp_err_t ret = esp_xiaozhi_transport_start(mcp_item->transport_handle, new_config->use_mqtt, &new_config->callbacks);
-    ESP_RETURN_ON_ERROR(ret, TAG, "Failed to start transport: %s", esp_err_to_name(ret));
-
-    ESP_LOGD(TAG, "MCP transport started with %s", new_config->use_mqtt ? "MQTT" : "WebSocket");
-
+    item->mutex = xSemaphoreCreateMutex();
+    if (!item->mutex) {
+        vEventGroupDelete(item->events);
+        free(item);
+        return ESP_ERR_NO_MEM;
+    }
+    item->stopping = true;
+    xEventGroupSetBits(item->events, MCP_WORKER_EXITED);
+    s_xiaozhi_mcp = item;
+    *handle = (esp_mcp_transport_handle_t)item;
     return ESP_OK;
 }
 
 static esp_err_t esp_xiaozhi_mcp_stop(esp_mcp_transport_handle_t handle)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-
-    esp_xiaozhi_mcp_item_t *mcp_item = (esp_xiaozhi_mcp_item_t *)handle;
-
-    esp_xiaozhi_transport_stop(mcp_item->transport_handle);
-    mcp_item->config = NULL;
-
-    ESP_LOGD(TAG, "MCP transport stopped");
-
+    esp_xiaozhi_mcp_item_t *item = (esp_xiaozhi_mcp_item_t *)handle;
+    if (!item) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    xSemaphoreTake(item->mutex, portMAX_DELAY);
+    if (xTaskGetCurrentTaskHandle() == item->task) {
+        xSemaphoreGive(item->mutex);
+        return ESP_ERR_INVALID_STATE;
+    }
+    __atomic_store_n(&item->stopping, true, __ATOMIC_RELEASE);
+    bool active = item->task != NULL;
+    if (active) {
+        esp_xiaozhi_mcp_request_t *stop = NULL;
+        (void)xQueueSend(item->queue, &stop, 0);
+    }
+    xSemaphoreGive(item->mutex);
+    if (active) {
+        EventBits_t bits = xEventGroupWaitBits(item->events, MCP_WORKER_EXITED, pdFALSE, pdFALSE, pdMS_TO_TICKS(5000));
+        if (!(bits & MCP_WORKER_EXITED)) {
+            return ESP_ERR_TIMEOUT;
+        }
+    }
+    xSemaphoreTake(item->mutex, portMAX_DELAY);
+    esp_xiaozhi_mcp_clear_connection(item);
+    xSemaphoreGive(item->mutex);
     return ESP_OK;
 }
 
-static esp_err_t esp_xiaozhi_mcp_register_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name, void *priv_data)
+static esp_err_t esp_xiaozhi_mcp_deinit(esp_mcp_transport_handle_t handle)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-    ESP_RETURN_ON_FALSE(ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid endpoint name");
-
-    ESP_LOGD(TAG, "MCP endpoint registered: %s", ep_name);
-
+    esp_xiaozhi_mcp_item_t *item = (esp_xiaozhi_mcp_item_t *)handle;
+    esp_err_t ret = esp_xiaozhi_mcp_stop(handle);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    if (item->queue) {
+        vQueueDelete(item->queue);
+    }
+    vEventGroupDelete(item->events);
+    vSemaphoreDelete(item->mutex);
+    s_xiaozhi_mcp = NULL;
+    free(item);
     return ESP_OK;
 }
 
-static esp_err_t esp_xiaozhi_mcp_unregister_endpoint(esp_mcp_transport_handle_t handle, const char *ep_name)
+static esp_err_t esp_xiaozhi_mcp_create_config(const void *config, void **output)
 {
-    ESP_RETURN_ON_FALSE(handle, ESP_ERR_INVALID_ARG, TAG, "Invalid handle");
-    ESP_RETURN_ON_FALSE(ep_name, ESP_ERR_INVALID_ARG, TAG, "Invalid endpoint name");
-
-    ESP_LOGD(TAG, "MCP endpoint unregistered: %s", ep_name);
-
+    if (!config || !output) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_xiaozhi_mcp_config_t *copy = malloc(sizeof(*copy));
+    if (!copy) {
+        return ESP_ERR_NO_MEM;
+    }
+    *copy = *(const esp_xiaozhi_mcp_config_t *)config;
+    *output = copy;
     return ESP_OK;
+}
+
+static esp_err_t esp_xiaozhi_mcp_delete_config(void *config)
+{
+    free(config);
+    return ESP_OK;
+}
+
+static esp_err_t esp_xiaozhi_mcp_start(esp_mcp_transport_handle_t handle, void *config)
+{
+    esp_xiaozhi_mcp_item_t *item = (esp_xiaozhi_mcp_item_t *)handle;
+    if (!item || !config || !((esp_xiaozhi_mcp_config_t *)config)->transport_handle) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    item->config = config;
+    if (!item->queue) {
+        item->queue = xQueueCreate(MCP_QUEUE_LENGTH, sizeof(esp_xiaozhi_mcp_request_t *));
+    }
+    if (!item->queue) {
+        return ESP_ERR_NO_MEM;
+    }
+    __atomic_store_n(&item->stopping, false, __ATOMIC_RELEASE);
+    return ESP_OK;
+}
+
+static esp_err_t esp_xiaozhi_mcp_endpoint(esp_mcp_transport_handle_t handle, const char *name, void *data)
+{
+    (void)data;
+    return handle && name ? ESP_OK : ESP_ERR_INVALID_ARG;
+}
+
+static esp_err_t esp_xiaozhi_mcp_remove_endpoint(esp_mcp_transport_handle_t handle, const char *name)
+{
+    return esp_xiaozhi_mcp_endpoint(handle, name, NULL);
+}
+
+static esp_err_t esp_xiaozhi_mcp_emit(esp_mcp_transport_handle_t handle, const char *session, const char *json)
+{
+    esp_xiaozhi_mcp_item_t *item = (esp_xiaozhi_mcp_item_t *)handle;
+    if (!item || __atomic_load_n(&item->stopping, __ATOMIC_ACQUIRE) || !item->config || !item->config->send_message) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    return item->config->send_message(item->config->ctx, session, NULL, json);
 }
 
 const esp_mcp_transport_t esp_mcp_transport_xiaozhi = {
-    .init                = esp_xiaozhi_mcp_init,
-    .deinit              = esp_xiaozhi_mcp_deinit,
-    .create_config       = esp_xiaozhi_mcp_create_config,
-    .delete_config       = esp_xiaozhi_mcp_delete_config,
-    .start               = esp_xiaozhi_mcp_start,
-    .stop                = esp_xiaozhi_mcp_stop,
-    .register_endpoint   = esp_xiaozhi_mcp_register_endpoint,
-    .unregister_endpoint = esp_xiaozhi_mcp_unregister_endpoint,
+    .init = esp_xiaozhi_mcp_init,
+    .deinit = esp_xiaozhi_mcp_deinit,
+    .create_config = esp_xiaozhi_mcp_create_config,
+    .delete_config = esp_xiaozhi_mcp_delete_config,
+    .start = esp_xiaozhi_mcp_start,
+    .stop = esp_xiaozhi_mcp_stop,
+    .register_endpoint = esp_xiaozhi_mcp_endpoint,
+    .unregister_endpoint = esp_xiaozhi_mcp_remove_endpoint,
+    .emit_message = esp_xiaozhi_mcp_emit,
 };

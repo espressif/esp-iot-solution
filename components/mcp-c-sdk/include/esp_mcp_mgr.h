@@ -738,11 +738,18 @@ esp_err_t esp_mcp_mgr_set_request_context(esp_mcp_mgr_handle_t handle,
  * @brief Clear manager-side session state
  *
  * Clears state associated with a specific session, including duplicate-request
- * tracking and other per-session runtime caches.
+ * tracking and other per-session runtime caches. Serialized with engine message
+ * handling. Calls from synchronous engine callbacks return ESP_ERR_INVALID_STATE
+ * without changing state; defer cleanup until message handling returns or use
+ * another task that does not block the callback.
  *
  * @param[in] handle MCP manager handle
- * @param[in] session_id Target session id (nullable)
- * @return ESP_OK on success
+ * @param[in] session_id Non-empty target session id
+ * @return
+ *       - ESP_OK                 On success, including an unknown session
+ *       - ESP_ERR_INVALID_ARG    If handle or session_id is NULL, or session_id is empty
+ *       - ESP_ERR_INVALID_STATE  If no engine is configured, called from a synchronous engine callback,
+ *                                or a state mutex cannot be acquired
  */
 esp_err_t esp_mcp_mgr_clear_session_state(esp_mcp_mgr_handle_t handle, const char *session_id);
 

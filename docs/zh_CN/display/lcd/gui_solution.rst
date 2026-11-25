@@ -62,21 +62,21 @@ Presenter，LVGL 9、GSP 或自绘 GUI 轮流独占生产。
 ESP LVGL EAF Player
 -------------------------
 
-esp_lv_eaf_player 是一款专为 LVGL v8/v9 设计的轻量级高效 EAF 动画播放器。它可以将压缩动画序列无缝集成到 LVGL 项目中。EAF 格式支持多种压缩方法，包括 RLE、Huffman 编码和 JPEG 压缩，在保持高质量动画的同时最大限度地减少内存占用。
+``esp_lv_eaf_player`` 是支持传统 ``EAF/AAF`` 与新一代 ``EAF4`` 容器的动画编解码与播放组件，提供与 GUI 解耦的播放器核心接口（``esp_eaf_player.h``）以及可选的 LVGL v8/v9 控件适配层（``lv_eaf.h``）。支持 ``BGRA8888``、``RGB565``、``RGB565A8`` 像素格式，涵盖调色板 RLE/Huffman、JPEG、EAF Lossless（含 ``HSUB`` 与 ``TILE_SUB_PACKED``）、有界误差 EAF Bounded（4×4 BTC）、JPEG Delta 及可选 H.264 模式。
 
 特性：
 
-- 支持多种压缩方式：RLE、Huffman、JPEG
-- 针对嵌入式优化：内存占用小，解码效率高
-- LVGL 集成：与 LVGL 控件系统无缝集成
-- 动画控制：播放、暂停、重启和循环控制
+- 统一支持 ``EAF/AAF`` 与 ``EAF4`` 容器及脏矩形局部刷新
+- 支持多种压缩方式：RLE、Huffman、JPEG、EAF Lossless、EAF Bounded、JPEG Delta、H.264
+- GUI 无关核心接口 + LVGL v8/v9 控件无缝集成
+- 组件内置 Python CLI 转换、对齐打包与离线检查工具（``tools/eaf_cli.py``）
 
 适用场景：
 
-- 使用 LVGL v8/v9 需要播放高质量动画的用户
-- 需要在资源受限平台上实现高效动画播放
+- 使用 LVGL v8/v9 或自绘 GUI 播放带 Alpha 半透明特效或全屏动画
+- 在 ESP32、ESP32-S3、ESP32-P4、ESP32-S31 等平台上兼顾高压缩率与快速解码
 
-EAF 文件转换：可使用在线转换工具将 GIF 或其他动画格式转换为 EAF 格式：https://esp32-gif.espressif.com/
+EAF 文件转换：新一代 EAF4 / Lossless / Bounded / 批量打包可使用组件内置 ``tools/eaf_cli.py``，传统调色板 EAF 也可使用在线转换工具：https://esp32-gif.espressif.com/
 
 组件链接：https://components.espressif.com/components/espressif/esp_lv_eaf_player
 

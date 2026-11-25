@@ -1,5 +1,37 @@
 # ChangeLog
 
+## [v2.2.0]
+
+### Added
+
+- Xiaozhi 2026-07-28 request metadata for server/discover, tools/list and tools/call, independent of the legacy initialize lifecycle.
+- Tool request context callbacks and validators, required client capabilities, user-only list filtering, and string maxLength constraints.
+- Xiaozhi legacy JSON-RPC tool error compatibility within the explicit Xiaozhi mode.
+- Explicit per-engine Xiaozhi compatibility mode, disabled by default, with stateless legacy requests, upstream version advertisements, registration-order listing and legacy image wrapping.
+
+### Fixed
+
+- Xiaozhi argument defaults, modern strict integer validation, complete-response pagination budgets and long cursors are isolated from the generic SDK argument and pagination paths.
+- Exact safe-integer response IDs and bounded, strict JSON input parsing in Xiaozhi mode; generic response metadata, parsing and reinitialization behavior remain unchanged.
+
+
+## [v2.1.0]
+
+### Added
+
+- **Request ID cache size**: Add `CONFIG_MCP_RECENT_REQUEST_IDS_MAX` with a range of 1–64 and a default of 64. Smaller values reduce RAM use and the duplicate-detection window.
+
+### Changed
+
+- **Session and subscription memory**: Allocate named sessions and resource subscriptions on demand, and release their storage during cleanup. Existing capacity limits remain in effect.
+- **Response memory**: Transfer the JSON-RPC response buffer to the caller without making an additional copy. Release it with `esp_mcp_free_response()`, including error responses returned with a non-`ESP_OK` status.
+
+### Fixed
+
+- **Session cleanup synchronization**: Serialize cleanup with message handling and protect session state snapshots. Cleanup from a synchronous engine callback returns `ESP_ERR_INVALID_STATE`; defer it until message handling returns.
+- **HTTP session lock order**: Clear expired and deleted engine sessions after releasing the SSE mutex, avoiding a lock inversion with notification callbacks.
+- **Response allocator**: Free response buffers through `cJSON_free()` to respect custom cJSON allocation hooks.
+
 ## [v2.0.2]
 
 ### Fixed

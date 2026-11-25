@@ -11,6 +11,9 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <time.h>
+#include <math.h>
+#include <limits.h>
+#include <sys/param.h>
 
 #include <esp_log.h>
 #include <esp_app_desc.h>
@@ -37,7 +40,12 @@ static const char *TAG = "esp_mcp_engine";
 #define MCP_PROTO_BASELINE "2024-11-05"
 #define MCP_PROTO_LATEST_KNOWN "2025-11-25"
 #define MCP_PROTO_DEFAULT "2025-03-26"
+#define MCP_PROTO_MODERN "2026-07-28"
+#define MCP_META_VERSION "io.modelcontextprotocol/protocolVersion"
+#define MCP_META_CAPABILITIES "io.modelcontextprotocol/clientCapabilities"
+#define MCP_META_CLIENT_INFO "io.modelcontextprotocol/clientInfo"
 
+static void esp_mcp_resource_subscriptions_trim_unlocked(esp_mcp_t *mcp);
 static esp_err_t esp_mcp_reply_result(esp_mcp_t *mcp, const cJSON *id, const char *result);
 static esp_err_t esp_mcp_reply_invalid_params(esp_mcp_t *mcp,
                                               const cJSON *id,
@@ -277,15 +285,22 @@ static void esp_mcp_emit_resource_updated(esp_mcp_t *mcp, const char *uri)
     }
     bool matched_any = false;
     bool broadcast_default = false;
-    size_t sid_cap = sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0]);
     size_t sid_size = sizeof(mcp->resource_subscriptions[0].session_id);
-    char *sid_snapshot = calloc(sid_cap, sid_size);
-    if (!sid_snapshot) {
+    esp_mcp_resource_sub_lock(mcp);
+    size_t sid_cap = mcp->resource_subscriptions_count;
+    if (sid_cap == 0) {
+        esp_mcp_resource_sub_unlock(mcp);
         cJSON_free(s);
         return;
     }
+    char *sid_snapshot = calloc(sid_cap, sid_size);
+    if (!sid_snapshot) {
+        esp_mcp_resource_sub_unlock(mcp);
+        cJSON_free(s);
+        ESP_LOGE(TAG, "Notify resource failed: no memory for subscribers");
+        return;
+    }
     size_t nsid = 0;
-    esp_mcp_resource_sub_lock(mcp);
     for (size_t i = 0; i < mcp->resource_subscriptions_count; ++i) {
         if (strcmp(mcp->resource_subscriptions[i].uri, uri) != 0) {
             continue;
@@ -685,10 +700,9 @@ static esp_mcp_session_state_t *esp_mcp_session_state_find(esp_mcp_t *mcp, const
     if (!(mcp && session_id && session_id[0])) {
         return NULL;
     }
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used &&
-                strcmp(mcp->session_states[i].session_id, session_id) == 0) {
-            return &mcp->session_states[i];
+    for (esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            return &node->state;
         }
     }
     return NULL;
@@ -700,10 +714,9 @@ static const esp_mcp_session_state_t *esp_mcp_session_state_find_const(const esp
     if (!(mcp && session_id && session_id[0])) {
         return NULL;
     }
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used &&
-                strcmp(mcp->session_states[i].session_id, session_id) == 0) {
-            return &mcp->session_states[i];
+    for (const esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            return &node->state;
         }
     }
     return NULL;
@@ -719,24 +732,28 @@ static esp_mcp_session_state_t *esp_mcp_get_session_state(esp_mcp_t *mcp,
         return &mcp->default_session_state;
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        NULL, TAG, "Get session failed: session mutex unavailable");
     esp_mcp_session_state_t *state = esp_mcp_session_state_find(mcp, session_id);
-    if (state || !create) {
-        return state;
-    }
-
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        if (mcp->session_states[i].used) {
-            continue;
+    if (!state && create) {
+        if (mcp->session_states_count < ESP_MCP_MAX_SESSION_STATES) {
+            esp_mcp_session_node_t *node = calloc(1, sizeof(*node));
+            if (node) {
+                node->state.used = true;
+                esp_mcp_copy_str(node->state.session_id, sizeof(node->state.session_id), session_id);
+                node->next = mcp->session_states;
+                mcp->session_states = node;
+                mcp->session_states_count++;
+                state = &node->state;
+            } else {
+                ESP_LOGE(TAG, "Create session failed: no memory");
+            }
+        } else {
+            ESP_LOGW(TAG, "Create session failed: capacity %u reached", (unsigned)ESP_MCP_MAX_SESSION_STATES);
         }
-        memset(&mcp->session_states[i], 0, sizeof(mcp->session_states[i]));
-        mcp->session_states[i].used = true;
-        snprintf(mcp->session_states[i].session_id,
-                 sizeof(mcp->session_states[i].session_id),
-                 "%s",
-                 session_id);
-        return &mcp->session_states[i];
     }
-    return NULL;
+    xSemaphoreGive(mcp->session_mutex);
+    return state;
 }
 
 static const esp_mcp_session_state_t *esp_mcp_get_session_state_const(const esp_mcp_t *mcp,
@@ -749,6 +766,20 @@ static const esp_mcp_session_state_t *esp_mcp_get_session_state_const(const esp_
         return &mcp->default_session_state;
     }
     return esp_mcp_session_state_find_const(mcp, session_id);
+}
+
+static bool esp_mcp_copy_session_state(esp_mcp_t *mcp, const char *session_id,
+                                       esp_mcp_session_state_t *snapshot)
+{
+    if (!mcp || xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) != pdTRUE) {
+        return false;
+    }
+    const esp_mcp_session_state_t *state = esp_mcp_get_session_state_const(mcp, session_id);
+    if (state) {
+        *snapshot = *state;
+    }
+    xSemaphoreGive(mcp->session_mutex);
+    return state != NULL;
 }
 
 static esp_mcp_session_state_t *esp_mcp_get_request_session_state(esp_mcp_t *mcp, bool create)
@@ -788,19 +819,33 @@ static esp_err_t esp_mcp_emit_log_message(esp_mcp_t *mcp,
     ESP_RETURN_ON_FALSE(mcp && level && jsonrpc_message, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
 
     if (mcp->request_session_id[0]) {
-        const esp_mcp_session_state_t *state =
-            esp_mcp_get_session_state_const(mcp, mcp->request_session_id);
-        if (!esp_mcp_session_allows_log_level(state, level)) {
+        esp_mcp_session_state_t snapshot = {0};
+        bool found = esp_mcp_copy_session_state(mcp, mcp->request_session_id, &snapshot);
+        if (!esp_mcp_session_allows_log_level(found ? &snapshot : NULL, level)) {
             return ESP_OK;
         }
         return esp_mcp_emit_message(mcp, mcp->request_session_id, jsonrpc_message);
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Log failed: session mutex unavailable");
+    size_t count = mcp->session_states_count;
+    esp_mcp_session_state_t *snapshots = count ? calloc(count, sizeof(*snapshots)) : NULL;
+    if (count && !snapshots) {
+        xSemaphoreGive(mcp->session_mutex);
+        ESP_LOGE(TAG, "Log failed: no memory for session snapshots");
+        return ESP_ERR_NO_MEM;
+    }
+    size_t index = 0;
+    for (esp_mcp_session_node_t *node = mcp->session_states; node; node = node->next) {
+        snapshots[index++] = node->state;
+    }
+    xSemaphoreGive(mcp->session_mutex);
     bool has_named_sessions = false;
     esp_err_t last_ret = ESP_OK;
-    for (size_t i = 0; i < ESP_MCP_MAX_SESSION_STATES; ++i) {
-        const esp_mcp_session_state_t *state = &mcp->session_states[i];
-        if (!(state->used && state->received_initialize_request)) {
+    for (size_t i = 0; i < count; ++i) {
+        const esp_mcp_session_state_t *state = &snapshots[i];
+        if (!state->received_initialize_request) {
             continue;
         }
         has_named_sessions = true;
@@ -812,12 +857,15 @@ static esp_err_t esp_mcp_emit_log_message(esp_mcp_t *mcp,
             last_ret = emit_ret;
         }
     }
+    free(snapshots);
 
     if (has_named_sessions) {
         return last_ret;
     }
 
-    if (!esp_mcp_session_allows_log_level(&mcp->default_session_state, level)) {
+    esp_mcp_session_state_t snapshot = {0};
+    bool found = esp_mcp_copy_session_state(mcp, NULL, &snapshot);
+    if (!esp_mcp_session_allows_log_level(found ? &snapshot : NULL, level)) {
         return ESP_OK;
     }
     return esp_mcp_emit_message(mcp, NULL, jsonrpc_message);
@@ -840,10 +888,10 @@ static bool esp_mcp_task_visible_to_request_session(const esp_mcp_t *mcp, const 
 
 static void esp_mcp_forget_request_ids_for_session(esp_mcp_t *mcp, const char *session_id)
 {
-    if (!mcp || !session_id) {
+    if (!mcp || !session_id || !mcp->recent_request_ids) {
         return;
     }
-    for (size_t i = 0; i < (sizeof(mcp->recent_request_ids) / sizeof(mcp->recent_request_ids[0])); ++i) {
+    for (size_t i = 0; i < CONFIG_MCP_RECENT_REQUEST_IDS_MAX; ++i) {
         if (!mcp->recent_request_ids[i].used) {
             continue;
         }
@@ -863,14 +911,16 @@ static bool esp_mcp_is_duplicate_request_id(esp_mcp_t *mcp, const char *session_
     }
     bool found = false;
     esp_mcp_req_id_lock(mcp);
-    for (size_t i = 0; i < (sizeof(mcp->recent_request_ids) / sizeof(mcp->recent_request_ids[0])); ++i) {
-        if (!mcp->recent_request_ids[i].used) {
-            continue;
-        }
-        if (strcmp(mcp->recent_request_ids[i].session_id, session_id) == 0 &&
-                strcmp(mcp->recent_request_ids[i].request_id, request_id) == 0) {
-            found = true;
-            break;
+    if (mcp->recent_request_ids) {
+        for (size_t i = 0; i < CONFIG_MCP_RECENT_REQUEST_IDS_MAX; ++i) {
+            if (!mcp->recent_request_ids[i].used) {
+                continue;
+            }
+            if (strcmp(mcp->recent_request_ids[i].session_id, session_id) == 0 &&
+                    strcmp(mcp->recent_request_ids[i].request_id, request_id) == 0) {
+                found = true;
+                break;
+            }
         }
     }
     esp_mcp_req_id_unlock(mcp);
@@ -882,8 +932,15 @@ static void esp_mcp_remember_request_id(esp_mcp_t *mcp, const char *session_id, 
     if (!mcp || !session_id || !request_id) {
         return;
     }
-    size_t cap = sizeof(mcp->recent_request_ids) / sizeof(mcp->recent_request_ids[0]);
+    size_t cap = CONFIG_MCP_RECENT_REQUEST_IDS_MAX;
     esp_mcp_req_id_lock(mcp);
+    if (!mcp->recent_request_ids) {
+        mcp->recent_request_ids = calloc(cap, sizeof(*mcp->recent_request_ids));
+        if (!mcp->recent_request_ids) {
+            esp_mcp_req_id_unlock(mcp);
+            return;
+        }
+    }
     size_t idx = mcp->recent_request_id_cursor % cap;
     mcp->recent_request_id_cursor = (idx + 1) % cap;
     mcp->recent_request_ids[idx].used = true;
@@ -908,7 +965,78 @@ static esp_err_t esp_mcp_add_mbuf(esp_mcp_t *mcp, uint16_t mbuf_id, uint8_t *out
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_reply_result(esp_mcp_t *mcp, const cJSON *id, const char *result)
+static cJSON *esp_mcp_copy_response_id(const cJSON *id)
+{
+    if (cJSON_IsNumber(id) && isfinite(id->valuedouble) &&
+            trunc(id->valuedouble) == id->valuedouble && fabs(id->valuedouble) <= 9007199254740991.0) {
+        char number[32];
+        snprintf(number, sizeof(number), "%.0f", id->valuedouble);
+        return cJSON_CreateRaw(number);
+    }
+    return cJSON_Duplicate(id, true);
+}
+
+static cJSON *esp_mcp_create_result_payload(esp_mcp_t *mcp, const cJSON *id, cJSON *result)
+{
+    cJSON *payload = cJSON_CreateObject();
+    cJSON *id_copy = esp_mcp_copy_response_id(id);
+    if (!payload || !id_copy || !result ||
+            !cJSON_AddStringToObject(payload, "jsonrpc", "2.0")) {
+        cJSON_Delete(payload);
+        cJSON_Delete(id_copy);
+        cJSON_Delete(result);
+        return NULL;
+    }
+    cJSON_AddItemToObject(payload, "id", id_copy);
+    cJSON_AddItemToObject(payload, "result", result);
+    if (mcp->request_modern) {
+        cJSON *meta = cJSON_GetObjectItemCaseSensitive(result, "_meta");
+        if (!meta) {
+            meta = cJSON_AddObjectToObject(result, "_meta");
+        }
+        cJSON *info = cJSON_CreateObject();
+        const esp_app_desc_t *app = esp_app_get_description();
+        if (!meta || !info || !cJSON_AddStringToObject(result, "resultType", "complete")) {
+            cJSON_Delete(info);
+            cJSON_Delete(payload);
+            return NULL;
+        }
+        cJSON_AddStringToObject(info, "name", mcp->xiaozhi_server_name ? mcp->xiaozhi_server_name : app->project_name);
+        cJSON_AddStringToObject(info, "version", mcp->xiaozhi_server_version ? mcp->xiaozhi_server_version : app->version);
+        cJSON_DeleteItemFromObjectCaseSensitive(meta, "io.modelcontextprotocol/serverInfo");
+        cJSON_AddItemToObject(meta, "io.modelcontextprotocol/serverInfo", info);
+        if (!strcmp(mcp->request_method, "tools/list") || !strcmp(mcp->request_method, "server/discover")) {
+            cJSON_AddNumberToObject(result, "ttlMs", 60000);
+            cJSON_AddStringToObject(result, "cacheScope", "private");
+        }
+    }
+    return payload;
+}
+
+static esp_err_t esp_mcp_xiaozhi_wrap_legacy_images(cJSON *result)
+{
+    cJSON *content = cJSON_GetObjectItemCaseSensitive(result, "content");
+    cJSON *item = NULL;
+    cJSON_ArrayForEach(item, content) {
+        const cJSON *type = cJSON_GetObjectItemCaseSensitive(item, "type");
+        if (!cJSON_IsString(type) || strcmp(type->valuestring, "image") ||
+                !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(item, "mimeType")) ||
+                !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(item, "data"))) {
+            continue;
+        }
+        char *image = cJSON_PrintUnformatted(item);
+        if (!image || !cJSON_AddStringToObject(item, "image", image)) {
+            cJSON_free(image);
+            return ESP_ERR_NO_MEM;
+        }
+        cJSON_free(image);
+        cJSON_DeleteItemFromObjectCaseSensitive(item, "mimeType");
+        cJSON_DeleteItemFromObjectCaseSensitive(item, "data");
+    }
+    return ESP_OK;
+}
+
+static esp_err_t esp_mcp_reply_result_generic(esp_mcp_t *mcp, const cJSON *id, const char *result)
 {
     ESP_RETURN_ON_FALSE(mcp && result, ESP_ERR_INVALID_ARG, TAG, "Invalid server or result");
 
@@ -983,6 +1111,130 @@ static esp_err_t esp_mcp_reply_result(esp_mcp_t *mcp, const cJSON *id, const cha
     return ESP_OK;
 }
 
+static char *esp_mcp_xiaozhi_json_string(const char *value)
+{
+    cJSON *str = cJSON_CreateString(value ? value : "");
+    char *encoded = str ? cJSON_PrintUnformatted(str) : NULL;
+    cJSON_Delete(str);
+    return encoded;
+}
+
+static char *esp_mcp_xiaozhi_format_id(const cJSON *id, char num_buf[32])
+{
+    if (cJSON_IsNumber(id) && isfinite(id->valuedouble) &&
+            trunc(id->valuedouble) == id->valuedouble && fabs(id->valuedouble) <= 9007199254740991.0) {
+        snprintf(num_buf, 32, "%.0f", id->valuedouble);
+        return num_buf;
+    }
+    cJSON *dup = cJSON_Duplicate(id, true);
+    char *encoded = dup ? cJSON_PrintUnformatted(dup) : NULL;
+    cJSON_Delete(dup);
+    return encoded;
+}
+
+static char *esp_mcp_xiaozhi_build_prefix(const esp_mcp_t *mcp, const cJSON *id, const char *method)
+{
+    char num_buf[32];
+    char *id_str = esp_mcp_xiaozhi_format_id(id, num_buf);
+    if (!id_str) {
+        return NULL;
+    }
+    char *prefix = NULL;
+    if (!mcp->request_modern) {
+        size_t cap = strlen("{\"jsonrpc\":\"2.0\",\"id\":,\"result\":") + strlen(id_str) + 1;
+        prefix = malloc(cap);
+        if (prefix) {
+            snprintf(prefix, cap, "{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":", id_str);
+        }
+    } else {
+        const esp_app_desc_t *app = esp_app_get_description();
+        char *name_json = esp_mcp_xiaozhi_json_string(mcp->xiaozhi_server_name ? mcp->xiaozhi_server_name : app->project_name);
+        char *ver_json = esp_mcp_xiaozhi_json_string(mcp->xiaozhi_server_version ? mcp->xiaozhi_server_version : app->version);
+        const char *ttl = (!strcmp(method, "tools/list") || !strcmp(method, "server/discover")) ?
+                          ",\"ttlMs\":60000,\"cacheScope\":\"private\"" : "";
+        if (name_json && ver_json) {
+            size_t cap = strlen("{\"jsonrpc\":\"2.0\",\"id\":,\"result\":{\"resultType\":\"complete\","
+                                "\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":,\"version\":}}") +
+                         strlen(id_str) + strlen(name_json) + strlen(ver_json) + strlen(ttl) + 1;
+            prefix = malloc(cap);
+            if (prefix) {
+                snprintf(prefix, cap,
+                         "{\"jsonrpc\":\"2.0\",\"id\":%s,\"result\":{\"resultType\":\"complete\","
+                         "\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":%s,\"version\":%s}}%s",
+                         id_str, name_json, ver_json, ttl);
+            }
+        }
+        cJSON_free(name_json);
+        cJSON_free(ver_json);
+    }
+    if (id_str != num_buf) {
+        cJSON_free(id_str);
+    }
+    return prefix;
+}
+
+static esp_err_t esp_mcp_xiaozhi_send_enveloped(esp_mcp_t *mcp, const cJSON *id,
+                                                const char *prefix, const char *result, size_t result_len)
+{
+    size_t prefix_len = strlen(prefix);
+    size_t total_len = prefix_len + result_len + 1;
+    if (total_len > UINT16_MAX) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    char *encoded = cJSON_malloc(total_len + 1);
+    if (!encoded) {
+        return ESP_ERR_NO_MEM;
+    }
+    memcpy(encoded, prefix, prefix_len);
+    if (!mcp->request_modern) {
+        memcpy(encoded + prefix_len, result, result_len);
+        encoded[prefix_len + result_len] = '}';
+    } else if (result_len == 2) {
+        encoded[prefix_len] = '}';
+        encoded[prefix_len + 1] = '}';
+        total_len = prefix_len + 2;
+    } else {
+        encoded[prefix_len] = ',';
+        memcpy(encoded + prefix_len + 1, result + 1, result_len - 1);
+        encoded[prefix_len + result_len] = '}';
+    }
+    encoded[total_len] = '\0';
+    return esp_mcp_add_mbuf(mcp, esp_mcp_mbuf_id_from_json_id(id), (uint8_t *)encoded, (uint16_t)total_len);
+}
+
+static esp_err_t esp_mcp_reply_result(esp_mcp_t *mcp, const cJSON *id, const char *result)
+{
+    if (mcp && !mcp->xiaozhi_compatibility) {
+        return esp_mcp_reply_result_generic(mcp, id, result);
+    }
+    ESP_RETURN_ON_FALSE(mcp && result && id, ESP_ERR_INVALID_ARG, TAG, "Invalid result");
+    size_t result_len = strlen(result);
+    if ((!mcp->request_modern && (result[0] == '{' || result[0] == '[')) ||
+            (mcp->request_modern && result_len >= 2 && result[0] == '{' &&
+             result[result_len - 1] == '}' && !strstr(result, "\"_meta\""))) {
+        char *prefix = esp_mcp_xiaozhi_build_prefix(mcp, id, mcp->request_method);
+        ESP_RETURN_ON_FALSE(prefix, ESP_ERR_NO_MEM, TAG, "Result prefix allocation failed");
+        esp_err_t ret = esp_mcp_xiaozhi_send_enveloped(mcp, id, prefix, result, result_len);
+        free(prefix);
+        return ret;
+    }
+    cJSON *object = cJSON_Parse(result);
+    if (!object) {
+        object = cJSON_CreateString(result);
+    }
+    cJSON *payload = esp_mcp_create_result_payload(mcp, id, object);
+    ESP_RETURN_ON_FALSE(payload, ESP_ERR_NO_MEM, TAG, "Result allocation failed");
+    char *encoded = cJSON_PrintUnformatted(payload);
+    cJSON_Delete(payload);
+    ESP_RETURN_ON_FALSE(encoded, ESP_ERR_NO_MEM, TAG, "Result encoding failed");
+    size_t length = strlen(encoded);
+    if (length > UINT16_MAX) {
+        cJSON_free(encoded);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    return esp_mcp_add_mbuf(mcp, esp_mcp_mbuf_id_from_json_id(id), (uint8_t *)encoded, length);
+}
+
 static esp_err_t esp_mcp_reply_result_with_related_task(esp_mcp_t *mcp,
                                                         const cJSON *id,
                                                         const char *result,
@@ -1031,7 +1283,8 @@ static esp_err_t esp_mcp_reply_error_ex(esp_mcp_t *mcp,
 
     // Only omit/set null id when it is unknown/unparsable.
     if (request_id && (cJSON_IsNumber(request_id) || cJSON_IsString(request_id))) {
-        cJSON_AddItemToObject(payload, "id", cJSON_Duplicate(request_id, 1));
+        cJSON_AddItemToObject(payload, "id", mcp->xiaozhi_compatibility ?
+                              esp_mcp_copy_response_id(request_id) : cJSON_Duplicate(request_id, 1));
     } else {
         cJSON_AddNullToObject(payload, "id");
     }
@@ -1470,14 +1723,18 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
                 }
                 mcp->resource_subscriptions_count--;
             }
+            esp_mcp_resource_subscriptions_trim_unlocked(mcp);
             esp_mcp_resource_sub_unlock(mcp);
         }
         esp_mcp_req_id_lock(mcp);
         esp_mcp_forget_request_ids_for_session(mcp, esp_mcp_request_session_or_default(mcp));
         esp_mcp_req_id_unlock(mcp);
+        ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                            ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
         session_state->require_initialized_notification = false;
         session_state->received_initialized_notification = false;
         session_state->received_initialize_request = false;
+        xSemaphoreGive(mcp->session_mutex);
     }
 
     mcp->client_initialized = false;
@@ -1497,6 +1754,8 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
                                             "params.protocolVersion");
     }
 
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
     esp_mcp_session_state_reset_lifecycle(session_state);
     if (strcmp(negotiated_protocol_version, MCP_PROTO_LATEST_KNOWN) > 0) {
         ESP_LOGW(TAG,
@@ -1512,6 +1771,7 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
     if (capabilities_param && cJSON_IsObject(capabilities_param)) {
         esp_mcp_parse_capabilities(session_state, capabilities_param);
     }
+    xSemaphoreGive(mcp->session_mutex);
 
     const esp_app_desc_t *app_desc = esp_app_get_description();
     cJSON *message = cJSON_CreateObject();
@@ -1624,12 +1884,15 @@ static esp_err_t esp_mcp_handle_initialize(esp_mcp_t *mcp, const cJSON *params, 
         cJSON_free(message_str);
     }
     cJSON_Delete(message);
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
     session_state->received_initialize_request = true;
+    xSemaphoreGive(mcp->session_mutex);
 
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_tools_foreach_cb(esp_mcp_tool_t *tool, void *arg)
+static esp_err_t esp_mcp_tools_foreach_generic_cb(esp_mcp_tool_t *tool, void *arg)
 {
     esp_mcp_tool_foreach_ctx_t *ctx = (esp_mcp_tool_foreach_ctx_t *)arg;
 
@@ -1677,6 +1940,55 @@ static esp_err_t esp_mcp_tools_foreach_cb(esp_mcp_tool_t *tool, void *arg)
     return ESP_OK;
 }
 
+static esp_err_t esp_mcp_tools_foreach_cb(esp_mcp_tool_t *tool, void *arg)
+{
+    esp_mcp_tool_foreach_ctx_t *ctx = (esp_mcp_tool_foreach_ctx_t *)arg;
+
+    if (!(*ctx->found_cursor)) {
+        if (!strcmp(tool->name, ctx->cursor_str)) {
+            *ctx->found_cursor = true;
+        } else {
+            return ESP_OK;
+        }
+    }
+
+    if (tool->user_only && !ctx->with_user_tools) {
+        return ESP_OK;
+    }
+
+    cJSON *object = esp_mcp_tool_to_cjson(tool, true);
+    char *tool_json = object ? cJSON_PrintUnformatted(object) : NULL;
+    if (!object || !tool_json) {
+        cJSON_Delete(object);
+        cJSON_free(tool_json);
+        return ESP_ERR_NO_MEM;
+    }
+    size_t candidate_size = ctx->current_size + strlen(tool_json) + (ctx->emitted ? 1 : 0) +
+                            ctx->envelope_size;
+    cJSON_free(tool_json);
+    if (candidate_size > ctx->max_size) {
+        cJSON_Delete(object);
+        ctx->next_cursor = strdup(tool->name);
+        if (!ctx->next_cursor) {
+            return ESP_ERR_NO_MEM;
+        }
+        ctx->should_break = true;
+        return ESP_ERR_INVALID_SIZE;
+    }
+    if (!cJSON_AddItemToArray(ctx->tools_array, object)) {
+        cJSON_Delete(object);
+        return ESP_ERR_NO_MEM;
+    }
+    ctx->current_size = candidate_size - ctx->envelope_size;
+    ctx->emitted++;
+    return ESP_OK;
+}
+
+static cJSON *esp_mcp_request_member(const esp_mcp_t *mcp, const cJSON *object, const char *name)
+{
+    return mcp->xiaozhi_compatibility ? cJSON_GetObjectItemCaseSensitive(object, name) : cJSON_GetObjectItem(object, name);
+}
+
 static esp_err_t esp_mcp_parse_paginated_request(const cJSON *params,
                                                  const cJSON *id,
                                                  esp_mcp_t *mcp,
@@ -1696,7 +2008,7 @@ static esp_err_t esp_mcp_parse_paginated_request(const cJSON *params,
         return ESP_OK;
     }
 
-    cJSON *cursor_item = cJSON_GetObjectItem((cJSON *)params, "cursor");
+    cJSON *cursor_item = esp_mcp_request_member(mcp, params, "cursor");
     if (cursor_item) {
         if (!cJSON_IsString(cursor_item) || !cursor_item->valuestring) {
             return esp_mcp_reply_invalid_params_and_fail(mcp, id, method, "params.cursor", "params.cursor");
@@ -1722,7 +2034,7 @@ static esp_err_t esp_mcp_parse_paginated_request(const cJSON *params,
     return ESP_OK;
 }
 
-static esp_err_t esp_mcp_handle_tools_list(esp_mcp_t *mcp, const cJSON *params, const cJSON *id)
+static esp_err_t esp_mcp_handle_tools_list_generic(esp_mcp_t *mcp, const cJSON *params, const cJSON *id)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
 
@@ -1781,7 +2093,7 @@ static esp_err_t esp_mcp_handle_tools_list(esp_mcp_t *mcp, const cJSON *params, 
         .emitted = 0,
     };
 
-    esp_mcp_tool_list_foreach(mcp->tools, esp_mcp_tools_foreach_cb, &ctx);
+    esp_mcp_tool_list_foreach(mcp->tools, esp_mcp_tools_foreach_generic_cb, &ctx);
 
     if (cursor && !found_cursor) {
         cJSON_Delete(tools);
@@ -1810,6 +2122,127 @@ static esp_err_t esp_mcp_handle_tools_list(esp_mcp_t *mcp, const cJSON *params, 
         cJSON_free(payload_str);
     }
     cJSON_Delete(tools);
+
+    return ret;
+}
+
+static esp_err_t esp_mcp_handle_tools_list(esp_mcp_t *mcp, const cJSON *params, const cJSON *id)
+{
+    if (mcp && !mcp->xiaozhi_compatibility) {
+        return esp_mcp_handle_tools_list_generic(mcp, params, id);
+    }
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
+
+    const char *cursor = NULL;
+    bool found_cursor = true;
+    esp_err_t ret = esp_mcp_parse_paginated_request(params, id, mcp, "tools/list", false, &cursor, NULL);
+    if (ret != ESP_OK) {
+        return ret;
+    }
+    if (cursor) {
+        found_cursor = false;
+    }
+
+    char *payload_str = NULL;
+
+    cJSON *tools = cJSON_CreateObject();
+    if (!tools) {
+        ESP_LOGE(TAG, "Failed to allocate memory for tools");
+        return ESP_ERR_NO_MEM;
+    }
+
+    cJSON *tools_array = cJSON_CreateArray();
+    if (!tools_array) {
+        ESP_LOGE(TAG, "Failed to allocate memory for tools array");
+        cJSON_Delete(tools);
+        return ESP_ERR_NO_MEM;
+    }
+
+    cJSON_AddItemToObject(tools, "tools", tools_array);
+
+    cJSON *with_user = cJSON_GetObjectItemCaseSensitive(params, "withUserTools");
+    if (mcp->request_modern && with_user && !cJSON_IsBool(with_user)) {
+        cJSON_Delete(tools);
+        return esp_mcp_reply_invalid_params(mcp, id, "tools/list", "boolean", "params.withUserTools");
+    }
+    char *prefix = esp_mcp_xiaozhi_build_prefix(mcp, id, "tools/list");
+    if (!prefix) {
+        cJSON_Delete(tools);
+        return ESP_ERR_NO_MEM;
+    }
+    size_t envelope_size = strlen(prefix) + 1;
+    esp_mcp_tool_foreach_ctx_t ctx = {
+        .tools_array = (void *)tools_array,
+        .cursor_str = cursor,
+        .found_cursor = &found_cursor,
+        .should_break = false,
+        .emitted = 0,
+        .with_user_tools = cJSON_IsTrue(with_user),
+        .max_size = MIN(CONFIG_MCP_TOOLLIST_MAX_SIZE, 8000),
+        .envelope_size = envelope_size,
+        .current_size = strlen("{\"tools\":[]}"),
+    };
+
+    ret = esp_mcp_tool_list_foreach_registered(mcp->tools, esp_mcp_tools_foreach_cb, &ctx);
+    if (ctx.should_break && ctx.emitted == 0) {
+        free(ctx.next_cursor);
+        free(prefix);
+        cJSON_Delete(tools);
+        return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/list", "Tool definition exceeds payload limit");
+    }
+    if (ctx.next_cursor) {
+        if (!cJSON_AddStringToObject(tools, "nextCursor", ctx.next_cursor)) {
+            ret = ESP_ERR_NO_MEM;
+        }
+        free(ctx.next_cursor);
+    }
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_SIZE) {
+        free(prefix);
+        cJSON_Delete(tools);
+        return ret;
+    }
+    ret = ESP_OK;
+
+    if (cursor && !found_cursor) {
+        free(prefix);
+        cJSON_Delete(tools);
+        return esp_mcp_reply_invalid_params(mcp, id, "tools/list", "known params.cursor", "params.cursor");
+    }
+
+    /* A following tool can have a longer cursor than any tool already emitted.
+     * Measure the complete envelope and move the final tool to the next page
+     * until the response, including the exact cursor, fits the wire budget. */
+    while (true) {
+        payload_str = cJSON_PrintUnformatted(tools);
+        if (!payload_str || strlen(payload_str) + envelope_size <= ctx.max_size) {
+            break;
+        }
+        cJSON_free(payload_str);
+        payload_str = NULL;
+        int count = cJSON_GetArraySize(tools_array);
+        if (count <= 1) {
+            free(prefix);
+            cJSON_Delete(tools);
+            return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/list", "Tool definition exceeds payload limit");
+        }
+        cJSON *last = cJSON_GetArrayItem(tools_array, count - 1);
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(last, "name");
+        cJSON_DeleteItemFromObjectCaseSensitive(tools, "nextCursor");
+        if (!cJSON_IsString(name) || !cJSON_AddStringToObject(tools, "nextCursor", name->valuestring)) {
+            free(prefix);
+            cJSON_Delete(tools);
+            return ESP_ERR_NO_MEM;
+        }
+        cJSON_DeleteItemFromArray(tools_array, count - 1);
+    }
+    cJSON_Delete(tools);
+    if (payload_str) {
+        ret = esp_mcp_xiaozhi_send_enveloped(mcp, id, prefix, payload_str, strlen(payload_str));
+        cJSON_free(payload_str);
+    } else {
+        ret = ESP_ERR_NO_MEM;
+    }
+    free(prefix);
 
     return ret;
 }
@@ -1885,6 +2318,85 @@ static esp_err_t esp_mcp_tool_args_cb(const esp_mcp_property_t *property, void *
     return ESP_OK;
 }
 
+static esp_err_t esp_mcp_xiaozhi_tool_args_cb(const esp_mcp_property_t *property, void *arg)
+{
+    esp_mcp_property_foreach_ctx_t *ctx = (esp_mcp_property_foreach_ctx_t *)arg;
+    const char *name = property->name;
+    cJSON *value = cJSON_GetObjectItem(ctx->arg, name);
+    esp_mcp_property_t *new_prop = NULL;
+    if (!value) {
+        if (!property->has_default_value) {
+            ctx->has_error = true;
+            return ESP_ERR_INVALID_ARG;
+        }
+        switch (property->type) {
+        case ESP_MCP_PROPERTY_TYPE_BOOLEAN:
+            new_prop = esp_mcp_property_create_with_bool(name, property->default_value.bool_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_INTEGER:
+            new_prop = esp_mcp_property_create_with_int(name, property->default_value.int_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_FLOAT:
+            new_prop = esp_mcp_property_create_with_float(name, property->default_value.float_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_STRING:
+            new_prop = esp_mcp_property_create_with_string(name, property->default_value.string_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_ARRAY:
+            new_prop = esp_mcp_property_create_with_array(name, property->default_value.string_value);
+            break;
+        case ESP_MCP_PROPERTY_TYPE_OBJECT:
+            new_prop = esp_mcp_property_create_with_object(name, property->default_value.string_value);
+            break;
+        default:
+            break;
+        }
+    } else if (property->type == ESP_MCP_PROPERTY_TYPE_BOOLEAN && cJSON_IsBool(value)) {
+        new_prop = esp_mcp_property_create_with_bool(name, cJSON_IsTrue(value));
+    } else if (property->type == ESP_MCP_PROPERTY_TYPE_INTEGER && cJSON_IsNumber(value) &&
+               (!ctx->strict_integer || (isfinite(value->valuedouble) && trunc(value->valuedouble) == value->valuedouble &&
+                                         value->valuedouble >= INT_MIN && value->valuedouble <= INT_MAX))) {
+        int number = value->valueint;
+        if (!property->has_range || (number >= property->min_value && number <= property->max_value)) {
+            new_prop = esp_mcp_property_create_with_int(name, number);
+        }
+    } else if (property->type == ESP_MCP_PROPERTY_TYPE_FLOAT && cJSON_IsNumber(value) &&
+               isfinite(value->valuedouble) && isfinite((float)value->valuedouble)) {
+        new_prop = esp_mcp_property_create_with_float(name, value->valuedouble);
+    } else if (property->type == ESP_MCP_PROPERTY_TYPE_STRING && cJSON_IsString(value)) {
+        if (!property->has_max_length || strlen(value->valuestring) <= property->max_length) {
+            new_prop = esp_mcp_property_create_with_string(name, value->valuestring);
+        }
+    } else if ((property->type == ESP_MCP_PROPERTY_TYPE_ARRAY && cJSON_IsArray(value)) ||
+               (property->type == ESP_MCP_PROPERTY_TYPE_OBJECT && cJSON_IsObject(value))) {
+        char *encoded = cJSON_PrintUnformatted(value);
+        if (encoded) {
+            new_prop = property->type == ESP_MCP_PROPERTY_TYPE_ARRAY ?
+                       esp_mcp_property_create_with_array(name, encoded) :
+                       esp_mcp_property_create_with_object(name, encoded);
+            cJSON_free(encoded);
+        }
+    }
+    if (!new_prop && value) {
+        ctx->has_error = true;
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!new_prop) {
+        ctx->has_error = true;
+        ESP_LOGE(TAG, "tools/call: Failed to create property for argument: %s", name);
+        return ESP_ERR_NO_MEM;
+    }
+    esp_err_t add_ret = esp_mcp_property_list_add_property(ctx->list, new_prop);
+    if (add_ret != ESP_OK) {
+        esp_mcp_property_destroy(new_prop);
+        ctx->has_error = true;
+        ESP_LOGE(TAG, "tools/call: Failed to add argument property: %s", name);
+        return add_ret;
+    }
+
+    return ESP_OK;
+}
+
 static void esp_mcp_make_task_id(char out[48])
 {
     uint8_t rnd[16];
@@ -1927,7 +2439,22 @@ typedef struct {
     esp_mcp_task_t *task;
     char tool_name[64];
     char *args_json; // JSON object string or NULL
+    char *meta_json;
+    char *session_id;
+    char *auth_subject;
+    esp_mcp_request_context_t request;
 } esp_mcp_tool_task_ctx_t;
+
+static void esp_mcp_tool_task_context_destroy(esp_mcp_tool_task_ctx_t *ctx)
+{
+    if (ctx) {
+        cJSON_free(ctx->args_json);
+        free(ctx->meta_json);
+        free(ctx->session_id);
+        free(ctx->auth_subject);
+        free(ctx);
+    }
+}
 
 static char *esp_mcp_build_error_json(int error_code,
                                       const char *message,
@@ -1997,8 +2524,7 @@ static void esp_mcp_tool_task_worker(void *arg)
 
     if (!ctx || !ctx->mcp || !ctx->task) {
         if (ctx) {
-            free(ctx->args_json);
-            free(ctx);
+            esp_mcp_tool_task_context_destroy(ctx);
         }
         vTaskDelete(NULL);
         return;
@@ -2104,7 +2630,7 @@ static void esp_mcp_tool_task_worker(void *arg)
         goto cleanup;
     }
 
-    result = esp_mcp_tool_call(tool, arguments);
+    result = esp_mcp_tool_call_with_context(tool, arguments, &ctx->request);
 
     if (!result) {
         result = esp_mcp_build_error_json(MCP_ERROR_CODE_TOOL_CALL_FAILED,
@@ -2156,8 +2682,7 @@ cleanup:
     }
     esp_mcp_task_mark_worker_finished(ctx->task);
     esp_mcp_tool_task_worker_atomic_dec(ctx->mcp);
-    free(ctx->args_json);
-    free(ctx);
+    esp_mcp_tool_task_context_destroy(ctx);
     vTaskDelete(NULL);
 }
 
@@ -2206,9 +2731,27 @@ static esp_err_t esp_mcp_tools_call_create_task(esp_mcp_t *mcp,
     }
     ctx->mcp = mcp;
     ctx->task = task;
+    esp_mcp_tool_t *tool = esp_mcp_tool_list_find_tool(mcp->tools, tool_name);
+    if (tool && tool->callback_with_context) {
+        ctx->meta_json = mcp->request_full_meta_json ? strdup(mcp->request_full_meta_json) : NULL;
+        ctx->session_id = mcp->request_session_id[0] ? strdup(mcp->request_session_id) : NULL;
+        ctx->auth_subject = mcp->request_auth_subject[0] ? strdup(mcp->request_auth_subject) : NULL;
+        if ((mcp->request_full_meta_json && !ctx->meta_json) ||
+                (mcp->request_session_id[0] && !ctx->session_id) ||
+                (mcp->request_auth_subject[0] && !ctx->auth_subject)) {
+            esp_mcp_tool_task_context_destroy(ctx);
+            (void)esp_mcp_task_set_status(task, ESP_MCP_TASK_FAILED, "No mem");
+            return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "task metadata alloc failed");
+        }
+        ctx->request = (esp_mcp_request_context_t) {
+            .protocol_version = mcp->request_modern ? MCP_PROTO_MODERN : NULL,
+            .meta_json = ctx->meta_json, .session_id = ctx->session_id,
+            .auth_subject = ctx->auth_subject, .is_authenticated = mcp->request_authenticated,
+        };
+    }
     if (strlen(tool_name) >= sizeof(ctx->tool_name)) {
         (void)esp_mcp_task_set_status(task, ESP_MCP_TASK_FAILED, "Tool name too long");
-        free(ctx);
+        esp_mcp_tool_task_context_destroy(ctx);
         return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.name <= 63 chars", "params.name");
     }
     esp_mcp_copy_str(ctx->tool_name, sizeof(ctx->tool_name), tool_name);
@@ -2216,7 +2759,7 @@ static esp_err_t esp_mcp_tools_call_create_task(esp_mcp_t *mcp,
         ctx->args_json = cJSON_PrintUnformatted((cJSON *)tool_arguments);
         if (!ctx->args_json) {
             (void)esp_mcp_task_set_status(task, ESP_MCP_TASK_FAILED, "Args serialize failed");
-            free(ctx);
+            esp_mcp_tool_task_context_destroy(ctx);
             return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "task args serialize failed");
         }
     }
@@ -2235,8 +2778,7 @@ static esp_err_t esp_mcp_tools_call_create_task(esp_mcp_t *mcp,
     if (mcp->destroy_requested) {
         (void)__atomic_sub_fetch(&mcp->tool_worker_count, 1, __ATOMIC_SEQ_CST);
         (void)esp_mcp_task_set_status(task, ESP_MCP_TASK_FAILED, "Engine destroying");
-        free(ctx->args_json);
-        free(ctx);
+        esp_mcp_tool_task_context_destroy(ctx);
         return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "engine destroying");
     }
     (void)esp_mcp_task_mark_worker_starting(task);
@@ -2244,8 +2786,7 @@ static esp_err_t esp_mcp_tools_call_create_task(esp_mcp_t *mcp,
         (void)__atomic_sub_fetch(&mcp->tool_worker_count, 1, __ATOMIC_SEQ_CST);
         esp_mcp_task_mark_worker_finished(task);
         (void)esp_mcp_task_set_status(task, ESP_MCP_TASK_FAILED, "Spawn failed");
-        free(ctx->args_json);
-        free(ctx);
+        esp_mcp_tool_task_context_destroy(ctx);
         return esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "task spawn failed");
     }
 
@@ -2294,7 +2835,7 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, const cJSON *id, const cha
 
     esp_mcp_property_list_t *arguments = esp_mcp_property_list_create();
     if (arguments) {
-        if (tool_arguments && cJSON_IsObject(tool_arguments)) {
+        if ((tool_arguments && cJSON_IsObject(tool_arguments)) || mcp->xiaozhi_compatibility) {
             if (!tool->properties) {
                 ESP_LOGW(TAG, "tools/call: tool %s has no property schema", tool_name);
                 if (cJSON_GetArraySize((cJSON *)tool_arguments) > 0) {
@@ -2305,9 +2846,10 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, const cJSON *id, const cha
             } else {
                 esp_mcp_property_foreach_ctx_t args_ctx = {
                     .list = arguments,
-                    .callback = esp_mcp_tool_args_cb,
+                    .callback = mcp->xiaozhi_compatibility ? esp_mcp_xiaozhi_tool_args_cb : esp_mcp_tool_args_cb,
                     .arg = (void *)tool_arguments,
-                    .has_error = false
+                    .has_error = false,
+                    .strict_integer = mcp->request_modern
                 };
 
                 esp_err_t foreach_ret = esp_mcp_property_list_foreach(tool->properties, &args_ctx);
@@ -2319,9 +2861,51 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, const cJSON *id, const cha
             }
         }
 
-        char *result = esp_mcp_tool_call(tool, arguments);
+        esp_mcp_request_context_t context = {
+            .protocol_version = mcp->request_modern ? MCP_PROTO_MODERN : NULL,
+            .meta_json = mcp->request_full_meta_json,
+            .session_id = mcp->request_session_id[0] ? mcp->request_session_id : NULL,
+            .auth_subject = mcp->request_auth_subject[0] ? mcp->request_auth_subject : NULL,
+            .is_authenticated = mcp->request_authenticated,
+        };
+        char *result = esp_mcp_tool_call_with_context(tool, arguments, &context);
         if (result) {
-            esp_mcp_reply_result(mcp, id, result);
+            if (!mcp->xiaozhi_compatibility || mcp->request_modern ||
+                    (!strstr(result, "\"isError\":true") && !strstr(result, "\"type\":\"image\""))) {
+                esp_mcp_reply_result(mcp, id, result);
+            } else {
+                cJSON *object = cJSON_Parse(result);
+                bool failed = cJSON_IsTrue(cJSON_GetObjectItem(object, "isError"));
+                if (failed) {
+                    cJSON *content = cJSON_GetArrayItem(cJSON_GetObjectItem(object, "content"), 0);
+                    cJSON *text = cJSON_GetObjectItem(content, "text");
+                    const char *message = (cJSON_IsString(text) && text->valuestring) ? text->valuestring
+                                          : "Tool execution failed";
+                    cJSON *error = cJSON_CreateObject();
+                    char *encoded = NULL;
+                    if (error != NULL && cJSON_AddNumberToObject(error, "code", -32603) != NULL &&
+                            cJSON_AddStringToObject(error, "message", message) != NULL) {
+                        encoded = cJSON_PrintUnformatted(error);
+                    }
+                    cJSON_Delete(error);
+                    if (encoded) {
+                        esp_mcp_reply_error_ex(mcp, -32603, encoded, id, NULL);
+                        cJSON_free(encoded);
+                    } else {
+                        esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "Result allocation failed");
+                    }
+                } else {
+                    esp_err_t ret = esp_mcp_xiaozhi_wrap_legacy_images(object);
+                    char *encoded = ret == ESP_OK ? cJSON_PrintUnformatted(object) : NULL;
+                    if (encoded) {
+                        esp_mcp_reply_result(mcp, id, encoded);
+                        cJSON_free(encoded);
+                    } else {
+                        esp_mcp_reply_internal_error_with_method(mcp, id, "tools/call", "Result allocation failed");
+                    }
+                }
+                cJSON_Delete(object);
+            }
             cJSON_free(result);
         } else {
             esp_mcp_reply_error_with_method_reason(mcp,
@@ -2345,9 +2929,33 @@ static esp_err_t esp_mcp_do_tool_call(esp_mcp_t *mcp, const cJSON *id, const cha
     return ESP_OK;
 }
 
+static bool esp_mcp_capabilities_match(const cJSON *required, const cJSON *available)
+{
+    if (!cJSON_IsObject(required) || !available) {
+        return false;
+    }
+    if (!required->child) {
+        return true;  /* An empty requirement checks presence; a validator checks its value. */
+    }
+    if (!cJSON_IsObject(available)) {
+        return false;
+    }
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, required) {
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(available, item->string);
+        if (!value || (cJSON_IsObject(item) ? !esp_mcp_capabilities_match(item, value) : !cJSON_Compare(item, value, true))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static esp_err_t esp_mcp_handle_tools_call(esp_mcp_t *mcp, const cJSON *params, const cJSON *id)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
+    if (mcp->xiaozhi_compatibility && !params) {
+        return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.name", "params");
+    }
     ESP_RETURN_ON_FALSE(params, ESP_ERR_INVALID_ARG, TAG, "Invalid params");
 
     if (!cJSON_IsObject(params)) {
@@ -2355,30 +2963,66 @@ static esp_err_t esp_mcp_handle_tools_call(esp_mcp_t *mcp, const cJSON *params, 
         return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.name", "params");
     }
 
-    cJSON *tool_name = cJSON_GetObjectItem(params, "name");
+    cJSON *tool_name = esp_mcp_request_member(mcp, params, "name");
     if (!cJSON_IsString(tool_name)) {
         ESP_LOGE(TAG, "tools/call: Missing name");
         return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.name", "params.name");
     }
 
-    cJSON *tool_arguments = cJSON_GetObjectItem(params, "arguments");
+    cJSON *tool_arguments = esp_mcp_request_member(mcp, params, "arguments");
     if (tool_arguments != NULL && !cJSON_IsObject(tool_arguments)) {
         ESP_LOGE(TAG, "tools/call: Invalid arguments");
         return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.arguments", "params.arguments");
     }
 
     cJSON *stack_size = cJSON_GetObjectItem(params, "stackSize");
-    if (stack_size != NULL && !cJSON_IsNumber(stack_size)) {
+    if (!mcp->xiaozhi_compatibility && stack_size != NULL && !cJSON_IsNumber(stack_size)) {
         ESP_LOGE(TAG, "tools/call: Invalid stackSize");
         return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "params.stackSize", "params.stackSize");
     }
 
     esp_mcp_tool_t *tool = esp_mcp_tool_list_find_tool(mcp->tools, tool_name->valuestring);
     if (!tool) {
-        ESP_LOGE(TAG, "tools/call: Unknown tool: %s", tool_name->valuestring);
+        if (mcp->xiaozhi_compatibility) {
+            return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "known tool", "params.name");
+        }
         return esp_mcp_reply_not_found(mcp, id, "tools/call", "name", tool_name->valuestring, "Tool not found");
     }
+    if (mcp->request_modern && tool->required_capabilities_json) {
+        cJSON *meta = cJSON_Parse(mcp->request_full_meta_json);
+        cJSON *required = cJSON_Parse(tool->required_capabilities_json);
+        const cJSON *caps = cJSON_GetObjectItemCaseSensitive(meta, MCP_META_CAPABILITIES);
+        bool supported = esp_mcp_capabilities_match(required, caps);
+        cJSON_Delete(meta);
+        if (!supported) {
+            cJSON *data = cJSON_CreateObject();
+            if (data) {
+                cJSON_AddItemToObject(data, "requiredCapabilities", required);
+            } else {
+                cJSON_Delete(required);
+            }
+            esp_err_t ret = esp_mcp_reply_error_ex(mcp, -32021, "Missing required client capability", id, data);
+            cJSON_Delete(data);
+            return ret;
+        }
+        cJSON_Delete(required);
+    }
 
+    if (tool->request_validator) {
+        const esp_mcp_request_context_t request = {
+            .protocol_version = mcp->request_modern ? MCP_PROTO_MODERN : NULL,
+            .meta_json = mcp->request_full_meta_json,
+            .session_id = mcp->request_session_id[0] ? mcp->request_session_id : NULL,
+            .auth_subject = mcp->request_auth_subject[0] ? mcp->request_auth_subject : NULL,
+            .is_authenticated = mcp->request_authenticated,
+        };
+        if (tool->request_validator(&request, tool->validator_ctx) != ESP_OK) {
+            return esp_mcp_reply_invalid_params(mcp, id, "tools/call", "valid tool metadata", "params._meta");
+        }
+    }
+    if (mcp->xiaozhi_compatibility) {
+        return esp_mcp_do_tool_call(mcp, id, tool_name->valuestring, tool_arguments, CONFIG_MCP_TOOLCALL_STACK_SIZE);
+    }
     cJSON *task = cJSON_GetObjectItem(params, "task");
     bool wants_task_mode = false;
     if (task != NULL) {
@@ -2599,6 +3243,21 @@ static esp_err_t esp_mcp_handle_resources_read(esp_mcp_t *mcp, const cJSON *para
     return r;
 }
 
+static void esp_mcp_resource_subscriptions_trim_unlocked(esp_mcp_t *mcp)
+{
+    if (mcp->resource_subscriptions_count == 0) {
+        free(mcp->resource_subscriptions);
+        mcp->resource_subscriptions = NULL;
+        return;
+    }
+    esp_mcp_resource_subscription_t *subscriptions =
+        realloc(mcp->resource_subscriptions,
+                mcp->resource_subscriptions_count * sizeof(*subscriptions));
+    if (subscriptions) {
+        mcp->resource_subscriptions = subscriptions;
+    }
+}
+
 static bool esp_mcp_resource_subscription_contains_unlocked(esp_mcp_t *mcp, const char *session_id, const char *uri)
 {
     if (!mcp || !session_id || !uri) {
@@ -2623,12 +3282,22 @@ static esp_err_t esp_mcp_resource_subscription_add(esp_mcp_t *mcp, const char *s
         esp_mcp_resource_sub_unlock(mcp);
         return ESP_OK;
     }
-    size_t max_subscriptions = sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0]);
+    size_t max_subscriptions = CONFIG_MCP_RESOURCE_SUBSCRIPTIONS_MAX;
     if (mcp->resource_subscriptions_count >= max_subscriptions) {
         esp_mcp_resource_sub_unlock(mcp);
+        ESP_LOGW(TAG, "Subscribe failed: capacity %u reached", (unsigned)max_subscriptions);
+        return ESP_ERR_INVALID_SIZE;
+    }
+    size_t idx = mcp->resource_subscriptions_count;
+    esp_mcp_resource_subscription_t *subscriptions =
+        realloc(mcp->resource_subscriptions, (idx + 1) * sizeof(*subscriptions));
+    if (!subscriptions) {
+        esp_mcp_resource_sub_unlock(mcp);
+        ESP_LOGE(TAG, "Subscribe failed: no memory for subscription");
         return ESP_ERR_NO_MEM;
     }
-    size_t idx = mcp->resource_subscriptions_count++;
+    mcp->resource_subscriptions = subscriptions;
+    mcp->resource_subscriptions_count++;
     esp_mcp_copy_str(mcp->resource_subscriptions[idx].session_id, sizeof(mcp->resource_subscriptions[idx].session_id), session_id);
     esp_mcp_copy_str(mcp->resource_subscriptions[idx].uri, sizeof(mcp->resource_subscriptions[idx].uri), uri);
     esp_mcp_resource_sub_unlock(mcp);
@@ -2650,6 +3319,7 @@ static esp_err_t esp_mcp_resource_subscription_remove(esp_mcp_t *mcp, const char
                        sizeof(mcp->resource_subscriptions[j - 1]));
             }
             mcp->resource_subscriptions_count--;
+            esp_mcp_resource_subscriptions_trim_unlocked(mcp);
             esp_mcp_resource_sub_unlock(mcp);
             return ESP_OK;
         }
@@ -2787,13 +3457,13 @@ static esp_err_t esp_mcp_handle_resources_subscribe(esp_mcp_t *mcp, const cJSON 
         return esp_mcp_reply_error_with_kv(mcp, MCP_ERROR_CODE_INVALID_REQUEST, MCP_ERROR_MESSAGE_INVALID_REQUEST, id, "reason", "missing_session");
     }
     esp_err_t ret = esp_mcp_resource_subscription_add(mcp, mcp->request_session_id, uri->valuestring);
-    if (ret == ESP_ERR_NO_MEM) {
+    if (ret == ESP_ERR_INVALID_SIZE) {
         cJSON *data = cJSON_CreateObject();
         if (data) {
             cJSON_AddStringToObject(data, "reason", "subscription_limit_reached");
             cJSON_AddNumberToObject(data,
                                     "limit",
-                                    (double)(sizeof(mcp->resource_subscriptions) / sizeof(mcp->resource_subscriptions[0])));
+                                    (double)CONFIG_MCP_RESOURCE_SUBSCRIPTIONS_MAX);
             cJSON_AddStringToObject(data, "uri", uri->valuestring);
         }
         esp_err_t rr = esp_mcp_reply_error_ex(mcp, MCP_ERROR_CODE_INTERNAL_ERROR, "Maximum subscriptions reached", id, data);
@@ -2801,6 +3471,10 @@ static esp_err_t esp_mcp_handle_resources_subscribe(esp_mcp_t *mcp, const cJSON 
             cJSON_Delete(data);
         }
         return rr;
+    }
+    if (ret == ESP_ERR_NO_MEM) {
+        return esp_mcp_reply_internal_error_with_method(mcp, id, "resources/subscribe",
+                                                        "subscription allocation failed");
     }
     if (ret != ESP_OK) {
         return esp_mcp_reply_error_with_kv(mcp, MCP_ERROR_CODE_INTERNAL_ERROR, MCP_ERROR_MESSAGE_INTERNAL_ERROR, id, "uri", uri->valuestring);
@@ -3090,8 +3764,11 @@ static esp_err_t esp_mcp_handle_logging_set_level(esp_mcp_t *mcp, const cJSON *p
     }
     esp_mcp_session_state_t *session_state = esp_mcp_get_request_session_state(mcp, true);
     if (session_state) {
+        ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                            ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
         session_state->has_log_level = true;
         esp_mcp_copy_str(session_state->log_level, sizeof(session_state->log_level), normalized_level);
+        xSemaphoreGive(mcp->session_mutex);
     }
     esp_mcp_copy_str(mcp->log_level, sizeof(mcp->log_level), normalized_level);
     return esp_mcp_reply_result(mcp, id, "{}");
@@ -3446,7 +4123,13 @@ esp_err_t esp_mcp_create(esp_mcp_t **mcp)
     }
 
     temp_mcp->req_id_mutex = xSemaphoreCreateMutex();
-    if (!temp_mcp->req_id_mutex) {
+    if (temp_mcp->req_id_mutex) {
+        temp_mcp->session_mutex = xSemaphoreCreateMutex();
+    }
+    if (!temp_mcp->req_id_mutex || !temp_mcp->session_mutex) {
+        if (temp_mcp->req_id_mutex) {
+            vSemaphoreDelete(temp_mcp->req_id_mutex);
+        }
         vSemaphoreDelete(temp_mcp->resource_sub_mutex);
         vSemaphoreDelete(temp_mcp->mutex);
         esp_mcp_prompt_list_destroy((esp_mcp_prompt_list_t *)temp_mcp->prompts);
@@ -3454,6 +4137,7 @@ esp_err_t esp_mcp_create(esp_mcp_t **mcp)
         esp_mcp_task_store_destroy((esp_mcp_task_store_t *)temp_mcp->tasks);
         esp_mcp_tool_list_destroy(temp_mcp->tools);
         free(temp_mcp);
+        ESP_LOGE(TAG, "Create failed: no memory for request/session mutexes");
         return ESP_ERR_NO_MEM;
     }
 
@@ -3513,6 +4197,19 @@ esp_err_t esp_mcp_destroy(esp_mcp_t *mcp)
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Error destroying tool list: %s", esp_err_to_name(ret));
     }
+    while (mcp->session_states) {
+        esp_mcp_session_node_t *node = mcp->session_states;
+        mcp->session_states = node->next;
+        free(node);
+    }
+    free(mcp->resource_subscriptions);
+    free(mcp->recent_request_ids);
+    mcp->recent_request_ids = NULL;
+
+    free(mcp->extensions_json);
+    cJSON_free(mcp->request_full_meta_json);
+    free(mcp->xiaozhi_server_name);
+    free(mcp->xiaozhi_server_version);
 
     if (mcp->mbuf.outbuf) {
         cJSON_free(mcp->mbuf.outbuf);
@@ -3564,6 +4261,9 @@ esp_err_t esp_mcp_destroy(esp_mcp_t *mcp)
         mcp->req_id_mutex = NULL;
     }
 
+    if (mcp->session_mutex) {
+        vSemaphoreDelete(mcp->session_mutex);
+    }
     if (mcp->mutex) {
         if (mutex_held) {
             (void)xSemaphoreGive(mcp->mutex);
@@ -3583,7 +4283,7 @@ esp_err_t esp_mcp_free_response(esp_mcp_t *mcp, uint8_t *outbuf)
     if (!outbuf) {
         return ESP_OK;
     }
-    free(outbuf);
+    cJSON_free(outbuf);
     return ESP_OK;
 }
 
@@ -3673,24 +4373,32 @@ esp_err_t esp_mcp_handle_message(esp_mcp_t *mcp, const uint8_t *inbuf, uint16_t 
         mutex_held = true;
     }
 
-    // Reuse existing parser which fills legacy mbuf, then copy into independent buffer.
-    ret = esp_mcp_parse_message(mcp, (const char *)inbuf);
-    uint8_t *tmp = NULL;
-    uint16_t tmplen = 0;
-    // Even when parser returns an error code, it may have produced a valid JSON-RPC error payload.
-    // Always drain mbuf so transport can return protocol-level errors to the caller.
-    (void)esp_mcp_get_mbuf(mcp, &tmp, &tmplen);
-    if (tmp && tmplen > 0) {
-        uint8_t *copy = (uint8_t *)calloc(1, (size_t)tmplen + 1);
-        if (copy) {
-            memcpy(copy, tmp, tmplen);
-            *outbuf = copy;
-            *outlen = tmplen;
-        } else {
+    if (!mcp->xiaozhi_compatibility) {
+        ret = esp_mcp_parse_message(mcp, (const char *)inbuf);
+    } else {
+        char *message = malloc((size_t)inlen + 1);
+        if (!message) {
             ret = ESP_ERR_NO_MEM;
+            goto cleanup;
         }
-        (void)esp_mcp_remove_mbuf(mcp, tmp);
+        memcpy(message, inbuf, inlen);
+        message[inlen] = '\0';
+        const void *terminator = memchr(message, '\0', inlen);
+        if (terminator && terminator != message + inlen - 1) {
+            ret = ESP_ERR_INVALID_ARG;
+        } else {
+            ret = esp_mcp_parse_message(mcp, message);
+        }
+        free(message);
     }
+    /* Error returns can still carry a JSON-RPC error response. Detach ownership
+     * under the engine lock so the next request cannot overwrite this buffer.
+     */
+    *outbuf = mcp->mbuf.outbuf;
+    *outlen = mcp->mbuf.outlen;
+    mcp->mbuf.outbuf = NULL;
+    mcp->mbuf.outlen = 0;
+    mcp->mbuf.id = 0;
 
 cleanup:
     if (mcp->mutex && mutex_held) {
@@ -3826,6 +4534,10 @@ const char *esp_mcp_get_request_session_id(const esp_mcp_t *mcp)
 esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id)
 {
     ESP_RETURN_ON_FALSE(mcp && session_id && session_id[0], ESP_ERR_INVALID_ARG, TAG, "Invalid args");
+    ESP_RETURN_ON_FALSE(xSemaphoreGetMutexHolder(mcp->mutex) != xTaskGetCurrentTaskHandle(),
+                        ESP_ERR_INVALID_STATE, TAG, "Clear session failed: engine mutex is held by current task");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->mutex, portMAX_DELAY) == pdTRUE,
+                        ESP_ERR_INVALID_STATE, TAG, "Clear session failed: engine mutex unavailable");
     esp_mcp_resource_sub_lock(mcp);
     for (size_t i = 0; i < mcp->resource_subscriptions_count;) {
         if (strcmp(mcp->resource_subscriptions[i].session_id, session_id) == 0) {
@@ -3839,14 +4551,29 @@ esp_err_t esp_mcp_clear_session_state(esp_mcp_t *mcp, const char *session_id)
         }
         i++;
     }
+    esp_mcp_resource_subscriptions_trim_unlocked(mcp);
     esp_mcp_resource_sub_unlock(mcp);
     esp_mcp_req_id_lock(mcp);
     esp_mcp_forget_request_ids_for_session(mcp, session_id);
     esp_mcp_req_id_unlock(mcp);
-    esp_mcp_session_state_t *state = esp_mcp_session_state_find(mcp, session_id);
-    if (state) {
-        memset(state, 0, sizeof(*state));
+    if (xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) != pdTRUE) {
+        xSemaphoreGive(mcp->mutex);
+        ESP_LOGE(TAG, "Clear session failed: session mutex unavailable");
+        return ESP_ERR_INVALID_STATE;
     }
+    esp_mcp_session_node_t **link = &mcp->session_states;
+    while (*link) {
+        esp_mcp_session_node_t *node = *link;
+        if (strcmp(node->state.session_id, session_id) == 0) {
+            *link = node->next;
+            mcp->session_states_count--;
+            free(node);
+            break;
+        }
+        link = &node->next;
+    }
+    xSemaphoreGive(mcp->session_mutex);
+    xSemaphoreGive(mcp->mutex);
     return ESP_OK;
 }
 
@@ -3861,21 +4588,158 @@ esp_err_t esp_mcp_clear_recent_request_ids(esp_mcp_t *mcp, const char *session_i
     return ESP_OK;
 }
 
+esp_err_t esp_mcp_set_extensions_json(esp_mcp_t *mcp, const char *extensions_json)
+{
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid engine");
+    if (extensions_json) {
+        cJSON *object = cJSON_ParseWithOpts(extensions_json, NULL, true);
+        bool valid = cJSON_IsObject(object);
+        cJSON_Delete(object);
+        ESP_RETURN_ON_FALSE(valid, ESP_ERR_INVALID_ARG, TAG, "Expected extensions object");
+    }
+    char *copy = extensions_json ? strdup(extensions_json) : NULL;
+    ESP_RETURN_ON_FALSE(!extensions_json || copy, ESP_ERR_NO_MEM, TAG, "Allocation failed");
+    free(mcp->extensions_json);
+    mcp->extensions_json = copy;
+    return ESP_OK;
+}
+
+esp_err_t esp_mcp_set_xiaozhi_compatibility(esp_mcp_t *mcp, bool enabled)
+{
+    ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid engine");
+    mcp->xiaozhi_compatibility = enabled;
+    return ESP_OK;
+}
+
+bool esp_mcp_is_xiaozhi_compatibility_enabled(const esp_mcp_t *mcp)
+{
+    return mcp && mcp->xiaozhi_compatibility;
+}
+
+esp_err_t esp_mcp_set_xiaozhi_server_identity(esp_mcp_t *mcp, const char *name, const char *version)
+{
+    ESP_RETURN_ON_FALSE(mcp && (!name || name[0]) && (!version || version[0]), ESP_ERR_INVALID_ARG, TAG, "Invalid identity");
+    char *name_copy = name ? strdup(name) : NULL;
+    char *version_copy = version ? strdup(version) : NULL;
+    if ((name && !name_copy) || (version && !version_copy)) {
+        free(name_copy);
+        free(version_copy);
+        return ESP_ERR_NO_MEM;
+    }
+    free(mcp->xiaozhi_server_name);
+    free(mcp->xiaozhi_server_version);
+    mcp->xiaozhi_server_name = name_copy;
+    mcp->xiaozhi_server_version = version_copy;
+    return ESP_OK;
+}
+
+static esp_err_t esp_mcp_discover_extensions(esp_mcp_tool_t *tool, void *ctx)
+{
+    if (!tool->required_capabilities_json) {
+        return ESP_OK;
+    }
+    cJSON *caps = ctx;
+    cJSON *required = cJSON_Parse(tool->required_capabilities_json);
+    cJSON *extensions = cJSON_GetObjectItemCaseSensitive(required, "extensions");
+    esp_err_t ret = ESP_OK;
+    if (cJSON_IsObject(extensions)) {
+        cJSON *advertised = cJSON_GetObjectItemCaseSensitive(caps, "extensions");
+        if (!advertised) {
+            advertised = cJSON_AddObjectToObject(caps, "extensions");
+        }
+        cJSON *item = NULL;
+        cJSON_ArrayForEach(item, extensions) {
+            if (!advertised || (!cJSON_GetObjectItemCaseSensitive(advertised, item->string) &&
+                                !cJSON_AddObjectToObject(advertised, item->string))) {
+                ret = ESP_ERR_NO_MEM;
+                break;
+            }
+        }
+    }
+    cJSON_Delete(required);
+    return ret;
+}
+
+static esp_err_t esp_mcp_handle_discover(esp_mcp_t *mcp, const cJSON *id)
+{
+    cJSON *result = cJSON_CreateObject();
+    if (!result) {
+        return ESP_ERR_NO_MEM;
+    }
+    cJSON *versions = cJSON_Parse("[\"2026-07-28\",\"2024-11-05\"]");
+    cJSON *caps = cJSON_AddObjectToObject(result, "capabilities");
+    if (!versions || !caps || !cJSON_AddObjectToObject(caps, "tools")) {
+        cJSON_Delete(versions);
+        cJSON_Delete(result);
+        return ESP_ERR_NO_MEM;
+    }
+    cJSON_AddItemToObject(result, "supportedVersions", versions);
+    if (mcp->extensions_json) {
+        cJSON *extensions = cJSON_Parse(mcp->extensions_json);
+        if (!extensions) {
+            cJSON_Delete(result);
+            return ESP_ERR_NO_MEM;
+        }
+        cJSON_AddItemToObject(caps, "extensions", extensions);
+    }
+    esp_err_t extension_ret = esp_mcp_tool_list_foreach(mcp->tools, esp_mcp_discover_extensions, caps);
+    if (extension_ret != ESP_OK) {
+        cJSON_Delete(result);
+        return extension_ret;
+    }
+    char *encoded = cJSON_PrintUnformatted(result);
+    cJSON_Delete(result);
+    ESP_RETURN_ON_FALSE(encoded, ESP_ERR_NO_MEM, TAG, "Discovery encoding failed");
+    esp_err_t ret = esp_mcp_reply_result(mcp, id, encoded);
+    cJSON_free(encoded);
+    return ret;
+}
+
+static esp_err_t esp_mcp_handle_xiaozhi_initialize(esp_mcp_t *mcp, const cJSON *id)
+{
+    const esp_app_desc_t *app = esp_app_get_description();
+    cJSON *result = cJSON_CreateObject();
+    cJSON *caps = result ? cJSON_AddObjectToObject(result, "capabilities") : NULL;
+    cJSON *info = result ? cJSON_AddObjectToObject(result, "serverInfo") : NULL;
+    if (!result || !caps || !info || !cJSON_AddStringToObject(result, "protocolVersion", MCP_PROTO_BASELINE) ||
+            !cJSON_AddObjectToObject(caps, "tools") ||
+            !cJSON_AddStringToObject(info, "name", mcp->xiaozhi_server_name ? mcp->xiaozhi_server_name : app->project_name) ||
+            !cJSON_AddStringToObject(info, "version", mcp->xiaozhi_server_version ? mcp->xiaozhi_server_version : app->version)) {
+        cJSON_Delete(result);
+        return ESP_ERR_NO_MEM;
+    }
+    char *encoded = cJSON_PrintUnformatted(result);
+    cJSON_Delete(result);
+    ESP_RETURN_ON_FALSE(encoded, ESP_ERR_NO_MEM, TAG, "Initialize encoding failed");
+    esp_err_t ret = esp_mcp_reply_result(mcp, id, encoded);
+    cJSON_free(encoded);
+    return ret;
+}
+
+static bool esp_mcp_xiaozhi_is_valid_id(const cJSON *id)
+{
+    return cJSON_IsString(id) || (cJSON_IsNumber(id) && isfinite(id->valuedouble) &&
+                                  trunc(id->valuedouble) == id->valuedouble && fabs(id->valuedouble) <= 9007199254740991.0);
+}
+
 static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
     ESP_RETURN_ON_FALSE(json, ESP_ERR_INVALID_ARG, TAG, "Invalid JSON");
 
-    cJSON *version = cJSON_GetObjectItem(json, "jsonrpc");
+    const cJSON *early_id = cJSON_GetObjectItemCaseSensitive(json, "id");
+    const cJSON *xiaozhi_err_id = (mcp->xiaozhi_compatibility && esp_mcp_xiaozhi_is_valid_id(early_id)) ? early_id : NULL;
+
+    cJSON *version = esp_mcp_request_member(mcp, json, "jsonrpc");
     if (version == NULL || !cJSON_IsString(version) || strcmp(version->valuestring, "2.0") != 0) {
         ESP_LOGE(TAG, "Invalid JSONRPC version: %s", version ? version->valuestring : "null");
-        esp_mcp_reply_invalid_request_with_reason(mcp, NULL, NULL, "jsonrpc must be 2.0");
+        esp_mcp_reply_invalid_request_with_reason(mcp, xiaozhi_err_id, NULL, "jsonrpc must be 2.0");
         return ESP_ERR_INVALID_ARG;
     }
 
-    cJSON *method = cJSON_GetObjectItem(json, "method");
+    cJSON *method = esp_mcp_request_member(mcp, json, "method");
     if (method == NULL || !cJSON_IsString(method)) {
-        cJSON *resp_id = cJSON_GetObjectItem(json, "id");
+        cJSON *resp_id = esp_mcp_request_member(mcp, json, "id");
         cJSON *resp_result = cJSON_GetObjectItem(json, "result");
         cJSON *resp_error = cJSON_GetObjectItem(json, "error");
         if (resp_id && (cJSON_IsNumber(resp_id) || cJSON_IsString(resp_id)) && (resp_result || resp_error)) {
@@ -3895,43 +4759,111 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
             return ESP_OK;
         }
         ESP_LOGE(TAG, "Missing method");
-        esp_mcp_reply_invalid_request_with_reason(mcp, NULL, NULL, "missing method");
+        esp_mcp_reply_invalid_request_with_reason(mcp, xiaozhi_err_id, NULL, "missing method");
         return ESP_ERR_INVALID_ARG;
     }
 
+    mcp->request_modern = false;
+    cJSON_free(mcp->request_full_meta_json);
+    mcp->request_full_meta_json = NULL;
+    if (mcp->xiaozhi_compatibility) {
+        if (!early_id) {
+            return ESP_OK;
+        }
+        if (!esp_mcp_xiaozhi_is_valid_id(early_id)) {
+            return esp_mcp_reply_invalid_request_with_reason(mcp, NULL, method->valuestring, "Invalid request ID");
+        }
+        if (!strncmp(method->valuestring, "notifications/", 14)) {
+            return ESP_OK;
+        }
+    }
+    const cJSON *early_params = esp_mcp_request_member(mcp, json, "params");
+    if (mcp->xiaozhi_compatibility && early_params && !cJSON_IsObject(early_params)) {
+        return esp_mcp_reply_invalid_params(mcp, early_id, method->valuestring, "params as object", "params");
+    }
+    const cJSON *meta = cJSON_GetObjectItemCaseSensitive(early_params, "_meta");
+    const cJSON *protocol = cJSON_GetObjectItemCaseSensitive(meta, MCP_META_VERSION);
+    const cJSON *caps = cJSON_GetObjectItemCaseSensitive(meta, MCP_META_CAPABILITIES);
+    const cJSON *identity = cJSON_GetObjectItemCaseSensitive(meta, MCP_META_CLIENT_INFO);
+    mcp->request_modern = mcp->xiaozhi_compatibility &&
+                          (!strcmp(method->valuestring, "server/discover") || protocol || caps || identity ||
+                           cJSON_GetObjectItemCaseSensitive(meta, "io.modelcontextprotocol/logLevel"));
+    esp_mcp_copy_str(mcp->request_method, sizeof(mcp->request_method), method->valuestring);
+    if (mcp->xiaozhi_compatibility && meta && !cJSON_IsObject(meta)) {
+        return esp_mcp_reply_invalid_params(mcp, early_id, method->valuestring, "object", "params._meta");
+    }
+    if (mcp->request_modern) {
+        if (!cJSON_IsString(protocol) || !cJSON_IsObject(caps)) {
+            return esp_mcp_reply_invalid_params(mcp, early_id, method->valuestring, "version and client capabilities", "params._meta");
+        }
+        if (strcmp(protocol->valuestring, MCP_PROTO_MODERN)) {
+            cJSON *data = cJSON_CreateObject();
+            if (!data) {
+                return ESP_ERR_NO_MEM;
+            }
+            cJSON *versions = cJSON_Parse("[\"2026-07-28\",\"2024-11-05\"]");
+            cJSON_AddItemToObject(data, "supported", versions);
+            cJSON_AddStringToObject(data, "requested", protocol->valuestring);
+            esp_err_t ret = esp_mcp_reply_error_ex(mcp, -32022, "Unsupported protocol version", early_id, data);
+            cJSON_Delete(data);
+            return ret;
+        }
+        const cJSON *extensions = cJSON_GetObjectItemCaseSensitive(caps, "extensions");
+        if ((extensions && !cJSON_IsObject(extensions)) ||
+                (identity && (!cJSON_IsObject(identity) ||
+                              !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(identity, "name")) ||
+                              !cJSON_IsString(cJSON_GetObjectItemCaseSensitive(identity, "version"))))) {
+            return esp_mcp_reply_invalid_params(mcp, early_id, method->valuestring, "valid client metadata", "params._meta");
+        }
+    }
+    bool needs_full_meta = mcp->xiaozhi_compatibility;
+    if (!needs_full_meta && !strcmp(method->valuestring, "tools/call")) {
+        const cJSON *name = cJSON_GetObjectItem(early_params, "name");
+        esp_mcp_tool_t *tool = cJSON_IsString(name) ? esp_mcp_tool_list_find_tool(mcp->tools, name->valuestring) : NULL;
+        needs_full_meta = tool && (tool->callback_with_context || tool->request_validator);
+    }
+    if (meta && needs_full_meta) {
+        mcp->request_full_meta_json = cJSON_PrintUnformatted(meta);
+        if (!mcp->request_full_meta_json) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
     const char *method_str = method->valuestring;
     const esp_mcp_session_state_t *request_state = esp_mcp_get_request_session_state_const(mcp);
     bool session_initialized = request_state && request_state->received_initialize_request;
     bool session_requires_initialized_notification = request_state && request_state->require_initialized_notification;
     bool session_received_initialized_notification = request_state && request_state->received_initialized_notification;
 
-    if (!session_initialized &&
+    if (!mcp->xiaozhi_compatibility && !session_initialized &&
             !mcp->client_initialized &&
             strcmp(method_str, "initialize") != 0) {
         if (!strncmp(method_str, "notifications", strlen("notifications"))) {
             ESP_LOGW(TAG, "Notification ignored before initialize: %s", method_str);
             return ESP_ERR_INVALID_STATE;
         }
-        cJSON *request_id = cJSON_GetObjectItem(json, "id");
+        cJSON *request_id = esp_mcp_request_member(mcp, json, "id");
         esp_mcp_reply_invalid_request_with_reason(mcp, request_id, method_str, "initialize must be first interaction");
         return ESP_ERR_INVALID_STATE;
     }
 
     if (!strncmp(method_str, "notifications", strlen("notifications"))) {
-        if (cJSON_GetObjectItem(json, "id") != NULL) {
+        if (esp_mcp_request_member(mcp, json, "id") != NULL) {
             ESP_LOGW(TAG, "Notification contains id and will be treated as notification: %s", method_str);
         }
         if (!strcmp(method_str, "notifications/initialized")) {
             esp_mcp_session_state_t *mutable_state = esp_mcp_get_request_session_state(mcp, true);
             if (mutable_state) {
+                ESP_RETURN_ON_FALSE(xSemaphoreTake(mcp->session_mutex, portMAX_DELAY) == pdTRUE,
+                                    ESP_ERR_INVALID_STATE, TAG, "Update session failed: session mutex unavailable");
                 mutable_state->received_initialized_notification = true;
+                xSemaphoreGive(mcp->session_mutex);
             }
         } else if (!strcmp(method_str, "notifications/cancelled")) {
             // Best-effort store cancellation info for long-running operations/tasks
             mcp->has_cancel_request = false;
             mcp->cancelled_request_id[0] = '\0';
             mcp->cancel_reason[0] = '\0';
-            cJSON *params = cJSON_GetObjectItem(json, "params");
+            cJSON *params = esp_mcp_request_member(mcp, json, "params");
             if (params && cJSON_IsObject(params)) {
                 cJSON *rid = cJSON_GetObjectItem(params, "requestId");
                 cJSON *reason = cJSON_GetObjectItem(params, "reason");
@@ -3956,18 +4888,18 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
                 }
             }
         } else if (!strcmp(method_str, "notifications/elicitation/complete")) {
-            cJSON *params = cJSON_GetObjectItem(json, "params");
+            cJSON *params = esp_mcp_request_member(mcp, json, "params");
             esp_mcp_handle_elicitation_complete_notification(mcp, params);
         }
-        esp_mcp_dispatch_incoming_notification(mcp, method_str, cJSON_GetObjectItem(json, "params"));
+        esp_mcp_dispatch_incoming_notification(mcp, method_str, esp_mcp_request_member(mcp, json, "params"));
         ESP_LOGD(TAG, "Received notification (method: %s)", method_str);
         return ESP_OK;
     }
 
-    cJSON *params = cJSON_GetObjectItem(json, "params");
+    cJSON *params = esp_mcp_request_member(mcp, json, "params");
     if (params != NULL && !cJSON_IsObject(params)) {
         ESP_LOGE(TAG, "Invalid params for method: %s", method_str);
-        cJSON *early_id = cJSON_GetObjectItem(json, "id");
+        cJSON *early_id = esp_mcp_request_member(mcp, json, "id");
         return esp_mcp_reply_invalid_params(mcp, early_id, method_str, "params as object", "params");
     }
 
@@ -3980,7 +4912,7 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         free(mcp->request_meta_json);
         mcp->request_meta_json = NULL;
     }
-    if (params && cJSON_IsObject(params)) {
+    if (!mcp->xiaozhi_compatibility && params && cJSON_IsObject(params)) {
         cJSON *meta = cJSON_GetObjectItem(params, "_meta");
         if (meta && cJSON_IsObject(meta)) {
             cJSON *pt = cJSON_GetObjectItem(meta, "progressToken");
@@ -4018,36 +4950,35 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         }
     }
 
-    cJSON *id = cJSON_GetObjectItem(json, "id");
+    cJSON *id = esp_mcp_request_member(mcp, json, "id");
     if (id == NULL || !(cJSON_IsNumber(id) || cJSON_IsString(id))) {
         ESP_LOGE(TAG, "Invalid id for method: %s", method_str);
         esp_mcp_reply_error_with_kv(mcp, MCP_ERROR_CODE_INVALID_REQUEST, MCP_ERROR_MESSAGE_INVALID_REQUEST, NULL, "method", method_str);
         return ESP_ERR_INVALID_ARG;
     }
 
-    char request_id_str[64] = {0};
-    if (esp_mcp_request_id_to_str(id, request_id_str, sizeof(request_id_str)) != ESP_OK) {
-        esp_mcp_reply_invalid_request_with_reason(mcp, id, method_str, "invalid request id");
-        return ESP_ERR_INVALID_ARG;
+    /* Generic reinitialize clears its session cache; Xiaozhi is stateless. */
+    if (!mcp->xiaozhi_compatibility) {
+        char request_id_str[64] = {0};
+        if (esp_mcp_request_id_to_str(id, request_id_str, sizeof(request_id_str)) != ESP_OK) {
+            esp_mcp_reply_invalid_request_with_reason(mcp, id, method_str, "invalid request id");
+            return ESP_ERR_INVALID_ARG;
+        }
+        const char *request_session = esp_mcp_request_session_or_default(mcp);
+        if (strcmp(method_str, "initialize") != 0 &&
+                esp_mcp_is_duplicate_request_id(mcp, request_session, request_id_str)) {
+            esp_mcp_reply_invalid_request_with_reason(mcp, id, method_str, "duplicate request id in session");
+            return ESP_ERR_INVALID_STATE;
+        }
+        esp_mcp_remember_request_id(mcp, request_session, request_id_str);
     }
-    const char *request_session = esp_mcp_request_session_or_default(mcp);
-    /*
-     * A repeated initialize must reach esp_mcp_handle_initialize(), which
-     * clears this cache. Rejecting it here leaves every later reused id stuck.
-     */
-    if (strcmp(method_str, "initialize") != 0 &&
-            esp_mcp_is_duplicate_request_id(mcp, request_session, request_id_str)) {
-        esp_mcp_reply_invalid_request_with_reason(mcp, id, method_str, "duplicate request id in session");
-        return ESP_ERR_INVALID_STATE;
-    }
-    esp_mcp_remember_request_id(mcp, request_session, request_id_str);
 
     if (!mcp->request_authenticated) {
         return esp_mcp_reply_error_with_kv(mcp, -32001, "Unauthorized", id, "method", method_str);
     }
 
     // Lifecycle gate (enabled for negotiated protocol versions newer than 2024-11-05)
-    if (session_requires_initialized_notification &&
+    if (!mcp->xiaozhi_compatibility && session_requires_initialized_notification &&
             !session_received_initialized_notification &&
             strcmp(method_str, "initialize") != 0 &&
             strcmp(method_str, "ping") != 0) {
@@ -4056,6 +4987,15 @@ static esp_err_t esp_mcp_parse_json_message(esp_mcp_t *mcp, const cJSON *json)
         return ESP_ERR_INVALID_STATE;
     }
 
+    if (mcp->request_modern && !strcmp(method_str, "server/discover")) {
+        return esp_mcp_handle_discover(mcp, id);
+    }
+    if (mcp->xiaozhi_compatibility && !mcp->request_modern && !strcmp(method_str, "initialize")) {
+        return esp_mcp_handle_xiaozhi_initialize(mcp, id);
+    }
+    if (mcp->xiaozhi_compatibility && strcmp(method_str, "tools/list") && strcmp(method_str, "tools/call")) {
+        return esp_mcp_reply_error_with_kv(mcp, -32601, "Method not found", id, "method", method_str);
+    }
     if (!strcmp(method_str, "initialize")) {
         return esp_mcp_handle_initialize(mcp, params, id);
     } else if (!strcmp(method_str, "tools/list")) {
@@ -4107,9 +5047,13 @@ esp_err_t esp_mcp_parse_message(esp_mcp_t *mcp, const char *message)
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid server");
     ESP_RETURN_ON_FALSE(message, ESP_ERR_INVALID_ARG, TAG, "Invalid message");
 
-    cJSON *json = cJSON_Parse(message);
+    cJSON *json = mcp->xiaozhi_compatibility ? cJSON_ParseWithOpts(message, NULL, true) : cJSON_Parse(message);
     if (!json) {
-        ESP_LOGE(TAG, "Failed to parse MCP message: %s", message);
+        if (mcp->xiaozhi_compatibility) {
+            ESP_LOGE(TAG, "Failed to parse MCP message");
+        } else {
+            ESP_LOGE(TAG, "Failed to parse MCP message: %s", message);
+        }
         cJSON *data = cJSON_CreateObject();
         if (data) {
             cJSON_AddStringToObject(data, "reason", "invalid json");
@@ -4122,7 +5066,9 @@ esp_err_t esp_mcp_parse_message(esp_mcp_t *mcp, const char *message)
     }
 
     esp_err_t ret = ESP_OK;
-    if (cJSON_IsArray(json)) {
+    if (mcp->xiaozhi_compatibility && !cJSON_IsObject(json)) {
+        ret = esp_mcp_parse_json_message(mcp, json);
+    } else if (cJSON_IsArray(json)) {
         int n = cJSON_GetArraySize(json);
         if (n <= 0) {
             esp_mcp_reply_invalid_request_with_reason(mcp, NULL, NULL, "empty batch");
@@ -4403,7 +5349,8 @@ static esp_err_t esp_mcp_emit_server_request_with_request_id(esp_mcp_t *mcp,
     ESP_RETURN_ON_FALSE(request_id && request_id[0], ESP_ERR_INVALID_ARG, TAG, "Invalid request id");
     ESP_RETURN_ON_FALSE(mcp->mgr_ctx, ESP_ERR_INVALID_STATE, TAG, "Manager context not set");
     ESP_RETURN_ON_ERROR(esp_mcp_parse_request_capability_hints(params_json, &hints), TAG, "Invalid params_json");
-    session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    session_state = esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     if (!(session_state && session_state->received_initialize_request)) {
         return ESP_ERR_NOT_SUPPORTED;
     }
@@ -4557,7 +5504,9 @@ esp_err_t esp_mcp_request_sampling_with_tools(esp_mcp_t *mcp,
                                               size_t out_request_id_len)
 {
     ESP_RETURN_ON_FALSE(mcp, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
 
     cJSON *params = NULL;
@@ -4627,7 +5576,9 @@ esp_err_t esp_mcp_request_elicitation(esp_mcp_t *mcp,
                                       char *out_request_id,
                                       size_t out_request_id_len)
 {
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
 
     cJSON *params = NULL;
@@ -4664,7 +5615,9 @@ esp_err_t esp_mcp_request_elicitation_url(esp_mcp_t *mcp,
                                           size_t out_request_id_len)
 {
     ESP_RETURN_ON_FALSE(mcp && url, ESP_ERR_INVALID_ARG, TAG, "Invalid args");
-    const esp_mcp_session_state_t *session_state = esp_mcp_get_session_state_const(mcp, session_id);
+    esp_mcp_session_state_t session_snapshot = {0};
+    const esp_mcp_session_state_t *session_state =
+        esp_mcp_copy_session_state(mcp, session_id, &session_snapshot) ? &session_snapshot : NULL;
     ESP_RETURN_ON_FALSE(session_state && session_state->received_initialize_request, ESP_ERR_NOT_SUPPORTED, TAG, "Client session not initialized");
     ESP_RETURN_ON_FALSE(session_state->client_cap_elicitation_url, ESP_ERR_NOT_SUPPORTED, TAG, "Client does not support URL elicitation");
     char request_id[33] = {0};

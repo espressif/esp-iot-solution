@@ -81,6 +81,14 @@ lightbulb_config_t config = {
 lightbulb_new_pwm_device(&config);
 ```
 
+### 多 PWM 灯实例
+
+可以多次调用 `lightbulb_new_pwm_device(&config)` 创建 PWM 灯，每盏灯使用独立 GPIO，并通过返回的句柄控制和销毁，上层 API 不变。相同频率共享定时器，通道自动分配；删除实例不影响其他灯。
+
+底层 `pwm_init()` 新增末尾输出参数 `pwm_handle_t *out_handle`，其余原有 `pwm_*()` 接口新增首参数 `pwm_handle_t`。直接调用底层接口的代码需要补传句柄；同一实例的操作和销毁需要串行化。
+
+实例数量受当前 LEDC 速度模式的通道与定时器数量限制。例如 ESP32-C3 的 6 个通道可驱动两盏 RGB 灯或三盏 CW 灯。资源不足时底层返回 `ESP_ERR_NOT_FOUND`，上层创建返回 `NULL`。不要通过其他驱动配置本驱动管理的 LEDC 资源。
+
 ## IIC 调光芯片方案使用示例
 
 IIC 调光芯片方案已支持配置 IIC 调光芯片的所有参数，调光芯片的具体功能及参数请参阅手册填写.使用实例如下：

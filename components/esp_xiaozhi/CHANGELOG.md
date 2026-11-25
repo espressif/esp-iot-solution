@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.2.0
+
+### Added
+
+- Shared bootstrap/hello capabilities and font metadata, WebSocket framing v1/v2/v3, packet metadata callbacks, raw JSON/MCP send and receive APIs, and negotiated audio parameter queries.
+- Authenticated MQTT+UDP probes with strict PONG validation, retry/deadline scheduling, independent health queries, and IDF 5.5 Mbed TLS / IDF 6 PSA implementations.
+- Application adapters for board JSON, bootstrap identity, full response handling, and activation v1/v2 signing.
+- Queued MCP dispatch with connection isolation, request-scoped vision metadata, and compatibility with the 2026-07-28 discovery/tools subset in mcp-c-sdk 2.2.0.
+
+### Fixed
+
+- Fragment reassembly, MQTT keepalive and callback-safe enqueueing, hello validation and cancellation, and transport shutdown error handling.
+- Optional server hello session IDs and matching-session goodbye handling; borrowed MCP engines regain their original compatibility mode after stop or failed start.
+
+
+## v0.1.5
+
+### Added
+
+- **Optional vision endpoint storage**: Add `CONFIG_XIAOZHI_VISION_ENABLE`, enabled by default. Disabling it saves 1024 bytes per chat context; `esp_xiaozhi_chat_get_vision_explain()` returns `ESP_ERR_NOT_SUPPORTED`. Standalone camera and video APIs are unchanged.
+
+### Changed
+
+- **MCP dependency**: Require `mcp-c-sdk` `^2.1.0` for memory optimizations and session cleanup fixes.
+
 ## v0.1.4
 
 ### Fixed

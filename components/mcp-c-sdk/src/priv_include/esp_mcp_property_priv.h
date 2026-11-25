@@ -21,6 +21,7 @@ typedef struct esp_mcp_property_foreach_ctx_s {
     void *arg;                                                            /*!< User context passed to callback */
     esp_err_t (*callback)(const esp_mcp_property_t *property, void *arg); /*!< Callback function for each property */
     bool has_error;                                                       /*!< Set when callback returns error */
+    bool strict_integer;                                                  /*!< Modern Xiaozhi integer validation */
 } esp_mcp_property_foreach_ctx_t;
 
 /**

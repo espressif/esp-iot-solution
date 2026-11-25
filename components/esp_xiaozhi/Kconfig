@@ -1,9 +1,46 @@
 menu "Xiaozhi Assistant"
+    config XIAOZHI_MCP_WORKER_STACK_SIZE
+        int "MCP worker task stack size (bytes)"
+        range 2048 16384
+        default 4096
+        help
+            Stack size in bytes for the transient MCP request worker task.
+            Increase if custom MCP tool callbacks require deep call stacks.
+
+    config XIAOZHI_MCP_STACK_IN_PSRAM
+        bool "Allocate MCP worker stack in PSRAM"
+        default n
+        depends on SPIRAM
+        help
+            Allocate the transient MCP worker stack from PSRAM instead of
+            internal RAM when PSRAM is available.
+
+    config XIAOZHI_MCP_IDLE_TIMEOUT_MS
+        int "MCP worker idle timeout (ms)"
+        range 100 60000
+        default 1000
+        help
+            Create the MCP worker on the first request and release its stack
+            after this idle period. A running tool is never interrupted.
+            The next request recreates the worker with MCP_TOOLCALL_STACK_SIZE.
+            Connection state survives idle exit.
+
+    config XIAOZHI_VISION_ENABLE
+        bool "Store chat vision explain endpoints"
+        default y
+        help
+            Store legacy vision endpoints received through MCP initialize.
+            Disabling this removes 1024 bytes from each chat context; legacy
+            vision endpoint queries return ESP_ERR_NOT_SUPPORTED. Modern
+            request-scoped metadata and standalone camera/video APIs are unchanged.
+
     config XIAOZHI_OTA_URL
         string "Default OTA URL"
         default "https://api.tenclass.net/xiaozhi/ota/"
         help
-            The application will access this URL to check for new firmwares and server address.
+            Fallback bootstrap endpoint when neither an application URL override nor
+            the saved wifi.ota_url is present. Used for server configuration,
+            firmware metadata and activation; firmware installation is external.
 
     config XIAOZHI_INFO_TIMEOUT_MS
         int "Default information timeout (ms)"

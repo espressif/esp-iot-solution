@@ -1,0 +1,15 @@
+# Override the compressed OTA defaults for differential OTA. Apply this file
+# after sdkconfig.defaults, for example:
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.diff_ota" set-target esp32c3
+# or:
+#   export SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.diff_ota"
+#   idf.py set-target esp32c3
+#
+# This keeps the 4 MB flash, certificate bundle, and xz decompressor settings
+# from sdkconfig.defaults and only switches the partition table to
+# partition_for_diff_ota.csv, enabling the example's differential OTA option.
+
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partition_for_diff_ota.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partition_for_diff_ota.csv"
+
+CONFIG_EXAMPLE_DIFF_OTA=y

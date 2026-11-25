@@ -1,7 +1,11 @@
 dependencies:
   bootloader_support_plus:
-    version: "0.*"
+    version: ">=0.8.0"
     # Please comment the following line, if this example is installed by idf.py create-project-from-example.
     override_path: "../../../../components/bootloader_support_plus"
+  cmake_utilities:
+    version: ">=1.4.1"
+    # Please comment the following line, if this example is installed by idf.py create-project-from-example.
+    override_path: "../../../../tools/cmake_utilities"
   xz: ">=1.1.2,<2.0.0"
   idf: ">=5.0"

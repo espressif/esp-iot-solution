@@ -32,6 +32,7 @@
 #include "lvgl_port_private.h"
 #include "lvgl_port_alignment.h"
 #include "common/display_bridge_common.h"
+#include "common/display_rgb565.h"
 
 #if SOC_MIPI_DSI_SUPPORTED
 #include "esp_lcd_mipi_dsi.h"
@@ -2478,22 +2479,23 @@ static esp_err_t display_bridge_v9_te_stage_merge_area(esp_lv_adapter_display_br
         const uint8_t *src = color_map +
                              ((size_t)area->y1 * logical_width + area->x1) * color_bytes;
         const bool swap_rgb565 = lv_display_get_color_format(disp) == LV_COLOR_FORMAT_RGB565;
-        const bool swapped = rotate_copy_strided_region(src, impl->te_stage_buf,
-                                                        area->x1, area->y1, area->x2, area->y2,
-                                                        logical_width, swap_rgb565, impl);
-        if (swap_rgb565 && !swapped) {
+        const bool ppa_swapped = rotate_copy_strided_region(src, impl->te_stage_buf,
+                                                            area->x1, area->y1, area->x2, area->y2,
+                                                            logical_width, swap_rgb565, impl);
+#if CONFIG_SOC_PPA_SUPPORTED
+        if (swap_rgb565 && !ppa_swapped) {
             lv_area_t physical;
             display_bridge_v9_diff_area_to_physical(impl, area, &physical);
             size_t physical_row_width = (size_t)lv_area_get_width(&physical);
             for (int32_t y = physical.y1; y <= physical.y2; ++y) {
                 uint8_t *row = impl->te_stage_buf + ((size_t)y * physical_width + physical.x1) * color_bytes;
-                lv_draw_sw_rgb565_swap(row, physical_row_width);
-#if CONFIG_SOC_PPA_SUPPORTED
-                /* A later SRM invalidates whole destination rows, including this dirty area. */
+                /* A later SRM can invalidate rows containing this CPU-written area. */
                 display_cache_msync_range(row, physical_row_width * color_bytes, impl->cache_line_size);
-#endif
             }
         }
+#else
+        (void)ppa_swapped;
+#endif
         return ESP_OK;
     }
 
@@ -2505,9 +2507,11 @@ static esp_err_t display_bridge_v9_te_stage_merge_area(esp_lv_adapter_display_br
     uint8_t *dst = impl->te_stage_buf + (size_t)area->y1 * dst_stride + (size_t)area->x1 * color_bytes;
     for (size_t row = 0; row < height; row++) {
         uint8_t *dst_row = dst + row * dst_stride;
-        memcpy(dst_row, src + row * src_stride, row_bytes);
         if (lv_display_get_color_format(disp) == LV_COLOR_FORMAT_RGB565) {
-            lv_draw_sw_rgb565_swap(dst_row, width);
+            display_rgb565_swap_copy((uint16_t *)dst_row,
+                                     (const uint16_t *)(src + row * src_stride), width);
+        } else {
+            memcpy(dst_row, src + row * src_stride, row_bytes);
         }
     }
     return ESP_OK;
@@ -3140,7 +3144,8 @@ static void display_bridge_v9_flush_partial_rotate(esp_lv_adapter_display_bridge
 
 /**
  * @brief Rotate and copy region with stride support (uses PPA if available)
- * @return Whether the requested RGB565 byte swap was performed by PPA.
+ * The CPU fallback also applies the requested byte swap.
+ * @return Whether the byte swap was performed by PPA (CPU writes may need writeback).
  */
 static bool IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
                                                  uint16_t lv_x_start, uint16_t lv_y_start,
@@ -3244,7 +3249,8 @@ static bool IRAM_ATTR rotate_copy_strided_region(const void *src, void *dst_fb,
                                rotation,
                                color_bytes,
                                impl->block_size_small,
-                               impl->block_size_large);
+                               impl->block_size_large,
+                               swap_rgb565);
     return false;
 }
 
@@ -3347,7 +3353,8 @@ static void IRAM_ATTR rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *imp
                                rotation,
                                color_bytes,
                                impl->block_size_small,
-                               impl->block_size_large);
+                               impl->block_size_large,
+                               false);
 }
 
 /**********************

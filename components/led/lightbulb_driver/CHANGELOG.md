@@ -1,5 +1,17 @@
 # ChangeLog
 
+## v2.1.0 - 2026-11-4
+
+### Enhancements:
+
+* Add support for multiple PWM driver instances. Matching frequencies share timers; LEDC channels are allocated automatically.
+
+### Breaking Changes:
+
+* The low-level PWM API is now instance-based: `pwm_init()` adds a final `pwm_handle_t *out_handle` parameter, and all other `pwm_*()` functions take a `pwm_handle_t` as their first parameter. Direct callers of `pwm.h` must pass the handle returned by `pwm_init()`.
+* `pwm_init()` now rejects a zero `freq_hz`.
+* `pwm_deinit()` now releases the given instance and leaves its GPIOs at the inactive level.
+
 ## v2.0.2 - 2026-9-2
 
 ### Enhancements:

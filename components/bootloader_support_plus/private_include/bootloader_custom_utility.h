@@ -66,6 +66,7 @@ static inline bool bootloader_custom_flash_encryption_enabled(void)
 
 typedef enum {
     DECOMPRESS_ENGINE,
+    DIFF_ENGINE,
     STORAGE_ENGINE,
     MAX_ENGINE
 } bootloader_custom_ota_engine_type_t;
@@ -74,6 +75,11 @@ typedef enum {
     COMPRESS_NONE,
     COMPRESS_XZ,
 } bootloader_custom_ota_compress_type_t;
+
+typedef enum {
+    DIFF_NONE = 0,
+    DIFF_DDELTA = 1,
+} bootloader_custom_ota_diff_type_t;
 
 typedef enum {
     STORAGE_FLASH,
@@ -87,6 +93,11 @@ typedef struct {
     uint32_t dst_addr;
     uint32_t dst_size;
     uint32_t dst_offset;
+
+    /* Base firmware read by ddelta. Unused when delta_type is DIFF_NONE. */
+    uint32_t base_addr;
+    uint32_t base_size;
+    uint32_t base_offset;
 } bootloader_custom_ota_config_t;
 
 typedef struct {
@@ -100,6 +111,19 @@ typedef struct {
     int (*init)(bootloader_custom_ota_params_t *params);                  // init OK return 0, others return -1, -2, ...
     int (*input)(void *addr, int size); // the input function just recv data and use data, and then put data to next engine; return 0 if no errors.
 } bootloader_custom_ota_engine_t;
+
+/**
+ * @brief Read ota_info partition and fill array from two otadata structures.
+ *
+ * @param ota_info   Position of the ota_info partition.
+ * @param two_otadata Output array of two esp_ota_select_entry_t.
+ *
+ * @return
+ *    - ESP_OK: otadata read successfully.
+ *    - ESP_ERR_NOT_FOUND: ota_info offset is 0.
+ *    - ESP_FAIL: partition too small or mmap failed.
+ */
+esp_err_t bootloader_custom_utility_read_otadata(const esp_partition_pos_t *ota_info, esp_ota_select_entry_t *two_otadata);
 
 /**
  * @brief Update OTA data for a new boot partition.

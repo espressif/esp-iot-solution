@@ -110,6 +110,7 @@ esp_err_t power_measure_new_ina236_device(const power_measure_config_t *config,
 
     // Copy configurations
     ina236_dev->config = *config;
+    ina236_dev->base.config = &ina236_dev->config;
     ina236_dev->ina236_config = *ina236_config;
 
     // Initialize function pointers

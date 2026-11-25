@@ -79,6 +79,14 @@ lightbulb_config_t config = {
 lightbulb_new_pwm_device(&config);
 ```
 
+### Multiple PWM lightbulbs
+
+Call `lightbulb_new_pwm_device(&config)` for each bulb using distinct GPIOs, and control/delete it through the returned handle. The application API is unchanged. Matching frequencies share timers; channels are allocated automatically and deletion does not affect other bulbs.
+
+The existing `pwm_init()` now takes a final `pwm_handle_t *out_handle` parameter. All other existing `pwm_*()` functions now take a `pwm_handle_t` first parameter. Direct driver callers must pass the handle and serialize operations/deletion on each instance.
+
+Capacity is limited by channels in the selected LEDC speed mode and available timers. ESP32-C3 has six channels, allowing two RGB or three CW bulbs. Exhaustion returns `ESP_ERR_NOT_FOUND` from the driver and `NULL` from the lightbulb constructor. Do not configure this driver's LEDC resources through other drivers.
+
 ## Example of IIC Scheme
 
 The IIC dimming chip solution now supports configuring all parameters of the IIC dimming chip. Please refer to the manual for the specific functions and parameters of the dimming chip and fill in accordingly. An example of usage is provided below:
