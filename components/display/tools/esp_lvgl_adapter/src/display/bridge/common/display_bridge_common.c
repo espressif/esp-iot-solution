@@ -297,6 +297,38 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
  *   ROTATION & COPY OPERATIONS
  **********************/
 
+void display_bridge_copy_unrendered_rows(const uint8_t *src, uint8_t *dst,
+                                        uint16_t width, uint16_t height, uint8_t color_bytes,
+                                        const lv_area_t *dirty, uint16_t dirty_count)
+{
+    const size_t stride = (size_t)width * color_bytes;
+    for (int32_t y = 0; y < height; ++y, src += stride, dst += stride) {
+        int32_t x = 0;
+        while (x < width) {
+            int32_t next_dirty = width;
+            int32_t end_dirty = x;
+            for (uint16_t i = 0; i < dirty_count; ++i) {
+                const lv_area_t *area = &dirty[i];
+                if (y < area->y1 || y > area->y2 || x > area->x2) {
+                    continue;
+                }
+                if (x >= area->x1) {
+                    end_dirty = LV_MAX(end_dirty, area->x2 + 1);
+                } else {
+                    next_dirty = LV_MIN(next_dirty, area->x1);
+                }
+            }
+            if (end_dirty > x) {
+                x = end_dirty;
+            } else {
+                memcpy(dst + x * color_bytes, src + x * color_bytes,
+                       (size_t)(next_dirty - x) * color_bytes);
+                x = next_dirty;
+            }
+        }
+    }
+}
+
 static inline void IRAM_ATTR display_copy_pixel(const uint8_t *src, uint8_t *dst, uint8_t color_bytes)
 {
     if (color_bytes == 1) {

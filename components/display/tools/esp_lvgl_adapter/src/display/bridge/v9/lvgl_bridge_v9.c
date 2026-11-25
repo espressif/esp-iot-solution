@@ -1051,9 +1051,6 @@ static void rotate_copy_region(esp_lv_adapter_display_bridge_v9_t *impl,
                                uint8_t color_bytes);
 
 /* Helper functions */
-static void copy_unrendered_area_from_front_to_back(lv_display_t *disp_refr,
-                                                    esp_lv_adapter_display_bridge_v9_t *impl);
-
 static void copy_diff_repair_from_front_to_back(
     esp_lv_adapter_display_bridge_v9_t *impl,
     const lv_area_t *repair,
@@ -3428,15 +3425,17 @@ static bool display_bridge_v9_prepare_partial_back_buffer(
     *target_index = UINT8_MAX;
     *reset_tracker = false;
 
-    bool current_valid = disp_refr != NULL &&
-                         display_bridge_v9_diff_capture_current(
-                             impl, disp_refr, current, current_count, dirty_to_physical);
+    if (disp_refr == NULL || !display_bridge_v9_diff_capture_current(
+                impl, disp_refr, current, current_count, dirty_to_physical)) {
+        ESP_LOGE(TAG, "No dirty areas for partial refresh");
+        display_bridge_v9_diff_reset(impl);
+        return false;
+    }
     *target_index =
         display_bridge_v9_diff_buffer_index(impl, impl->draw_fb);
     source_index =
         display_bridge_v9_diff_buffer_index(impl, impl->disp_fb);
-    *reset_tracker = !current_valid || *target_index == UINT8_MAX ||
-                     source_index == UINT8_MAX;
+    *reset_tracker = *target_index == UINT8_MAX || source_index == UINT8_MAX;
 
     if (!*reset_tracker) {
         display_bridge_v9_diff_buffer_t *target =
@@ -3479,236 +3478,17 @@ static bool display_bridge_v9_prepare_partial_back_buffer(
     }
 
     if (copy_baseline) {
-        if (disp_refr == NULL) {
-            ESP_LOGE(TAG, "No refreshing display for partial baseline");
-            return false;
+        const lv_area_t frame = {0, 0, bridge_h_res(impl) - 1, bridge_v_res(impl) - 1};
+        if (!display_bridge_v9_diff_subtract(
+                    &frame, 1, current, *current_count, repair, &repair_count)) {
+            display_bridge_copy_unrendered_rows(
+                impl->disp_fb, impl->draw_fb, bridge_h_res(impl), bridge_v_res(impl),
+                bridge_color_bytes(impl), current, *current_count);
+            return true;
         }
-        copy_unrendered_area_from_front_to_back(disp_refr, impl);
-    } else {
-        copy_diff_repair_from_front_to_back(impl, repair, repair_count);
     }
-
+    copy_diff_repair_from_front_to_back(impl, repair, repair_count);
     return true;
-}
-
-/**
- * @brief Copy unrendered areas from front buffer to back buffer
- */
-static void copy_unrendered_area_from_front_to_back(lv_display_t *disp_refr, esp_lv_adapter_display_bridge_v9_t *impl)
-{
-    uint16_t hor_res = bridge_h_res(impl);
-    uint16_t ver_res = bridge_v_res(impl);
-    uint8_t color_bytes = bridge_color_bytes(impl);
-    esp_lv_adapter_rotation_t rotation = bridge_rotation(impl);
-
-    if (rotation != ESP_LV_ADAPTER_ROTATE_0) {
-        for (int i = 0; i < disp_refr->inv_p; i++) {
-            lv_area_t *a = &disp_refr->inv_areas[i];
-            int x1, y1, x2, y2;
-            display_coord_to_phy(a->x1, a->y1, &x1, &y1, rotation, hor_res, ver_res);
-            display_coord_to_phy(a->x2, a->y2, &x2, &y2, rotation, hor_res, ver_res);
-            a->x1 = LV_MIN(x1, x2);
-            a->x2 = LV_MAX(x1, x2);
-            a->y1 = LV_MIN(y1, y2);
-            a->y2 = LV_MAX(y1, y2);
-        }
-    }
-
-    typedef struct {
-        int x1, y1, x2, y2;
-    } rect_t;
-
-    /* Step-1: Build "unsynced" list = FullScreen – Union(dirty) */
-    rect_t unsync_rects[LV_INV_BUF_SIZE * 4 + 4];
-    int    unsync_cnt = 1;
-    unsync_rects[0] = (rect_t) {
-        0, 0, hor_res - 1, ver_res - 1
-    };
-
-    for (int i = 0; i < disp_refr->inv_p; i++) {
-        if (disp_refr->inv_area_joined[i]) {
-            continue; /* skip already-joined areas */
-        }
-
-        rect_t d = {
-            .x1 = disp_refr->inv_areas[i].x1,
-            .y1 = disp_refr->inv_areas[i].y1,
-            .x2 = disp_refr->inv_areas[i].x2,
-            .y2 = disp_refr->inv_areas[i].y2,
-        };
-
-        int j = 0;
-        while (j < unsync_cnt) {
-            rect_t r = unsync_rects[j];
-
-            /* no intersection => keep going */
-            bool overlap = !(d.x2 < r.x1 || d.x1 > r.x2 || d.y2 < r.y1 || d.y1 > r.y2);
-            if (!overlap) {
-                j++;
-                continue;
-            }
-
-            /* remove r from list */
-            for (int k = j; k < unsync_cnt - 1; k++) {
-                unsync_rects[k] = unsync_rects[k + 1];
-            }
-            unsync_cnt--;
-
-            /* split r − d (up to four rectangles) and push back */
-            if (d.y1 > r.y1) { /* top slice */
-                unsync_rects[unsync_cnt++] = (rect_t) {
-                    r.x1, r.y1, r.x2, d.y1 - 1
-                };
-            }
-            if (d.y2 < r.y2) { /* bottom slice */
-                unsync_rects[unsync_cnt++] = (rect_t) {
-                    r.x1, d.y2 + 1, r.x2, r.y2
-                };
-            }
-
-            int overlap_y1 = LV_MAX(r.y1, d.y1);
-            int overlap_y2 = LV_MIN(r.y2, d.y2);
-
-            if (d.x1 > r.x1) { /* left slice */
-                unsync_rects[unsync_cnt++] = (rect_t) {
-                    r.x1, overlap_y1, d.x1 - 1, overlap_y2
-                };
-            }
-            if (d.x2 < r.x2) { /* right slice */
-                unsync_rects[unsync_cnt++] = (rect_t) {
-                    d.x2 + 1, overlap_y1, r.x2, overlap_y2
-                };
-            }
-        }
-    }
-
-    if (unsync_cnt == 0) {
-        return; /* whole screen was rendered this frame */
-    }
-
-    /* Step-2: Merge rectangles which share one axis span to reduce copy */
-    bool merged;
-    do {
-        merged = false;
-        for (int i = 0; i < unsync_cnt; i++) {
-            for (int j = i + 1; j < unsync_cnt; j++) {
-                rect_t *a = &unsync_rects[i];
-                rect_t *b = &unsync_rects[j];
-
-                /* Horizontal merge: identical vertical span, x ranges touch/overlap */
-                if (a->y1 == b->y1 && a->y2 == b->y2 &&
-                        b->x1 <= a->x2 + 1 && b->x2 >= a->x1 - 1) {
-                    a->x1 = LV_MIN(a->x1, b->x1);
-                    a->x2 = LV_MAX(a->x2, b->x2);
-
-                    for (int k = j; k < unsync_cnt - 1; k++) {
-                        unsync_rects[k] = unsync_rects[k + 1];
-                    }
-                    unsync_cnt--;
-                    merged = true;
-                    goto MERGE_RESTART; /* restart outer loops */
-                }
-
-                /* Vertical merge: identical horizontal span, y ranges touch/overlap */
-                if (a->x1 == b->x1 && a->x2 == b->x2 &&
-                        b->y1 <= a->y2 + 1 && b->y2 >= a->y1 - 1) {
-                    a->y1 = LV_MIN(a->y1, b->y1);
-                    a->y2 = LV_MAX(a->y2, b->y2);
-
-                    for (int k = j; k < unsync_cnt - 1; k++) {
-                        unsync_rects[k] = unsync_rects[k + 1];
-                    }
-                    unsync_cnt--;
-                    merged = true;
-                    goto MERGE_RESTART;
-                }
-            }
-        }
-MERGE_RESTART:;
-    } while (merged);
-
-    /* Step-3: Copy using DMA2D when available, fallback to CPU memcpy */
-#if SOC_DMA2D_SUPPORTED
-
-    if (unsync_cnt > 0) {
-        display_cache_msync_framebuffer(impl->disp_fb, impl->runtime.frame_buffer_size);
-    }
-
-    for (int idx = 0; idx < unsync_cnt; idx++) {
-        rect_t r = unsync_rects[idx];
-        size_t copy_w_px = r.x2 - r.x1 + 1;
-        size_t copy_h_px = r.y2 - r.y1 + 1;
-
-        int offset_x = r.x1;
-        if (display_bridge_dma2d_window_is_compatible(impl->disp_fb, hor_res, offset_x, copy_w_px, color_bytes) &&
-                display_bridge_dma2d_window_is_compatible(impl->draw_fb, hor_res, offset_x, copy_w_px, color_bytes)) {
-#ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
-            async_color_convert_request_t tr = {
-                .src_buffer  = impl->disp_fb,
-                .dst_buffer  = impl->draw_fb,
-                .src_stride  = hor_res,
-                .src_height  = ver_res,
-                .dst_stride  = hor_res,
-                .dst_height  = ver_res,
-                .src_x       = offset_x,
-                .src_y       = r.y1,
-                .dst_x       = offset_x,
-                .dst_y       = r.y1,
-                .copy_width  = copy_w_px,
-                .copy_height = copy_h_px,
-                DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
-            };
-#else
-            esp_async_fbcpy_trans_desc_t tr = {
-                .src_buffer        = impl->disp_fb,
-                .dst_buffer        = impl->draw_fb,
-                .src_buffer_size_x = hor_res,
-                .src_buffer_size_y = ver_res,
-                .dst_buffer_size_x = hor_res,
-                .dst_buffer_size_y = ver_res,
-                .src_offset_x      = offset_x,
-                .src_offset_y      = r.y1,
-                .dst_offset_x      = offset_x,
-                .dst_offset_y      = r.y1,
-                .copy_size_x       = copy_w_px,
-                .copy_size_y       = copy_h_px,
-                DMA2D_PIXEL_FORMAT_FIELD(color_bytes),
-            };
-#endif
-
-            /* submit and wait */
-            ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&tr, portMAX_DELAY));
-        } else {
-            const int bytes_per_pixel = color_bytes;
-            int bytes_per_line  = copy_w_px * bytes_per_pixel;
-            uint8_t *src_line = (uint8_t *)impl->disp_fb + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
-            uint8_t *dst_line = (uint8_t *)impl->draw_fb  + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
-
-            for (int y = r.y1; y <= r.y2; y++) {
-                memcpy(dst_line, src_line, bytes_per_line);
-                src_line += hor_res * bytes_per_pixel;
-                dst_line += hor_res * bytes_per_pixel;
-            }
-        }
-    }
-#else /* !SOC_DMA2D_SUPPORTED */
-
-    const int bytes_per_pixel = color_bytes;
-    for (int idx = 0; idx < unsync_cnt; idx++) {
-        rect_t r = unsync_rects[idx];
-        int width_px        = r.x2 - r.x1 + 1;
-        int bytes_per_line  = width_px * bytes_per_pixel;
-        uint8_t *src_line = (uint8_t *)impl->disp_fb + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
-        uint8_t *dst_line = (uint8_t *)impl->draw_fb  + (r.y1 * hor_res + r.x1) * bytes_per_pixel;
-
-        for (int y = r.y1; y <= r.y2; y++) {
-            memcpy(dst_line, src_line, bytes_per_line);
-            src_line += hor_res * bytes_per_pixel;
-            dst_line += hor_res * bytes_per_pixel;
-        }
-    }
-
-#endif /* !SOC_DMA2D_SUPPORTED */
 }
 
 /**
