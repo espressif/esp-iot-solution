@@ -11,6 +11,10 @@
 
 #include "esp_display_present_blit.h"
 #include "esp_display_present_target.h"
+#include "esp_memory_utils.h"
+#include "present_rgb565_swap.h"
+#include "sdkconfig.h"
+#include "soc/soc_caps.h"
 
 esp_err_t present_target_blit_region(
     esp_display_present_target_t *target,
@@ -35,6 +39,27 @@ esp_err_t present_target_blit_region(
     if (ret != ESP_OK) {
         return ret;
     }
+#if CONFIG_SOC_DMA2D_SUPPORTED && (defined(ESP_ASYNC_COLOR_CONVERT_AVAILABLE) || defined(ESP_ASYNC_FBCPY_AVAILABLE))
+    /* A submitted TE tile is leased scratch storage. For packed, unrotated
+     * copies to PSRAM, swap it before the blit so DMA2D can move the pixels. */
+    if (dst->rotation == ESP_DISPLAY_PRESENT_ROTATE_0 &&
+            dst->swap_rgb565 && dst->color_bytes == sizeof(uint16_t) &&
+            ((uintptr_t)region->surface.pixels & 1U) == 0 &&
+            esp_ptr_external_ram(dst->pixels) &&
+            dst->stride_bytes == (size_t)dst->width * sizeof(uint16_t) &&
+            region->surface.stride_bytes == (size_t)region->surface.width * sizeof(uint16_t)) {
+        esp_display_present_blit_fb_t wire_dst = *dst;
+        wire_dst.swap_rgb565 = false;
+        size_t pixels = (size_t)region->surface.width * region->surface.height;
+        present_rgb565_swap_in_place(region->surface.pixels, pixels);
+        ret = esp_display_present_blit_tile_to_fb(
+                  &wire_dst, &placement, region->surface.pixels, region->surface.stride_bytes);
+        if (ret != ESP_OK) {
+            present_rgb565_swap_in_place(region->surface.pixels, pixels);
+        }
+        return ret;
+    }
+#endif
     return esp_display_present_blit_tile_to_fb(
                dst, &placement, region->surface.pixels,
                region->surface.stride_bytes);

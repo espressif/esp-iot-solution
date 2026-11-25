@@ -220,8 +220,8 @@ Choose the configuration macro based on your display interface:
 
 .. note::
 
-   - Only MIPI DSI and RGB support tearing modes
-   - SPI/I2C/I80/QSPI are collectively called "OTHER" interfaces in the adapter and support only ``NONE`` mode
+   - MIPI DSI and RGB support framebuffer-based tearing modes
+   - SPI/I2C/I80/QSPI are grouped as OTHER interfaces and support ``NONE`` and GPIO-based ``TE_SYNC``
 
 
 Computing Frame Buffer Count
@@ -240,9 +240,9 @@ For RGB/MIPI DSI, compute required frame buffers early before hardware initializ
 
 **Frame Buffer Count Rules**:
 
-- 90°/270° rotation or triple-buffer modes: **3** frame buffers
-- Double-buffer modes: **2** frame buffers
-- Single-buffer mode: **1** frame buffer
+- Triple-buffer modes, or rotation with ``DOUBLE_FULL`` or ``DOUBLE_DIRECT``: **3** frame buffers
+- ``DOUBLE_PARTIAL`` at any supported rotation, or other double-buffer modes at 0°: **2** frame buffers
+- ``NONE`` at 0°: **1** frame buffer
 
 
 Tearing Modes: Selector (RGB/MIPI DSI)
@@ -268,10 +268,14 @@ Choose the appropriate tearing mode based on your use case:
      - High
    * - ``DOUBLE_FULL``
      - Large-area updates, Tighter RAM
-     - 2
-     - Medium
+     - 2, or 3 with rotation
+     - Medium / High
    * - ``DOUBLE_DIRECT``
      - Small-area updates, Widget/UI deltas
+     - 2, or 3 with rotation
+     - Medium / High
+   * - ``DOUBLE_PARTIAL``
+     - Partial updates with two panel frame buffers
      - 2
      - Medium
    * - ``NONE``
@@ -282,8 +286,7 @@ Choose the appropriate tearing mode based on your use case:
 
 .. warning::
 
-   - RGB/MIPI DSI with ``TEAR_AVOID_MODE_NONE`` **forbids rotation** (any non-zero rotation is rejected)
-   - OTHER (SPI/I2C/I80/QSPI) interfaces support ``NONE`` only; for rotation, configure panel orientation (swap XY/mirror) during LCD initialization and adjust touch mapping accordingly
+   RGB/MIPI DSI with ``TEAR_AVOID_MODE_NONE`` requires rotation to be set to 0°.
 
 
 Memory Estimation
@@ -320,11 +323,13 @@ Default ``buffer_height`` for each interface (see ``esp_lv_adapter_display.h``):
      - 50
      - Medium stripe height
    * - OTHER with PSRAM
-     - ``ver_res`` (full height)
+     - Full logical height
      - Full-height partial refresh, better throughput
    * - OTHER without PSRAM
      - 10
      - Small stripe to save RAM
+
+In partial mode, ``buffer_height`` counts logical rows after rotation. LVGL v9 includes stride padding when it allocates space for each row.
 
 
 Tuning Tips
@@ -381,19 +386,19 @@ The adapter provides a default configuration macro ``ESP_LV_ADAPTER_TOUCH_DEFAUL
 Encoder/Knob
 """"""""""""
 
-Requires Kconfig option ``ESP_LV_ADAPTER_ENABLE_KNOB``. See ``esp_lv_adapter_input.h`` for ``esp_lv_adapter_encoder_config_t``.
+Requires Kconfig option ``ESP_LVGL_ADAPTER_ENABLE_KNOB``. See ``esp_lv_adapter_input.h`` for ``esp_lv_adapter_encoder_config_t``.
 
 
 Navigation Buttons
 """"""""""""""""""
 
-Requires Kconfig option ``ESP_LV_ADAPTER_ENABLE_BUTTON``. Use ``esp_lv_adapter_register_navigation_buttons()``.
+Requires Kconfig option ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``. Use ``esp_lv_adapter_register_navigation_buttons()``.
 
 
 Filesystem Bridge (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-If ``ESP_LV_ADAPTER_ENABLE_FS`` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from ``esp_mmap_assets``.
+If ``ESP_LVGL_ADAPTER_ENABLE_FS`` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from ``esp_mmap_assets``.
 
 .. code:: c
 
@@ -430,7 +435,7 @@ Depends on `esp_lv_fs <esp_lv_fs.html>`__ and `esp_mmap_assets <esp_mmap_assets.
 Image Decoding (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Enable ``ESP_LV_ADAPTER_ENABLE_DECODER`` to integrate ``esp_lv_decoder`` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
+Enable ``ESP_LVGL_ADAPTER_ENABLE_DECODER`` to integrate ``esp_lv_decoder`` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
 
 .. code:: c
 
@@ -451,7 +456,7 @@ For details, refer to `esp_lv_decoder <esp_lv_decoder.html>`__.
 FreeType Fonts (Optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Enable ``ESP_LV_ADAPTER_ENABLE_FREETYPE`` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
+Enable ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE`` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
 
 .. code:: c
 
@@ -500,7 +505,7 @@ FPS Statistics and Dummy Draw
 FPS Statistics
 """"""""""""""
 
-Requires ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``.
+Requires ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``.
 
 .. code:: c
 
@@ -547,17 +552,17 @@ Configure via ``idf.py menuconfig``:
 
    * - Option
      - Description
-   * - ``ESP_LV_ADAPTER_ENABLE_FS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FS``
      - Enable filesystem bridge (``esp_lv_fs``)
-   * - ``ESP_LV_ADAPTER_ENABLE_DECODER``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_DECODER``
      - Enable image decoder (``esp_lv_decoder``)
-   * - ``ESP_LV_ADAPTER_ENABLE_FREETYPE``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE``
      - Enable FreeType vector font support
-   * - ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``
      - Enable FPS monitoring APIs
-   * - ``ESP_LV_ADAPTER_ENABLE_BUTTON``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``
      - Enable navigation button input support
-   * - ``ESP_LV_ADAPTER_ENABLE_KNOB``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_KNOB``
      - Enable rotary encoder input support
 
 
@@ -574,9 +579,9 @@ Interface and Tearing Mode Support
    * - Interface Type
      - Supported Tearing Modes
    * - RGB / MIPI DSI
-     - ``NONE``, ``DOUBLE_FULL``, ``TRIPLE_FULL``, ``DOUBLE_DIRECT``, ``TRIPLE_PARTIAL``
+     - ``NONE``, ``DOUBLE_FULL``, ``TRIPLE_FULL``, ``DOUBLE_DIRECT``, ``DOUBLE_PARTIAL``, ``TRIPLE_PARTIAL``
    * - OTHER (SPI/I2C/I80/QSPI)
-     - ``NONE`` only
+     - ``NONE``, ``TE_SYNC`` (requires a panel TE signal connected to an ESP GPIO)
 
 
 Rotation Limitations
@@ -588,9 +593,8 @@ Rotation Limitations
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
 
-  - Adapter does not apply 90°/270° rotation
-  - For rotation, configure panel orientation (swap XY/mirror) during LCD initialization
-  - Must also adjust touch coordinate mapping
+  - For color displays in ``NONE`` or synchronous ``TE_SYNC``, configure panel orientation during LCD initialization and adjust touch mapping
+  - With asynchronous ``TE_SYNC``, keep the panel in its native orientation and map touch coordinates to the adapter's logical orientation
 
 
 Buffering and Render Modes
@@ -600,19 +604,25 @@ Buffering and Render Modes
 
   - ``DOUBLE_FULL`` / ``TRIPLE_FULL`` → FULL render mode
   - ``DOUBLE_DIRECT`` → DIRECT render mode
-  - Others (incl. ``TRIPLE_PARTIAL``) → PARTIAL render mode
+  - ``TE_SYNC`` → FULL in synchronous mode, DIRECT in asynchronous mode
+  - Others (including ``DOUBLE_PARTIAL`` and ``TRIPLE_PARTIAL``) → PARTIAL render mode
 
 - **LVGL Draw Buffer Count**:
 
-  - ``TRIPLE_PARTIAL``: 1 buffer
-  - ``TRIPLE_FULL`` / ``DOUBLE_*``: 2 buffers
-  - FULL/DIRECT default: 2 buffers
-  - Otherwise: 1 buffer
+  - ``DOUBLE_PARTIAL`` / ``TRIPLE_PARTIAL``: 1 buffer
+  - ``DOUBLE_FULL`` / ``TRIPLE_FULL`` / ``DOUBLE_DIRECT``: 2 buffers
+  - ``TE_SYNC``: 1 LVGL draw buffer, plus 1 adapter staging buffer in asynchronous mode
 
 - **OTHER + NONE**:
 
   - No panel frame buffers requested
   - Adapter sends partial stripes from LVGL draw buffer
+
+
+LVGL Tick During Pause
+^^^^^^^^^^^^^^^^^^^^^^
+
+LVGL v9 reads the adapter clock on demand through ``lv_tick_set_cb()``, and the clock freezes while the adapter is paused. On LVGL v8, the adapter stops the periodic tick timer during pause. Both resume tick progression when the adapter resumes.
 
 
 PPA/DMA2D Acceleration
@@ -771,6 +781,7 @@ Screen Tearing or Flicker
 
 1. Choose appropriate tearing mode based on use case
 2. Use ``esp_lv_adapter_get_required_frame_buffer_count()`` to compute correct frame buffer count
+3. After display registration, call ``esp_lv_adapter_dump_display_config(disp)`` from task context to log the active render mode, rotation, and buffer counts and capacities at INFO level
 
 
 Decoder or FS Not Working

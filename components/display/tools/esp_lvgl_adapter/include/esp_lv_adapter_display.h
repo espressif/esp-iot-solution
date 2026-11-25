@@ -145,7 +145,7 @@ typedef struct {
     esp_lv_adapter_rotation_t rotation;           /*!< Display rotation angle */
     uint16_t hor_res;                       /*!< Horizontal resolution in pixels */
     uint16_t ver_res;                       /*!< Vertical resolution in pixels */
-    uint16_t buffer_height;                 /*!< Draw buffer height in pixels */
+    uint16_t buffer_height;                 /*!< Draw buffer height in logical rows */
     bool use_psram;                         /*!< Use PSRAM for adapter draw/conversion buffers where applicable.
                                                RGB/MIPI DOUBLE_PARTIAL/TRIPLE_PARTIAL draw buffers always use internal SRAM.
                                                Panel frame buffers and TE bounce buffers are not controlled by this flag. */
@@ -192,7 +192,8 @@ typedef struct {
 #define ESP_LV_ADAPTER_DISPLAY_PROFILE_SPI_WITH_PSRAM_BASE_CONFIG(_hor_res, _ver_res, _rotation)     \
     .interface             = ESP_LV_ADAPTER_PANEL_IF_OTHER,                                          \
     ESP_LV_ADAPTER_DISPLAY_PROFILE_BASE_CONFIG(_hor_res, _ver_res, _rotation)                        \
-    .buffer_height         = _ver_res,                                                               \
+    .buffer_height         = ((_rotation) == ESP_LV_ADAPTER_ROTATE_90 ||                              \
+                              (_rotation) == ESP_LV_ADAPTER_ROTATE_270) ? (_hor_res) : (_ver_res),    \
     .use_psram             = true,                                                                   \
     .enable_ppa_accel      = false
 
@@ -369,6 +370,20 @@ lv_display_t *esp_lv_adapter_register_display(const esp_lv_adapter_display_confi
  *      - ESP_ERR_NOT_FOUND: Display not found in registered list
  */
 esp_err_t esp_lv_adapter_unregister_display(lv_display_t *disp);
+
+/**
+ * @brief Log the current display configuration at INFO level
+ *
+ * Reports panel geometry, logical resolution, render mode, bound panel buffers
+ * and current LVGL draw-buffer capacities and memory locations. This is not a
+ * total heap-usage report. Buffer details are omitted while the panel is detached.
+ * Call from task context; this function acquires the adapter's recursive lock.
+ *
+ * @param[in] disp Registered LVGL display (must not be NULL)
+ * @return ESP_OK on success, ESP_ERR_INVALID_STATE if not initialized,
+ *         ESP_ERR_INVALID_ARG for NULL, or ESP_ERR_NOT_FOUND if not registered
+ */
+esp_err_t esp_lv_adapter_dump_display_config(lv_display_t *disp);
 
 /**
  * @brief Set area rounding callback for display

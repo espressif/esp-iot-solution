@@ -15,7 +15,6 @@
 #include <string.h>
 
 #include "esp_log.h"
-#include "present_rgb565_swap.h"
 #include "present_target_internal.h"
 
 #define PRESENT_ASYNC_COPY_STACK_BYTES 4096
@@ -27,7 +26,6 @@ typedef struct {
     esp_display_present_blit_fb_t dst;
     esp_display_presenter_region_t region;
     uint8_t slot;
-    bool swap_rgb565;
 } present_async_copy_job_t;
 
 static void async_copy_task(void *arg)
@@ -37,11 +35,6 @@ static void async_copy_task(void *arg)
     for (;;) {
         if (xQueueReceive(copy->jobs, &job, portMAX_DELAY) != pdTRUE) {
             continue;
-        }
-        if (job.swap_rgb565) {
-            present_rgb565_swap_in_place(
-                job.region.surface.pixels,
-                (size_t)job.region.surface.width * job.region.surface.height);
         }
         esp_err_t ret = present_target_blit_region(job.target, &job.dst,
                                                    &job.region);
@@ -144,8 +137,7 @@ static esp_err_t ensure_task(present_async_copy_t *copy)
 esp_err_t present_async_copy_submit(present_async_copy_t *copy,
                                     esp_display_present_target_t *target,
                                     const esp_display_present_blit_fb_t *dst,
-                                    const esp_display_presenter_region_t *region,
-                                    bool swap_rgb565)
+                                    const esp_display_presenter_region_t *region)
 {
     if (copy == NULL || !copy->enabled) {
         return ESP_ERR_NOT_SUPPORTED;
@@ -159,7 +151,6 @@ esp_err_t present_async_copy_submit(present_async_copy_t *copy,
         .dst = *dst,
         .region = *region,
         .slot = (uint8_t)slot,
-        .swap_rgb565 = swap_rgb565,
     };
     copy->busy[slot] = true;
     if (xQueueSend(copy->jobs, &job, 0) != pdTRUE) {

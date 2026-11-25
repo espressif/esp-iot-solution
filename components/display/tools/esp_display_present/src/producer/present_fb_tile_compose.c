@@ -81,7 +81,7 @@ esp_err_t esp_display_present_fb_write_partition(
         .ppa_handle = surface->fb.ppa_handle,
     };
     if (present_async_copy_submit(&surface->fb.async_copy, surface->target,
-                                  &dst, region, false) == ESP_OK) {
+                                  &dst, region) == ESP_OK) {
         return ESP_OK;
     }
     /* Row-span cache invalidation in a queued blit would drop an inline

@@ -10,6 +10,7 @@
 
 #include "esp_attr.h"
 #include "esp_display_present_rotate.h"
+#include "present_rgb565_rotate.h"
 
 void IRAM_ATTR esp_display_present_rotate_copy(
     const esp_display_present_rotate_copy_request_t *request)
@@ -18,6 +19,7 @@ void IRAM_ATTR esp_display_present_rotate_copy(
             request->destination.pixels == NULL ||
             request->source.color_bytes == 0 ||
             request->source.color_bytes != request->destination.color_bytes ||
+            (request->swap_rgb565 && request->source.color_bytes != 2) ||
             request->source.stride_bytes % request->source.color_bytes != 0 ||
             request->logical_area.x1 < request->source_origin.x ||
             request->logical_area.y1 < request->source_origin.y ||
@@ -52,6 +54,14 @@ void IRAM_ATTR esp_display_present_rotate_copy(
     const int rect_h = y_end - y_start + 1;
     const int phys_w = hor_res;
 
+    if (color_bytes == 2) {
+        present_rgb565_rotate_copy(src, dst_fb, x_start, y_start, x_end, y_end,
+                                   src_stride_px, hor_res, ver_res, rotation,
+                                   block_size_small, block_size_large,
+                                   request->swap_rgb565);
+        return;
+    }
+
     if (rotation == ESP_DISPLAY_PRESENT_ROTATE_0) {
         const uint8_t *src_base = (const uint8_t *)src;
         uint8_t *dst_base = (uint8_t *)dst_fb + (size_t)(y_start * phys_w + x_start) * color_bytes;
@@ -81,26 +91,7 @@ void IRAM_ATTR esp_display_present_rotate_copy(
             int dst_x_start = hor_res - 1 - x_end;
             uint8_t *dst_row = (uint8_t *)dst_fb + (size_t)(dst_y * phys_w + dst_x_start) * color_bytes;
 
-            if (color_bytes == 2) {
-                /* Walk the destination forward (reading the source row
-                 * backward) so pixel pairs merge into 32-bit stores. */
-                uint16_t *dst16 = (uint16_t *)dst_row;
-                const uint16_t *src16 = (const uint16_t *)src_row + rect_w - 1;
-                int n = rect_w;
-                if (((uintptr_t)dst16 & 3U) != 0U && n > 0) {
-                    *dst16++ = *src16--;
-                    n--;
-                }
-                uint32_t *dst32 = (uint32_t *)dst16;
-                for (; n >= 2; n -= 2) {
-                    uint32_t lo = *src16--;
-                    uint32_t hi = *src16--;
-                    *dst32++ = lo | (hi << 16);
-                }
-                if (n != 0) {
-                    *(uint16_t *)dst32 = *src16;
-                }
-            } else if (color_bytes == 4) {
+            if (color_bytes == 4) {
                 uint32_t *dst32 = (uint32_t *)(dst_row + (rect_w - 1) * 4);
                 const uint32_t *src32 = (const uint32_t *)src_row;
                 for (int x = 0; x < rect_w; x++) {
@@ -121,59 +112,6 @@ void IRAM_ATTR esp_display_present_rotate_copy(
                   block_size_small : block_size_large;
     int block_h = (rotation == ESP_DISPLAY_PRESENT_ROTATE_90 || rotation == ESP_DISPLAY_PRESENT_ROTATE_270) ?
                   block_size_large : block_size_small;
-
-    if (color_bytes == 2) {
-        /* 90/270 transpose, RGB565: one source column becomes one
-         * destination row, written sequentially with pixel pairs
-         * merged into 32-bit stores. The source column walk is strided
-         * — cheap for the SRAM bounce block, and kept cache-resident
-         * for PSRAM sources by the tile loops. */
-        const int src_stride = src_stride_px;
-        for (int j = 0; j < rect_w; j += block_w) {
-            int tile_x_end = (j + block_w > rect_w) ? rect_w : j + block_w;
-            for (int i = 0; i < rect_h; i += block_h) {
-                int tile_y_end = (i + block_h > rect_h) ? rect_h : i + block_h;
-                int run = tile_y_end - i;
-                for (int x = j; x < tile_x_end; x++) {
-                    int gx = x_start + x;
-                    const uint16_t *src_px;
-                    uint16_t *dst_px;
-                    int src_step;
-                    if (rotation == ESP_DISPLAY_PRESENT_ROTATE_90) {
-                        /* Destination columns ascend as source rows
-                         * descend: start at the bottom of the tile. */
-                        int dx = phys_w - 1 - (y_start + tile_y_end - 1);
-                        dst_px = (uint16_t *)dst_fb + (size_t)gx * phys_w + dx;
-                        src_px = (const uint16_t *)src + (size_t)(tile_y_end - 1) * src_stride + x;
-                        src_step = -src_stride;
-                    } else {
-                        int dx = y_start + i;
-                        dst_px = (uint16_t *)dst_fb + (size_t)(ver_res - 1 - gx) * phys_w + dx;
-                        src_px = (const uint16_t *)src + (size_t)i * src_stride + x;
-                        src_step = src_stride;
-                    }
-                    int n = run;
-                    if (((uintptr_t)dst_px & 3U) != 0U && n > 0) {
-                        *dst_px++ = *src_px;
-                        src_px += src_step;
-                        n--;
-                    }
-                    uint32_t *dst32 = (uint32_t *)dst_px;
-                    for (; n >= 2; n -= 2) {
-                        uint32_t lo = *src_px;
-                        src_px += src_step;
-                        uint32_t hi = *src_px;
-                        src_px += src_step;
-                        *dst32++ = lo | (hi << 16);
-                    }
-                    if (n != 0) {
-                        *(uint16_t *)dst32 = *src_px;
-                    }
-                }
-            }
-        }
-        return;
-    }
 
     for (int i = 0; i < rect_h; i += block_h) {
         int max_height = (i + block_h > rect_h) ? rect_h : i + block_h;
@@ -198,9 +136,7 @@ void IRAM_ATTR esp_display_present_rotate_copy(
                     const uint8_t *src_pixel = (const uint8_t *)src + (size_t)(y * src_stride_px + x) * color_bytes;
                     uint8_t *dst_pixel = (uint8_t *)dst_fb + (size_t)(dy * phys_w + dx) * color_bytes;
 
-                    if (color_bytes == 2) {
-                        *(uint16_t *)dst_pixel = *(const uint16_t *)src_pixel;
-                    } else if (color_bytes == 3) {
+                    if (color_bytes == 3) {
                         dst_pixel[0] = src_pixel[0];
                         dst_pixel[1] = src_pixel[1];
                         dst_pixel[2] = src_pixel[2];

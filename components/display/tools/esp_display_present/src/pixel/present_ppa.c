@@ -266,6 +266,7 @@ esp_err_t esp_display_present_ppa_rotate_copy_block(
             request->source.pixels == NULL ||
             request->destination.pixels == NULL ||
             request->source.color_bytes != request->destination.color_bytes ||
+            (request->swap_rgb565 && request->source.color_bytes != 2) ||
             request->source_area.x1 < 0 || request->source_area.y1 < 0 ||
             request->source_area.x2 < request->source_area.x1 ||
             request->source_area.y2 < request->source_area.y1 ||
@@ -320,7 +321,7 @@ esp_err_t esp_display_present_ppa_rotate_copy_block(
            .scale_x = ESP_DISPLAY_PRESENT_PPA_SCALE_NO_CHANGE,
            .scale_y = ESP_DISPLAY_PRESENT_PPA_SCALE_NO_CHANGE,
            .rgb_swap = ESP_DISPLAY_PRESENT_PPA_SWAP_DISABLED,
-           .byte_swap = ESP_DISPLAY_PRESENT_PPA_SWAP_DISABLED,
+           .byte_swap = request->swap_rgb565,
            .mode = PPA_TRANS_MODE_BLOCKING,
     };
 

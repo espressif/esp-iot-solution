@@ -19,6 +19,7 @@ extern "C" {
  *
  * @p source_origin identifies the logical coordinate stored at source[0, 0].
  * This lets a tight tile and a full logical frame use the same operation.
+ * The destination is a packed physical framebuffer; the buffers do not overlap.
  */
 typedef struct {
     esp_display_present_blit_plane_t source;
@@ -26,6 +27,9 @@ typedef struct {
     esp_display_present_blit_plane_t destination;
     esp_display_present_area_t logical_area;
     esp_display_present_rotation_t rotation;
+    /** RGB565 only: swap each pixel while copying; source stays unchanged.
+     *  Defaults to false in zero-initialized requests. */
+    bool swap_rgb565;
 } esp_display_present_rotate_copy_request_t;
 
 /** Software fallback for one rotate-copy request. Not a public API. */

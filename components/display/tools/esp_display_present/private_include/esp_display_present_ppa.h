@@ -50,6 +50,8 @@ typedef struct {
     esp_display_present_blit_plane_t destination;
     esp_display_present_point_t destination_origin;
     esp_display_present_rotation_t rotation;
+    /** RGB565 only: fuse the byte swap into SRM; false preserves byte order. */
+    bool swap_rgb565;
 } esp_display_present_ppa_rotate_block_request_t;
 
 esp_err_t esp_display_present_ppa_rotate_copy_block(

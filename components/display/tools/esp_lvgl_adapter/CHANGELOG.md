@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v0.8.0 (2026-11-23)
+
+* Use pull-based `lv_tick_set_cb()` on LVGL v9 to eliminate periodic `esp_timer` interrupts while preserving pause/resume tick freeze semantics (LVGL v8 retains the periodic timer).
+* Reduce framebuffer repair fallbacks, unify paired RGB565 180° software rotation, and skip redundant DMA2D color-convert cache writeback.
+* Add `esp_lv_adapter_dump_display_config()`, fix `DOUBLE_PARTIAL`/`TRIPLE_PARTIAL` zero-height fallback, and clarify display setup errors and Kconfig documentation.
+* Fix rotated PARTIAL and dummy-draw buffers, bound framebuffer repair, and synchronize legacy DMA2D buffers.
+
 ## v0.7.9 (2026-11-13)
 
 * Speed up RGB565 90°/270° software rotation and fuse async TE copy/rotation with byte swapping.

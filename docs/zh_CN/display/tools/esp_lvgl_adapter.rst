@@ -214,8 +214,8 @@ PSRAM 优化(如果可用)
 
 .. note::
 
-   - 仅 MIPI DSI 和 RGB 支持防撕裂模式
-   - SPI/I2C/I80/QSPI 等接口在适配器中统称为 "OTHER" 接口,仅支持 ``NONE`` 模式
+   - MIPI DSI 和 RGB 支持基于帧缓冲的防撕裂模式
+   - SPI/I2C/I80/QSPI 在适配器中归为 OTHER 接口，支持 ``NONE`` 和基于 GPIO 的 ``TE_SYNC``
 
 
 计算帧缓冲数量
@@ -234,9 +234,9 @@ PSRAM 优化(如果可用)
 
 **帧缓冲数量规则**:
 
-- 90°/270° 旋转 或 三缓冲模式: 需要 **3** 个帧缓冲
-- 双缓冲模式: 需要 **2** 个帧缓冲
-- 单缓冲模式: 需要 **1** 个帧缓冲
+- 三缓冲模式，或启用旋转的 ``DOUBLE_FULL`` / ``DOUBLE_DIRECT``：需要 **3** 个帧缓冲
+- 任意受支持角度下的 ``DOUBLE_PARTIAL``，或旋转角度为 0° 的其他双缓冲模式：需要 **2** 个帧缓冲
+- 旋转角度为 0° 的 ``NONE``：需要 **1** 个帧缓冲
 
 
 防撕裂模式选择(RGB/MIPI DSI)
@@ -262,10 +262,14 @@ PSRAM 优化(如果可用)
      - 高
    * - ``DOUBLE_FULL``
      - 大区域刷新, 内存较紧
-     - 2
-     - 中
+     - 2，旋转时为 3
+     - 中 / 高
    * - ``DOUBLE_DIRECT``
      - 小区域更新, 控件/局部变化
+     - 2，旋转时为 3
+     - 中 / 高
+   * - ``DOUBLE_PARTIAL``
+     - 使用两个面板帧缓冲进行局部更新
      - 2
      - 中
    * - ``NONE``
@@ -276,8 +280,7 @@ PSRAM 优化(如果可用)
 
 .. warning::
 
-   - RGB/MIPI DSI 在 ``TEAR_AVOID_MODE_NONE`` 下 **不支持旋转** (任何非 0 旋转会被拒绝)
-   - OTHER (SPI/I2C/I80/QSPI) 接口仅支持 ``NONE`` 模式; 如需旋转,请在 LCD 初始化阶段配置面板方向(交换 XY/镜像),并相应调整触摸坐标映射
+   RGB/MIPI DSI 在 ``TEAR_AVOID_MODE_NONE`` 下要求旋转角度为 0°。
 
 
 内存估算
@@ -314,11 +317,13 @@ PSRAM 优化(如果可用)
      - 50
      - 中等条带高度
    * - OTHER + PSRAM
-     - ``ver_res`` (整屏高度)
+     - 逻辑整屏高度
      - 整屏高度分区,吞吐更高
    * - OTHER 无 PSRAM
      - 10
      - 小条带以节省 RAM
+
+PARTIAL 模式下，``buffer_height`` 表示旋转后的逻辑行数。LVGL v9 的行步长包含对齐填充。
 
 
 调优建议
@@ -375,19 +380,19 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 旋钮/编码器
 """""""""""
 
-需要启用 Kconfig 选项 ``ESP_LV_ADAPTER_ENABLE_KNOB``。详见 ``esp_lv_adapter_input.h``。
+需要启用 Kconfig 选项 ``ESP_LVGL_ADAPTER_ENABLE_KNOB``。详见 ``esp_lv_adapter_input.h``。
 
 
 按键导航
 """"""""
 
-需要启用 Kconfig 选项 ``ESP_LV_ADAPTER_ENABLE_BUTTON``。详见 ``esp_lv_adapter_input.h``。
+需要启用 Kconfig 选项 ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``。详见 ``esp_lv_adapter_input.h``。
 
 
 文件系统桥接(可选)
 ^^^^^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_FS`` 后,可将 ``esp_mmap_assets`` 生成的资源分区挂载为 LVGL 文件系统:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_FS`` 后,可将 ``esp_mmap_assets`` 生成的资源分区挂载为 LVGL 文件系统:
 
 .. code:: c
 
@@ -424,7 +429,7 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 图片解码(可选)
 ^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_DECODER`` 后,适配器会集成 ``esp_lv_decoder``,支持直接使用 LVGL 图片控件加载各种格式的图片:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_DECODER`` 后,适配器会集成 ``esp_lv_decoder``,支持直接使用 LVGL 图片控件加载各种格式的图片:
 
 .. code:: c
 
@@ -445,7 +450,7 @@ LVGL API **不是线程安全的**,多线程访问时必须使用适配器锁:
 FreeType 字体(可选)
 ^^^^^^^^^^^^^^^^^^^^
 
-启用 ``ESP_LV_ADAPTER_ENABLE_FREETYPE`` 并在 LVGL 中开启 FreeType 后,可以从文件或内存加载矢量字体:
+启用 ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE`` 并在 LVGL 中开启 FreeType 后,可以从文件或内存加载矢量字体:
 
 .. code:: c
 
@@ -494,7 +499,7 @@ FPS 与 Dummy Draw
 FPS 统计
 """"""""
 
-需要启用 ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``。
+需要启用 ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``。
 
 .. code:: c
 
@@ -541,17 +546,17 @@ Dummy Draw 模式绕过 LVGL 渲染,直接控制显示:
 
    * - 配置项
      - 说明
-   * - ``ESP_LV_ADAPTER_ENABLE_FS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FS``
      - 启用文件系统桥接 (``esp_lv_fs``)
-   * - ``ESP_LV_ADAPTER_ENABLE_DECODER``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_DECODER``
      - 启用图片解码 (``esp_lv_decoder``)
-   * - ``ESP_LV_ADAPTER_ENABLE_FREETYPE``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FREETYPE``
      - 启用 FreeType 矢量字体支持
-   * - ``ESP_LV_ADAPTER_ENABLE_FPS_STATS``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_FPS_STATS``
      - 启用 FPS 统计功能
-   * - ``ESP_LV_ADAPTER_ENABLE_BUTTON``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_BUTTON``
      - 启用按键导航输入
-   * - ``ESP_LV_ADAPTER_ENABLE_KNOB``
+   * - ``ESP_LVGL_ADAPTER_ENABLE_KNOB``
      - 启用旋钮/编码器输入
 
 
@@ -568,9 +573,9 @@ Dummy Draw 模式绕过 LVGL 渲染,直接控制显示:
    * - 接口类型
      - 支持的防撕裂模式
    * - RGB / MIPI DSI
-     - ``NONE``, ``DOUBLE_FULL``, ``TRIPLE_FULL``, ``DOUBLE_DIRECT``, ``TRIPLE_PARTIAL``
+     - ``NONE``, ``DOUBLE_FULL``, ``TRIPLE_FULL``, ``DOUBLE_DIRECT``, ``DOUBLE_PARTIAL``, ``TRIPLE_PARTIAL``
    * - OTHER (SPI/I2C/I80/QSPI)
-     - 仅 ``NONE``
+     - ``NONE`` 和 ``TE_SYNC`` （TE 同步需将面板的 TE 信号接到 ESP GPIO）
 
 
 旋转限制
@@ -582,9 +587,8 @@ Dummy Draw 模式绕过 LVGL 渲染,直接控制显示:
 
 - **OTHER (SPI/I2C/I80/QSPI)**:
 
-  - 适配器不对 90°/270° 进行旋转处理
-  - 如需旋转,请在 LCD 初始化阶段配置面板方向(交换 XY/镜像)
-  - 同时需要相应调整触摸坐标映射
+  - 彩色屏使用 ``NONE`` 或同步 ``TE_SYNC`` 时，在 LCD 初始化阶段配置面板方向，并相应调整触摸坐标映射
+  - 使用异步 ``TE_SYNC`` 时，保持面板原生方向，将触摸坐标映射到适配器的逻辑方向
 
 
 缓冲与渲染模式
@@ -594,19 +598,25 @@ Dummy Draw 模式绕过 LVGL 渲染,直接控制显示:
 
   - ``DOUBLE_FULL`` / ``TRIPLE_FULL`` → FULL 渲染模式
   - ``DOUBLE_DIRECT`` → DIRECT 渲染模式
-  - 其余(含 ``TRIPLE_PARTIAL``) → PARTIAL 渲染模式
+  - ``TE_SYNC`` → 同步模式使用 FULL，异步模式使用 DIRECT
+  - 其余模式（含 ``DOUBLE_PARTIAL`` 和 ``TRIPLE_PARTIAL``）→ PARTIAL 渲染模式
 
 - **LVGL 绘制缓冲数量**:
 
-  - ``TRIPLE_PARTIAL``: 1 块
-  - ``TRIPLE_FULL`` / ``DOUBLE_*``: 2 块
-  - FULL/DIRECT 模式默认: 2 块
-  - 其他: 1 块
+  - ``DOUBLE_PARTIAL`` / ``TRIPLE_PARTIAL``：1 块
+  - ``DOUBLE_FULL`` / ``TRIPLE_FULL`` / ``DOUBLE_DIRECT``：2 块
+  - ``TE_SYNC``：1 块 LVGL 绘制缓冲，异步模式额外使用 1 块适配器暂存缓冲
 
 - **OTHER + NONE**:
 
   - 不申请面板帧缓冲
   - 仅使用 LVGL 绘制缓冲的条带方式发送数据
+
+
+暂停时的 LVGL Tick
+^^^^^^^^^^^^^^^^^^^
+
+LVGL v9 通过 ``lv_tick_set_cb()`` 按需读取适配器时钟，时钟在适配器暂停期间冻结。LVGL v8 则在暂停期间停止周期 Tick 定时器。适配器恢复后，两个版本的 Tick 均继续计时。
 
 
 PPA/DMA2D 加速
@@ -765,6 +775,7 @@ FreeType 崩溃或显示异常
 
 1. 根据应用场景选择合适的防撕裂模式
 2. 使用 ``esp_lv_adapter_get_required_frame_buffer_count()`` 计算正确的帧缓冲数
+3. 注册显示后，在任务上下文调用 ``esp_lv_adapter_dump_display_config(disp)``，以 INFO 日志查看实际渲染模式、旋转角度、缓冲区数量与容量
 
 
 图片解码或文件系统不可用

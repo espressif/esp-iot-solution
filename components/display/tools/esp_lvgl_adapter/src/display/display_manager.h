@@ -42,6 +42,9 @@ lv_display_t *display_manager_register(const esp_lv_adapter_display_config_t *cf
  */
 esp_err_t display_manager_unregister(lv_display_t *disp);
 
+/* Caller holds the adapter lock. */
+esp_err_t display_manager_dump_config(lv_display_t *disp);
+
 /**
  * @brief Set area rounding callback for display
  *

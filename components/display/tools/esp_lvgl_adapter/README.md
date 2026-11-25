@@ -286,6 +286,23 @@ Full-frame buffer size ≈ `horizontal_res × vertical_res × bytes_per_pixel`
 - Triple buffering: ≈ 2.2 MB
 - **Conclusion**: PSRAM is typically required
 
+### On-demand Configuration Diagnostics
+
+After registering a display, call from task context:
+
+```c
+ESP_ERROR_CHECK(esp_lv_adapter_dump_display_config(disp));
+```
+
+The function acquires the adapter lock and logs at INFO level: configured panel geometry,
+LVGL logical resolution, rotation, color depth, actual render mode, bound panel framebuffers,
+and current LVGL draw-buffer capacities and memory locations. Panel `payload_bytes_each`
+describes pixel data; draw-buffer `capacity_bytes` is the capacity registered with LVGL
+(including the palette for v9 monochrome). Neither is heap allocation size or total display
+memory usage. The v9 stride describes the current layout and may change after a partial refresh.
+Async TE staging is identified separately; buffer details are omitted while
+the panel is detached for sleep. The call creates no task and does not change configuration.
+
 ### Buffer Tuning (Defaults and Tips)
 
 #### Default `buffer_height` Values
@@ -296,7 +313,7 @@ Default `buffer_height` for each interface (see `esp_lv_adapter_display.h`):
 |---------------|------------------------|-------------|
 | MIPI DSI | 50 | Medium stripe height |
 | RGB | 50 | Medium stripe height |
-| OTHER with PSRAM | `ver_res` (full height) | Full-height partial refresh, better throughput |
+| OTHER with PSRAM | Full logical height | Full-height partial refresh, better throughput |
 | OTHER without PSRAM | 10 | Small stripe to save RAM |
 
 #### Draw-buffer Memory Placement
@@ -306,8 +323,9 @@ in **internal SRAM**, regardless of `profile.use_psram`. Rendered stripes are co
 or rotated into panel frame buffers, whose placement is set during `esp_lcd`
 initialization.
 
-Pixel storage is `hor_res × buffer_height × bytes_per_pixel`: 480 × 50 × 2 = 48,000
-bytes for RGB565. Reduce `buffer_height` if SRAM allocation fails.
+The buffer holds `buffer_height` logical rows. Its width follows the rotation,
+and LVGL v9 includes any row padding in the stride. For 480 logical pixels in RGB565
+without padding, 50 rows use 48,000 bytes. Reduce `buffer_height` if SRAM allocation fails.
 
 #### Tuning Tips
 
@@ -411,15 +429,15 @@ touch_cfg.multi_touch.pointers = 2;
 
 #### Encoder/Knob
 
-Requires Kconfig option `ESP_LV_ADAPTER_ENABLE_KNOB`. See `esp_lv_adapter_input.h` for `esp_lv_adapter_encoder_config_t`.
+Requires Kconfig option `ESP_LVGL_ADAPTER_ENABLE_KNOB`. See `esp_lv_adapter_input.h` for `esp_lv_adapter_encoder_config_t`.
 
 #### Navigation Buttons
 
-Requires Kconfig option `ESP_LV_ADAPTER_ENABLE_BUTTON`. Use `esp_lv_adapter_register_navigation_buttons()`.
+Requires Kconfig option `ESP_LVGL_ADAPTER_ENABLE_BUTTON`. Use `esp_lv_adapter_register_navigation_buttons()`.
 
 ### Filesystem Bridge (Optional)
 
-If `ESP_LV_ADAPTER_ENABLE_FS` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from `esp_mmap_assets`.
+If `ESP_LVGL_ADAPTER_ENABLE_FS` is enabled, mount a memory-mapped asset partition as an LVGL drive. Indexing comes from `esp_mmap_assets`.
 
 ```c
 #include "esp_lv_fs.h"
@@ -451,7 +469,7 @@ lv_img_set_src(img, "A:my_image.png");
 
 ### Image Decoding (Optional)
 
-Enable `ESP_LV_ADAPTER_ENABLE_DECODER` to integrate `esp_lv_decoder` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
+Enable `ESP_LVGL_ADAPTER_ENABLE_DECODER` to integrate `esp_lv_decoder` with LVGL. Use LVGL image widgets as usual; load from the mounted drive:
 
 ```c
 // Use LVGL image widget to load images
@@ -468,7 +486,7 @@ lv_img_set_src(img, "I:red_png.png");  // I: is the decoder drive letter
 
 ### FreeType Fonts (Optional)
 
-Enable `ESP_LV_ADAPTER_ENABLE_FREETYPE` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
+Enable `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` and ensure LVGL FreeType is enabled. Then initialize fonts from file or memory:
 
 ```c
 #include "esp_lv_adapter.h" // FreeType APIs under this header
@@ -508,7 +526,7 @@ Enable `ESP_LVGL_ADAPTER_LVGL_THREAD_STACK_IN_PSRAM` only after validating PSRAM
 
 #### FPS Statistics
 
-Requires `ESP_LV_ADAPTER_ENABLE_FPS_STATS`.
+Requires `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS`.
 
 ```c
 // Enable FPS statistics
@@ -682,7 +700,7 @@ If tickless auto Light Sleep is enabled, `esp_lv_adapter_pause()` / `resume()` c
 
 **Notes:**
 - Use `pause()` / `resume()` for pause-only auto sleep flows; use `sleep_prepare()` / `sleep_recover()` when LCD hardware must be deleted and recreated
-- While paused, the internal `LVGL tick` timer is stopped; in `esp_timer_dump(stdout)` it may remain visible but should be disarmed (`Period = 0`, `Alarm = 0`)
+- On LVGL v9, ticks are read on demand via `lv_tick_set_cb()` (no periodic `LVGL tick` timer in `esp_timer_dump(stdout)`) and freeze automatically while paused; on LVGL v8, the internal `LVGL tick` timer is stopped (`Period = 0`, `Alarm = 0`)
 - Do not mix manual `pause()` with `sleep_prepare()`
 
 ---
@@ -693,13 +711,13 @@ Configure via `idf.py menuconfig`:
 
 | Option | Description |
 |--------|-------------|
-| `ESP_LV_ADAPTER_ENABLE_FS` | Enable filesystem bridge (`esp_lv_fs`) |
-| `ESP_LV_ADAPTER_ENABLE_DECODER` | Enable image decoder (`esp_lv_decoder`) |
-| `ESP_LV_ADAPTER_ENABLE_FREETYPE` | Enable FreeType vector font support |
-| `ESP_LV_ADAPTER_ENABLE_FPS_STATS` | Enable FPS monitoring APIs |
-| `ESP_LV_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
-| `ESP_LV_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
-| `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
+| `ESP_LVGL_ADAPTER_ENABLE_FS` | Enable filesystem bridge (`esp_lv_fs`) |
+| `ESP_LVGL_ADAPTER_ENABLE_DECODER` | Enable image decoder (`esp_lv_decoder`) |
+| `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` | Enable FreeType vector font support |
+| `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS` | Enable FPS monitoring APIs |
+| `ESP_LVGL_ADAPTER_ENABLE_BUTTON` | Enable navigation button input support |
+| `ESP_LVGL_ADAPTER_ENABLE_KNOB` | Enable rotary encoder input support |
+| `ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE` | Resolve repeated decoding issues in partial modes by setting image cache to max |
 
 **Default Task Stack Size**:
 - LVGL adapter task stack: 8KB
@@ -712,7 +730,7 @@ Configure via `idf.py menuconfig`:
 
 | Interface Type | Supported Tearing Modes |
 |---------------|------------------------|
-| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
+| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL` |
 | OTHER (SPI/I2C/I80/QSPI) | `NONE`, `TE_SYNC` |
 
 ### Rotation Limitations
@@ -736,11 +754,11 @@ Configure via `idf.py menuconfig`:
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL render mode
   - `DOUBLE_DIRECT` → DIRECT render mode
   - `TE_SYNC`: synchronous mode → FULL; asynchronous high-performance mode → DIRECT
-  - Others (incl. `TRIPLE_PARTIAL`) → PARTIAL render mode
+  - Others (incl. `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL`) → PARTIAL render mode
   
 - **LVGL Draw Buffer Count**:
-  - `TRIPLE_PARTIAL`: 1 buffer
-  - `TRIPLE_FULL` / `DOUBLE_*`: 2 buffers
+  - `DOUBLE_PARTIAL` / `TRIPLE_PARTIAL`: 1 buffer
+  - `DOUBLE_FULL` / `DOUBLE_DIRECT` / `TRIPLE_FULL`: 2 buffers
   - `TE_SYNC`: 1 LVGL draw buffer; asynchronous high-performance mode adds 1 adapter staging buffer
   - FULL/DIRECT default: 2 buffers
   - Otherwise: 1 buffer

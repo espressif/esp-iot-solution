@@ -281,6 +281,21 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 - 三缓冲：≈ 2.2 MB
 - **结论**：通常需要 PSRAM 支持
 
+### 按需配置诊断
+
+显示注册成功后，可从任务上下文调用：
+
+```c
+ESP_ERROR_CHECK(esp_lv_adapter_dump_display_config(disp));
+```
+
+该函数自动获取适配器锁，按 INFO 日志级别输出 panel 配置尺寸、LVGL 逻辑尺寸、旋转、
+颜色位深、实际渲染模式、已绑定的 panel framebuffer，以及当前 LVGL draw buffer 的容量和
+内存位置。panel 的 `payload_bytes_each` 是像素数据大小，draw buffer 的 `capacity_bytes`
+是 LVGL 登记容量（v9 单色模式包含调色板），均不代表 heap 实占或显示链路总内存。
+v9 的 stride 是当前布局，可随局部刷新变化。异步 TE 的 staging 单独标记；panel 在睡眠解绑期间省略 buffer 明细。
+诊断仅在调用时输出，不创建任务，也不改变配置。
+
 ### 缓冲调优（默认与建议）
 
 #### 默认 `buffer_height` 值
@@ -291,7 +306,7 @@ uint8_t num_fbs = esp_lv_adapter_get_required_frame_buffer_count(
 |---------|---------------------|------|
 | MIPI DSI | 50 | 中等条带高度 |
 | RGB | 50 | 中等条带高度 |
-| OTHER + PSRAM | `ver_res` (整屏高度) | 整屏高度分区，吞吐更高 |
+| OTHER + PSRAM | 逻辑整屏高度 | 整屏高度分区，吞吐更高 |
 | OTHER 无 PSRAM | 10 | 小条带以节省 RAM |
 
 #### 绘图缓冲区的内存位置
@@ -300,8 +315,9 @@ RGB/MIPI DSI 的 `DOUBLE_PARTIAL` 和 `TRIPLE_PARTIAL` 始终使用**一个片�
 不受 `profile.use_psram` 影响。条带渲染后复制或旋转到面板帧缓冲区，
 后者的内存位置由 `esp_lcd` 初始化配置决定。
 
-像素数据占用 `hor_res × buffer_height × 每像素字节数` 字节：RGB565 的
-480 × 50 × 2 = 48,000 字节。若 SRAM 分配失败，可减小 `buffer_height`。
+绘图缓冲区包含 `buffer_height` 个逻辑行，宽度随旋转方向变化。LVGL v9 的行步长
+包含对齐填充。以逻辑宽度 480 像素的 RGB565 为例，无填充时 50 行占 48,000 字节。
+若 SRAM 分配失败，可减小 `buffer_height`。
 
 #### 调优建议
 
@@ -401,15 +417,15 @@ touch_cfg.multi_touch.pointers = 2;
 
 #### 旋钮/编码器
 
-需要启用 Kconfig 选项 `ESP_LV_ADAPTER_ENABLE_KNOB`。详见 `esp_lv_adapter_input.h`。
+需要启用 Kconfig 选项 `ESP_LVGL_ADAPTER_ENABLE_KNOB`。详见 `esp_lv_adapter_input.h`。
 
 #### 按键导航
 
-需要启用 Kconfig 选项 `ESP_LV_ADAPTER_ENABLE_BUTTON`。详见 `esp_lv_adapter_input.h`。
+需要启用 Kconfig 选项 `ESP_LVGL_ADAPTER_ENABLE_BUTTON`。详见 `esp_lv_adapter_input.h`。
 
 ### 文件系统桥接（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_FS` 后，可将 `esp_mmap_assets` 生成的资源分区挂载为 LVGL 文件系统：
+启用 `ESP_LVGL_ADAPTER_ENABLE_FS` 后，可将 `esp_mmap_assets` 生成的资源分区挂载为 LVGL 文件系统：
 
 ```c
 #include "esp_lv_fs.h"
@@ -441,7 +457,7 @@ lv_img_set_src(img, "A:my_image.png");
 
 ### 图片解码（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_DECODER` 后，适配器会集成 `esp_lv_decoder`，支持直接使用 LVGL 图片控件加载各种格式的图片：
+启用 `ESP_LVGL_ADAPTER_ENABLE_DECODER` 后，适配器会集成 `esp_lv_decoder`，支持直接使用 LVGL 图片控件加载各种格式的图片：
 
 ```c
 // 使用 LVGL 图片控件加载图片
@@ -458,7 +474,7 @@ lv_img_set_src(img, "I:red_png.png");  // I: 为图片解码器的盘符
 
 ### FreeType 字体（可选）
 
-启用 `ESP_LV_ADAPTER_ENABLE_FREETYPE` 并在 LVGL 中开启 FreeType 后，可以从文件或内存加载矢量字体：
+启用 `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` 并在 LVGL 中开启 FreeType 后，可以从文件或内存加载矢量字体：
 
 ```c
 #include "esp_lv_adapter.h"
@@ -496,7 +512,7 @@ lv_obj_set_style_text_font(label, font30, 0);
 
 #### FPS 统计
 
-需要启用 `ESP_LV_ADAPTER_ENABLE_FPS_STATS`。
+需要启用 `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS`。
 
 ```c
 // 启用 FPS 统计
@@ -670,7 +686,7 @@ static void panel_wake_cb(void *user_data)
 
 **注意事项：**
 - 仅需要暂停 LVGL 并依赖 tickless 自动睡眠时，使用 `esp_lv_adapter_pause()` / `resume()`；如果还要删除并重建 LCD 硬件，请使用 `sleep_prepare()` / `sleep_recover()`
-- 暂停后内部 `LVGL tick` timer 会停止；在 `esp_timer_dump(stdout)` 中它可能仍可见，但应为停止状态（`Period = 0`、`Alarm = 0`）
+- LVGL v9 改用按需拉取式 `lv_tick_set_cb()`（`esp_timer_dump(stdout)` 中不再存在周期性 `LVGL tick` timer），并在暂停期间自动冻结 tick；LVGL v8 下内部 `LVGL tick` timer 仍会停止（`Period = 0`、`Alarm = 0`）
 - 不要将手动 `pause()` 与 `sleep_prepare()` 混用
 
 ---
@@ -681,13 +697,13 @@ static void panel_wake_cb(void *user_data)
 
 | 配置项 | 说明 |
 |-------|------|
-| `ESP_LV_ADAPTER_ENABLE_FS` | 启用文件系统桥接 (`esp_lv_fs`) |
-| `ESP_LV_ADAPTER_ENABLE_DECODER` | 启用图片解码 (`esp_lv_decoder`) |
-| `ESP_LV_ADAPTER_ENABLE_FREETYPE` | 启用 FreeType 矢量字体支持 |
-| `ESP_LV_ADAPTER_ENABLE_FPS_STATS` | 启用 FPS 统计功能 |
-| `ESP_LV_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
-| `ESP_LV_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
-| `ESP_LV_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
+| `ESP_LVGL_ADAPTER_ENABLE_FS` | 启用文件系统桥接 (`esp_lv_fs`) |
+| `ESP_LVGL_ADAPTER_ENABLE_DECODER` | 启用图片解码 (`esp_lv_decoder`) |
+| `ESP_LVGL_ADAPTER_ENABLE_FREETYPE` | 启用 FreeType 矢量字体支持 |
+| `ESP_LVGL_ADAPTER_ENABLE_FPS_STATS` | 启用 FPS 统计功能 |
+| `ESP_LVGL_ADAPTER_ENABLE_BUTTON` | 启用按键导航输入 |
+| `ESP_LVGL_ADAPTER_ENABLE_KNOB` | 启用旋钮/编码器输入 |
+| `ESP_LVGL_ADAPTER_PARTIAL_AUX_IMG_CACHE` | 解决局部刷新下的重复解码问题，将图片缓存设置为最大 |
 
 **默认任务栈大小**：
 - LVGL 适配器任务栈：8KB
@@ -700,7 +716,7 @@ static void panel_wake_cb(void *user_data)
 
 | 接口类型 | 支持的防撕裂模式 |
 |---------|----------------|
-| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `TRIPLE_PARTIAL` |
+| RGB / MIPI DSI | `NONE`, `DOUBLE_FULL`, `TRIPLE_FULL`, `DOUBLE_DIRECT`, `DOUBLE_PARTIAL`, `TRIPLE_PARTIAL` |
 | OTHER (SPI/I2C/I80/QSPI) | `NONE`、`TE_SYNC` |
 
 ### 旋转限制
@@ -724,11 +740,11 @@ static void panel_wake_cb(void *user_data)
   - `DOUBLE_FULL` / `TRIPLE_FULL` → FULL 渲染模式
   - `DOUBLE_DIRECT` → DIRECT 渲染模式
   - `TE_SYNC`：同步模式 → FULL；异步高性能模式 → DIRECT
-  - 其余（含 `TRIPLE_PARTIAL`）→ PARTIAL 渲染模式
+  - 其余（含 `DOUBLE_PARTIAL`、`TRIPLE_PARTIAL`）→ PARTIAL 渲染模式
   
 - **LVGL 绘制缓冲数量**：
-  - `TRIPLE_PARTIAL`：1 块
-  - `TRIPLE_FULL` / `DOUBLE_*`：2 块
+  - `DOUBLE_PARTIAL` / `TRIPLE_PARTIAL`：1 块
+  - `DOUBLE_FULL` / `DOUBLE_DIRECT` / `TRIPLE_FULL`：2 块
   - `TE_SYNC`：1 块 LVGL 绘制缓冲；异步高性能模式额外使用 1 块 adapter staging 缓冲
   - FULL/DIRECT 模式默认：2 块
   - 其他：1 块

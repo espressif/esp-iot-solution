@@ -67,11 +67,20 @@ static inline void present_rgb565_swap_in_place(uint16_t *pixels, size_t count)
 
 /**
  * Copy @p count RGB565 pixels from @p src to @p dst with the bytes of each
- * pixel swapped. Both pointers must be 2-byte aligned and must not overlap.
+ * pixel swapped. The buffers must not overlap.
  */
 static inline void present_rgb565_swap_copy(uint16_t *dst, const uint16_t *src,
                                             size_t count)
 {
+    if (((uintptr_t)dst | (uintptr_t)src) & 1U) {
+        uint8_t *out = (uint8_t *)dst;
+        const uint8_t *in = (const uint8_t *)src;
+        for (size_t index = 0; index < count; ++index) {
+            out[index * 2] = in[index * 2 + 1];
+            out[index * 2 + 1] = in[index * 2];
+        }
+        return;
+    }
     if ((((uintptr_t)dst ^ (uintptr_t)src) & 2U) != 0) {
         for (size_t index = 0; index < count; ++index) {
             dst[index] = present_rgb565_swap_one(src[index]);

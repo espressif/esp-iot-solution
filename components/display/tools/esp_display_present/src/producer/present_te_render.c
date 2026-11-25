@@ -11,7 +11,6 @@
 
 #include "present_te_internal.h"
 #include "present_mode_internal.h"
-#include "present_rgb565_swap.h"
 #include "present_target_internal.h"
 
 #include <stdlib.h>
@@ -393,16 +392,11 @@ esp_err_t esp_display_present_te_compose_submit_drawbuf(
         .color_bytes = te_compose->draw.color_bytes,
         .rotation = te_compose->rotation,
         .ppa_handle = te_compose->ppa_handle,
+        .swap_rgb565 = te_compose->draw.panel_byte_order,
     };
-    /*
-     * Panel wire order is big-endian RGB565. Swap the tile in place before
-     * the rotate/copy hop: byte order is pixel-local, so it commutes with the
-     * placement and no FB sweep is needed after the blit. create() rejects
-     * swap unless color_bytes == 2, and the stride check above guarantees
-     * the tile rows are contiguous.
-     */
+    /* Both inline and queued blits apply panel byte order to the submitted tile. */
     if (present_async_copy_submit(&te_compose->async_copy, ctx->target, &dst,
-                                  region, te_compose->draw.panel_byte_order) ==
+                                  region) ==
             ESP_OK) {
         return ESP_OK;
     }
@@ -410,11 +404,6 @@ esp_err_t esp_display_present_te_compose_submit_drawbuf(
      * an inline CPU copy into the same rows, so never run both at once. */
     ret = present_async_copy_drain(&te_compose->async_copy);
     if (ret == ESP_OK) {
-        if (te_compose->draw.panel_byte_order) {
-            present_rgb565_swap_in_place(
-                region->surface.pixels,
-                (size_t)region->surface.width * region->surface.height);
-        }
         ret = present_target_blit_region(ctx->target, &dst, region);
     }
     if (ret != ESP_OK) {
