@@ -100,6 +100,8 @@ idf.py bmgr -b <新板卡名称>
 
 ### PC 端
 
+> **警告：** Windows 预编译驱动属于实验性软件，有报告指出安装包会添加第三方测试 CA 证书并禁用受信任根证书自动更新。请勿在生产环境或日常使用的电脑上安装。操作前请阅读[驱动安全警告和清理指引](./windows_driver/README_cn.md)。
+
 准备工作，请参考 [windows_driver](./windows_driver/README_cn.md)
 
 ![Demo](https://dl.espressif.com/AE/esp-iot-solution/p4_usb_extern_screen.gif)
