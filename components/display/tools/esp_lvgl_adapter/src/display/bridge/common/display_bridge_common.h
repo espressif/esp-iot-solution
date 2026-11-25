@@ -203,8 +203,8 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
 
 /* Copy the complement of clipped dirty areas without building a rectangle list. */
 void display_bridge_copy_unrendered_rows(const uint8_t *src, uint8_t *dst,
-                                        uint16_t width, uint16_t height, uint8_t color_bytes,
-                                        const lv_area_t *dirty, uint16_t dirty_count);
+                                         uint16_t width, uint16_t height, uint8_t color_bytes,
+                                         const lv_area_t *dirty, uint16_t dirty_count);
 
 /**
  * @brief Rotate and copy a region with stride support (IRAM optimized)

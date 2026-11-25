@@ -298,8 +298,8 @@ void display_dirty_region_capture(esp_lv_adapter_display_dirty_region_t *dst,
  **********************/
 
 void display_bridge_copy_unrendered_rows(const uint8_t *src, uint8_t *dst,
-                                        uint16_t width, uint16_t height, uint8_t color_bytes,
-                                        const lv_area_t *dirty, uint16_t dirty_count)
+                                         uint16_t width, uint16_t height, uint8_t color_bytes,
+                                         const lv_area_t *dirty, uint16_t dirty_count)
 {
     const size_t stride = (size_t)width * color_bytes;
     for (int32_t y = 0; y < height; ++y, src += stride, dst += stride) {
@@ -1153,7 +1153,7 @@ static esp_err_t display_bridge_dma2d_copy_contiguous_sync(const void *src,
 #else
     if (display_bridge_get_cache_line_size_by_addr(src) != 0) {
         ESP_RETURN_ON_ERROR(esp_cache_msync((void *)src, width * height * color_bytes,
-                                          ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED),
+                                            ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED),
                             TAG, "DMA2D source cache sync failed");
     }
 
