@@ -1074,7 +1074,7 @@ bool IRAM_ATTR display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
  * Note: Mutex held during entire transfer to serialize access to shared
  * dma2d_done_sem semaphore (global resource shared by all displays)
  */
-esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
+esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint8_t color_bytes, uint32_t timeout_ms)
 {
     esp_err_t ret = ESP_OK;
     esp_lv_adapter_display_bridge_hw_resource_t *hw = display_bridge_peek_hw_resource();
@@ -1088,13 +1088,27 @@ esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms)
     xSemaphoreTake((SemaphoreHandle_t)hw->dma2d_done_sem, 0);
 
 #ifdef ESP_ASYNC_COLOR_CONVERT_AVAILABLE
+    (void)color_bytes;
     ret = esp_async_color_convert(hw->fbcpy_handle,
                                   (const async_color_convert_request_t *)trans_desc,
                                   display_bridge_dma2d_done_callback,
                                   NULL);
 #else
+    esp_async_fbcpy_trans_desc_t *transfer = trans_desc;
+    if (display_bridge_get_cache_line_size_by_addr(transfer->dst_buffer) != 0) {
+        size_t stride = transfer->dst_buffer_size_x * color_bytes;
+        uint8_t *dst = (uint8_t *)transfer->dst_buffer +
+                       transfer->dst_offset_y * stride + transfer->dst_offset_x * color_bytes;
+        size_t span = (transfer->copy_size_y - 1) * stride + transfer->copy_size_x * color_bytes;
+
+        /* Legacy fbcpy only syncs descriptors. Preserve neighboring CPU writes
+         * before invalidating the destination lines that DMA will update. */
+        ret = esp_cache_msync(dst, span, ESP_CACHE_MSYNC_FLAG_DIR_C2M |
+                              ESP_CACHE_MSYNC_FLAG_INVALIDATE | ESP_CACHE_MSYNC_FLAG_UNALIGNED);
+        ESP_GOTO_ON_ERROR(ret, release_mutex, TAG, "DMA2D destination cache sync failed");
+    }
     ret = esp_async_fbcpy(hw->fbcpy_handle,
-                          trans_desc,
+                          transfer,
                           display_bridge_dma2d_done_callback,
                           NULL);
 #endif
@@ -1137,6 +1151,12 @@ static esp_err_t display_bridge_dma2d_copy_contiguous_sync(const void *src,
         .dst_color_format = color_bytes == 2 ? ESP_COLOR_FOURCC_RGB16 : ESP_COLOR_FOURCC_RGB24,
     };
 #else
+    if (display_bridge_get_cache_line_size_by_addr(src) != 0) {
+        ESP_RETURN_ON_ERROR(esp_cache_msync((void *)src, width * height * color_bytes,
+                                          ESP_CACHE_MSYNC_FLAG_DIR_C2M | ESP_CACHE_MSYNC_FLAG_UNALIGNED),
+                            TAG, "DMA2D source cache sync failed");
+    }
+
     esp_async_fbcpy_trans_desc_t transfer = {
         .src_buffer = (void *)src,
         .src_buffer_size_x = width,
@@ -1157,7 +1177,7 @@ static esp_err_t display_bridge_dma2d_copy_contiguous_sync(const void *src,
 #endif
     };
 #endif
-    return display_bridge_dma2d_copy_sync(&transfer, portMAX_DELAY);
+    return display_bridge_dma2d_copy_sync(&transfer, color_bytes, portMAX_DELAY);
 }
 
 esp_err_t display_bridge_copy_to_dma_buffer(const void *src,

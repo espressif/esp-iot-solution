@@ -2842,7 +2842,7 @@ static void display_bridge_v9_flush_triple_diff(esp_lv_adapter_display_bridge_v9
         };
 #endif
 
-        ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, portMAX_DELAY));
+        ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(&blit, color_bytes, portMAX_DELAY));
     } else {
         uint8_t *src = (uint8_t *)color_map;
         uint8_t *dst = (uint8_t *)impl->draw_fb + (area->y1 * lvgl_port_h_res + area->x1) * bytes_per_pixel;
@@ -3388,7 +3388,7 @@ static void copy_diff_repair_from_front_to_back(
             };
 #endif
             ESP_ERROR_CHECK(display_bridge_dma2d_copy_sync(
-                                &transfer, portMAX_DELAY));
+                                &transfer, color_bytes, portMAX_DELAY));
             continue;
         }
 #endif

@@ -550,7 +550,7 @@ bool display_bridge_dma2d_done_callback(esp_async_fbcpy_handle_t mcp,
  * @param timeout_ms Timeout in milliseconds
  * @return esp_err_t ESP_OK on success
  */
-esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint32_t timeout_ms);
+esp_err_t display_bridge_dma2d_copy_sync(void *trans_desc, uint8_t color_bytes, uint32_t timeout_ms);
 
 esp_err_t display_bridge_copy_to_dma_buffer(const void *src,
                                             void *dst,
