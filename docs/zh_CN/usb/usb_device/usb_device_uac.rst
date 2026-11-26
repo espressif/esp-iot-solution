@@ -27,6 +27,17 @@ USB Device UAC 用户指南
     4. ``UAC_SPK_NEW_PLAY_INTERVAL`` 宏定义用于判断到来的音频是否是新音频，如果是新音频，会先缓冲一段数据，再进行传输，有助于减少音频数据传输的中断频率。
     5. ``UAC_SUPPORT_MACOS`` 宏用于支持 Macos 系统，注意开启该宏定义后，windows 系统可能无法识别设备。
 
+在 TinyUSB 复合设备中使用 UAC
+---------------------------------
+
+该组件默认提供独立 UAC 设备所需的 TinyUSB 配置、USB 描述符和协议栈初始化。如果需要把 UAC 集成到由应用管理的 TinyUSB 复合设备中：
+
+1. 设置 ``CONFIG_USB_DEVICE_UAC_AS_PART=y``。此模式下，应用需要提供自己的 ``tusb_config.h`` 和 ``usb_descriptors.c``，并加入本组件的 UAC 类配置和描述符。编译 TinyUSB 时必须能看到 UAC 配置宏。
+2. 在 ``uac_device_config_t`` 中设置 ``.skip_tinyusb_init = true``。应用需要自行初始化 USB PHY 和 TinyUSB 协议栈，并运行 TinyUSB 设备任务。
+3. 将 ``.spk_itf_num`` 和 ``.mic_itf_num`` 设置为 USB 描述符中的扬声器、麦克风流接口编号。复合设备中 UAC 和其他类使用的端点地址必须互不冲突。
+
+不要将此模式与 ``esp_tinyusb`` 组件组合使用。``esp_tinyusb`` 是完整的 TinyUSB 集成，不支持再向其中添加 UAC、UVC 等专用类。此时应直接基于 TinyUSB 构建应用。还要确认目标芯片有足够的 USB 端点供所有接口使用；ESP32-S3 USB 控制器有 6 个端点。
+
 USB Device UAC API 参考
 --------------------------
 
