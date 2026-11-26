@@ -6,11 +6,13 @@
 
 #pragma once
 
+#include "esp_err.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
+#define MAX_HTTP_OUTPUT_BUFFER      (16 * 1024)
 
-#define MAX_HTTP_OUTPUT_BUFFER      2048
 
 typedef struct {
     char district_id[20];     // Unique identifier for the district
@@ -26,16 +28,15 @@ typedef struct {
 } http_weather_data_t;
 
 /**
- * @brief Retrieve weather data via HTTP request using the provided URL
+ * @brief Retrieve weather data for the configured district.
  *
- * This function sends an HTTP request to the specified URL to retrieve weather data and stores the
- * data in the provided `weather_data` structure.
+ * The response is bounded by MAX_HTTP_OUTPUT_BUFFER. Malformed JSON,
+ * oversized fields, non-success HTTP responses, and transport failures
+ * return an error without modifying the destination structure.
  *
- * @param[in] weather_data Pointer to an `http_weather_data_t` structure where the retrieved weather data will be stored
+ * @param[in,out] weather_data Destination for a successful response.
  *
- * @return
- * - ESP_OK: Successfully retrieved and stored weather data
- * - ESP_FAIL on error
+ * @return ESP_OK on success, or an error code describing the failure.
  */
 esp_err_t get_http_weather_data_with_url(http_weather_data_t *weather_data);
 
