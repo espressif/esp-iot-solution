@@ -12,6 +12,9 @@
 #include "esp_check.h"
 #include "tinyusb.h"
 #include "tusb_tasks.h"
+#if CONFIG_TINYUSB_NET_MODE_NONE != 1
+#include "tinyusb_net.h"
+#endif
 
 const static char *TAG = "tusb_tsk";
 static TaskHandle_t s_tusb_tskh;
@@ -38,7 +41,12 @@ static void tusb_device_task(void *arg)
     xEventGroupSetBits(*init_flags, INIT_OK);
 #endif // CONFIG_TINYUSB_INIT_IN_DEFAULT_TASK
     while (1) { // RTOS forever loop
+#if CONFIG_TINYUSB_NET_MODE_NONE != 1
+        tud_task_ext(1, false);
+        tinyusb_net_process_tx_queue();
+#else
         tud_task();
+#endif
     }
 }
 
