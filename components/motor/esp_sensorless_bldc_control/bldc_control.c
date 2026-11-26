@@ -80,6 +80,7 @@ static void bldc_control_task(void *args)
 
 esp_err_t bldc_control_init(bldc_control_handle_t *handle, bldc_control_config_t *config)
 {
+    BLDC_CHECK(handle != NULL, "handle is NULL", ESP_ERR_INVALID_ARG);
     BLDC_CHECK(config != NULL, "config is NULL", ESP_ERR_INVALID_ARG);
     bldc_control_t *control = (bldc_control_t *)calloc(1, sizeof(bldc_control_t));
     BLDC_CHECK(control, "calloc failed", ESP_ERR_NO_MEM);
@@ -246,6 +247,7 @@ esp_err_t bldc_control_deinit(bldc_control_handle_t *handle)
 esp_err_t bldc_control_start(bldc_control_handle_t *handle, uint32_t expect_Speed_rpm)
 {
     bldc_control_t *control = (bldc_control_t *)handle;
+    BLDC_CHECK(control != NULL, "control is NULL", ESP_ERR_INVALID_STATE);
     if (control->is_running) {
         return bldc_control_set_speed_rpm(handle, (int)expect_Speed_rpm);
     }
@@ -304,6 +306,7 @@ esp_err_t bldc_control_start(bldc_control_handle_t *handle, uint32_t expect_Spee
 esp_err_t bldc_control_stop(bldc_control_handle_t *handle)
 {
     bldc_control_t *control = (bldc_control_t *)handle;
+    BLDC_CHECK(control != NULL, "control is NULL", ESP_ERR_INVALID_STATE);
     esp_err_t err = gptimer_stop(control->gptimer);
     BLDC_CHECK(err == ESP_OK, "gptimer_stop failed", ESP_FAIL);
 
