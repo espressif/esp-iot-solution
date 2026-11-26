@@ -107,6 +107,13 @@ typedef struct {
  */
 typedef enum {
     USBH_CDC_FLAGS_DISABLE_NOTIFICATION = 1 << 0, /*!< Force disable notification functionality on the CDC port. */
+    /**
+     * For a nonzero data alternate setting, start bulk IN only after a successful
+     * standard SET_INTERFACE for the claimed data interface and alternate setting
+     * through usbh_cdc_send_custom_request() on this port. With alternate setting
+     * zero, bulk IN starts at open as usual. Notification polling is independent.
+     */
+    USBH_CDC_FLAGS_WAIT_FOR_SET_INTERFACE = 1 << 1,
 } usbh_cdc_port_flags_t;
 
 /**

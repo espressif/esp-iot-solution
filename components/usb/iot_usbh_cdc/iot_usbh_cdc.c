@@ -76,6 +76,7 @@ typedef struct usbh_cdc_port_s {
         SemaphoreHandle_t out_xfer_free_sem;
         SemaphoreHandle_t out_mux;
         usb_transfer_t *in_xfer;           // IN data transfer
+        bool in_waits_for_alt_setting;
         uint16_t in_mps;                   // IN endpoint Maximum Packet Size
         uint8_t *in_data_buffer_base;      // Pointer to IN data buffer in usb_transfer_t
         const usb_intf_desc_t *intf_desc;  // Pointer to data interface descriptor
@@ -857,12 +858,16 @@ esp_err_t usbh_cdc_port_open(const usbh_cdc_port_config_t *port_config, usbh_cdc
         }
     }
 
+    // Claiming a host interface does not select its alternate setting on the device.
+    cdc_port->data.in_waits_for_alt_setting = (port_config->flags & USBH_CDC_FLAGS_WAIT_FOR_SET_INTERFACE) &&
+                                              cdc_port->data.in_xfer && cdc_info.data_intf->bAlternateSetting != 0;
+
     CDC_ENTER_CRITICAL();
     SLIST_INSERT_HEAD(&(p_usbh_cdc_obj->cdc_devices_port_list), cdc_port, list_entry);
     CDC_EXIT_CRITICAL();
 
     // Start polling for data
-    if (cdc_port->data.in_xfer) {
+    if (cdc_port->data.in_xfer && !cdc_port->data.in_waits_for_alt_setting) {
         ESP_LOGD(TAG, "Submitting poll for BULK IN transfer");
         ESP_ERROR_CHECK(usb_host_transfer_submit(cdc_port->data.in_xfer));
     }
@@ -1042,6 +1047,13 @@ esp_err_t usbh_cdc_send_custom_request(usbh_cdc_port_handle_t cdc_port_handle, u
 
     ESP_LOGD(TAG, "cdc_dev->ctrl.xfer->actual_num_bytes = %d\n", cdc_dev->ctrl.xfer->actual_num_bytes);
     ESP_GOTO_ON_FALSE(cdc_dev->ctrl.xfer->status == USB_TRANSFER_STATUS_COMPLETED, ESP_ERR_INVALID_RESPONSE, unblock, TAG, "Control transfer error");
+
+    const uint8_t set_interface_type = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_STANDARD | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
+    if (cdc_port->data.in_waits_for_alt_setting && bmRequestType == set_interface_type && bRequest == USB_B_REQUEST_SET_INTERFACE &&
+            wIndex == cdc_port->data.intf_desc->bInterfaceNumber && wValue == cdc_port->data.intf_desc->bAlternateSetting && wLength == 0) {
+        ESP_GOTO_ON_ERROR(_cdc_host_transfer_submit(cdc_port, cdc_port->data.in_xfer), unblock, TAG, "Failed to start bulk IN transfer");
+        cdc_port->data.in_waits_for_alt_setting = false;
+    }
 
     // Copy only received bytes; short responses must not expose stale transfer data.
     if (in_transfer && wLength > 0) {

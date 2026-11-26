@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v0.4.1
+
+### Bug Fixes:
+
+* Select the claimed data alternate setting before polling its bulk IN endpoint.
+
 ## v0.4.0 - 2026-06-30
 
 ### Features:

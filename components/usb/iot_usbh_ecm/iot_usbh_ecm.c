@@ -118,12 +118,17 @@ static esp_err_t _ecm_config_intf(usbh_ecm_t *ecm)
         return ret;
     }
 
-    // Set interface alternate setting to enable network connection
-    ESP_LOGI(TAG, "Setting interface alternate setting to 1");
+    // Use the same data interface and alternate setting that CDC claimed.
+    const usb_intf_desc_t *data_intf = NULL;
+    ESP_RETURN_ON_ERROR(usbh_cdc_port_get_intf_desc(ecm->cdc_port, NULL, &data_intf), TAG, "Failed to get data interface");
+    wValue = data_intf->bAlternateSetting;
+    wIndex = data_intf->bInterfaceNumber;
+    if (wValue == 0) {
+        return ESP_OK;
+    }
+    ESP_LOGI(TAG, "Setting data interface %u to alternate setting %u", wIndex, wValue);
     bmRequestType = USB_BM_REQUEST_TYPE_DIR_OUT | USB_BM_REQUEST_TYPE_TYPE_STANDARD | USB_BM_REQUEST_TYPE_RECIP_INTERFACE;
     bRequest = USB_B_REQUEST_SET_INTERFACE;
-    wValue = 1; // Alternate setting
-    wIndex = ecm->itf_num + 1; // Interface number
     wLength = 0; // No data
     ret = usbh_cdc_send_custom_request(ecm->cdc_port, bmRequestType, bRequest, wValue, wIndex, wLength, NULL);
     if (ret != ESP_OK) {
@@ -233,7 +238,9 @@ static void _usbh_ecm_dev_event_cb(usbh_cdc_device_event_t event, usbh_cdc_devic
                 .user_data = ecm,
             },
 #ifdef CONFIG_ECM_DISABLE_CDC_NOTIFICATION
-            .flags = USBH_CDC_FLAGS_DISABLE_NOTIFICATION,
+            .flags = USBH_CDC_FLAGS_WAIT_FOR_SET_INTERFACE | USBH_CDC_FLAGS_DISABLE_NOTIFICATION,
+#else
+            .flags = USBH_CDC_FLAGS_WAIT_FOR_SET_INTERFACE,
 #endif
         };
         ESP_RETURN_VOID_ON_ERROR(usbh_cdc_port_open(&cdc_port_config, &ecm->cdc_port), TAG, "Failed to open CDC port");
