@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v1.5.3 - 2026-11-15
+
+### Bug Fixes:
+
+* Fix UAC speaker crackle: send only whole isochronous packets, read across the ring buffer wrap, and stream the exact rate for 44.1 kHz.
+
 ## v1.5.2 - 2026-5-26
 
 ### Improvements:
