@@ -29,6 +29,7 @@ static const int MODEM_DESTROY_BIT       = BIT0;
 static const int MODEM_DESTROY_DONE_BIT  = BIT1;
 static const int MODEM_NEW_STAGE_BIT     = BIT2;
 static const int MODEM_IDLE_BIT          = BIT4;
+static const int MODEM_PPP_STOP_DONE_BIT = BIT5;
 
 typedef enum {
     STAGE_DTE_LOSS,    /* dte loss, restoring to command state */
@@ -63,6 +64,7 @@ typedef struct {
     iot_eth_handle_t eth_handle;
 
     modem_stage_t modem_stage;  /*!< Modem stage */
+    esp_err_t ppp_stop_result;
     bool auto_connect;
     EventGroupHandle_t evt_hdl;
     iot_eth_netif_glue_handle_t glue;
@@ -70,6 +72,12 @@ typedef struct {
 } modem_board_t;
 
 static modem_board_t *g_modem_board;
+
+static void modem_ppp_stop_complete(esp_err_t result)
+{
+    g_modem_board->ppp_stop_result = result;
+    xEventGroupSetBits(g_modem_board->evt_hdl, MODEM_PPP_STOP_DONE_BIT);
+}
 
 static const char *MODEM_STAGE_STR(int code)
 {
@@ -163,7 +171,11 @@ static void _usb_dte_disconn_callback(iot_eth_driver_t *dte_drv, void *arg)
     if (g_modem_board->modem_stage == STAGE_RUNNING) {
         g_modem_board->modem_stage = STAGE_STOP_PPP;
     } else {
+        bool ppp_stop_pending = g_modem_board->modem_stage == STAGE_STOP_PPP;
         g_modem_board->modem_stage = STAGE_DTE_LOSS;
+        if (ppp_stop_pending) {
+            modem_ppp_stop_complete(ESP_ERR_INVALID_STATE);
+        }
     }
     xEventGroupSetBits(g_modem_board->evt_hdl, MODEM_NEW_STAGE_BIT);
     modem_at_stop(esp_modem_dte_get_atparser(dte_drv));
@@ -224,14 +236,17 @@ static void _modem_daemon_task(void *param)
 #endif
             // if the dte is still connected, change to command mode
             if (esp_modem_dte_is_connected(dte_drv)) {
-                esp_modem_dte_change_port_mode(dte_drv, ESP_MODEM_COMMAND_MODE, exit_ppp_with_at_cmd); // change to command mode first
+                ret = esp_modem_dte_change_port_mode(dte_drv, ESP_MODEM_COMMAND_MODE, exit_ppp_with_at_cmd);
+                ESP_GOTO_ON_ERROR(ret, _ppp_abort, TAG, "Failed to change modem to command mode");
                 ret = esp_modem_dte_hang_up(dte_drv); // hang up
                 ESP_GOTO_ON_ERROR(ret, _ppp_abort, TAG, "Failed to stop PPP");
                 g_modem_board->modem_stage = STAGE_IDLE;
+                modem_ppp_stop_complete(ESP_OK);
             } else {
                 esp_modem_dte_on_stage_changed(dte_drv, IOT_ETH_LINK_DOWN); // notify link down
                 vTaskDelay(pdMS_TO_TICKS(100));
                 g_modem_board->modem_stage = STAGE_DTE_LOSS;
+                modem_ppp_stop_complete(ESP_ERR_INVALID_STATE);
             }
             goto _stage_succeed;
             break;
@@ -277,6 +292,9 @@ static void _modem_daemon_task(void *param)
                 goto _stage_succeed;
             }
 _ppp_abort:
+            if (g_modem_board->modem_stage == STAGE_STOP_PPP) {
+                modem_ppp_stop_complete(ret != ESP_OK ? ret : ESP_FAIL);
+            }
             g_modem_board->modem_stage = STAGE_ERROR;
             xEventGroupSetBits(g_modem_board->evt_hdl, MODEM_NEW_STAGE_BIT);
             break;
@@ -444,10 +462,13 @@ esp_err_t usbh_modem_ppp_stop()
     ESP_RETURN_ON_FALSE(g_modem_board != NULL, ESP_ERR_INVALID_STATE, TAG, "Modem board not initialized");
     ESP_RETURN_ON_FALSE(g_modem_board->modem_stage == STAGE_RUNNING, ESP_ERR_INVALID_STATE, TAG, "Modem stage is not PPP, cannot stop PPP now!");
 
+    xEventGroupClearBits(g_modem_board->evt_hdl, MODEM_PPP_STOP_DONE_BIT);
+    g_modem_board->ppp_stop_result = ESP_FAIL;
     g_modem_board->modem_stage = STAGE_STOP_PPP;
     xEventGroupSetBits(g_modem_board->evt_hdl, MODEM_NEW_STAGE_BIT);
-    xEventGroupWaitBits(g_modem_board->evt_hdl, MODEM_IDLE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
-    return ESP_OK;
+    EventBits_t bits = xEventGroupWaitBits(g_modem_board->evt_hdl, MODEM_PPP_STOP_DONE_BIT, pdTRUE, pdFALSE, portMAX_DELAY);
+    ESP_RETURN_ON_FALSE(bits & MODEM_PPP_STOP_DONE_BIT, ESP_FAIL, TAG, "PPP stop did not complete");
+    return g_modem_board->ppp_stop_result;
 }
 
 esp_err_t usbh_modem_ppp_auto_connect(bool enable)

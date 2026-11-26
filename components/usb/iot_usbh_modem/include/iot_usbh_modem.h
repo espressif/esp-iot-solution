@@ -102,9 +102,10 @@ esp_err_t usbh_modem_ppp_start(TickType_t timeout);
  * @brief Stop PPP connection
  *
  * @return
- *  - ESP_OK: Stopped successfully (or already stopped)
- *  - ESP_ERR_INVALID_STATE: Modem not ready
+ *  - ESP_OK: Stopped successfully
+ *  - ESP_ERR_INVALID_STATE: Modem not initialized, PPP not running, or DTE disconnected during stop
  *  - ESP_FAIL: Operation failed
+ *  - Other DTE mode-change or hang-up errors are returned directly
  */
 esp_err_t usbh_modem_ppp_stop();
 
