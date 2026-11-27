@@ -9,7 +9,7 @@ The function of the USB PHY/Transceiver is to convert the digital signals from t
 Use the internal PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ESP32-S2/S3/C3 internally integrates a USB PHY, eliminating the need for an external PHY chip. It can directly connect to external USB hosts or devices through the USB D+/D- pins. However, for chips with two integrated USB controllers, such as the ESP32-S3 with built-in USB-OTG and USB-Serial-JTAG, both controllers share a single internal PHY, allowing only one to operate at a time.
+The ESP32-S2/S3/C3 internally integrates a USB PHY, eliminating the need for an external PHY chip. It can directly connect to external USB hosts or devices through the USB D+/D- pins. On ESP32-S3, the USB-OTG and USB-Serial-JTAG controllers share a single internal PHY, so only one controller can use it at a time.
 
 
 .. image:: ../../../_static/usb/esp32s3_usb.png
@@ -62,16 +62,16 @@ The internal USB-PHY corresponds to fixed GPIO pins, as shown in the table below
      - pin 50
      - pin 49
 
-The default connection is FS_PHY1 connected to the USB Serial/JTAG controller, and FS_PHY2 connected to OTG_FS. The user can change the connection relationship through EFUSE_USB_PHY_SEL.
+By default, FS_PHY1 connects to the USB Serial/JTAG controller and FS_PHY2 connects to OTG_FS, allowing both controllers to operate simultaneously. Setting ``EFUSE_USB_PHY_SEL`` to 1 swaps the two full-speed PHY assignments.
 
 .. _external_phy:
 
 Use an external PHY (ESP32-S2/S3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-By adding an external PHY, it is possible to enable the simultaneous operation of both USB-OTG and USB-Serial-JTAG.
+On ESP32-S3, adding an external PHY allows USB-OTG and USB-Serial-JTAG to operate simultaneously. USB-OTG is the only USB controller on ESP32-S2 and supports an external PHY.
 
-ESP32S2/S3 supports SP5301 or equivalent USB PHY. A typical circuit diagram for an external PHY is as follows:
+ESP32-S2/S3 support the SP5301 or an equivalent USB PHY. A typical circuit diagram for an external PHY is as follows:
 
 
 .. image:: ../../../_static/usb/usb_fs_phy_sp5301.png
@@ -88,20 +88,23 @@ USB PHY default configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-#. For chips that feature both USB-OTG and USB-Serial-JTAG peripherals simultaneously, the default configuration is for USB-Serial-JTAG to be connected to the internal USB-PHY. Users can directly download or debug through the USB interface without additional configuration.
-#. If there is a need to develop a USB-OTG application using USB Host Driver or the TinyUSB protocol stack, during protocol stack initialization, the USB-PHY connection will automatically switch to USB-OTG, and users do not need to perform additional configuration. In USB-OTG mode, if users wish to utilize the download functionality of USB-Serial-JTAG, they need to manually boot into download mode.
+On ESP32-S3, the shared internal USB PHY connects to USB-Serial-JTAG by default, allowing firmware flashing and debugging through the internal PHY pins.
+
+When the USB Host Driver or TinyUSB stack initializes with the internal PHY, it switches the PHY to USB-OTG. With the default eFuse setting, manually enter ROM download mode to flash over USB-Serial-JTAG through the same pins.
 
 Modify the default configuration of the USB PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+The following methods apply to the shared internal USB PHY on ESP32-S3.
+
 Method 1: Switch the USB-PHY connection to USB-OTG by configuring the registers.
 
 
-* The USB Host Driver or TinyUSB stack internally switches the connection of the internal USB-PHY to USB-OTG by configuring USB PHY registers. For more information, please refer to the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_.
+* When configured to use the internal PHY, the USB Host Driver or TinyUSB stack sets the USB PHY registers to connect it to USB-OTG. For more information, see the `USB PHY Configuration API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_.
 
-Method 2: Switch the default connection of USB-PHY to USB-OTG by burning the efuse ``usb_phy_sel`` bit to 1.
+Method 2: Switch the default connection of the internal USB PHY to USB-OTG by burning the ``USB_PHY_SEL`` eFuse bit to 1.
 
 
-* This efuse bit should only be burned if the user needs to use USB-OTG functionality in Boot mode. Once burned, when the chip enters Boot mode, it will utilize the download functionality provided by USB-OTG, such as USB DFU.
-* Note that once the efuse bit is burned to 1, it cannot be restored to 0. When the USB-PHY default connection is switched to USB-OTG, and the chip enters Boot mode, USB-OTG functionality will be active, and USB-Serial-JTAG functionality will be unavailable.
-* Note: For ESP32-S3 modules and development boards produced before DateCode 2219 (PW No. earlier than PW-2022-06-XXXX), because EFUSE_DIS_USB_OTG_DOWNLOAD_MODE (BLK0 B19[7]) has already been burned to 1 (USB OTG download disabled), if users burn the efuse_usb_phy_sel bit to 1, it will result in both USB-Serial-JTAG and USB-OTG download functionalities being disabled when the chip enters Boot mode.
+* Burn this eFuse bit only if you need to use USB-OTG through the internal PHY in ROM download mode, for example to use USB DFU.
+* Burning this eFuse bit is irreversible. In ROM download mode, the internal PHY pins will be assigned to USB-OTG, so USB-Serial-JTAG will be unavailable through those pins.
+* On affected ESP32-S3 products, ``EFUSE_DIS_USB_OTG_DOWNLOAD_MODE`` (BLK0 B19[7]) is already set to 1. Burning ``USB_PHY_SEL`` on these products makes both USB-Serial-JTAG and USB-OTG download unavailable through the internal PHY pins. See `ESP32-S3 erratum USBOTG-4289 <https://docs.espressif.com/projects/esp-chip-errata/en/latest/esp32s3/03-errata-description/esp32s3/usb-otg-download-func-bug.html>`_ for the affected date codes and PW numbers.
