@@ -9,7 +9,7 @@ USB PHY/Transceiver 的功能是将 USB 控制器的数字信号转换为 USB �
 使用内部 PHY
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以直接与外部 USB 主机或设备通过 USB D+/D- 连接。但对于集成两个 USB 控制器的芯片，例如 ESP32-S3 内置 USB-OTG 和 USB-Serial-JTAG，两者共用一个内部 PHY，同一时间只能有一个工作。
+ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以直接与外部 USB 主机或设备通过 USB D+/D- 连接。ESP32-S3 的 USB-OTG 和 USB-Serial-JTAG 控制器共用一个内部 PHY，同一时间只有一个控制器可以使用该 PHY。
 
 
 .. image:: ../../../_static/usb/esp32s3_usb.png
@@ -62,16 +62,16 @@ ESP32-S2/S3/C3 内部集成了 USB PHY，因此无需外接 PHY 芯片，可以�
      - pin 50
      - pin 49
 
-默认情况下，FS_PHY1 连接到 USB 串行/JTAG 控制器，FS_PHY2 连接到 OTG_FS。用户可以通过 EFUSE_USB_PHY_SEL 更改连接关系。
+默认情况下，FS_PHY1 连接到 USB 串行/JTAG 控制器，FS_PHY2 连接到 OTG_FS，两个控制器可以同时工作。将 ``EFUSE_USB_PHY_SEL`` 置为 1 可交换两个全速 PHY 的连接。
 
 .. _external_phy:
 
 使用外部 PHY （ESP32-S2/S3）
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-通过增加一个外部 PHY，可以实现 USB-OTG 和 USB-Serial-JTAG 两个外设同时工作。
+在 ESP32-S3 上，增加一个外部 PHY 可让 USB-OTG 和 USB-Serial-JTAG 同时工作。ESP32-S2 只有 USB-OTG 控制器，该控制器也支持使用外部 PHY。
 
-ESP32S2/S3 支持 SP5301 或同等功能的 USB PHY。外部 PHY 的典型电路图如下：
+ESP32-S2/S3 支持 SP5301 或同等功能的 USB PHY。外部 PHY 的典型电路图如下：
 
 
 .. image:: ../../../_static/usb/usb_fs_phy_sp5301.png
@@ -88,20 +88,23 @@ USB PHY 默认配置
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-#. 对于同时具有 USB-OTG 和 USB-Serial-JTAG 两个外设的芯片，默认情况下 USB-Serial-JTAG 与内部 USB-PHY 连接。用户可以直接通过 USB 接口进行下载或调试，无需额外配置。
-#. 如需使用 USB Host Driver 或 TinyUSB 协议栈开发 USB-OTG 应用，在协议栈初始化时，USB-PHY 连接会自动切换为 USB-OTG，用户不必再进行配置。在 USB-OTG 模式下，如果用户需要使用 USB-Serial-JTAG 的下载功能，需要手动 Boot 到下载模式。
+ESP32-S3 共用的内部 USB PHY 默认连接到 USB-Serial-JTAG，可通过内部 PHY 对应的引脚烧录固件或调试。
+
+USB Host Driver 或 TinyUSB 协议栈在使用内部 PHY 初始化时，会将 PHY 切换到 USB-OTG。在默认 eFuse 配置下，如需通过同一组引脚使用 USB-Serial-JTAG 烧录固件，请手动进入 ROM 下载模式。
 
 修改 USB PHY 默认配置
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-方法 1： 通过配置寄存器，将 USB-PHY 连接切换为 USB-OTG。
+以下两种方法适用于 ESP32-S3 共用的内部 USB PHY。
+
+方法 1：通过配置寄存器，将 USB-PHY 连接切换为 USB-OTG。
 
 
-* USB Host Driver 或 TinyUSB 协议栈内部通过配置 USB PHY 寄存器，将内部 USB-PHY 连接切换为 USB-OTG，如需了解更多信息，请参考 `USB PHY 配置 API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_\ 。
+* 配置为使用内部 PHY 时，USB Host Driver 或 TinyUSB 协议栈会设置 USB PHY 寄存器，将内部 PHY 连接到 USB-OTG。详情请参考 `USB PHY 配置 API <https://github.com/espressif/esp-idf/blob/master/components/esp_hw_support/include/esp_private/usb_phy.h>`_\ 。
 
-方法 2：通过烧写 efuse usb_phy_sel 位为 1，将 USB-PHY 默认连接切换为 USB-OTG：
+方法 2：将 eFuse 的 ``USB_PHY_SEL`` 位烧写为 1，使内部 USB PHY 默认连接到 USB-OTG。
 
 
-* 仅当用户需要在 Boot 模式下使用 USB-OTG 功能时，才需要烧写此 efuse 位。烧写完成后，芯片进入 Boot 模式后，将使用 USB-OTG 提供的下载功能，例如 USB DFU。
-* 注意，烧写 efuse 为 1 后不可恢复为 0。当 USB-PHY 默认连接切换为 USB-OTG，芯片进入 Boot 模式后，将使用 USB-OTG 功能，USB-Serial-JTAG 功能将无法使用。
-* 注意：对于在 DateCode 2219 生产的 ESP32-S3 模组和开发板 (PW No. 早于 PW-2022-06-XXXX), 由于 EFUSE_DIS_USB_OTG_DOWNLOAD_MODE (BLK0 B19[7]) 已经被烧录为 1 （USB OTG 下载被禁用），用户如果再烧写 efuse_usb_phy_sel 位为 1，将导致芯片进入 Boot 模式后，USB-Serial-JTAG 和 USB-OTG 下载功能均无法使用。
+* 仅在需要通过内部 PHY 在 ROM 下载模式下使用 USB-OTG 功能（例如 USB DFU）时，才需烧写此 eFuse 位。
+* 烧写此 eFuse 位后无法恢复。在 ROM 下载模式下，内部 PHY 对应的引脚将分配给 USB-OTG，USB-Serial-JTAG 将无法通过这些引脚使用。
+* 受影响的 ESP32-S3 产品的 ``EFUSE_DIS_USB_OTG_DOWNLOAD_MODE`` （BLK0 B19[7]）已烧写为 1。若再烧写 ``USB_PHY_SEL``，将无法通过内部 PHY 对应的引脚使用 USB-Serial-JTAG 或 USB-OTG 下载功能。受影响产品的日期代码及生产工单见 `ESP32-S3 芯片勘误 USBOTG-4289 <https://docs.espressif.com/projects/esp-chip-errata/zh_CN/latest/esp32s3/03-errata-description/esp32s3/usb-otg-download-func-bug.html>`_\ 。
